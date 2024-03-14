@@ -22,7 +22,7 @@
     "windows": [
       {
         "title": "scrcpy-mask",
-        "transparent":true,
+        "transparent": true,
         "decorations": false
       }
     ],
@@ -33,11 +33,9 @@
       "active": true,
       "targets": "all",
       "identifier": "com.tauri.dev",
-      "icon": [
-      ],
-      "resources": [
-        "resource/*"
-      ]
-    }
+      "icon": [],
+      "resources": ["resource/*"]
+    },
+    "macOSPrivateApi": true
   }
 }
