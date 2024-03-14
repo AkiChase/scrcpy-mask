@@ -1,0 +1,26 @@
+:root {
+  --primary-color: #63E2B7;
+  --primary-hover-color: #7FE7C4;
+  --primary-pressed-color: #5ACEA7;
+  --bg-color: #101014;
+  --content-bg-color: #18181C;
+  
+  --light-color: rgba(255, 255, 255, 0.9);
+  --gray-color: #6b6e76;
+  --red-color: #fc5185;
+  --red-pressed-color: #f4336d;
+}
+
+html,
+body {
+  background-color: transparent;
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+}
+
+div#app {
+  height: 100%;
+  box-sizing: border-box;
+}
+
