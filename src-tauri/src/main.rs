@@ -46,6 +46,16 @@ fn adb_devices(app: tauri::AppHandle) -> Result<Vec<Device>, String> {
 }
 
 #[tauri::command]
+/// get screen size of the device
+fn get_screen_size(id: String, app: tauri::AppHandle) -> Result<(u16, u16), String> {
+    let dir = app.path_resolver().resolve_resource("resource").unwrap();
+    match ScrcpyClient::get_screen_size(&dir, &id) {
+        Ok(size) => Ok(size),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
 /// reverse the device port to the local port
 fn reverse_server_port(
     app: tauri::AppHandle,
@@ -83,30 +93,27 @@ fn open_socket_server(port: u16, app: tauri::AppHandle) -> Result<(), String> {
     let app = Arc::new(app);
 
     let share_app = app.clone();
-    let (device_reply_send, mut device_reply_recv) = tokio::sync::mpsc::channel::<String>(16);
+    let (device_reply_sender, mut device_reply_receiver) = tokio::sync::mpsc::channel::<String>(16);
     println!("device reply channel created");
     RUNTIME.spawn(async move {
-        while let Some(reply) = device_reply_recv.recv().await {
+        while let Some(reply) = device_reply_receiver.recv().await {
             share_app.emit_all("device-reply", reply).unwrap();
         }
     });
 
     // create new global watch channel sender
-    let (killer_send, mut killer_recv) = tokio::sync::watch::channel(false);
+    let (killer_send, mut killer_receiver) = tokio::sync::watch::channel(false);
     *SERVER_KILLER.lock().unwrap() = Some(killer_send);
 
-    let (ctrl_msg_sender, _) = broadcast::channel::<String>(16);
-    let ctrl_msg_sender_clone = ctrl_msg_sender.clone();
+    let (fc_broadcast_sender, _receiver) = broadcast::channel::<String>(16);
+    let fc_broadcast_sender_clone = fc_broadcast_sender.clone();
 
     let share_app = app.clone();
-    share_app.listen_global("control-msg", move |event| {
-        println!("收到control-msg: {}", event.payload().unwrap_or(""));
-        // TODO 广播到所有TcpStream子任务中
-        match ctrl_msg_sender_clone.send(event.payload().unwrap_or("").into()) {
-            Ok(_) => {}
-            Err(e) => {
-                println!("广播失败: {}", e);
-            }
+    share_app.listen_global("front-command", move |event| {
+        println!("收到front-command: {}", event.payload().unwrap_or(""));
+        // 广播前端命令到所有Socket处理器中
+        if let Err(e) = fc_broadcast_sender_clone.send(event.payload().unwrap_or("").into()) {
+            println!("front-command广播失败: {}", e);
         };
     });
 
@@ -114,17 +121,15 @@ fn open_socket_server(port: u16, app: tauri::AppHandle) -> Result<(), String> {
         select! {
             _ = async {
                 let server = Server::bind(port).await;
-
                 loop{
                     // create channel to receive msg in TcpStream task
-                    let (ctrl_msg_sender, _) = broadcast::channel::<String>(16);
-                    server.accept(ctrl_msg_sender.subscribe(), device_reply_send.clone()).await;
+                    server.accept(fc_broadcast_sender.subscribe(), device_reply_sender.clone()).await;
                 }
             } => {}
             _ = async {
                 loop {
                     // close server when receiving msg
-                    if killer_recv.changed().await.is_ok() {
+                    if killer_receiver.changed().await.is_ok() {
                         *SERVER_KILLER.lock().unwrap() = None;
                         println!("Close socket server listening to 127.0.0.1:{port}");
                         return
@@ -133,7 +138,6 @@ fn open_socket_server(port: u16, app: tauri::AppHandle) -> Result<(), String> {
             } => {}
         }
     });
-
     Ok(())
 }
 
@@ -154,10 +158,13 @@ fn start_scrcpy_server(id: String, scid: String, app: tauri::AppHandle) -> Resul
     let dir = app.path_resolver().resolve_resource("resource").unwrap();
     let version = ScrcpyClient::get_scrcpy_version();
 
-    match ScrcpyClient::shell_start_server(&dir, &id, &scid, &version) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e.to_string()),
-    }
+    RUNTIME.spawn_blocking(move || {
+        match ScrcpyClient::shell_start_server(&dir, &id, &scid, &version) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
+    });
+    Ok(())
 }
 
 fn main() {
@@ -176,6 +183,7 @@ fn main() {
             get_windows,
             get_window_controls,
             adb_devices,
+            get_screen_size,
             reverse_server_port,
             push_server_file,
             open_socket_server,
