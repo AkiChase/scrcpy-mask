@@ -1,0 +1,266 @@
+import { emit } from "@tauri-apps/api/event";
+import {
+  AndroidKeyEventAction,
+  AndroidKeycode,
+  AndroidMetastate,
+  AndroidMotionEventAction,
+  AndroidMotionEventButtons,
+} from "./android";
+
+interface ControlMsgPayload {
+  fcType: ControlMsgType;
+  receiver?: string;
+  msgData?: ControlMsgData;
+}
+
+async function sendControlMsg(payload: ControlMsgPayload) {
+  if (payload.receiver === undefined) {
+    delete payload.receiver;
+  }
+  await emit("front-command", payload);
+}
+
+export async function sendInjectKeycode(
+  payload: InjectKeycode,
+  receiver?: string
+) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeInjectKeycode,
+    msgData: payload,
+    receiver,
+  });
+}
+
+export async function sendInjectText(payload: InjectText, receiver?: string) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeInjectText,
+    msgData: payload,
+    receiver,
+  });
+}
+
+export async function sendInjectTouchEvent(
+  payload: InjectTouchEvent,
+  receiver?: string
+) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeInjectTouchEvent,
+    msgData: payload,
+    receiver,
+  });
+}
+
+export async function sendInjectScrollEvent(
+  payload: InjectScrollEvent,
+  receiver?: string
+) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeInjectScrollEvent,
+    msgData: payload,
+    receiver,
+  });
+}
+
+export async function sendBackOrScreenOn(
+  payload: BackOrScreenOn,
+  receiver?: string
+) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeBackOrScreenOn,
+    msgData: payload,
+    receiver,
+  });
+}
+
+export async function sendExpandNotificationPanel(receiver?: string) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeExpandNotificationPanel,
+    receiver,
+  });
+}
+
+export async function sendExpandSettingsPanel(receiver?: string) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeExpandSettingsPanel,
+    receiver,
+  });
+}
+
+export async function sendCollapsePanels(receiver?: string) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeCollapsePanels,
+    receiver,
+  });
+}
+
+export async function sendGetClipboard(
+  payload: GetClipboard,
+  receiver?: string
+) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeGetClipboard,
+    msgData: payload,
+    receiver,
+  });
+}
+
+export async function sendSetClipboard(
+  payload: SetClipboard,
+  receiver?: string
+) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeSetClipboard,
+    msgData: payload,
+    receiver,
+  });
+}
+
+export async function sendSetScreenPowerMode(
+  payload: SetScreenPowerMode,
+  receiver?: string
+) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeSetScreenPowerMode,
+    msgData: payload,
+    receiver,
+  });
+}
+
+export async function sendRotateDevice(receiver?: string) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeRotateDevice,
+    receiver,
+  });
+}
+
+export async function sendUhidCreate(payload: UhidCreate, receiver?: string) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeUhidCreate,
+    msgData: payload,
+    receiver,
+  });
+}
+
+export async function sendUhidInput(payload: UhidInput, receiver?: string) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeUhidInput,
+    msgData: payload,
+    receiver,
+  });
+}
+
+export async function sendOpenHardKeyboardSettings(receiver?: string) {
+  await sendControlMsg({
+    fcType: ControlMsgType.ControlMsgTypeOpenHardKeyboardSettings,
+    receiver,
+  });
+}
+
+export enum ControlMsgType {
+  ControlMsgTypeInjectKeycode, //发送原始按键
+  ControlMsgTypeInjectText, //发送文本，不知道是否能输入中文（估计只是把文本转为keycode的输入效果）
+  ControlMsgTypeInjectTouchEvent, //发送触摸事件
+  ControlMsgTypeInjectScrollEvent, //发送滚动事件（类似接入鼠标后滚动滚轮的效果，不是通过触摸实现的）
+  ControlMsgTypeBackOrScreenOn, //应该就是发送返回键
+  ControlMsgTypeExpandNotificationPanel, //打开消息面板
+  ControlMsgTypeExpandSettingsPanel, //打开设置面板（就是消息面板右侧的）
+  ControlMsgTypeCollapsePanels, //折叠上述面板
+  ControlMsgTypeGetClipboard, //获取剪切板
+  ControlMsgTypeSetClipboard, //设置剪切板
+  ControlMsgTypeSetScreenPowerMode, //设置屏幕电源模式，是关闭设备屏幕的（SC_SCREEN_POWER_MODE_OFF 和 SC_SCREEN_POWER_MODE_NORMAL ）
+  ControlMsgTypeRotateDevice, //旋转设备屏幕
+  ControlMsgTypeUhidCreate, //创建虚拟设备？从而模拟真实的键盘、鼠标用的，目前没用
+  ControlMsgTypeUhidInput, //同上转发键盘、鼠标的输入，目前没用
+  ControlMsgTypeOpenHardKeyboardSettings, //打开设备的硬件键盘设置，目前没用
+}
+
+type ControlMsgData =
+  | InjectKeycode
+  | InjectText
+  | InjectTouchEvent
+  | InjectScrollEvent
+  | BackOrScreenOn
+  | GetClipboard
+  | SetClipboard
+  | SetScreenPowerMode
+  | UhidCreate
+  | UhidInput;
+
+interface ScPosition {
+  x: number;
+  y: number;
+  // screen width
+  w: number;
+  // screen height
+  h: number;
+}
+
+interface InjectKeycode {
+  action: AndroidKeyEventAction;
+  keycode: AndroidKeycode;
+  repeat: number;
+  metastate: AndroidMetastate;
+}
+
+enum ScCopyKey {
+  SC_COPY_KEY_NONE,
+  SC_COPY_KEY_COPY,
+  SC_COPY_KEY_CUT,
+}
+
+enum ScScreenPowerMode {
+  // see <https://android.googlesource.com/platform/frameworks/base.git/+/pie-release-2/core/java/android/view/SurfaceControl.java#305>
+  SC_SCREEN_POWER_MODE_OFF = 0,
+  SC_SCREEN_POWER_MODE_NORMAL = 2,
+}
+
+interface InjectText {
+  text: string;
+}
+
+interface InjectTouchEvent {
+  action: AndroidMotionEventAction;
+  actionButton: AndroidMotionEventButtons;
+  buttons: AndroidMotionEventButtons;
+  pointerId: number;
+  position: ScPosition;
+  pressure: number;
+}
+
+interface InjectScrollEvent {
+  position: ScPosition;
+  hscroll: number;
+  vscroll: number;
+  buttons: AndroidMotionEventButtons;
+}
+
+interface BackOrScreenOn {
+  action: AndroidKeyEventAction; // action for the BACK key
+  // screen may only be turned on on ACTION_DOWN
+}
+
+interface GetClipboard {
+  copy_key: ScCopyKey;
+}
+
+interface SetClipboard {
+  sequence: number;
+  text: string;
+  paste: boolean;
+}
+
+interface SetScreenPowerMode {
+  mode: ScScreenPowerMode;
+}
+
+interface UhidCreate {
+  id: number;
+  reportDescSize: number;
+  reportDesc: Uint8Array;
+}
+
+interface UhidInput {
+  id: number;
+  size: number;
+  data: Uint8Array;
+}
