@@ -1,15 +1,33 @@
 use crate::binary;
 use tokio::{io::AsyncWriteExt, net::tcp::OwnedWriteHalf};
 
-pub async fn send_ctrl_msg(
-    ctrl_msg_type: ControlMsgType,
-    payload: &serde_json::Value,
-    writer: &mut OwnedWriteHalf,
-) {
+pub const SC_CONTROL_MSG_INJECT_TEXT_MAX_LENGTH: usize = 300;
+pub const SC_CONTROL_MSG_MAX_SIZE: usize = 1 << 18; // 256k
+pub const SC_CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH: usize = SC_CONTROL_MSG_MAX_SIZE - 14;
+
+pub fn gen_ctrl_msg(ctrl_msg_type: ControlMsgType, payload: &serde_json::Value) -> Vec<u8> {
     match ctrl_msg_type {
+        ControlMsgType::ControlMsgTypeInjectKeycode => {
+            let mut buf = vec![0; 14];
+            buf[0] = ctrl_msg_type as u8;
+            buf[1] = payload["action"].as_u64().unwrap() as u8;
+            binary::write_32be(&mut buf[2..6], payload["keycode"].as_u64().unwrap() as u32);
+            binary::write_32be(&mut buf[6..10], payload["repeat"].as_u64().unwrap() as u32);
+            binary::write_32be(
+                &mut buf[10..14],
+                payload["metastate"].as_u64().unwrap() as u32,
+            );
+            buf
+        }
+        ControlMsgType::ControlMsgTypeInjectText => {
+            let mut buf: Vec<u8> = vec![ctrl_msg_type as u8];
+            let text = payload["text"].as_str().unwrap();
+            binary::write_string(text, SC_CONTROL_MSG_INJECT_TEXT_MAX_LENGTH, &mut buf);
+            buf
+        }
         ControlMsgType::ControlMsgTypeInjectTouchEvent => {
-            let mut buf: [u8; 32] = [0; 32];
-            buf[0] = ControlMsgType::ControlMsgTypeInjectTouchEvent as u8;
+            let mut buf = vec![0; 32];
+            buf[0] = ctrl_msg_type as u8;
             buf[1] = payload["action"].as_u64().unwrap() as u8;
             binary::write_64be(&mut buf[2..10], payload["pointerId"].as_u64().unwrap());
             binary::write_posion(
@@ -32,15 +50,98 @@ pub async fn send_ctrl_msg(
                 payload["buttons"].as_u64().unwrap() as u32,
             );
 
-            writer.write_all(&buf).await.unwrap();
-            writer.flush().await.unwrap();
+            buf
         }
-        _ => {}
-    };
-    println!("收到前端命令，发送控制消息:{:?}", ctrl_msg_type);
+        ControlMsgType::ControlMsgTypeInjectScrollEvent => {
+            let mut buf = vec![0; 21];
+            buf[0] = ctrl_msg_type as u8;
+            binary::write_posion(
+                &mut buf[1..13],
+                payload["position"]["x"].as_i64().unwrap() as i32,
+                payload["position"]["y"].as_i64().unwrap() as i32,
+                payload["position"]["w"].as_i64().unwrap() as u16,
+                payload["position"]["h"].as_i64().unwrap() as u16,
+            );
+            binary::write_16be(
+                &mut buf[13..15],
+                binary::float_to_i16fp(payload["hscroll"].as_f64().unwrap() as f32) as u16,
+            );
+            binary::write_16be(
+                &mut buf[15..17],
+                binary::float_to_i16fp(payload["vscroll"].as_f64().unwrap() as f32) as u16,
+            );
+            binary::write_32be(
+                &mut buf[17..21],
+                payload["buttons"].as_u64().unwrap() as u32,
+            );
+            buf
+        }
+        ControlMsgType::ControlMsgTypeBackOrScreenOn => {
+            vec![
+                ctrl_msg_type as u8,
+                payload["action"].as_u64().unwrap() as u8,
+            ]
+        }
+        ControlMsgType::ControlMsgTypeGetClipboard => {
+            vec![
+                ctrl_msg_type as u8,
+                payload["copyKey"].as_u64().unwrap() as u8,
+            ]
+        }
+        ControlMsgType::ControlMsgTypeSetClipboard => {
+            let mut buf: Vec<u8> = vec![0; 10];
+            buf[0] = ctrl_msg_type as u8;
+            binary::write_64be(&mut buf[1..9], payload["sequence"].as_u64().unwrap());
+            buf[9] = payload["paste"].as_bool().unwrap_or(false) as u8;
+            let text = payload["text"].as_str().unwrap();
+            binary::write_string(text, SC_CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH, &mut buf);
+            buf
+        }
+        ControlMsgType::ControlMsgTypeSetScreenPowerMode => {
+            vec![ctrl_msg_type as u8, payload["mode"].as_u64().unwrap() as u8]
+        }
+        ControlMsgType::ControlMsgTypeUhidCreate => {
+            let size = payload["reportDescSize"].as_u64().unwrap() as u16;
+            let mut buf: Vec<u8> = vec![0; 5];
+            buf[0] = ctrl_msg_type as u8;
+            binary::write_16be(&mut buf[1..3], payload["id"].as_u64().unwrap() as u16);
+            binary::write_16be(&mut buf[3..5], size);
+            let report_desc = payload["reportDesc"].as_array().unwrap();
+            let report_desc_u8: Vec<u8> = report_desc
+                .iter()
+                .map(|x| x.as_u64().unwrap() as u8)
+                .collect();
+            buf.extend_from_slice(&report_desc_u8);
+            buf
+        }
+        ControlMsgType::ControlMsgTypeUhidInput => {
+            let size = payload["size"].as_u64().unwrap() as u16;
+            let mut buf: Vec<u8> = vec![0; 5];
+            buf[0] = ctrl_msg_type as u8;
+            binary::write_16be(&mut buf[1..3], payload["id"].as_u64().unwrap() as u16);
+            binary::write_16be(&mut buf[3..5], size);
+            let data = payload["data"].as_array().unwrap();
+            let data_u8: Vec<u8> = data.iter().map(|x| x.as_u64().unwrap() as u8).collect();
+            buf.extend_from_slice(&data_u8);
+            buf
+        }
+        // other control message types do not have a payload
+        _ => {
+            vec![ctrl_msg_type as u8]
+        }
+    }
 }
 
-#[derive(Debug)]
+pub async fn send_ctrl_msg(
+    ctrl_msg_type: ControlMsgType,
+    payload: &serde_json::Value,
+    writer: &mut OwnedWriteHalf,
+) {
+    let buf = gen_ctrl_msg(ctrl_msg_type, payload);
+    writer.write_all(&buf).await.unwrap();
+    writer.flush().await.unwrap();
+}
+
 pub enum ControlMsgType {
     ControlMsgTypeInjectKeycode,            //发送原始按键
     ControlMsgTypeInjectText, //发送文本，不知道是否能输入中文（估计只是把文本转为keycode的输入效果）

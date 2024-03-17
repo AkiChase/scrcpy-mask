@@ -240,7 +240,7 @@ interface BackOrScreenOn {
 }
 
 interface GetClipboard {
-  copy_key: ScCopyKey;
+  copyKey: ScCopyKey;
 }
 
 interface SetClipboard {
