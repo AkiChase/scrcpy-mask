@@ -1,27 +1,27 @@
 import { emit } from "@tauri-apps/api/event";
 
-enum PureFrontCommandType {
+enum ScrcpyMaskCmdType {
   PasteText = 15,
 }
 
-interface PureFrontCommandPayload {
-  fcType: PureFrontCommandType;
+interface ScrcpyMaskCmdPayload {
+  msgType: ScrcpyMaskCmdType;
   receiver?: string;
-  msgData: PureFrontCommandData;
+  msgData: ScrcpyMaskCmdData;
 }
 
-type PureFrontCommandData = null;
+type ScrcpyMaskCmdData = null;
 
-export async function sendPureFrontCommand(
-  commandType: PureFrontCommandType,
-  msgData: PureFrontCommandData,
+export async function sendScrcpyMaskCmd(
+  commandType: ScrcpyMaskCmdType,
+  msgData: ScrcpyMaskCmdData,
   receiver?: string
 ) {
-  const payload: PureFrontCommandPayload = { fcType: commandType, msgData };
+  const payload: ScrcpyMaskCmdPayload = { msgType: commandType, msgData };
   if (receiver !== undefined) payload.receiver = receiver;
 
   switch (commandType) {
-    case PureFrontCommandType.PasteText:
+    case ScrcpyMaskCmdType.PasteText:
       break;
     default:
       console.error("暂不支持当前命令");

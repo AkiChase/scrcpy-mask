@@ -1,12 +1,15 @@
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::AsyncReadExt,
     net::{
         tcp::{OwnedReadHalf, OwnedWriteHalf},
         TcpListener,
     },
 };
 
-use crate::binary;
+use crate::{
+    control_msg::{self, ControlMsgType},
+    scrcpy_mask_cmd::{self, ScrcpyMaskCmdType},
+};
 
 pub struct Server {
     listener: TcpListener,
@@ -23,7 +26,7 @@ impl Server {
 
     pub async fn accept(
         &self,
-        fc_broadcast_receiver: tokio::sync::broadcast::Receiver<String>,
+        front_msg_broadcast_receiver: tokio::sync::broadcast::Receiver<String>,
         device_reply_sender: tokio::sync::mpsc::Sender<String>,
     ) {
         let (client, _) = self.listener.accept().await.unwrap();
@@ -39,7 +42,7 @@ impl Server {
 
             // 开启线程接收通道消息，其中通道消息来自前端发送的事件
             tokio::spawn(async move {
-                Self::recv_front_command(write_half, fc_broadcast_receiver).await;
+                Self::recv_front_msg(write_half, front_msg_broadcast_receiver).await;
             });
         });
     }
@@ -124,29 +127,37 @@ impl Server {
     }
 
     // 接收前端发送的消息，执行相关操作
-    async fn recv_front_command(
+    async fn recv_front_msg(
         mut write_half: OwnedWriteHalf,
-        mut fc_broadcast_receiver: tokio::sync::broadcast::Receiver<String>,
+        mut front_msg_broadcast_receiver: tokio::sync::broadcast::Receiver<String>,
     ) {
         loop {
-            match fc_broadcast_receiver.recv().await {
+            match front_msg_broadcast_receiver.recv().await {
                 Ok(msg) => {
                     match serde_json::from_str::<serde_json::Value>(&msg) {
                         Err(_e) => {
                             println!("无法解析的Json数据: {}", msg);
                         }
                         Ok(payload) => {
-                            if let Some(fc_type) = payload["fcType"].as_i64() {
-                                if fc_type >= 0 && fc_type <= 14 {
-                                    let ctrl_msg_type = ControlMsgType::from_i64(fc_type).unwrap();
-                                    Self::send_ctrl_msg(ctrl_msg_type, &payload["msgData"], &mut write_half)
-                                        .await;
+                            if let Some(front_msg_type) = payload["msgType"].as_i64() {
+                                // 发送原始控制信息
+                                if front_msg_type >= 0 && front_msg_type <= 14 {
+                                    let ctrl_msg_type =
+                                        ControlMsgType::from_i64(front_msg_type).unwrap();
+                                    control_msg::send_ctrl_msg(
+                                        ctrl_msg_type,
+                                        &payload["msgData"],
+                                        &mut write_half,
+                                    )
+                                    .await;
                                     println!("控制信息发送完成！");
                                     continue;
                                 } else {
-                                    if let Some(pfc_type) = PureFrontCommandType::from_i64(fc_type)
+                                    // 处理Scrcpy Mask命令
+                                    if let Some(cmd_type) =
+                                        ScrcpyMaskCmdType::from_i64(front_msg_type)
                                     {
-                                        Self::exec_pfc(pfc_type).await;
+                                        scrcpy_mask_cmd::exec_pfc(cmd_type).await;
                                         continue;
                                     }
                                 }
@@ -161,59 +172,6 @@ impl Server {
                 }
             };
         }
-    }
-
-    async fn exec_pfc(pfc_type: PureFrontCommandType) {
-        match pfc_type {
-            _ => {}
-        }
-        println!("收到纯前端命令:{:?}", pfc_type);
-    }
-
-    async fn send_ctrl_msg(
-        ctrl_msg_type: ControlMsgType,
-        payload: &serde_json::Value,
-        writer: &mut OwnedWriteHalf,
-    ) {
-        match ctrl_msg_type {
-            ControlMsgType::ControlMsgTypeInjectTouchEvent => {
-                let mut buf: [u8; 32] = [0; 32];
-                buf[0] = ControlMsgType::ControlMsgTypeInjectTouchEvent as u8;
-                buf[1] = payload["action"].as_u64().unwrap() as u8;
-                binary::write_64be(&mut buf[2..10], payload["pointerId"].as_u64().unwrap());
-                Self::write_posion(
-                    &mut buf[10..22],
-                    payload["position"]["x"].as_i64().unwrap() as i32,
-                    payload["position"]["y"].as_i64().unwrap() as i32,
-                    payload["position"]["w"].as_i64().unwrap() as u16,
-                    payload["position"]["h"].as_i64().unwrap() as u16,
-                );
-                binary::write_16be(
-                    &mut buf[22..24],
-                    binary::float_to_u16fp(payload["pressure"].as_f64().unwrap() as f32),
-                );
-                binary::write_32be(
-                    &mut buf[24..28],
-                    payload["actionButton"].as_u64().unwrap() as u32,
-                );
-                binary::write_32be(
-                    &mut buf[28..32],
-                    payload["buttons"].as_u64().unwrap() as u32,
-                );
-
-                writer.write_all(&buf).await.unwrap();
-                writer.flush().await.unwrap();
-            }
-            _ => {}
-        };
-        println!("收到前端命令，发送控制消息:{:?}", ctrl_msg_type);
-    }
-
-    fn write_posion(buf: &mut [u8], x: i32, y: i32, w: u16, h: u16) {
-        binary::write_32be(buf, x as u32);
-        binary::write_32be(&mut buf[4..8], y as u32);
-        binary::write_16be(&mut buf[8..10], w);
-        binary::write_16be(&mut buf[10..12], h);
     }
 }
 
@@ -230,62 +188,6 @@ impl DeviceMsgType {
             0 => Some(Self::DeviceMsgTypeClipboard),
             1 => Some(Self::DeviceMsgTypeAckClipboard),
             2 => Some(Self::DeviceMsgTypeUhidOutput),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug)]
-enum ControlMsgType {
-    ControlMsgTypeInjectKeycode,            //发送原始按键
-    ControlMsgTypeInjectText, //发送文本，不知道是否能输入中文（估计只是把文本转为keycode的输入效果）
-    ControlMsgTypeInjectTouchEvent, //发送触摸事件
-    ControlMsgTypeInjectScrollEvent, //发送滚动事件（类似接入鼠标后滚动滚轮的效果，不是通过触摸实现的）
-    ControlMsgTypeBackOrScreenOn,    //应该就是发送返回键
-    ControlMsgTypeExpandNotificationPanel, //打开消息面板
-    ControlMsgTypeExpandSettingsPanel, //打开设置面板（就是消息面板右侧的）
-    ControlMsgTypeCollapsePanels,    //折叠上述面板
-    ControlMsgTypeGetClipboard,      //获取剪切板
-    ControlMsgTypeSetClipboard,      //设置剪切板
-    ControlMsgTypeSetScreenPowerMode, //设置屏幕电源模式，是关闭设备屏幕的（SC_SCREEN_POWER_MODE_OFF 和 SC_SCREEN_POWER_MODE_NORMAL ）
-    ControlMsgTypeRotateDevice,       //旋转设备屏幕
-    ControlMsgTypeUhidCreate,         //创建虚拟设备？从而模拟真实的键盘、鼠标用的，目前没用
-    ControlMsgTypeUhidInput,          //同上转发键盘、鼠标的输入，目前没用
-    ControlMsgTypeOpenHardKeyboardSettings, //打开设备的硬件键盘设置，目前没用
-}
-
-impl ControlMsgType {
-    fn from_i64(value: i64) -> Option<Self> {
-        match value {
-            0 => Some(Self::ControlMsgTypeInjectKeycode),
-            1 => Some(Self::ControlMsgTypeInjectText),
-            2 => Some(Self::ControlMsgTypeInjectTouchEvent),
-            3 => Some(Self::ControlMsgTypeInjectScrollEvent),
-            4 => Some(Self::ControlMsgTypeBackOrScreenOn),
-            5 => Some(Self::ControlMsgTypeExpandNotificationPanel),
-            6 => Some(Self::ControlMsgTypeExpandSettingsPanel),
-            7 => Some(Self::ControlMsgTypeCollapsePanels),
-            8 => Some(Self::ControlMsgTypeGetClipboard),
-            9 => Some(Self::ControlMsgTypeSetClipboard),
-            10 => Some(Self::ControlMsgTypeSetScreenPowerMode),
-            11 => Some(Self::ControlMsgTypeRotateDevice),
-            12 => Some(Self::ControlMsgTypeUhidCreate),
-            13 => Some(Self::ControlMsgTypeUhidInput),
-            14 => Some(Self::ControlMsgTypeOpenHardKeyboardSettings),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug)]
-enum PureFrontCommandType {
-    PasteText,
-}
-
-impl PureFrontCommandType {
-    fn from_i64(value: i64) -> Option<Self> {
-        match value {
-            15 => Some(Self::PasteText),
             _ => None,
         }
     }

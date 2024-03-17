@@ -41,3 +41,10 @@ pub fn float_to_i16fp(f: f32) -> i16 {
     }
     i as i16
 }
+
+pub fn write_posion(buf: &mut [u8], x: i32, y: i32, w: u16, h: u16) {
+    write_32be(buf, x as u32);
+    write_32be(&mut buf[4..8], y as u32);
+    write_16be(&mut buf[8..10], w);
+    write_16be(&mut buf[10..12], h);
+}

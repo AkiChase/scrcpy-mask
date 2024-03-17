@@ -105,14 +105,15 @@ fn open_socket_server(port: u16, app: tauri::AppHandle) -> Result<(), String> {
     let (killer_send, mut killer_receiver) = tokio::sync::watch::channel(false);
     *SERVER_KILLER.lock().unwrap() = Some(killer_send);
 
-    let (fc_broadcast_sender, _receiver) = broadcast::channel::<String>(16);
-    let fc_broadcast_sender_clone = fc_broadcast_sender.clone();
+    let (front_msg_broadcast_sender, _receiver) = broadcast::channel::<String>(16);
+    let front_msg_broadcast_sender_clone = front_msg_broadcast_sender.clone();
 
     let share_app = app.clone();
     share_app.listen_global("front-command", move |event| {
         println!("收到front-command: {}", event.payload().unwrap_or(""));
         // 广播前端命令到所有Socket处理器中
-        if let Err(e) = fc_broadcast_sender_clone.send(event.payload().unwrap_or("").into()) {
+        if let Err(e) = front_msg_broadcast_sender_clone.send(event.payload().unwrap_or("").into())
+        {
             println!("front-command广播失败: {}", e);
         };
     });
@@ -123,7 +124,7 @@ fn open_socket_server(port: u16, app: tauri::AppHandle) -> Result<(), String> {
                 let server = Server::bind(port).await;
                 loop{
                     // create channel to receive msg in TcpStream task
-                    server.accept(fc_broadcast_sender.subscribe(), device_reply_sender.clone()).await;
+                    server.accept(front_msg_broadcast_sender.subscribe(), device_reply_sender.clone()).await;
                 }
             } => {}
             _ = async {

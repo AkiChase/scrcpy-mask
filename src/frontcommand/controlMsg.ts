@@ -8,7 +8,7 @@ import {
 } from "./android";
 
 interface ControlMsgPayload {
-  fcType: ControlMsgType;
+  msgType: ControlMsgType;
   receiver?: string;
   msgData?: ControlMsgData;
 }
@@ -25,7 +25,7 @@ export async function sendInjectKeycode(
   receiver?: string
 ) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeInjectKeycode,
+    msgType: ControlMsgType.ControlMsgTypeInjectKeycode,
     msgData: payload,
     receiver,
   });
@@ -33,7 +33,7 @@ export async function sendInjectKeycode(
 
 export async function sendInjectText(payload: InjectText, receiver?: string) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeInjectText,
+    msgType: ControlMsgType.ControlMsgTypeInjectText,
     msgData: payload,
     receiver,
   });
@@ -44,7 +44,7 @@ export async function sendInjectTouchEvent(
   receiver?: string
 ) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeInjectTouchEvent,
+    msgType: ControlMsgType.ControlMsgTypeInjectTouchEvent,
     msgData: payload,
     receiver,
   });
@@ -55,7 +55,7 @@ export async function sendInjectScrollEvent(
   receiver?: string
 ) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeInjectScrollEvent,
+    msgType: ControlMsgType.ControlMsgTypeInjectScrollEvent,
     msgData: payload,
     receiver,
   });
@@ -66,7 +66,7 @@ export async function sendBackOrScreenOn(
   receiver?: string
 ) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeBackOrScreenOn,
+    msgType: ControlMsgType.ControlMsgTypeBackOrScreenOn,
     msgData: payload,
     receiver,
   });
@@ -74,21 +74,21 @@ export async function sendBackOrScreenOn(
 
 export async function sendExpandNotificationPanel(receiver?: string) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeExpandNotificationPanel,
+    msgType: ControlMsgType.ControlMsgTypeExpandNotificationPanel,
     receiver,
   });
 }
 
 export async function sendExpandSettingsPanel(receiver?: string) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeExpandSettingsPanel,
+    msgType: ControlMsgType.ControlMsgTypeExpandSettingsPanel,
     receiver,
   });
 }
 
 export async function sendCollapsePanels(receiver?: string) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeCollapsePanels,
+    msgType: ControlMsgType.ControlMsgTypeCollapsePanels,
     receiver,
   });
 }
@@ -98,7 +98,7 @@ export async function sendGetClipboard(
   receiver?: string
 ) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeGetClipboard,
+    msgType: ControlMsgType.ControlMsgTypeGetClipboard,
     msgData: payload,
     receiver,
   });
@@ -109,7 +109,7 @@ export async function sendSetClipboard(
   receiver?: string
 ) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeSetClipboard,
+    msgType: ControlMsgType.ControlMsgTypeSetClipboard,
     msgData: payload,
     receiver,
   });
@@ -120,7 +120,7 @@ export async function sendSetScreenPowerMode(
   receiver?: string
 ) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeSetScreenPowerMode,
+    msgType: ControlMsgType.ControlMsgTypeSetScreenPowerMode,
     msgData: payload,
     receiver,
   });
@@ -128,14 +128,14 @@ export async function sendSetScreenPowerMode(
 
 export async function sendRotateDevice(receiver?: string) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeRotateDevice,
+    msgType: ControlMsgType.ControlMsgTypeRotateDevice,
     receiver,
   });
 }
 
 export async function sendUhidCreate(payload: UhidCreate, receiver?: string) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeUhidCreate,
+    msgType: ControlMsgType.ControlMsgTypeUhidCreate,
     msgData: payload,
     receiver,
   });
@@ -143,7 +143,7 @@ export async function sendUhidCreate(payload: UhidCreate, receiver?: string) {
 
 export async function sendUhidInput(payload: UhidInput, receiver?: string) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeUhidInput,
+    msgType: ControlMsgType.ControlMsgTypeUhidInput,
     msgData: payload,
     receiver,
   });
@@ -151,7 +151,7 @@ export async function sendUhidInput(payload: UhidInput, receiver?: string) {
 
 export async function sendOpenHardKeyboardSettings(receiver?: string) {
   await sendControlMsg({
-    fcType: ControlMsgType.ControlMsgTypeOpenHardKeyboardSettings,
+    msgType: ControlMsgType.ControlMsgTypeOpenHardKeyboardSettings,
     receiver,
   });
 }

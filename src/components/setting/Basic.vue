@@ -87,7 +87,7 @@ async function test3() {
     });
   };
   for (let index = 0; index < 100; index++) {
-    await touch(500, 1000+10*index, false);
+    await touch(500, 1000 + 10 * index, false);
     await sleep(100);
   }
   await touch(500, 1300, true);
