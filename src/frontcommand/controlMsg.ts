@@ -9,150 +9,110 @@ import {
 
 interface ControlMsgPayload {
   msgType: ControlMsgType;
-  receiver?: string;
   msgData?: ControlMsgData;
 }
 
 async function sendControlMsg(payload: ControlMsgPayload) {
-  if (payload.receiver === undefined) {
-    delete payload.receiver;
-  }
   await emit("front-command", payload);
 }
 
-export async function sendInjectKeycode(
-  payload: InjectKeycode,
-  receiver?: string
-) {
+export async function sendInjectKeycode(payload: InjectKeycode) {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeInjectKeycode,
     msgData: payload,
-    receiver,
   });
 }
 
-export async function sendInjectText(payload: InjectText, receiver?: string) {
+export async function sendInjectText(payload: InjectText) {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeInjectText,
     msgData: payload,
-    receiver,
   });
 }
 
-export async function sendInjectTouchEvent(
-  payload: InjectTouchEvent,
-  receiver?: string
-) {
+export async function sendInjectTouchEvent(payload: InjectTouchEvent) {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeInjectTouchEvent,
     msgData: payload,
-    receiver,
   });
 }
 
-export async function sendInjectScrollEvent(
-  payload: InjectScrollEvent,
-  receiver?: string
-) {
+export async function sendInjectScrollEvent(payload: InjectScrollEvent) {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeInjectScrollEvent,
     msgData: payload,
-    receiver,
   });
 }
 
-export async function sendBackOrScreenOn(
-  payload: BackOrScreenOn,
-  receiver?: string
-) {
+export async function sendBackOrScreenOn(payload: BackOrScreenOn) {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeBackOrScreenOn,
     msgData: payload,
-    receiver,
   });
 }
 
-export async function sendExpandNotificationPanel(receiver?: string) {
+export async function sendExpandNotificationPanel() {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeExpandNotificationPanel,
-    receiver,
   });
 }
 
-export async function sendExpandSettingsPanel(receiver?: string) {
+export async function sendExpandSettingsPanel() {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeExpandSettingsPanel,
-    receiver,
   });
 }
 
-export async function sendCollapsePanels(receiver?: string) {
+export async function sendCollapsePanels() {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeCollapsePanels,
-    receiver,
   });
 }
 
-export async function sendGetClipboard(
-  payload: GetClipboard,
-  receiver?: string
-) {
+export async function sendGetClipboard(payload: GetClipboard) {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeGetClipboard,
     msgData: payload,
-    receiver,
   });
 }
 
-export async function sendSetClipboard(
-  payload: SetClipboard,
-  receiver?: string
-) {
+export async function sendSetClipboard(payload: SetClipboard) {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeSetClipboard,
     msgData: payload,
-    receiver,
   });
 }
 
-export async function sendSetScreenPowerMode(
-  payload: SetScreenPowerMode,
-  receiver?: string
-) {
+export async function sendSetScreenPowerMode(payload: SetScreenPowerMode) {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeSetScreenPowerMode,
     msgData: payload,
-    receiver,
   });
 }
 
-export async function sendRotateDevice(receiver?: string) {
+export async function sendRotateDevice() {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeRotateDevice,
-    receiver,
   });
 }
 
-export async function sendUhidCreate(payload: UhidCreate, receiver?: string) {
+export async function sendUhidCreate(payload: UhidCreate) {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeUhidCreate,
     msgData: payload,
-    receiver,
   });
 }
 
-export async function sendUhidInput(payload: UhidInput, receiver?: string) {
+export async function sendUhidInput(payload: UhidInput) {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeUhidInput,
     msgData: payload,
-    receiver,
   });
 }
 
-export async function sendOpenHardKeyboardSettings(receiver?: string) {
+export async function sendOpenHardKeyboardSettings() {
   await sendControlMsg({
     msgType: ControlMsgType.ControlMsgTypeOpenHardKeyboardSettings,
-    receiver,
   });
 }
 
@@ -198,6 +158,7 @@ interface ScPosition {
 interface InjectKeycode {
   action: AndroidKeyEventAction;
   keycode: AndroidKeycode;
+  // https://developer.android.com/reference/android/view/KeyEvent#getRepeatCount()
   repeat: number;
   metastate: AndroidMetastate;
 }

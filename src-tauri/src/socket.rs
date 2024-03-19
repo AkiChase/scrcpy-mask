@@ -32,18 +32,16 @@ impl Server {
         let (client, _) = self.listener.accept().await.unwrap();
         println!("成功连接scrcpy-server:{:?}", client.local_addr());
 
+        let (read_half, write_half) = client.into_split();
+
+        // 开启线程读取设备发送的信息，并通过通道传递到与前端通信的线程，最后与前端通信的线程发送全局事件，告知前端设备发送的信息
         tokio::spawn(async move {
-            let (read_half, write_half) = client.into_split();
+            Self::read_socket(read_half, device_reply_sender).await;
+        });
 
-            // 开启线程读取设备发送的信息，并通过通道传递到与前端通信的线程，最后与前端通信的线程发送全局事件，告知前端设备发送的信息
-            tokio::spawn(async move {
-                Self::read_socket(read_half, device_reply_sender).await;
-            });
-
-            // 开启线程接收通道消息，其中通道消息来自前端发送的事件
-            tokio::spawn(async move {
-                Self::recv_front_msg(write_half, front_msg_broadcast_receiver).await;
-            });
+        // 开启线程接收通道消息，其中通道消息来自前端发送的事件
+        tokio::spawn(async move {
+            Self::recv_front_msg(write_half, front_msg_broadcast_receiver).await;
         });
     }
 
@@ -54,31 +52,53 @@ impl Server {
     ) {
         // read metadata (device name)
         let mut buf: [u8; 64] = [0; 64];
-        match reader.read(&mut buf).await {
-            Err(_e) => eprintln!("failed to read metadata"),
+        let device_name = match reader.read(&mut buf).await {
+            Err(_e) => {
+                eprintln!("failed to read metadata");
+                return;
+            }
+            Ok(0) => {
+                eprintln!("failed to read metadata");
+                return;
+            }
             Ok(n) => {
-                let device_name = std::str::from_utf8(&buf[..n]).unwrap();
-                println!("device name: {}", device_name);
+                let mut end = n;
+                while buf[end - 1] == 0 {
+                    end -= 1;
+                }
+                let device_name = std::str::from_utf8(&buf[..end]).unwrap();
+                let msg = format!(
+                    r#"{{
+                        "msg": "MetaData",
+                        "deviceName": "{device_name}"
+                    }}"#
+                );
+                device_reply_sender.send(msg).await.unwrap();
+                device_name
             }
         };
 
         loop {
             match reader.read_u8().await {
                 Err(e) => {
-                    eprintln!("read from client error:{}", e);
+                    eprintln!("Failed to read from scrcpy server, maybe it was closed. Error:{}", e);
                     break;
                 }
                 Ok(message_type) => {
                     let message_type = match DeviceMsgType::from_u8(message_type) {
                         Some(t) => t,
                         None => {
-                            println!("Unkonw message type: {}", message_type);
+                            println!("Ignore unkonw message type: {}", message_type);
                             break;
                         }
                     };
-                    if let Err(e) =
-                        Self::handle_device_message(message_type, &mut reader, &device_reply_sender)
-                            .await
+                    if let Err(e) = Self::handle_device_message(
+                        message_type,
+                        &mut reader,
+                        &device_reply_sender,
+                        device_name,
+                    )
+                    .await
                     {
                         eprintln!("Failed to handle device message: {}", e);
                     }
@@ -91,6 +111,7 @@ impl Server {
         message_type: DeviceMsgType,
         reader: &mut OwnedReadHalf,
         device_reply_sender: &tokio::sync::mpsc::Sender<String>,
+        device_name: &str,
     ) -> anyhow::Result<()> {
         match message_type {
             // 设备剪切板变动
@@ -98,22 +119,27 @@ impl Server {
                 let text_length = reader.read_u32().await?;
                 let mut buf: Vec<u8> = vec![0; text_length as usize];
                 reader.read_exact(&mut buf).await?;
-                device_reply_sender
-                    .send(format!(
-                        "收到DeviceMsgTypeClipboard设备消息, 剪切板内容:{}",
-                        String::from_utf8(buf)?
-                    ))
-                    .await?;
+                let cb = String::from_utf8(buf)?;
+                let msg = format!(
+                    r#"{{
+                        "msg": "ClipboardChanged",
+                        "deviceName": "{device_name}",
+                        "clipboard": "{cb}"
+                    }}"#
+                );
+                device_reply_sender.send(msg).await?;
             }
             // 设备剪切板设置成功的回复
             DeviceMsgType::DeviceMsgTypeAckClipboard => {
                 let sequence = reader.read_u64().await?;
-                device_reply_sender
-                    .send(format!(
-                        "收到DeviceMsgTypeAckClipboard设备消息, sequence:{}",
-                        sequence
-                    ))
-                    .await?;
+                let msg = format!(
+                    r#"{{
+                        "type": "ClipboardSetAck",
+                        "deviceName": "{device_name}",
+                        "sequence": "{sequence}"
+                    }}"#
+                );
+                device_reply_sender.send(msg).await?;
             }
             // 虚拟设备输出，仅读取但不做进一步处理
             DeviceMsgType::DeviceMsgTypeUhidOutput => {
@@ -157,7 +183,12 @@ impl Server {
                                     if let Some(cmd_type) =
                                         ScrcpyMaskCmdType::from_i64(front_msg_type)
                                     {
-                                        scrcpy_mask_cmd::exec_pfc(cmd_type).await;
+                                        scrcpy_mask_cmd::handle_sm_cmd(
+                                            cmd_type,
+                                            &payload["msgData"],
+                                            &mut write_half,
+                                        )
+                                        .await;
                                         continue;
                                     }
                                 }

@@ -54,7 +54,7 @@ impl ScrcpyClient {
             "/data/local/tmp/scrcpy-server.jar",
         )?;
 
-        println!("Successfully push server files.\n{}", info);
+        println!("{}\nSuccessfully push server files", info);
         Ok(())
     }
 
@@ -118,6 +118,7 @@ impl ScrcpyClient {
             // clear string to store new line only
             s.clear();
         }
+        println!("Scrcpy server closed");
         Ok(())
     }
 }
