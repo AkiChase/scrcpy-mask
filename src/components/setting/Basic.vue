@@ -6,13 +6,13 @@ import {
   pushServerFile,
   openSocketServer,
   startScrcpyServer,
-  closeSocketServer,
 } from "../../invoke";
 import { onMounted, onUnmounted } from "vue";
 import { UnlistenFn, listen } from "@tauri-apps/api/event";
-import {
-  shutdown
-} from "../../frontcommand/scrcpyMaskCmd";
+import { shutdown } from "../../frontcommand/scrcpyMaskCmd";
+
+let deviceName: string | undefined;
+let scId: string | undefined;
 
 async function test() {
   let devices = await adbDevices();
@@ -45,9 +45,6 @@ async function test2() {
   await startScrcpyServer(device.id, scid);
 }
 
-async function closeServer() {
-  await closeSocketServer();
-}
 
 // function sleep(time: number) {
 //   return new Promise<void>((resolve) => {
@@ -63,7 +60,7 @@ async function test3() {
     console.log("无任何设备！");
     return;
   }
-  await shutdown()
+  await shutdown({ scId: scId || "" });
 }
 
 let unlisten: UnlistenFn | undefined;
@@ -73,7 +70,10 @@ onMounted(async () => {
       let payload = JSON.parse(event.payload as string);
       switch (payload.msg) {
         case "MetaData":
-          console.log("设备名", payload.deviceName);
+          deviceName = payload.deviceName;
+          scId = payload.scId;
+          console.log("设备名", deviceName);
+          console.log("scId", scId);
           break;
         case "ClipboardChanged":
           console.log("剪切板变动", payload.clipboard);
@@ -101,7 +101,6 @@ onUnmounted(() => {
     <NButton @click="test">测试1</NButton>
     <NButton @click="test2">测试2</NButton>
     <NButton @click="test3">测试3</NButton>
-    <NButton @click="closeServer">关闭服务器</NButton>
   </div>
 </template>
 

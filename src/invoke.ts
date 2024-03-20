@@ -46,10 +46,6 @@ export async function openSocketServer(port: number): Promise<void> {
   return await invoke("open_socket_server", { port });
 }
 
-export async function closeSocketServer(): Promise<void> {
-  return await invoke("close_socket_server");
-}
-
 export async function startScrcpyServer(
   id: string,
   scid: string

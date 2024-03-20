@@ -4,11 +4,7 @@
 use lazy_static::lazy_static;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
-use tokio::{
-    runtime::Runtime,
-    select,
-    sync::{broadcast, watch::Sender},
-};
+use tokio::{runtime::Runtime, sync::broadcast};
 
 use scrcpy_mask::{
     adb::{Adb, Device},
@@ -20,7 +16,7 @@ use scrcpy_mask::{
 
 lazy_static! {
     static ref RUNTIME: Runtime = Runtime::new().unwrap();
-    static ref SERVER_KILLER: Arc<Mutex<Option<Sender<bool>>>> = Default::default();
+    static ref TCPLISTENER_RUNNING: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
 }
 
 #[tauri::command]
@@ -84,14 +80,11 @@ fn push_server_file(id: String, app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 /// open client socket
 fn open_socket_server(port: u16, app: tauri::AppHandle) -> Result<(), String> {
-    // if server is running, return
-    if SERVER_KILLER.lock().unwrap().is_some() {
-        println!("The socket server has already started");
-        return Err("The socket server has already started".into());
+    if *TCPLISTENER_RUNNING.lock().unwrap() == true {
+        return Err("TcpListener is already running".to_string());
     }
 
     let app = Arc::new(app);
-
     let share_app = app.clone();
     let (device_reply_sender, mut device_reply_receiver) = tokio::sync::mpsc::channel::<String>(16);
     println!("device reply channel created");
@@ -100,10 +93,6 @@ fn open_socket_server(port: u16, app: tauri::AppHandle) -> Result<(), String> {
             share_app.emit_all("device-reply", reply).unwrap();
         }
     });
-
-    // create new global watch channel sender
-    let (killer_send, mut killer_receiver) = tokio::sync::watch::channel(false);
-    *SERVER_KILLER.lock().unwrap() = Some(killer_send);
 
     let (front_msg_broadcast_sender, _receiver) = broadcast::channel::<String>(16);
     let front_msg_broadcast_sender_clone = front_msg_broadcast_sender.clone();
@@ -119,38 +108,19 @@ fn open_socket_server(port: u16, app: tauri::AppHandle) -> Result<(), String> {
     });
 
     RUNTIME.spawn(async move {
-        select! {
-            _ = async {
-                let server = Server::bind(port).await;
-                loop{
-                    // create channel to receive msg in TcpStream task
-                    server.accept(front_msg_broadcast_sender.subscribe(), device_reply_sender.clone()).await;
-                }
-            } => {}
-            _ = async {
-                loop {
-                    // close server when receiving msg
-                    if killer_receiver.changed().await.is_ok() {
-                        *SERVER_KILLER.lock().unwrap() = None;
-                        println!("Close socket server listening to 127.0.0.1:{port}");
-                        return
-                    }
-                }
-            } => {}
+        let server = Server::bind(port).await;
+        *TCPLISTENER_RUNNING.lock().unwrap() = true;
+        loop {
+            // create channel to receive msg in TcpStream task
+            server
+                .accept(
+                    front_msg_broadcast_sender.subscribe(),
+                    device_reply_sender.clone(),
+                )
+                .await;
         }
     });
     Ok(())
-}
-
-#[tauri::command]
-fn close_socket_server() -> Result<(), String> {
-    let server_killer = SERVER_KILLER.lock().unwrap();
-    if let Some(sender) = &*server_killer {
-        sender.send(true).unwrap();
-        Ok(())
-    } else {
-        Err("The socket server is not running".into())
-    }
 }
 
 #[tauri::command]
@@ -188,7 +158,6 @@ fn main() {
             reverse_server_port,
             push_server_file,
             open_socket_server,
-            close_socket_server,
             start_scrcpy_server
         ])
         .run(tauri::generate_context!())
