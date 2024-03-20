@@ -7,23 +7,23 @@ import { NTabs, NTabPane, NScrollbar } from "naive-ui";
 
 <template>
   <div class="setting">
-    <n-tabs type="line" animated placement="left" default-value="basic">
-      <n-tab-pane tab="基本设置" name="basic">
-        <n-scrollbar>
+    <NTabs type="line" animated placement="left" default-value="basic">
+      <NTabPane tab="基本设置" name="basic">
+        <NScrollbar>
           <Basic />
-        </n-scrollbar>
-      </n-tab-pane>
-      <n-tab-pane tab="蒙版设置" name="mask">
-        <n-scrollbar>
+        </NScrollbar>
+      </NTabPane>
+      <NTabPane tab="蒙版设置" name="mask">
+        <NScrollbar>
           <Mask />
-        </n-scrollbar>
-      </n-tab-pane>
-      <n-tab-pane tab="脚本设置" name="script">
-        <n-scrollbar>
+        </NScrollbar>
+      </NTabPane>
+      <NTabPane tab="脚本设置" name="script">
+        <NScrollbar>
           <Script />
-        </n-scrollbar>
-      </n-tab-pane>
-    </n-tabs>
+        </NScrollbar>
+      </NTabPane>
+    </NTabs>
   </div>
 </template>
 
@@ -34,7 +34,7 @@ import { NTabs, NTabPane, NScrollbar } from "naive-ui";
   overflow: hidden;
   display: flex;
 
-  .n-tab-pane {
+  .NTabPane {
     padding: 0;
   }
 

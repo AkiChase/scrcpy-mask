@@ -24,40 +24,40 @@ function nav(name: string) {
     <div data-tauri-drag-region class="logo">S M</div>
     <div class="module">
       <div :class="{ active: route.name == 'mask' }" @click="nav('mask')">
-        <n-icon>
+        <NIcon>
           <GameControllerOutline />
-        </n-icon>
+        </NIcon>
       </div>
       <div
         :class="{ active: route.name == 'keyboard' }"
         @click="nav('keyboard')"
       >
-        <n-icon>
+        <NIcon>
           <Keyboard24Regular />
-        </n-icon>
+        </NIcon>
       </div>
       <div :class="{ active: route.name == 'setting' }" @click="nav('setting')">
-        <n-icon>
+        <NIcon>
           <SettingsOutline />
-        </n-icon>
+        </NIcon>
       </div>
     </div>
 
     <div class="nav">
       <div>
-        <n-icon>
+        <NIcon>
           <ReturnDownBackOutline />
-        </n-icon>
+        </NIcon>
       </div>
       <div>
-        <n-icon>
+        <NIcon>
           <StopOutline />
-        </n-icon>
+        </NIcon>
       </div>
       <div>
-        <n-icon>
+        <NIcon>
           <ListOutline />
-        </n-icon>
+        </NIcon>
       </div>
     </div>
   </div>
@@ -132,16 +132,16 @@ function nav(name: string) {
       justify-content: center;
       align-items: center;
 
-      .n-icon {
+      .NIcon {
         cursor: pointer;
         transition: transform 0.3s ease;
       }
 
-      .n-icon:hover {
+      .NIcon:hover {
         color: var(--primary-hover-color);
         transform: scale(1.1);
       }
-      .n-icon:active {
+      .NIcon:active {
         color: var(--primary-pressed-color);
         transform: scale(0.9);
       }

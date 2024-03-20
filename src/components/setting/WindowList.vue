@@ -193,9 +193,9 @@ function refreshWindowList() {
 
 <template>
   <div class="window-list">
-    <n-flex justify="space-between">
-      <n-h4 prefix="bar">{{ isControlWindow ? "控件列表" : "窗口列表" }}</n-h4>
-      <n-button
+    <NFlex justify="space-between">
+      <NH4 prefix="bar">{{ isControlWindow ? "控件列表" : "窗口列表" }}</NH4>
+      <NButton
         tertiary
         circle
         type="primary"
@@ -203,11 +203,11 @@ function refreshWindowList() {
         style="margin-right: 20px"
       >
         <template #icon>
-          <n-icon><Refresh /></n-icon>
+          <NIcon><Refresh /></NIcon>
         </template>
-      </n-button>
-    </n-flex>
-    <n-data-table
+      </NButton>
+    </NFlex>
+    <NDataTable
       max-height="250"
       :columns="tableCols"
       :data="tableData"
@@ -215,7 +215,7 @@ function refreshWindowList() {
       :pagination="false"
       :bordered="false"
     />
-    <n-dropdown
+    <NDropdown
       placement="bottom-start"
       trigger="manual"
       :x="menuX"
@@ -228,13 +228,13 @@ function refreshWindowList() {
     <p>提示：选择列表中的窗口/控件，即可将蒙版覆盖到对应窗口/控件所在区域</p>
     <p style="padding-left: 3em">
       若蒙版位置不恰当导致其他部分不可见，请使用
-      <n-tooltip trigger="hover">
+      <NTooltip trigger="hover">
         <template #trigger>
-          <n-button text type="info">系统快捷键</n-button>
+          <NButton text type="info">系统快捷键</NButton>
         </template>
         <p>Window: Win + ↑/↓</p>
         <p>MacOS: ⌃ + ⌘ + F</p>
-      </n-tooltip>
+      </NTooltip>
       将窗口最大化/恢复
     </p>
   </div>

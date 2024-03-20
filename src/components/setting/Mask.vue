@@ -146,9 +146,9 @@ onUnmounted(() => {
 <template>
   <div class="setting-page">
     <WindowList />
-    <n-flex justify="space-between">
-      <n-h4 prefix="bar">手动调整</n-h4>
-      <n-button
+    <NFlex justify="space-between">
+      <NH4 prefix="bar">手动调整</NH4>
+      <NButton
         tertiary
         circle
         type="primary"
@@ -156,12 +156,12 @@ onUnmounted(() => {
         style="margin-right: 20px"
       >
         <template #icon>
-          <n-icon><SettingsOutline /></n-icon>
+          <NIcon><SettingsOutline /></NIcon>
         </template>
-      </n-button>
-    </n-flex>
+      </NButton>
+    </NFlex>
 
-    <n-form
+    <NForm
       ref="formRef"
       :model="areaModel"
       :rules="areaFormRules"
@@ -169,33 +169,33 @@ onUnmounted(() => {
       label-width="auto"
       require-mark-placement="right-hanging"
     >
-      <n-grid :cols="2" :x-gap="24">
-        <n-form-item-gi label="X" path="posX">
-          <n-input-number
+      <NGrid :cols="2" :x-gap="24">
+        <NFormItemGi label="X" path="posX">
+          <NInputNumber
             v-model:value="areaModel.posX"
             placeholder="左上角X坐标"
           />
-        </n-form-item-gi>
-        <n-form-item-gi label="Y" path="posY">
-          <n-input-number
+        </NFormItemGi>
+        <NFormItemGi label="Y" path="posY">
+          <NInputNumber
             v-model:value="areaModel.posY"
             placeholder="左上角Y坐标"
           />
-        </n-form-item-gi>
-        <n-form-item-gi label="W" path="sizeW">
-          <n-input-number
+        </NFormItemGi>
+        <NFormItemGi label="W" path="sizeW">
+          <NInputNumber
             v-model:value="areaModel.sizeW"
             placeholder="蒙版宽度"
           />
-        </n-form-item-gi>
-        <n-form-item-gi label="H" path="sizeH">
-          <n-input-number
+        </NFormItemGi>
+        <NFormItemGi label="H" path="sizeH">
+          <NInputNumber
             v-model:value="areaModel.sizeH"
             placeholder="蒙版高度"
           />
-        </n-form-item-gi>
-      </n-grid>
-    </n-form>
+        </NFormItemGi>
+      </NGrid>
+    </NForm>
   </div>
 </template>
 

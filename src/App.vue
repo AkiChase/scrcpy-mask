@@ -2,22 +2,20 @@
 import Sidebar from "./components/Sidebar.vue";
 import Header from "./components/Header.vue";
 import { darkTheme, NConfigProvider, NMessageProvider } from "naive-ui";
-
-
 </script>
 
 <template>
-  <n-config-provider :theme="darkTheme" class="container">
-    <n-message-provider>
+  <NConfigProvider :theme="darkTheme" class="container">
+    <NMessageProvider>
       <Header />
-      <router-view style="grid-area: content" v-slot="{ Component }">
-        <keep-alive>
+      <RouterView style="grid-area: content" v-slot="{ Component }">
+        <KeepAlive>
           <component :is="Component" />
-        </keep-alive>
-      </router-view>
+        </KeepAlive>
+      </RouterView>
       <Sidebar />
-    </n-message-provider>
-  </n-config-provider>
+    </NMessageProvider>
+  </NConfigProvider>
 </template>
 
 <style scoped>

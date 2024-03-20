@@ -13,28 +13,28 @@ async function maximizeOrRestore() {
 
 <template>
   <div data-tauri-drag-region class="header">
-    <n-button-group>
-      <n-button quaternary :focusable="false" @click="appWindow.minimize()">
+    <NButtonGroup>
+      <NButton quaternary :focusable="false" @click="appWindow.minimize()">
         <template #icon>
-          <n-icon><Subtract16Regular /></n-icon>
+          <NIcon><Subtract16Regular /></NIcon>
         </template>
-      </n-button>
-      <n-button quaternary :focusable="false" @click="maximizeOrRestore">
+      </NButton>
+      <NButton quaternary :focusable="false" @click="maximizeOrRestore">
         <template #icon>
-          <n-icon><Maximize16Regular /></n-icon>
+          <NIcon><Maximize16Regular /></NIcon>
         </template>
-      </n-button>
-      <n-button
+      </NButton>
+      <NButton
         quaternary
         :focusable="false"
         class="close"
         @click="appWindow.close()"
       >
         <template #icon>
-          <n-icon><Close /></n-icon>
+          <NIcon><Close /></NIcon>
         </template>
-      </n-button>
-    </n-button-group>
+      </NButton>
+    </NButtonGroup>
   </div>
 </template>
 

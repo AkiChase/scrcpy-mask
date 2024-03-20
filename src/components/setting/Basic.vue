@@ -6,16 +6,13 @@ import {
   pushServerFile,
   openSocketServer,
   startScrcpyServer,
-  getScreenSize,
   closeSocketServer,
 } from "../../invoke";
 import { onMounted, onUnmounted } from "vue";
 import { UnlistenFn, listen } from "@tauri-apps/api/event";
-import { sendInjectTouchEvent } from "../../frontcommand/controlMsg";
 import {
-  AndroidMotionEventAction,
-  AndroidMotionEventButtons,
-} from "../../frontcommand/android";
+  shutdown
+} from "../../frontcommand/scrcpyMaskCmd";
 
 async function test() {
   let devices = await adbDevices();
@@ -52,13 +49,13 @@ async function closeServer() {
   await closeSocketServer();
 }
 
-function sleep(time: number) {
-  return new Promise<void>((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, time);
-  });
-}
+// function sleep(time: number) {
+//   return new Promise<void>((resolve) => {
+//     setTimeout(() => {
+//       resolve();
+//     }, time);
+//   });
+// }
 
 async function test3() {
   let devices = await adbDevices();
@@ -66,38 +63,31 @@ async function test3() {
     console.log("无任何设备！");
     return;
   }
-  let device = devices[0];
-  let size = await getScreenSize(device.id);
-
-  const touch = async (x: number, y: number, up: boolean) => {
-    await sendInjectTouchEvent({
-      action: up
-        ? AndroidMotionEventAction.AMOTION_EVENT_ACTION_UP
-        : AndroidMotionEventAction.AMOTION_EVENT_ACTION_DOWN,
-      actionButton: AndroidMotionEventButtons.AMOTION_EVENT_BUTTON_PRIMARY,
-      buttons: AndroidMotionEventButtons.AMOTION_EVENT_BUTTON_PRIMARY,
-      pointerId: 0,
-      position: {
-        x,
-        y,
-        w: size[0],
-        h: size[1],
-      },
-      pressure: 1,
-    });
-  };
-  for (let index = 0; index < 100; index++) {
-    await touch(500, 1000 + 10 * index, false);
-    await sleep(100);
-  }
-  await touch(500, 1300, true);
+  await shutdown()
 }
 
 let unlisten: UnlistenFn | undefined;
 onMounted(async () => {
   unlisten = await listen("device-reply", (event) => {
-    console.log("device-reply:");
-    console.log(event);
+    try {
+      let payload = JSON.parse(event.payload as string);
+      switch (payload.msg) {
+        case "MetaData":
+          console.log("设备名", payload.deviceName);
+          break;
+        case "ClipboardChanged":
+          console.log("剪切板变动", payload.clipboard);
+          break;
+        case "ClipboardSetAck":
+          console.log("剪切板设置成功", payload.sequence);
+          break;
+        default:
+          console.log("Known reply", payload);
+          break;
+      }
+    } catch (e) {
+      console.error(e);
+    }
   });
 });
 
@@ -108,10 +98,10 @@ onUnmounted(() => {
 
 <template>
   <div class="setting-page">
-    <n-button @click="test">测试1</n-button>
-    <n-button @click="test2">测试2</n-button>
-    <n-button @click="test3">测试3</n-button>
-    <n-button @click="closeServer">关闭服务器</n-button>
+    <NButton @click="test">测试1</NButton>
+    <NButton @click="test2">测试2</NButton>
+    <NButton @click="test3">测试3</NButton>
+    <NButton @click="closeServer">关闭服务器</NButton>
   </div>
 </template>
 
