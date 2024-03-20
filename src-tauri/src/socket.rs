@@ -24,6 +24,16 @@ impl Server {
         Self { listener }
     }
 
+    fn gen_scrcpy_client_id() -> String {
+        use rand::distributions::Alphanumeric;
+        use rand::{thread_rng, Rng};
+        thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(8)
+            .map(char::from)
+            .collect::<String>()
+    }
+
     pub async fn accept(
         &self,
         front_msg_broadcast_receiver: tokio::sync::broadcast::Receiver<String>,
@@ -32,16 +42,20 @@ impl Server {
         let (client, _) = self.listener.accept().await.unwrap();
         println!("成功连接scrcpy-server:{:?}", client.local_addr());
 
+        // 生成ScrcpyClient id用于辨别连接
+        let sc_id = Self::gen_scrcpy_client_id();
+        let sc_id_clone = sc_id.clone();
+
         let (read_half, write_half) = client.into_split();
 
         // 开启线程读取设备发送的信息，并通过通道传递到与前端通信的线程，最后与前端通信的线程发送全局事件，告知前端设备发送的信息
         tokio::spawn(async move {
-            Self::read_socket(read_half, device_reply_sender).await;
+            Self::read_socket(read_half, device_reply_sender, sc_id).await;
         });
 
         // 开启线程接收通道消息，其中通道消息来自前端发送的事件
         tokio::spawn(async move {
-            Self::recv_front_msg(write_half, front_msg_broadcast_receiver).await;
+            Self::recv_front_msg(write_half, front_msg_broadcast_receiver, sc_id_clone).await;
         });
     }
 
@@ -49,6 +63,7 @@ impl Server {
     async fn read_socket(
         mut reader: OwnedReadHalf,
         device_reply_sender: tokio::sync::mpsc::Sender<String>,
+        sc_id: String,
     ) {
         // read metadata (device name)
         let mut buf: [u8; 64] = [0; 64];
@@ -70,7 +85,8 @@ impl Server {
                 let msg = format!(
                     r#"{{
                         "msg": "MetaData",
-                        "deviceName": "{device_name}"
+                        "deviceName": "{device_name}",
+                        "scId": "{sc_id}"
                     }}"#
                 );
                 device_reply_sender.send(msg).await.unwrap();
@@ -81,15 +97,20 @@ impl Server {
         loop {
             match reader.read_u8().await {
                 Err(e) => {
-                    eprintln!("Failed to read from scrcpy server, maybe it was closed. Error:{}", e);
-                    break;
+                    eprintln!(
+                        "Failed to read from scrcpy server, maybe it was closed. Error:{}",
+                        e
+                    );
+                    println!("Drop TcpStream reader");
+                    drop(reader);
+                    return;
                 }
                 Ok(message_type) => {
                     let message_type = match DeviceMsgType::from_u8(message_type) {
                         Some(t) => t,
                         None => {
                             println!("Ignore unkonw message type: {}", message_type);
-                            break;
+                            continue;
                         }
                     };
                     if let Err(e) = Self::handle_device_message(
@@ -156,6 +177,7 @@ impl Server {
     async fn recv_front_msg(
         mut write_half: OwnedWriteHalf,
         mut front_msg_broadcast_receiver: tokio::sync::broadcast::Receiver<String>,
+        sc_id: String,
     ) {
         loop {
             match front_msg_broadcast_receiver.recv().await {
@@ -183,13 +205,20 @@ impl Server {
                                     if let Some(cmd_type) =
                                         ScrcpyMaskCmdType::from_i64(front_msg_type)
                                     {
-                                        scrcpy_mask_cmd::handle_sm_cmd(
+                                        if scrcpy_mask_cmd::handle_sm_cmd(
                                             cmd_type,
                                             &payload["msgData"],
                                             &mut write_half,
+                                            &sc_id
                                         )
-                                        .await;
-                                        continue;
+                                        .await
+                                        {
+                                            continue;
+                                        } else {
+                                            println!("Drop TcpStream writer");
+                                            drop(write_half);
+                                            return;
+                                        }
                                     }
                                 }
                             }

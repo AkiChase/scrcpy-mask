@@ -3,7 +3,7 @@ import { AndroidKeycode, AndroidMetastate } from "./android";
 
 async function sendScrcpyMaskCmd(
   commandType: ScrcpyMaskCmdType,
-  msgData?: ScrcpyMaskCmdData
+  msgData: ScrcpyMaskCmdData
 ) {
   const payload: ScrcpyMaskCmdPayload = { msgType: commandType, msgData };
   await emit("front-command", payload);
@@ -21,8 +21,8 @@ export async function swipe(payload: CmdDataSwipe) {
   await sendScrcpyMaskCmd(ScrcpyMaskCmdType.Swipe, payload);
 }
 
-export async function shutdown() {
-  await sendScrcpyMaskCmd(ScrcpyMaskCmdType.Shutdown);
+export async function shutdown(payload: CmdDataShutdown) {
+  await sendScrcpyMaskCmd(ScrcpyMaskCmdType.Shutdown, payload);
 }
 
 export enum ScrcpyMaskCmdType {
@@ -36,7 +36,7 @@ type ScrcpyMaskCmdData =
   | CmdDataSendKey
   | CmdDataTouch
   | CmdDataSwipe
-  | undefined;
+  | CmdDataShutdown;
 
 enum SendKeyAction {
   Default = 0,
@@ -76,6 +76,10 @@ interface CmdDataSwipe {
   screen: { w: number; h: number };
   pos: { x: number; y: number }[];
   intervalBetweenPos: number;
+}
+
+interface CmdDataShutdown {
+  scId: string;
 }
 
 interface ScrcpyMaskCmdPayload {

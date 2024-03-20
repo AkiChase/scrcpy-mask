@@ -9,7 +9,8 @@ pub async fn handle_sm_cmd(
     cmd_type: ScrcpyMaskCmdType,
     payload: &serde_json::Value,
     writer: &mut OwnedWriteHalf,
-) {
+    sc_id: &str,
+) -> bool {
     match cmd_type {
         ScrcpyMaskCmdType::SendKey => {
             let ctrl_msg_type = ControlMsgType::ControlMsgTypeInjectKeycode as u8;
@@ -69,6 +70,7 @@ pub async fn handle_sm_cmd(
                 }
                 _ => {}
             };
+            true
         }
         ScrcpyMaskCmdType::Touch => {
             let ctrl_msg_type = ControlMsgType::ControlMsgTypeInjectTouchEvent as u8;
@@ -96,6 +98,7 @@ pub async fn handle_sm_cmd(
                 }
                 _ => {}
             }
+            true
         }
         ScrcpyMaskCmdType::Swipe => {
             let ctrl_msg_type = ControlMsgType::ControlMsgTypeInjectTouchEvent as u8;
@@ -160,10 +163,17 @@ pub async fn handle_sm_cmd(
                     .await;
                 }
                 _ => {}
-            }
+            };
+            true
         }
         ScrcpyMaskCmdType::Shutdown => {
-            writer.shutdown().await.unwrap();
+            let shutdown_sc_id = payload["scId"].as_str().unwrap();
+            if shutdown_sc_id == sc_id {
+                writer.shutdown().await.unwrap();
+                false
+            } else {
+                true
+            }
         }
     }
 }
@@ -243,7 +253,7 @@ pub async fn swipe(
         let dy = (y - prev_y) / divide_num;
         let d_interval = interval_between_pos / (divide_num as u64);
 
-        for i in 1..divide_num+1 {
+        for i in 1..divide_num + 1 {
             let nx = prev_x + dx * i;
             let ny = prev_y + dy * i;
             touch(ctrl_msg_type, pointer_id, nx, ny, w, h, 2, writer).await;
