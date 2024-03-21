@@ -1,35 +1,89 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { NDialog } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { useRouter } from "vue-router";
+import { TouchAction, touch } from "../frontcommand/scrcpyMaskCmd";
+import { appWindow } from "@tauri-apps/api/window";
 
 const maskRef = ref<HTMLElement | null>(null);
 
 const store = useGlobalStore();
 const router = useRouter();
 
+let posFactor = 1;
+onMounted(async () => {
+  posFactor = await appWindow.scaleFactor();
+});
+
+function clientxToPosx(clientx: number) {
+  return Math.floor((clientx - 70) * posFactor);
+}
+
+function clientyToPosy(clienty: number) {
+  return Math.floor((clienty - 30) * posFactor);
+}
+
 function toStartServer() {
   router.replace({ name: "device" });
 }
 
-function handleMouseDown(event: MouseEvent) {
+async function handleMouseDown(event: MouseEvent) {
   event.preventDefault();
-  // 目前先不考虑按键的情况，仅仅注入点击事件
-  console.log("down", event);
-  maskRef.value?.addEventListener("mousemove", handleMouseMove);
+  // TODO 目前先不考虑按键的情况，仅仅注入点击事件
+  if (event.button === 0) {
+    // Check if left mouse button is pressed (button code 0)
+    maskRef.value?.addEventListener("mousemove", handleMouseMove);
+    await touch({
+      action: TouchAction.Down,
+      pointerId: 0,
+      screen: {
+        w: store.screenSize.w,
+        h: store.screenSize.h,
+      },
+      pos: {
+        x: clientxToPosx(event.clientX),
+        y: clientyToPosy(event.clientY),
+      },
+    });
+  }
 }
 
-function handleMouseUp(event: MouseEvent) {
+async function handleMouseUp(event: MouseEvent) {
   event.preventDefault();
 
-  console.log("up", event);
-  maskRef.value?.removeEventListener("mousemove", handleMouseMove);
+  if (event.button === 0) {
+    // Check if left mouse button is pressed (button code 0)
+    maskRef.value?.removeEventListener("mousemove", handleMouseMove);
+    await touch({
+      action: TouchAction.Up,
+      pointerId: 0,
+      screen: {
+        w: store.screenSize.w,
+        h: store.screenSize.h,
+      },
+      pos: {
+        x: clientxToPosx(event.clientX),
+        y: clientyToPosy(event.clientY),
+      },
+    });
+  }
 }
 
-function handleMouseMove(event: MouseEvent) {
+async function handleMouseMove(event: MouseEvent) {
   event.preventDefault();
-  console.log("move", event);
+  await touch({
+      action: TouchAction.Move,
+      pointerId: 0,
+      screen: {
+        w: store.screenSize.w,
+        h: store.screenSize.h,
+      },
+      pos: {
+        x: clientxToPosx(event.clientX),
+        y: clientyToPosy(event.clientY),
+      },
+    });
 }
 
 // TODO 监听快捷键
@@ -38,12 +92,12 @@ function handleMouseMove(event: MouseEvent) {
 </script>
 
 <template>
-  <div v-show="!store.isServerRunning" class="notice">
+  <div v-show="store.controledDevices.length === 0" class="notice">
     <div class="content">
       <NDialog
         :closable="false"
-        title="服务端未启动"
-        content="请先启动服务端并控制任意设备"
+        title="未找到受控设备"
+        content="请启动服务端并控制任意设备"
         positive-text="去启动"
         type="warning"
         @positive-click="toStartServer"
@@ -51,7 +105,7 @@ function handleMouseMove(event: MouseEvent) {
     </div>
   </div>
   <div
-    v-show="store.isServerRunning"
+    v-show="store.controledDevices.length"
     class="mask"
     ref="maskRef"
     @mousedown="handleMouseDown"

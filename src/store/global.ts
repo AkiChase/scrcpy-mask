@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { Ref, ref } from "vue";
+import { Device } from "../invoke";
 
 export const useGlobalStore = defineStore("counter", () => {
   const showLoadingRef = ref(false);
@@ -10,7 +11,22 @@ export const useGlobalStore = defineStore("counter", () => {
     showLoadingRef.value = false;
   }
 
-  const isServerRunning = ref(false);
+  interface ControledDevice {
+    scid: string;
+    smid: string;
+    deviceName: string;
+    device: Device;
+  }
 
-  return { showLoading, hideLoading, showLoadingRef, isServerRunning};
+  const controledDevices: Ref<ControledDevice[]> = ref([]);
+
+  const screenSize = ref({ w: 0, h: 0 });
+
+  return {
+    showLoading,
+    hideLoading,
+    showLoadingRef,
+    controledDevices,
+    screenSize,
+  };
 });

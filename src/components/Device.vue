@@ -3,6 +3,7 @@ import { Ref, computed, h, nextTick, onMounted, onUnmounted, ref } from "vue";
 import {
   Device,
   adbDevices,
+  getScreenSize,
   openSocketServer,
   pushServerFile,
   reverseServerPort,
@@ -36,6 +37,7 @@ const dialog = useDialog();
 const store = useGlobalStore();
 
 const port = ref(27183);
+const isServerRunning = ref(false);
 
 //#region listener
 const deviceWaitForMetadataTask: ((
@@ -50,7 +52,7 @@ onMounted(async () => {
   unlisten = await listen("device-reply", (event) => {
     try {
       let payload = JSON.parse(event.payload as string);
-      switch (payload.msg) {
+      switch (payload.type) {
         case "MetaData":
           let task = deviceWaitForMetadataTask.shift();
           task?.(payload.smid, payload.deviceName);
@@ -80,7 +82,7 @@ onUnmounted(() => {
 const devices: Ref<Device[]> = ref([]);
 const availableDevice = computed(() => {
   return devices.value.filter((d) => {
-    return !controledDevices.value.some((cd) => cd.device.id === d.id);
+    return !store.controledDevices.some((cd) => cd.device.id === d.id);
   });
 });
 const tableCols: DataTableColumns = [
@@ -125,14 +127,6 @@ const tableRowProps = (_: any, index: number) => {
 //#endregion
 
 //#region controled device
-interface ControledDevice {
-  scid: string;
-  smid: string;
-  deviceName: string;
-  device: Device;
-}
-
-const controledDevices: Ref<ControledDevice[]> = ref([]);
 
 async function shutdownSC(smid: string) {
   dialog.warning({
@@ -144,8 +138,8 @@ async function shutdownSC(smid: string) {
       await shutdown({
         smid,
       });
-      controledDevices.value.splice(
-        controledDevices.value.findIndex((cd) => cd.smid === smid),
+      store.controledDevices.splice(
+        store.controledDevices.findIndex((cd) => cd.smid === smid),
         1
       );
     },
@@ -173,12 +167,17 @@ async function onMenuSelect(key: string) {
   store.showLoading();
   switch (key) {
     case "control":
-      if (!store.isServerRunning) {
+      if (!isServerRunning.value) {
         message.error("请先启动服务端");
         store.hideLoading();
         return;
       }
       let device = devices.value[rowIndex];
+
+      let screenSize = await getScreenSize(device.id);
+      store.screenSize.w = screenSize[0];
+      store.screenSize.h = screenSize[1];
+
       let scid = (
         "00000000" + Math.floor(Math.random() * 100000).toString(16)
       ).slice(-8);
@@ -189,7 +188,7 @@ async function onMenuSelect(key: string) {
 
       // wait for metadata
       deviceWaitForMetadataTask.push((smid: string, deviceName: string) => {
-        controledDevices.value.push({
+        store.controledDevices.push({
           scid,
           smid,
           deviceName,
@@ -206,7 +205,7 @@ async function onMenuSelect(key: string) {
 
 async function startServer() {
   store.showLoading();
-  store.isServerRunning = true;
+  isServerRunning.value = true;
   openSocketServer(port.value)
     .then(() => {
       message.success("服务端已启动: 127.0.0.1:" + port.value);
@@ -233,14 +232,14 @@ async function refreshDevices() {
         <NInputNumber
           v-model:value="port"
           :show-button="false"
-          :disabled="store.isServerRunning"
+          :disabled="isServerRunning"
         />
         <NButton
           @click="startServer"
-          :type="store.isServerRunning ? 'error' : 'primary'"
+          :type="isServerRunning ? 'error' : 'primary'"
           ghost
-          :disabled="store.isServerRunning"
-          >{{ store.isServerRunning ? "服务端运行中" : "启动服务端" }}</NButton
+          :disabled="isServerRunning"
+          >{{ isServerRunning ? "服务端运行中" : "启动服务端" }}</NButton
         >
       </NInputGroup>
       <NH4 prefix="bar">受控设备</NH4>
@@ -248,9 +247,9 @@ async function refreshDevices() {
         <NEmpty
           size="small"
           description="No Controled Device"
-          v-if="controledDevices.length === 0"
+          v-if="store.controledDevices.length === 0"
         />
-        <div class="controled-device" v-for="cDevice in controledDevices">
+        <div class="controled-device" v-for="cDevice in store.controledDevices">
           <div>{{ cDevice.deviceName }} ({{ cDevice.device.id }})</div>
           <div class="device-op">
             <NTooltip trigger="hover">
