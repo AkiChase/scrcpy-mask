@@ -193,7 +193,7 @@ function refreshWindowList() {
 
 <template>
   <div class="window-list">
-    <NFlex justify="space-between">
+    <NFlex justify="space-between" align="center">
       <NH4 prefix="bar">{{ isControlWindow ? "控件列表" : "窗口列表" }}</NH4>
       <NButton
         tertiary
@@ -241,4 +241,3 @@ function refreshWindowList() {
 </template>
 
 <style scoped lang="scss"></style>
-../../emitter

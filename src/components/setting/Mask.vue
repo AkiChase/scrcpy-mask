@@ -146,7 +146,7 @@ onUnmounted(() => {
 <template>
   <div class="setting-page">
     <WindowList />
-    <NFlex justify="space-between">
+    <NFlex justify="space-between" align="center">
       <NH4 prefix="bar">手动调整</NH4>
       <NButton
         tertiary
