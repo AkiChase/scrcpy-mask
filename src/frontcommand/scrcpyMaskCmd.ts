@@ -79,7 +79,7 @@ interface CmdDataSwipe {
 }
 
 interface CmdDataShutdown {
-  scId: string;
+  smid: string;
 }
 
 interface ScrcpyMaskCmdPayload {

@@ -43,19 +43,19 @@ impl Server {
         println!("成功连接scrcpy-server:{:?}", client.local_addr());
 
         // 生成ScrcpyClient id用于辨别连接
-        let sc_id = Self::gen_scrcpy_client_id();
-        let sc_id_clone = sc_id.clone();
+        let smid = Self::gen_scrcpy_client_id();
+        let smid_clone = smid.clone();
 
         let (read_half, write_half) = client.into_split();
 
         // 开启线程读取设备发送的信息，并通过通道传递到与前端通信的线程，最后与前端通信的线程发送全局事件，告知前端设备发送的信息
         tokio::spawn(async move {
-            Self::read_socket(read_half, device_reply_sender, sc_id).await;
+            Self::read_socket(read_half, device_reply_sender, smid).await;
         });
 
         // 开启线程接收通道消息，其中通道消息来自前端发送的事件
         tokio::spawn(async move {
-            Self::recv_front_msg(write_half, front_msg_broadcast_receiver, sc_id_clone).await;
+            Self::recv_front_msg(write_half, front_msg_broadcast_receiver, smid_clone).await;
         });
     }
 
@@ -63,11 +63,11 @@ impl Server {
     async fn read_socket(
         mut reader: OwnedReadHalf,
         device_reply_sender: tokio::sync::mpsc::Sender<String>,
-        sc_id: String,
+        smid: String,
     ) {
         // read metadata (device name)
         let mut buf: [u8; 64] = [0; 64];
-        let device_name = match reader.read(&mut buf).await {
+        match reader.read(&mut buf).await {
             Err(_e) => {
                 eprintln!("failed to read metadata");
                 return;
@@ -86,11 +86,10 @@ impl Server {
                     r#"{{
                         "msg": "MetaData",
                         "deviceName": "{device_name}",
-                        "scId": "{sc_id}"
+                        "smid": "{smid}"
                     }}"#
                 );
                 device_reply_sender.send(msg).await.unwrap();
-                device_name
             }
         };
 
@@ -117,7 +116,7 @@ impl Server {
                         message_type,
                         &mut reader,
                         &device_reply_sender,
-                        device_name,
+                        &smid,
                     )
                     .await
                     {
@@ -132,7 +131,7 @@ impl Server {
         message_type: DeviceMsgType,
         reader: &mut OwnedReadHalf,
         device_reply_sender: &tokio::sync::mpsc::Sender<String>,
-        device_name: &str,
+        smid: &str,
     ) -> anyhow::Result<()> {
         match message_type {
             // 设备剪切板变动
@@ -144,7 +143,7 @@ impl Server {
                 let msg = format!(
                     r#"{{
                         "msg": "ClipboardChanged",
-                        "deviceName": "{device_name}",
+                        "smid": "{smid}",
                         "clipboard": "{cb}"
                     }}"#
                 );
@@ -156,7 +155,7 @@ impl Server {
                 let msg = format!(
                     r#"{{
                         "type": "ClipboardSetAck",
-                        "deviceName": "{device_name}",
+                        "smid": "{smid}",
                         "sequence": "{sequence}"
                     }}"#
                 );
@@ -177,7 +176,7 @@ impl Server {
     async fn recv_front_msg(
         mut write_half: OwnedWriteHalf,
         mut front_msg_broadcast_receiver: tokio::sync::broadcast::Receiver<String>,
-        sc_id: String,
+        smid: String,
     ) {
         loop {
             match front_msg_broadcast_receiver.recv().await {
@@ -209,7 +208,7 @@ impl Server {
                                             cmd_type,
                                             &payload["msgData"],
                                             &mut write_half,
-                                            &sc_id
+                                            &smid,
                                         )
                                         .await
                                         {

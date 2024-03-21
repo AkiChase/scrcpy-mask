@@ -9,7 +9,7 @@ pub async fn handle_sm_cmd(
     cmd_type: ScrcpyMaskCmdType,
     payload: &serde_json::Value,
     writer: &mut OwnedWriteHalf,
-    sc_id: &str,
+    smid: &str,
 ) -> bool {
     match cmd_type {
         ScrcpyMaskCmdType::SendKey => {
@@ -167,8 +167,8 @@ pub async fn handle_sm_cmd(
             true
         }
         ScrcpyMaskCmdType::Shutdown => {
-            let shutdown_sc_id = payload["scId"].as_str().unwrap();
-            if shutdown_sc_id == sc_id {
+            let shutdown_smid = payload["smid"].as_str().unwrap();
+            if shutdown_smid == smid {
                 writer.shutdown().await.unwrap();
                 false
             } else {
