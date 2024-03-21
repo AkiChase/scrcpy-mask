@@ -1,3 +1,4 @@
+use serde_json::json;
 use tokio::{
     io::AsyncReadExt,
     net::{
@@ -82,13 +83,12 @@ impl Server {
                     end -= 1;
                 }
                 let device_name = std::str::from_utf8(&buf[..end]).unwrap();
-                let msg = format!(
-                    r#"{{
-                        "msg": "MetaData",
-                        "deviceName": "{device_name}",
-                        "smid": "{smid}"
-                    }}"#
-                );
+                let msg = json!({
+                    "type": "MetaData",
+                    "deviceName": device_name,
+                    "smid": smid
+                })
+                .to_string();
                 device_reply_sender.send(msg).await.unwrap();
             }
         };
@@ -140,25 +140,23 @@ impl Server {
                 let mut buf: Vec<u8> = vec![0; text_length as usize];
                 reader.read_exact(&mut buf).await?;
                 let cb = String::from_utf8(buf)?;
-                let msg = format!(
-                    r#"{{
-                        "msg": "ClipboardChanged",
-                        "smid": "{smid}",
-                        "clipboard": "{cb}"
-                    }}"#
-                );
+                let msg = json!({
+                    "type": "ClipboardChanged",
+                    "clipboard": cb,
+                    "smid": smid
+                })
+                .to_string();
                 device_reply_sender.send(msg).await?;
             }
             // 设备剪切板设置成功的回复
             DeviceMsgType::DeviceMsgTypeAckClipboard => {
                 let sequence = reader.read_u64().await?;
-                let msg = format!(
-                    r#"{{
-                        "type": "ClipboardSetAck",
-                        "smid": "{smid}",
-                        "sequence": "{sequence}"
-                    }}"#
-                );
+                let msg = json!({
+                    "type": "ClipboardSetAck",
+                    "sequence": sequence,
+                    "smid": smid
+                })
+                .to_string();
                 device_reply_sender.send(msg).await?;
             }
             // 虚拟设备输出，仅读取但不做进一步处理
