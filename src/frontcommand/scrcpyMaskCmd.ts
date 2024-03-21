@@ -54,6 +54,7 @@ export enum TouchAction {
   Default = 0,
   Down = 1,
   Up = 2,
+  Move = 3,
 }
 
 interface CmdDataTouch {

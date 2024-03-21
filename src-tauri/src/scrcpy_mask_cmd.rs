@@ -96,6 +96,10 @@ pub async fn handle_sm_cmd(
                 2 => {
                     touch(ctrl_msg_type, pointer_id, x, y, w, h, 1, writer).await;
                 }
+                // move
+                3 => {
+                    touch(ctrl_msg_type, pointer_id, x, y, w, h, 2, writer).await;
+                }
                 _ => {}
             }
             true
