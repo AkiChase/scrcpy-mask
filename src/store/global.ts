@@ -1,12 +1,16 @@
 import { defineStore } from "pinia";
-// import { ref } from "vue";
+import { ref } from "vue";
 
 export const useGlobalStore = defineStore("counter", () => {
-  // const showMaskSetter = ref(false);
-  // const doubleCount = computed(() => count.value * 2)
-  // function increment() {
-  //   count.value++
-  // }
+  const showLoadingRef = ref(false);
+  function showLoading() {
+    showLoadingRef.value = true;
+  }
+  function hideLoading() {
+    showLoadingRef.value = false;
+  }
 
-  // return { showMaskSetter };
+  const isServerRunning = ref(false);
+
+  return { showLoading, hideLoading, showLoadingRef, isServerRunning};
 });

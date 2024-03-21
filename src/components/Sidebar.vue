@@ -2,6 +2,7 @@
 import { useRouter, useRoute } from "vue-router";
 import {
   GameControllerOutline,
+  LogoAndroid,
   SettingsOutline,
   ReturnDownBackOutline,
   StopOutline,
@@ -26,6 +27,11 @@ function nav(name: string) {
       <div :class="{ active: route.name == 'mask' }" @click="nav('mask')">
         <NIcon>
           <GameControllerOutline />
+        </NIcon>
+      </div>
+      <div :class="{ active: route.name == 'device' }" @click="nav('device')">
+        <NIcon>
+          <LogoAndroid />
         </NIcon>
       </div>
       <div
