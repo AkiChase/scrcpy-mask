@@ -3,7 +3,6 @@ import { Ref, computed, h, nextTick, onMounted, onUnmounted, ref } from "vue";
 import {
   Device,
   adbDevices,
-  getScreenSize,
   openSocketServer,
   pushServerFile,
   reverseServerPort,
@@ -173,10 +172,6 @@ async function onMenuSelect(key: string) {
         return;
       }
       let device = devices.value[rowIndex];
-
-      let screenSize = await getScreenSize(device.id);
-      store.screenSize.w = screenSize[0];
-      store.screenSize.h = screenSize[1];
 
       let scid = (
         "00000000" + Math.floor(Math.random() * 100000).toString(16)

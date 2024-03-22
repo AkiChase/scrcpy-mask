@@ -212,12 +212,13 @@ pub async fn touch(
 }
 
 /// Determine the number of segments based on the distance between two points
-fn get_divide_num(x1: i32, y1: i32, x2: i32, y2: i32) -> i32 {
+fn get_divide_num(x1: i32, y1: i32, x2: i32, y2: i32, segment_length: i32) -> i32 {
     let dx = (x2 - x1).abs();
     let dy = (y2 - y1).abs();
     let d = (dx.pow(2) + dy.pow(2)) as f64;
     let d = d.sqrt();
-    (d / 50.0).ceil() as i32
+    let divide_num = (d / segment_length as f64).ceil() as i32;
+    divide_num
 }
 
 pub async fn swipe(
@@ -252,7 +253,8 @@ pub async fn swipe(
         let (x, y) = pos_arr[cur_index];
         let (prev_x, prev_y) = pos_arr[cur_index - 1];
         // divide it into several segments
-        let divide_num = get_divide_num(prev_x, prev_y, x, y);
+        let segment_length = 100;
+        let divide_num = get_divide_num(prev_x, prev_y, x, y, segment_length);
         let dx = (x - prev_x) / divide_num;
         let dy = (y - prev_y) / divide_num;
         let d_interval = interval_between_pos / (divide_num as u64);

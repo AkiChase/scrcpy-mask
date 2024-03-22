@@ -20,13 +20,10 @@ export const useGlobalStore = defineStore("counter", () => {
 
   const controledDevices: Ref<ControledDevice[]> = ref([]);
 
-  const screenSize = ref({ w: 0, h: 0 });
-
   return {
     showLoading,
     hideLoading,
     showLoadingRef,
     controledDevices,
-    screenSize,
   };
 });

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NH4, NForm, FormInst } from "naive-ui";
-import { ref } from "vue";
 
+import { ref } from "vue";
 
 const formRef = ref<FormInst | null>(null);
 </script>
