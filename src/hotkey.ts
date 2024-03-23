@@ -7,13 +7,29 @@ import {
   touch,
 } from "./frontcommand/scrcpyMaskCmd";
 
-let posFactor = 1;
+let posFactor = 1; // it will be replaced in initMouseShortcuts
 function clientxToPosx(clientx: number) {
   return clientx < 70 ? 0 : Math.floor((clientx - 70) * posFactor);
 }
 
 function clientyToPosy(clienty: number) {
   return clienty < 30 ? 0 : Math.floor((clienty - 30) * posFactor);
+}
+
+function clientxToSkillOffsetx(clientx: number) {
+  // Get the offset relative to the center of the screen
+  let offsetX = clientxToPosx(clientx) - screenSizeW / 2;
+  return Math.max(-100, Math.min(100, offsetX));
+}
+
+function clientyToSkillOffsety(clienty: number) {
+  // Get the offset relative to the center of the screen
+  let offsetY = clientyToPosy(clienty) - screenSizeH / 2;
+  return Math.max(-100, Math.min(100, offsetY));
+}
+
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 //#region mouse shortcuts
@@ -84,12 +100,12 @@ async function handleMouseUp(event: MouseEvent) {
 }
 
 // reduce the frequency of sending
-let ignoreMoveFlag = true;
+// let ignoreMoveFlag = true;
 let mousemoveTask: Map<string, (x: number, y: number) => Promise<void>> =
   new Map();
 async function handleMouseMove(event: MouseEvent) {
-  ignoreMoveFlag = !ignoreMoveFlag;
-  if (ignoreMoveFlag) return;
+  // ignoreMoveFlag = !ignoreMoveFlag;
+  // if (ignoreMoveFlag) return;
   event.preventDefault();
   mouseX = event.clientX;
   mouseY = event.clientY;
@@ -156,11 +172,11 @@ function addKeyboardShortcuts(
   }
 }
 
-// add keyboard shortcuts for direction skill
+// add keyboard shortcuts for directional skill
 function addDirectionalSkillKeyboardShortcuts(
   element: HTMLElement,
   key: string,
-  // pos relative to the mask
+  // pos relative to the device
   posX: number,
   posY: number,
   pointerId: number
@@ -178,8 +194,11 @@ function addDirectionalSkillKeyboardShortcuts(
           h: screenSizeH,
         },
         pos: [
-          { x: clientxToPosx(posX + 70), y: clientyToPosy(posY + 30) },
-          { x: clientxToPosx(x), y: clientyToPosy(y) },
+          { x: posX, y: posY },
+          {
+            x: posX + clientxToSkillOffsetx(x),
+            y: posY + clientyToSkillOffsety(y),
+          },
         ],
         intervalBetweenPos: 0,
       });
@@ -194,8 +213,8 @@ function addDirectionalSkillKeyboardShortcuts(
           h: screenSizeH,
         },
         pos: {
-          x: clientxToPosx(x),
-          y: clientyToPosy(y),
+          x: posX + clientxToSkillOffsetx(x),
+          y: posY + clientyToSkillOffsety(y),
         },
       });
     },
@@ -209,16 +228,12 @@ function addDirectionalSkillKeyboardShortcuts(
           h: screenSizeH,
         },
         pos: {
-          x: clientxToPosx(x),
-          y: clientyToPosy(y),
+          x: posX + clientxToSkillOffsetx(x),
+          y: posY + clientyToSkillOffsety(y),
         },
       });
     }
   );
-}
-
-async function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 let _keyDownFlag: stringKeyFlag = {
@@ -230,6 +245,7 @@ let _keyDownFlag: stringKeyFlag = {
 let _isWheelKeyLoopRunning = false;
 async function _wheelKeyLoop(
   pId: number,
+  // pos relative to the device
   posX: number,
   posY: number,
   offset: number
@@ -238,6 +254,7 @@ async function _wheelKeyLoop(
   _isWheelKeyLoopRunning = true;
   // calculate the end coordinates of the eight directions of the direction wheel
   let offsetHalf = Math.round(offset / 1.414);
+
   let pos = [
     { x: posX - offset, y: posY }, // left
     { x: posX + offset, y: posY }, // right
@@ -284,7 +301,7 @@ async function _wheelKeyLoop(
       _keyDownFlag.up === _lastKeyDownFlag.up &&
       _keyDownFlag.down === _lastKeyDownFlag.down
     ) {
-      await sleep(100);
+      await sleep(50);
       continue;
     }
     // record the last key down flag
@@ -337,6 +354,7 @@ type stringKeyFlag = Record<string, boolean>;
 // add keyboard shortcuts for steering wheel
 function addSteeringWheelKeyboardShortcuts(
   element: HTMLElement,
+  // pos relative to the device
   posX: number,
   posY: number,
   offset: number,
@@ -361,8 +379,8 @@ function addSteeringWheelKeyboardShortcuts(
 }
 
 export function initKeyboardShortcuts(element: HTMLElement) {
-  addDirectionalSkillKeyboardShortcuts(element, "q", 100, 100, 1);
-  addSteeringWheelKeyboardShortcuts(element, 500, 500, 100, 2, {
+  addDirectionalSkillKeyboardShortcuts(element, "q", 1025, 500, 1);
+  addSteeringWheelKeyboardShortcuts(element, 230, 384, 100, 2, {
     left: "a",
     right: "d",
     up: "w",
