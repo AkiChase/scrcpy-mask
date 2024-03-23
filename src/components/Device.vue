@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Ref, computed, h, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { Ref, computed, h, nextTick, onActivated, onMounted, onUnmounted, ref } from "vue";
 import {
   Device,
   adbDevices,
@@ -46,8 +46,6 @@ const deviceWaitForMetadataTask: ((
 
 let unlisten: UnlistenFn | undefined;
 onMounted(async () => {
-  await refreshDevices();
-
   unlisten = await listen("device-reply", (event) => {
     try {
       let payload = JSON.parse(event.payload as string);
@@ -70,6 +68,10 @@ onMounted(async () => {
       console.error(e);
     }
   });
+});
+
+onActivated(async () => {
+  await refreshDevices();
 });
 
 onUnmounted(() => {

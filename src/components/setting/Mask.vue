@@ -133,13 +133,11 @@ onMounted(async () => {
     await appWindow.outerSize(),
     await appWindow.outerPosition()
   );
-  console.log("监听窗口坐标、尺寸");
 });
 
 onUnmounted(() => {
   unlistenResize();
   unlistenMove();
-  console.log("移除监听");
 });
 </script>
 

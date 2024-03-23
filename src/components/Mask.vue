@@ -15,7 +15,10 @@ const router = useRouter();
 let isShortcutInited = false;
 
 onActivated(async () => {
-  if (isShortcutInited) return;
+  if (isShortcutInited) {
+    maskRef.value?.focus();
+    return;
+  }
   if (store.controledDevices.length) {
     let screenSize = await getScreenSize(store.controledDevices[0].device.id);
     if (maskRef.value) {
@@ -57,7 +60,6 @@ function toStartServer() {
     class="mask"
     ref="maskRef"
   ></div>
-  <!-- <div class="mask" ref="maskRef"></div> -->
 </template>
 
 <style scoped lang="scss">

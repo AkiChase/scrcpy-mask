@@ -40,7 +40,6 @@ export function initMouseShortcuts(
 
 async function handleMouseDown(event: MouseEvent) {
   if (event.button >= 0 && event.button <= 4) {
-    console.log("down", event.button);
     mouseDownFlag[event.button] = true;
     // left
     if (event.button === 0) {
@@ -64,7 +63,6 @@ async function handleMouseUp(event: MouseEvent) {
   if (event.button >= 0 && event.button <= 4) {
     // if pressed
     if (mouseDownFlag[event.button]) {
-      console.log("up", event);
       mouseDownFlag[event.button] = false;
       // left
       if (event.button === 0) {
@@ -118,72 +116,257 @@ async function handleMouseMove(event: MouseEvent) {
 //#endregion
 
 //#region keyboardShortcuts
-
-export function initKeyboardShortcuts(element: HTMLElement) {
+function addKeyboardShortcuts(
+  element: HTMLElement,
+  key: string,
+  downCB?: (x: number, y: number) => Promise<void>,
+  moveCB?: (x: number, y: number) => Promise<void>,
+  upCB?: (x: number, y: number) => Promise<void>
+) {
   tinykeys(
     element,
     {
-      Control: async (event) => {
+      [key]: async (event) => {
         if (event.repeat) return;
-        // down and move to mouse
-        await swipe({
-          action: SwipeAction.NoUp,
-          pointerId: 1,
-          screen: {
-            w: screenSizeW,
-            h: screenSizeH,
-          },
-          pos: [
-            { x: clientxToPosx(100 + 70), y: clientyToPosy(100 + 30) },
-            { x: clientxToPosx(mouseX), y: clientyToPosy(mouseY) },
-          ],
-          intervalBetweenPos: 0,
-        });
+        if (downCB) {
+          await downCB(mouseX, mouseY);
+        }
         // add move event task
-        mousemoveTask.set("Control", async (x: number, y: number) => {
-          await touch({
-            action: TouchAction.Move,
-            pointerId: 1,
-            screen: {
-              w: screenSizeW,
-              h: screenSizeH,
-            },
-            pos: {
-              x: clientxToPosx(x),
-              y: clientyToPosy(y),
-            },
-          });
-        });
+        if (moveCB) mousemoveTask.set(key, moveCB);
       },
     },
     {
       event: "keydown",
     }
   );
-  tinykeys(
-    element,
-    {
-      Control: async () => {
-        // delete move event task
-        mousemoveTask.delete("Control");
-        // up
-        await touch({
-          action: TouchAction.Up,
-          pointerId: 1,
-          screen: {
-            w: screenSizeW,
-            h: screenSizeH,
-          },
-          pos: {
-            x: clientxToPosx(mouseX),
-            y: clientyToPosy(mouseY),
-          },
-        });
+  if (upCB) {
+    tinykeys(
+      element,
+      {
+        [key]: async () => {
+          // delete move event task
+          if (moveCB) mousemoveTask.delete(key);
+          await upCB(mouseX, mouseY);
+        },
       },
+      {
+        event: "keyup",
+      }
+    );
+  }
+}
+
+// add keyboard shortcuts for direction skill
+function addDirectionalSkillKeyboardShortcuts(
+  element: HTMLElement,
+  key: string,
+  // pos relative to the mask
+  posX: number,
+  posY: number,
+  pointerId: number
+) {
+  addKeyboardShortcuts(
+    element,
+    key,
+    // down
+    async (x: number, y: number) => {
+      await swipe({
+        action: SwipeAction.NoUp,
+        pointerId,
+        screen: {
+          w: screenSizeW,
+          h: screenSizeH,
+        },
+        pos: [
+          { x: clientxToPosx(posX + 70), y: clientyToPosy(posY + 30) },
+          { x: clientxToPosx(x), y: clientyToPosy(y) },
+        ],
+        intervalBetweenPos: 0,
+      });
     },
-    {
-      event: "keyup",
+    // move
+    async (x: number, y: number) => {
+      await touch({
+        action: TouchAction.Move,
+        pointerId: 1,
+        screen: {
+          w: screenSizeW,
+          h: screenSizeH,
+        },
+        pos: {
+          x: clientxToPosx(x),
+          y: clientyToPosy(y),
+        },
+      });
+    },
+    // up
+    async (x: number, y: number) => {
+      await touch({
+        action: TouchAction.Up,
+        pointerId: 1,
+        screen: {
+          w: screenSizeW,
+          h: screenSizeH,
+        },
+        pos: {
+          x: clientxToPosx(x),
+          y: clientyToPosy(y),
+        },
+      });
     }
   );
+}
+
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+let _keyDownFlag: stringKeyFlag = {
+  left: false,
+  right: false,
+  up: false,
+  down: false,
+};
+let _isWheelKeyLoopRunning = false;
+async function _wheelKeyLoop(
+  pId: number,
+  posX: number,
+  posY: number,
+  offset: number
+) {
+  if (_isWheelKeyLoopRunning) return;
+  _isWheelKeyLoopRunning = true;
+  // calculate the end coordinates of the eight directions of the direction wheel
+  let offsetHalf = Math.round(offset / 1.414);
+  let pos = [
+    { x: posX - offset, y: posY }, // left
+    { x: posX + offset, y: posY }, // right
+    { x: posX, y: posY - offset }, // up
+    { x: posX, y: posY + offset }, // down
+    { x: posX - offsetHalf, y: posY - offsetHalf }, // left up
+    { x: posX + offsetHalf, y: posY - offsetHalf }, // right up
+    { x: posX - offsetHalf, y: posY + offsetHalf }, // left down
+    { x: posX + offsetHalf, y: posY + offsetHalf }, // right down
+  ];
+
+  // touch down on the center position
+  await touch({
+    action: TouchAction.Down,
+    pointerId: pId,
+    screen: {
+      w: screenSizeW,
+      h: screenSizeH,
+    },
+    pos: {
+      x: posX,
+      y: posY,
+    },
+  });
+
+  // move to the direction
+  let curPos;
+  let _lastKeyDownFlag: stringKeyFlag = {
+    left: true,
+    right: true,
+    up: true,
+    down: true,
+  };
+  while (
+    _keyDownFlag.left ||
+    _keyDownFlag.right ||
+    _keyDownFlag.up ||
+    _keyDownFlag.down
+  ) {
+    // if key down not changed
+    if (
+      _keyDownFlag.left === _lastKeyDownFlag.left &&
+      _keyDownFlag.right === _lastKeyDownFlag.right &&
+      _keyDownFlag.up === _lastKeyDownFlag.up &&
+      _keyDownFlag.down === _lastKeyDownFlag.down
+    ) {
+      await sleep(100);
+      continue;
+    }
+    // record the last key down flag
+    _lastKeyDownFlag = { ..._keyDownFlag };
+    // key down changed
+    if (_keyDownFlag.left) {
+      curPos = _keyDownFlag.up ? pos[4] : _keyDownFlag.down ? pos[6] : pos[0];
+    } else if (_keyDownFlag.right) {
+      curPos = _keyDownFlag.up ? pos[5] : _keyDownFlag.down ? pos[7] : pos[1];
+    } else if (_keyDownFlag.up) {
+      curPos = pos[2];
+    } else if (_keyDownFlag.down) {
+      curPos = pos[3];
+    } else {
+      curPos = { x: posX, y: posY };
+    }
+    await touch({
+      action: TouchAction.Move,
+      pointerId: pId,
+      screen: {
+        w: screenSizeW,
+        h: screenSizeH,
+      },
+      pos: curPos,
+    });
+    await sleep(100);
+  }
+  // touch up
+  await touch({
+    action: TouchAction.Up,
+    pointerId: pId,
+    screen: {
+      w: screenSizeW,
+      h: screenSizeH,
+    },
+    pos: curPos ? curPos : { x: posX, y: posY },
+  });
+  _isWheelKeyLoopRunning = false;
+}
+
+interface wheelKey {
+  left: string;
+  right: string;
+  up: string;
+  down: string;
+  [key: string]: string;
+}
+type stringKeyFlag = Record<string, boolean>;
+
+// add keyboard shortcuts for steering wheel
+function addSteeringWheelKeyboardShortcuts(
+  element: HTMLElement,
+  posX: number,
+  posY: number,
+  offset: number,
+  pointerId: number,
+  key: wheelKey
+) {
+  for (const k of ["left", "right", "up", "down"]) {
+    if (key[k])
+      addKeyboardShortcuts(
+        element,
+        key[k],
+        async () => {
+          _keyDownFlag[k] = true;
+          await _wheelKeyLoop(pointerId, posX, posY, offset);
+        },
+        undefined,
+        async () => {
+          _keyDownFlag[k] = false;
+        }
+      );
+  }
+}
+
+export function initKeyboardShortcuts(element: HTMLElement) {
+  addDirectionalSkillKeyboardShortcuts(element, "q", 100, 100, 1);
+  addSteeringWheelKeyboardShortcuts(element, 500, 500, 100, 2, {
+    left: "a",
+    right: "d",
+    up: "w",
+    down: "s",
+  });
 }
 //#endregion
