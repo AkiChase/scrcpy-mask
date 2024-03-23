@@ -12,7 +12,6 @@
   "dependencies": {
     "@tauri-apps/api": "^1",
     "pinia": "^2.1.7",
-    "tinykeys": "^2.1.0",
     "vue": "^3.3.4",
     "vue-router": "4"
   },

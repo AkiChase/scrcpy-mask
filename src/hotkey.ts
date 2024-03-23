@@ -1,5 +1,4 @@
 // https://github.com/jamiebuilds/tinykeys/pull/193/commits/2598ecb3db6b3948c7acbf0e7bd8b0674961ad61
-import { tinykeys } from "tinykeys";
 import {
   SwipeAction,
   TouchAction,
@@ -99,19 +98,14 @@ async function handleMouseUp(event: MouseEvent) {
   }
 }
 
-// reduce the frequency of sending
-// let ignoreMoveFlag = true;
-let mousemoveTask: Map<string, (x: number, y: number) => Promise<void>> =
-  new Map();
+let mousemoveCbMap: Map<string, () => Promise<void>> = new Map();
 async function handleMouseMove(event: MouseEvent) {
-  // ignoreMoveFlag = !ignoreMoveFlag;
-  // if (ignoreMoveFlag) return;
   event.preventDefault();
   mouseX = event.clientX;
   mouseY = event.clientY;
 
   // execute all tasks
-  mousemoveTask.forEach(async (task) => await task(mouseX, mouseY));
+  mousemoveCbMap.forEach(async (cb) => await cb());
 
   // left
   if (mouseDownFlag[0]) {
@@ -132,60 +126,18 @@ async function handleMouseMove(event: MouseEvent) {
 //#endregion
 
 //#region keyboardShortcuts
-function addKeyboardShortcuts(
-  element: HTMLElement,
-  key: string,
-  downCB?: (x: number, y: number) => Promise<void>,
-  moveCB?: (x: number, y: number) => Promise<void>,
-  upCB?: (x: number, y: number) => Promise<void>
-) {
-  tinykeys(
-    element,
-    {
-      [key]: async (event) => {
-        if (event.repeat) return;
-        if (downCB) {
-          await downCB(mouseX, mouseY);
-        }
-        // add move event task
-        if (moveCB) mousemoveTask.set(key, moveCB);
-      },
-    },
-    {
-      event: "keydown",
-    }
-  );
-  if (upCB) {
-    tinykeys(
-      element,
-      {
-        [key]: async () => {
-          // delete move event task
-          if (moveCB) mousemoveTask.delete(key);
-          await upCB(mouseX, mouseY);
-        },
-      },
-      {
-        event: "keyup",
-      }
-    );
-  }
-}
-
 // add keyboard shortcuts for directional skill
 function addDirectionalSkillKeyboardShortcuts(
-  element: HTMLElement,
   key: string,
   // pos relative to the device
   posX: number,
   posY: number,
   pointerId: number
 ) {
-  addKeyboardShortcuts(
-    element,
+  addKeyboardShortcut(
     key,
     // down
-    async (x: number, y: number) => {
+    async () => {
       await swipe({
         action: SwipeAction.NoUp,
         pointerId,
@@ -196,15 +148,15 @@ function addDirectionalSkillKeyboardShortcuts(
         pos: [
           { x: posX, y: posY },
           {
-            x: posX + clientxToSkillOffsetx(x),
-            y: posY + clientyToSkillOffsety(y),
+            x: posX + clientxToSkillOffsetx(mouseX),
+            y: posY + clientyToSkillOffsety(mouseY),
           },
         ],
         intervalBetweenPos: 0,
       });
     },
     // move
-    async (x: number, y: number) => {
+    async () => {
       await touch({
         action: TouchAction.Move,
         pointerId: 1,
@@ -213,13 +165,13 @@ function addDirectionalSkillKeyboardShortcuts(
           h: screenSizeH,
         },
         pos: {
-          x: posX + clientxToSkillOffsetx(x),
-          y: posY + clientyToSkillOffsety(y),
+          x: posX + clientxToSkillOffsetx(mouseX),
+          y: posY + clientyToSkillOffsety(mouseY),
         },
       });
     },
     // up
-    async (x: number, y: number) => {
+    async () => {
       await touch({
         action: TouchAction.Up,
         pointerId: 1,
@@ -228,14 +180,13 @@ function addDirectionalSkillKeyboardShortcuts(
           h: screenSizeH,
         },
         pos: {
-          x: posX + clientxToSkillOffsetx(x),
-          y: posY + clientyToSkillOffsety(y),
+          x: posX + clientxToSkillOffsetx(mouseX),
+          y: posY + clientyToSkillOffsety(mouseY),
         },
       });
     }
   );
 }
-
 let _keyDownFlag: stringKeyFlag = {
   left: false,
   right: false,
@@ -353,18 +304,16 @@ type stringKeyFlag = Record<string, boolean>;
 
 // add keyboard shortcuts for steering wheel
 function addSteeringWheelKeyboardShortcuts(
-  element: HTMLElement,
+  key: wheelKey,
   // pos relative to the device
   posX: number,
   posY: number,
   offset: number,
-  pointerId: number,
-  key: wheelKey
+  pointerId: number
 ) {
   for (const k of ["left", "right", "up", "down"]) {
     if (key[k])
-      addKeyboardShortcuts(
-        element,
+      addKeyboardShortcut(
         key[k],
         async () => {
           _keyDownFlag[k] = true;
@@ -378,13 +327,61 @@ function addSteeringWheelKeyboardShortcuts(
   }
 }
 
+const downKeyMap: Map<string, boolean> = new Map();
+const downKeyCBMap: Map<string, () => Promise<void>> = new Map();
+const upKeyCBMap: Map<string, () => Promise<void>> = new Map();
+
+async function keydownHandler(event: KeyboardEvent) {
+  if (event.repeat) return;
+  downKeyMap.set(event.key, true);
+  let cb = downKeyCBMap.get(event.key);
+  if (cb) await cb();
+}
+
+async function keyupHandler(event: KeyboardEvent) {
+  downKeyMap.set(event.key, false);
+  let cb = upKeyCBMap.get(event.key);
+  if (cb) await cb();
+}
+
+function addKeyboardShortcut(
+  key: string,
+  downCB: () => Promise<void>,
+  moveCB?: () => Promise<void>,
+  upCB?: () => Promise<void>
+) {
+  if (moveCB)
+    downKeyCBMap.set(key, async () => {
+      mousemoveCbMap.set(key, moveCB);
+      await downCB();
+    });
+  else downKeyCBMap.set(key, downCB);
+
+  if (upCB) {
+    if (moveCB)
+      upKeyCBMap.set(key, async () => {
+        mousemoveCbMap.delete(key);
+        await upCB();
+      });
+    else upKeyCBMap.set(key, upCB);
+  }
+}
+
 export function initKeyboardShortcuts(element: HTMLElement) {
-  addDirectionalSkillKeyboardShortcuts(element, "q", 1025, 500, 1);
-  addSteeringWheelKeyboardShortcuts(element, 230, 384, 100, 2, {
-    left: "a",
-    right: "d",
-    up: "w",
-    down: "s",
-  });
+  element.addEventListener("keydown", keydownHandler);
+  element.addEventListener("keyup", keyupHandler);
+  addDirectionalSkillKeyboardShortcuts("q", 1025, 500, 1);
+  addSteeringWheelKeyboardShortcuts(
+    {
+      left: "a",
+      right: "d",
+      up: "w",
+      down: "s",
+    },
+    230,
+    384,
+    100,
+    2
+  );
 }
 //#endregion
