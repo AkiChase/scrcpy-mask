@@ -5,6 +5,14 @@
   "windows": ["main"],
   "permissions": [
     "event:default",
-    "window:default"
+    "window:default",
+    "window:allow-set-position",
+    "window:allow-set-size",
+    "window:allow-maximize",
+    "window:allow-minimize",
+    "window:allow-close",
+    "window:allow-is-maximizable",
+    "window:allow-start-dragging",
+    "window:allow-unmaximize"
   ]
 }

@@ -29,7 +29,7 @@ async function maximizeOrRestore() {
         quaternary
         :focusable="false"
         class="close"
-        @click="appWindow.close()"
+        @click="getCurrent().close()"
       >
         <template #icon>
           <NIcon><Close /></NIcon>
