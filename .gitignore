@@ -1,0 +1,8 @@
+node_modules
+dist
+
+.vscode
+.DS_Store
+pnpm-lock.yaml
+scrcpy-mask.code-workspace
+src-tauri/Cargo.lock
