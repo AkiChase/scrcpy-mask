@@ -34,7 +34,7 @@ function clientxToCenterOffsetx(clientx: number, range: number, scale = 0.5) {
 function clientyToCenterOffsety(clienty: number, range: number, scale = 0.5) {
   return Math.max(
     -range,
-    Math.min(range, clientyToPosOffsety(clienty, screenSizeH * 0.57, scale))
+    Math.min(range, clientyToPosOffsety(clienty, screenSizeH * 0.55, scale))
   );
 }
 
@@ -83,8 +83,8 @@ function calculateMacroPosList(
   });
 }
 
-// TODO 方向轮盘也放到loop内吧，两个独立的循环不太好。但至少要将轮盘的循环间隔调低。
-// TODO 偶尔不定时抽风（但等待一会就能恢复正常），表现为setinterval中的回调函数没有执行
+// TODO 偶尔不定时抽风（切换一下程序就能恢复），表现为setinterval中的回调函数未执行
+// TODO 技能界面实际上是有投影变换的，需要一定的算法，不能仅仅相对坐标 （640,400）
 
 // add shortcuts for observation
 function addObservationShortcuts(
@@ -384,43 +384,13 @@ function addSteeringWheelKeyboardShortcuts(
   offset: number,
   pointerId: number
 ) {
-  for (const k of ["left", "right", "up", "down"]) {
-    if (key[k])
-      addShortcut(
-        key[k],
-        async () => {
-          _keyDownFlag[k] = true;
-          await _wheelKeyLoop(pointerId, posX, posY, offset);
-        },
-        undefined,
-        async () => {
-          _keyDownFlag[k] = false;
-        }
-      );
-  }
-}
+  let loopFlag = false;
+  let curPosX = 0;
+  let curPosY = 0;
 
-let _keyDownFlag: stringKeyFlag = {
-  left: false,
-  right: false,
-  up: false,
-  down: false,
-};
-let _isWheelKeyLoopRunning = false;
-// single loop for the steering wheel
-async function _wheelKeyLoop(
-  pointerId: number,
-  // pos relative to the device
-  posX: number,
-  posY: number,
-  offset: number
-) {
-  if (_isWheelKeyLoopRunning) return;
-  _isWheelKeyLoopRunning = true;
   // calculate the end coordinates of the eight directions of the direction wheel
   let offsetHalf = Math.round(offset / 1.414);
-
-  const pos = [
+  const calculatedPosList = [
     { x: posX - offset, y: posY }, // left
     { x: posX + offset, y: posY }, // right
     { x: posX, y: posY - offset }, // up
@@ -431,81 +401,112 @@ async function _wheelKeyLoop(
     { x: posX + offsetHalf, y: posY + offsetHalf }, // right down
   ];
 
-  // touch down on the center position
-  await touch({
-    action: TouchAction.Down,
-    pointerId: pointerId,
-    screen: {
-      w: screenSizeW,
-      h: screenSizeH,
-    },
-    pos: {
-      x: posX,
-      y: posY,
-    },
-  });
-
-  // move to the direction
-  let curPos;
-  let _lastKeyDownFlag: stringKeyFlag = {
-    left: true,
-    right: true,
-    up: true,
-    down: true,
-  };
-  while (
-    _keyDownFlag.left ||
-    _keyDownFlag.right ||
-    _keyDownFlag.up ||
-    _keyDownFlag.down
-  ) {
-    // if key down not changed
-    if (
-      _keyDownFlag.left === _lastKeyDownFlag.left &&
-      _keyDownFlag.right === _lastKeyDownFlag.right &&
-      _keyDownFlag.up === _lastKeyDownFlag.up &&
-      _keyDownFlag.down === _lastKeyDownFlag.down
-    ) {
-      await sleep(50);
-      continue;
-    }
-    // record the last key down flag
-    _lastKeyDownFlag = { ..._keyDownFlag };
-    // key down changed
-    if (_keyDownFlag.left) {
-      curPos = _keyDownFlag.up ? pos[4] : _keyDownFlag.down ? pos[6] : pos[0];
-    } else if (_keyDownFlag.right) {
-      curPos = _keyDownFlag.up ? pos[5] : _keyDownFlag.down ? pos[7] : pos[1];
-    } else if (_keyDownFlag.up) {
-      curPos = pos[2];
-    } else if (_keyDownFlag.down) {
-      curPos = pos[3];
+  // united loop callback for all directions
+  const unitedloopCB = async () => {
+    let newPosIndex;
+    if (downKeyMap.get(key.left)) {
+      newPosIndex = downKeyMap.get(key.up)
+        ? 4
+        : downKeyMap.get(key.down)
+        ? 6
+        : 0;
+    } else if (downKeyMap.get(key.right)) {
+      newPosIndex = downKeyMap.get(key.up)
+        ? 5
+        : downKeyMap.get(key.down)
+        ? 7
+        : 1;
+    } else if (downKeyMap.get(key.up)) {
+      newPosIndex = 2;
+    } else if (downKeyMap.get(key.down)) {
+      newPosIndex = 3;
     } else {
-      curPos = { x: posX, y: posY };
+      // all keys released
+      await unitedUpCB();
+      return;
     }
+    // if newPos is the same as curPos, return
+    let newPos = calculatedPosList[newPosIndex];
+    if (newPos.x === curPosX && newPos.y === curPosY) return;
+
+    curPosX = newPos.x;
+    curPosY = newPos.y;
+    // move to the direction
     await touch({
       action: TouchAction.Move,
-      pointerId: pointerId,
+      pointerId,
       screen: {
         w: screenSizeW,
         h: screenSizeH,
       },
-      pos: curPos,
+      pos: newPos,
     });
-    await sleep(100);
+  };
+
+  const unitedUpCB = async () => {
+    if (
+      downKeyMap.get(key.left) === false &&
+      downKeyMap.get(key.right) === false &&
+      downKeyMap.get(key.up) === false &&
+      downKeyMap.get(key.down) === false
+    ) {
+      // all wheel keys has been released
+      for (const k of ["left", "right", "up", "down"]) {
+        // only delete the valid key
+        loopDownKeyCBMap.delete(key[k]);
+        upKeyCBMap.delete(key[k]);
+      }
+      // touch up
+      await touch({
+        action: TouchAction.Up,
+        pointerId,
+        screen: {
+          w: screenSizeW,
+          h: screenSizeH,
+        },
+        pos: {
+          x: curPosX,
+          y: curPosY,
+        },
+      });
+      // recover the status
+      curPosX = 0;
+      curPosY = 0;
+      loopFlag = false;
+    }
+  };
+
+  for (const k of ["left", "right", "up", "down"]) {
+    addShortcut(
+      key[k],
+      async () => {
+        if (loopFlag) return;
+        loopFlag = true;
+        // add upCB
+        upKeyCBMap.set(key[k], unitedUpCB);
+
+        // touch down on the center position
+        await touch({
+          action: TouchAction.Down,
+          pointerId,
+          screen: {
+            w: screenSizeW,
+            h: screenSizeH,
+          },
+          pos: {
+            x: posX,
+            y: posY,
+          },
+        });
+        // add loopCB
+        loopDownKeyCBMap.set(key[k], unitedloopCB);
+      },
+      undefined,
+      undefined
+    );
   }
-  // touch up
-  await touch({
-    action: TouchAction.Up,
-    pointerId: pointerId,
-    screen: {
-      w: screenSizeW,
-      h: screenSizeH,
-    },
-    pos: curPos ? curPos : { x: posX, y: posY },
-  });
-  _isWheelKeyLoopRunning = false;
 }
+
 interface wheelKey {
   left: string;
   right: string;
@@ -513,7 +514,6 @@ interface wheelKey {
   down: string;
   [key: string]: string;
 }
-type stringKeyFlag = Record<string, boolean>;
 
 // add baisc click shortcuts
 function addClickShortcuts(key: string, pointerId: number) {
@@ -579,20 +579,20 @@ function keydownHandler(event: KeyboardEvent) {
   if (event.repeat) return;
   event.preventDefault();
   if (downKeyMap.has(event.code)) {
+    downKeyMap.set(event.code, true);
     // execute the down callback (if there is) asyncily
     let cb = downKeyCBMap.get(event.code);
     if (cb) cb();
-    downKeyMap.set(event.code, true);
   }
 }
 
 function keyupHandler(event: KeyboardEvent) {
   event.preventDefault();
   if (downKeyMap.has(event.code)) {
+    downKeyMap.set(event.code, false);
     // execute the up callback (if there is) asyncily
     let cb = upKeyCBMap.get(event.code);
     if (cb) cb();
-    downKeyMap.set(event.code, false);
   }
 }
 
@@ -602,10 +602,10 @@ function handleMouseDown(event: MouseEvent) {
   event.preventDefault();
   let key = "M" + event.button.toString();
   if (downKeyMap.has(key)) {
+    downKeyMap.set(key, true);
     // execute the down callback asyncily
     let cb = downKeyCBMap.get(key);
     if (cb) cb();
-    downKeyMap.set(key, true);
   }
 }
 
@@ -615,10 +615,10 @@ function handleMouseUp(event: MouseEvent) {
   event.preventDefault();
   let key = "M" + event.button.toString();
   if (downKeyMap.has(key)) {
+    downKeyMap.set(key, false);
     // execute the up callback asyncily
     let cb = upKeyCBMap.get(key);
     if (cb) cb();
-    downKeyMap.set(key, false);
   }
 }
 
@@ -802,6 +802,7 @@ export function listenToKeyEvent() {
       cb();
     });
   }, 50);
+
 }
 
 export function unlistenToKeyEvent() {
