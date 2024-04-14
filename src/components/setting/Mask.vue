@@ -14,6 +14,8 @@ import {
   useMessage,
 } from "naive-ui";
 import {
+  LogicalPosition,
+  LogicalSize,
   PhysicalPosition,
   PhysicalSize,
   getCurrent,
@@ -25,19 +27,21 @@ let unlistenResize: UnlistenFn = () => {};
 let unlistenMove: UnlistenFn = () => {};
 
 async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
-  const appWindow = getCurrent();
-  const factor = await appWindow.scaleFactor();
-  // header size and sidebar size
-  const mt = 30 * factor;
-  const ml = 70 * factor;
+  const factor = await getCurrent().scaleFactor();
 
-  if (pos !== undefined) {
-    areaModel.value.posX = Math.floor(pos.x + ml);
-    areaModel.value.posY = Math.floor(pos.y + mt);
+  const logicalSize = size?.toLogical(factor);
+  const logicalPos = pos?.toLogical(factor);
+  // header size and sidebar size
+  const mt = 30;
+  const ml = 70;
+
+  if (logicalPos !== undefined) {
+    areaModel.value.posX = Math.floor(logicalPos.x + ml);
+    areaModel.value.posY = Math.floor(logicalPos.y + mt);
   }
-  if (size !== undefined) {
-    areaModel.value.sizeW = Math.floor(size.width - ml);
-    areaModel.value.sizeH = Math.floor(size.height - mt);
+  if (logicalSize !== undefined) {
+    areaModel.value.sizeW = Math.floor(logicalSize.width - ml);
+    areaModel.value.sizeH = Math.floor(logicalSize.height - mt);
   }
 }
 
@@ -45,6 +49,7 @@ const message = useMessage();
 
 const formRef = ref<FormInst | null>(null);
 
+// logical pos and size of the mask area
 const areaModel = ref({
   posX: 0,
   posY: 0,
@@ -92,6 +97,7 @@ function handleAdjustClick(e: MouseEvent) {
   });
 }
 
+// TODO 等待官方合并修复分支后检查表现是否正常
 // move and resize window to the selected window (control) area
 async function adjustMaskArea() {
   // header size and sidebar size
@@ -99,26 +105,20 @@ async function adjustMaskArea() {
   const ml = 70;
 
   const appWindow = getCurrent();
-  const factor = await appWindow.scaleFactor();
 
-  const pos = new PhysicalPosition(
-    areaModel.value.posX,
-    areaModel.value.posY
-  ).toLogical(factor);
-  pos.y -= mt;
-  pos.x -= ml;
+  const pos = new LogicalPosition(
+    areaModel.value.posX - ml,
+    areaModel.value.posY - mt
+  );
 
   if (pos.x <= 0 || pos.y <= 0) {
     message.warning("蒙版区域坐标过小，可能导致其他部分不可见");
   }
 
-  const size = new PhysicalSize(
-    areaModel.value.sizeW,
-    areaModel.value.sizeH
-  ).toLogical(factor);
-  size.width += ml;
-  size.height += mt;
-
+  const size = new LogicalSize(
+    areaModel.value.sizeW + ml,
+    areaModel.value.sizeH + mt
+  );
   await appWindow.setPosition(pos);
   await appWindow.setSize(size);
 }

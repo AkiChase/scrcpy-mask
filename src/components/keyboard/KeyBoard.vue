@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { getCurrent } from "@tauri-apps/api/window";
-import { onActivated, onMounted, ref } from "vue";
+import { Ref, onActivated, ref } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 
 // TODO 添加右侧按键列表用于拖放
@@ -10,13 +9,12 @@ const keyboardElement = ref<HTMLElement | null>(null);
 const mouseX = ref(0);
 const mouseY = ref(0);
 
-let posFactor = 1;
 function clientxToPosx(clientx: number) {
-  return clientx < 70 ? 0 : Math.floor((clientx - 70) * posFactor);
+  return clientx < 70 ? 0 : Math.floor(clientx - 70);
 }
 
 function clientyToPosy(clienty: number) {
-  return clienty < 30 ? 0 : Math.floor((clienty - 30) * posFactor);
+  return clienty < 30 ? 0 : Math.floor(clienty - 30);
 }
 
 let ignoreMousemove = true;
@@ -27,17 +25,23 @@ function mousemoveHandler(event: MouseEvent) {
   mouseY.value = clientyToPosy(event.clientY);
 }
 
-onMounted(async () => {
-  const appWindow = getCurrent();
-  posFactor = await appWindow.scaleFactor();
-});
+const keyboardCodeList: Ref<string[]> = ref([]);
+function keyupHandler(event: KeyboardEvent) {
+  event.preventDefault();
+  if (keyboardCodeList.value.length > 10) {
+    keyboardCodeList.value.shift();
+    keyboardCodeList.value.push(event.code);
+  } else keyboardCodeList.value.push(event.code);
+}
 
 onActivated(() => {
   keyboardElement.value?.addEventListener("mousemove", mousemoveHandler);
+  document.addEventListener("keyup", keyupHandler);
 });
 
 onBeforeRouteLeave(() => {
   keyboardElement.value?.removeEventListener("mousemove", mousemoveHandler);
+  document.removeEventListener("keyup", keyupHandler);
 });
 </script>
 
@@ -45,6 +49,9 @@ onBeforeRouteLeave(() => {
   <div ref="keyboardElement" class="keyboard">
     此处最好用其他颜色的蒙版，和右侧的按键列表区同色
     <div>{{ mouseX }}, {{ mouseY }}</div>
+    <div v-for="code in keyboardCodeList">
+      {{ code }}
+    </div>
   </div>
 </template>
 

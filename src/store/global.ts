@@ -15,6 +15,7 @@ export const useGlobalStore = defineStore("counter", () => {
     scid: string;
     deviceName: string;
     device: Device;
+    screenSize: [number, number];
   }
 
   const controledDevice: Ref<ControledDevice|null> = ref(null);
