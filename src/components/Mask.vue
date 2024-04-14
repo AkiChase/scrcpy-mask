@@ -2,10 +2,12 @@
 import { onActivated, ref } from "vue";
 import { NDialog } from "naive-ui";
 import { useGlobalStore } from "../store/global";
-import { useRouter } from "vue-router";
-import { getCurrent } from "@tauri-apps/api/window";
-import { initShortcuts } from "../hotkey";
-import { getScreenSize } from "../invoke";
+import { onBeforeRouteLeave, useRouter } from "vue-router";
+import {
+  initShortcuts,
+  listenToKeyEvent,
+  unlistenToKeyEvent,
+} from "../hotkey";
 
 const maskRef = ref<HTMLElement | null>(null);
 
@@ -14,20 +16,26 @@ const router = useRouter();
 
 let isShortcutInited = false;
 
+onBeforeRouteLeave(() => {
+  if (isShortcutInited) {
+    if (maskRef.value) {
+      unlistenToKeyEvent();
+    }
+  }
+});
+
 onActivated(async () => {
   if (isShortcutInited) {
-    maskRef.value?.focus();
+    if (maskRef.value) {
+      listenToKeyEvent();
+    }
     return;
   }
   if (store.controledDevice) {
-    let screenSize = await getScreenSize(store.controledDevice.device.id);
     if (maskRef.value) {
-      const appWindow = getCurrent();
-      let posFactor = await appWindow.scaleFactor();
-      initShortcuts(maskRef.value, posFactor, screenSize);
+      initShortcuts(store.controledDevice.screenSize, maskRef.value);
+      listenToKeyEvent();
       isShortcutInited = true;
-      maskRef.value.focus();
-      console.log("热键已载入");
     }
   }
 });
@@ -36,7 +44,6 @@ function toStartServer() {
   router.replace({ name: "device" });
 }
 
-// TODO 监听快捷键
 // TODO 按键设置
 // TODO 渲染按钮
 </script>
@@ -56,7 +63,7 @@ function toStartServer() {
   </div>
   <div
     v-show="store.controledDevice"
-    tabindex="-1"
+    @contextmenu.prevent
     class="mask"
     ref="maskRef"
   ></div>
@@ -66,11 +73,7 @@ function toStartServer() {
 .mask {
   background-color: rgba(255, 255, 255, 0.2);
   overflow: hidden;
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 5px var(--primary-color);
-  }
+  cursor: pointer;
 }
 .notice {
   background-color: rgba(255, 255, 255, 0.2);
