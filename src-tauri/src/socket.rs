@@ -173,7 +173,6 @@ async fn recv_front_msg(
                             &mut write_half,
                         )
                         .await;
-                        println!("控制信息发送完成！");
                         continue;
                     } else {
                         // 处理Scrcpy Mask命令

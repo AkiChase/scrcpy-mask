@@ -12,32 +12,49 @@ import {
   NIcon,
   FormInst,
   useMessage,
+  NP,
 } from "naive-ui";
 import {
   PhysicalPosition,
   PhysicalSize,
   getCurrent,
 } from "@tauri-apps/api/window";
+import { platform } from "@tauri-apps/plugin-os";
 import { SettingsOutline } from "@vicons/ionicons5";
 import { UnlistenFn } from "@tauri-apps/api/event";
 
 let unlistenResize: UnlistenFn = () => {};
 let unlistenMove: UnlistenFn = () => {};
 
-async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
-  const appWindow = getCurrent();
-  const factor = await appWindow.scaleFactor();
-  // header size and sidebar size
-  const mt = 30 * factor;
-  const ml = 70 * factor;
+let factor = 1;
+let platformName = "";
 
-  if (pos !== undefined) {
-    areaModel.value.posX = Math.floor(pos.x + ml);
-    areaModel.value.posY = Math.floor(pos.y + mt);
-  }
-  if (size !== undefined) {
-    areaModel.value.sizeW = Math.floor(size.width - ml);
-    areaModel.value.sizeH = Math.floor(size.height - mt);
+// macos: use logical position and size to refresh the area model
+// others: use pyhsical position and size to refresh the area model
+async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
+  // header size and sidebar size
+  const mt = 30;
+  const ml = 70;
+
+  if (platformName === "macos") {
+    // use logical position and size
+    if (size !== undefined) {
+      areaModel.value.sizeW = Math.floor((size.width - ml) / factor);
+      areaModel.value.sizeH = Math.floor((size.height - mt) / factor);
+    }
+    if (pos !== undefined) {
+      areaModel.value.posX = Math.floor((pos.x + ml) / factor);
+      areaModel.value.posY = Math.floor((pos.y + mt) / factor);
+    }
+  } else {
+    if (size !== undefined) {
+      areaModel.value.sizeW = Math.floor(size.width - ml);
+      areaModel.value.sizeH = Math.floor(size.height - mt);
+    }
+    if (pos !== undefined) {
+      areaModel.value.posX = Math.floor(pos.x + ml);
+      areaModel.value.posY = Math.floor(pos.y + mt);
+    }
   }
 }
 
@@ -45,6 +62,7 @@ const message = useMessage();
 
 const formRef = ref<FormInst | null>(null);
 
+// logical pos and size of the mask area
 const areaModel = ref({
   posX: 0,
   posY: 0,
@@ -92,6 +110,7 @@ function handleAdjustClick(e: MouseEvent) {
   });
 }
 
+// TODO 等待官方合并修复分支后检查表现是否正常
 // move and resize window to the selected window (control) area
 async function adjustMaskArea() {
   // header size and sidebar size
@@ -99,32 +118,32 @@ async function adjustMaskArea() {
   const ml = 70;
 
   const appWindow = getCurrent();
-  const factor = await appWindow.scaleFactor();
 
   const pos = new PhysicalPosition(
-    areaModel.value.posX,
-    areaModel.value.posY
-  ).toLogical(factor);
-  pos.y -= mt;
-  pos.x -= ml;
-
-  if (pos.x <= 0 || pos.y <= 0) {
-    message.warning("蒙版区域坐标过小，可能导致其他部分不可见");
-  }
+    areaModel.value.posX - ml,
+    areaModel.value.posY - mt
+  );
 
   const size = new PhysicalSize(
-    areaModel.value.sizeW,
-    areaModel.value.sizeH
-  ).toLogical(factor);
-  size.width += ml;
-  size.height += mt;
+    areaModel.value.sizeW + ml,
+    areaModel.value.sizeH + mt
+  );
 
-  await appWindow.setPosition(pos);
-  await appWindow.setSize(size);
+  if (platformName === "macos") {
+    // use logical position and size
+    await appWindow.setPosition(pos.toLogical(factor));
+    await appWindow.setSize(size.toLogical(factor));
+  } else {
+    await appWindow.setPosition(pos);
+    await appWindow.setSize(size);
+  }
 }
 
 onMounted(async () => {
   const appWindow = getCurrent();
+  factor = await appWindow.scaleFactor();
+  platformName = await platform();
+
   unlistenResize = await appWindow.onResized(({ payload: size }) => {
     refreshAreaModel(size, undefined);
   });
@@ -194,6 +213,7 @@ onUnmounted(() => {
           />
         </NFormItemGi>
       </NGrid>
+      <NP>提示：使用物理坐标、尺寸</NP>
     </NForm>
   </div>
 </template>

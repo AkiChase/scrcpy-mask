@@ -10,14 +10,47 @@ import {
 } from "@vicons/ionicons5";
 import { Keyboard24Regular } from "@vicons/fluent";
 import { NIcon } from "naive-ui";
+import { useGlobalStore } from "../store/global";
+import { sendInjectKeycode } from "../frontcommand/controlMsg";
+import {
+  AndroidKeyEventAction,
+  AndroidKeycode,
+  AndroidMetastate,
+} from "../frontcommand/android";
 
 const router = useRouter();
 const route = useRoute();
+const store = useGlobalStore();
 
 function nav(name: string) {
   router.replace({ name });
 }
 
+function sleep(time: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, time);
+  });
+}
+
+async function sendKeyCodeToDevice(code: AndroidKeycode) {
+  if (store.controledDevice) {
+    await sendInjectKeycode({
+      action: AndroidKeyEventAction.AKEY_EVENT_ACTION_DOWN,
+      keycode: code,
+      repeat: 0,
+      metastate: AndroidMetastate.AMETA_NONE,
+    });
+    await sleep(50);
+    await sendInjectKeycode({
+      action: AndroidKeyEventAction.AKEY_EVENT_ACTION_UP,
+      keycode: code,
+      repeat: 0,
+      metastate: AndroidMetastate.AMETA_NONE,
+    });
+  }
+}
 </script>
 
 <template>
@@ -50,17 +83,17 @@ function nav(name: string) {
     </div>
 
     <div class="nav">
-      <div>
+      <div @click="sendKeyCodeToDevice(AndroidKeycode.AKEYCODE_BACK)">
         <NIcon>
           <ReturnDownBackOutline />
         </NIcon>
       </div>
-      <div>
+      <div @click="sendKeyCodeToDevice(AndroidKeycode.AKEYCODE_HOME)">
         <NIcon>
           <StopOutline />
         </NIcon>
       </div>
-      <div>
+      <div @click="sendKeyCodeToDevice(AndroidKeycode.AKEYCODE_APP_SWITCH)">
         <NIcon>
           <ListOutline />
         </NIcon>
@@ -79,6 +112,7 @@ function nav(name: string) {
   flex-direction: column;
   justify-content: space-between;
   user-select: none;
+  -webkit-user-select: none;
 
   .logo {
     height: 30px;
@@ -88,6 +122,7 @@ function nav(name: string) {
     justify-content: center;
     align-items: center;
     color: var(--light-color);
+    cursor: pointer;
   }
 
   .module {

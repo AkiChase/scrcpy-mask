@@ -15,7 +15,7 @@ async function maximizeOrRestore() {
 <template>
   <div data-tauri-drag-region class="header">
     <NButtonGroup>
-      <NButton quaternary :focusable="false" @click="appWindow.minimize()">
+      <NButton quaternary :focusable="false" @click="getCurrent().minimize()">
         <template #icon>
           <NIcon><Subtract16Regular /></NIcon>
         </template>

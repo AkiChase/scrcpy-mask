@@ -96,7 +96,7 @@ fn start_scrcpy_server(
         let share_app = app.clone();
         let listen_handler = share_app.listen("front-command", move |event| {
             let sender = front_msg_sender.clone();
-            println!("收到front-command: {}", event.payload());
+            // println!("收到front-command: {}", event.payload());
             tokio::spawn(async move {
                 if let Err(e) = sender.send(event.payload().into()).await {
                     println!("front-command转发失败: {}", e);
@@ -130,9 +130,44 @@ async fn main() {
                     .join("resource"),
             )
             .unwrap();
+
+            let main_window = app.get_webview_window("main").unwrap();
+
+            #[cfg(windows)]
+            {
+                let scale_factor = main_window.scale_factor().unwrap();
+                main_window
+                    .set_size(tauri::Size::Physical(tauri::PhysicalSize {
+                        width: 1350,
+                        height: 750,
+                    }))
+                    .unwrap();
+
+                main_window
+                    .with_webview(move |webview| {
+                        unsafe {
+                            // see https://docs.rs/webview2-com/0.19.1/webview2_com/Microsoft/Web/WebView2/Win32/struct.ICoreWebView2Controller.html
+                            webview
+                                .controller()
+                                .SetZoomFactor(1.0 / scale_factor)
+                                .unwrap();
+                        }
+                    })
+                    .unwrap();
+            }
+            #[cfg(target_os = "macos")]
+            {
+                main_window
+                    .set_size(tauri::Size::Logical(tauri::LogicalSize {
+                        width: 1350.,
+                        height: 750.,
+                    }))
+                    .unwrap();
+            }
+
             Ok(())
         })
-        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             adb_devices,
             get_screen_size,

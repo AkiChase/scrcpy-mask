@@ -15,6 +15,7 @@ import {
   pushServerFile,
   forwardServerPort,
   startScrcpyServer,
+  getScreenSize,
 } from "../invoke";
 import {
   NH4,
@@ -43,9 +44,7 @@ const store = useGlobalStore();
 const port = ref(27183);
 
 //#region listener
-const deviceWaitForMetadataTask: ((
-  deviceName: string
-) => void)[] = [];
+const deviceWaitForMetadataTask: ((deviceName: string) => void)[] = [];
 
 let unlisten: UnlistenFn | undefined;
 onMounted(async () => {
@@ -175,6 +174,8 @@ async function onMenuSelect(key: string) {
         "00000000" + Math.floor(Math.random() * 100000).toString(16)
       ).slice(-8);
 
+      let screenSize = await getScreenSize(device.id);
+
       await pushServerFile(device.id);
       await forwardServerPort(device.id, scid, port.value);
       await startScrcpyServer(device.id, scid, `127.0.0.1:${port.value}`);
@@ -185,7 +186,8 @@ async function onMenuSelect(key: string) {
           scid,
           deviceName,
           device,
-        }
+          screenSize,
+        };
         nextTick(() => {
           store.hideLoading();
         });
@@ -200,6 +202,13 @@ async function refreshDevices() {
   devices.value = await adbDevices();
   store.hideLoading();
 }
+
+const screenSizeInfo = computed(() => {
+  if (store.controledDevice) {
+    return `${store.controledDevice.screenSize[0]} x ${store.controledDevice.screenSize[1]}`;
+  }
+  return "";
+});
 </script>
 
 <template>
@@ -221,7 +230,11 @@ async function refreshDevices() {
           v-if="!store.controledDevice"
         />
         <div class="controled-device" v-if="store.controledDevice">
-          <div>{{ store.controledDevice.deviceName }} ({{ store.controledDevice.device.id }})</div>
+          <div>
+            {{ store.controledDevice.deviceName }} ({{
+              store.controledDevice.device.id
+            }})
+          </div>
           <div class="device-op">
             <NTooltip trigger="hover">
               <template #trigger>
@@ -231,16 +244,11 @@ async function refreshDevices() {
                   </template>
                 </NButton>
               </template>
-              scid: {{ store.controledDevice.scid }}
-              <br />status: {{ store.controledDevice.device.status }}
+              scid: {{ store.controledDevice.scid }} <br />status:
+              {{ store.controledDevice.device.status }} <br />screen:
+              {{ screenSizeInfo }}
             </NTooltip>
-
-            <NButton
-              quaternary
-              circle
-              type="error"
-              @click="shutdownSC()"
-            >
+            <NButton quaternary circle type="error" @click="shutdownSC()">
               <template #icon>
                 <NIcon><CloseCircle /></NIcon>
               </template>
