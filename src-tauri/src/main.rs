@@ -130,6 +130,32 @@ async fn main() {
                     .join("resource"),
             )
             .unwrap();
+
+            let main_window = app.get_webview_window("main").unwrap();
+            let scale_factor = main_window.scale_factor().unwrap();
+            main_window
+                .set_size(tauri::Size::Physical(tauri::PhysicalSize {
+                    width: 1350,
+                    height: 750,
+                }))
+                .unwrap();
+
+            let zoomfactor = 1.0 / scale_factor;
+            main_window
+                .with_webview(move |webview| {
+                    #[cfg(target_os = "windows")]
+                    unsafe {
+                        // see https://docs.rs/webview2-com/0.19.1/webview2_com/Microsoft/Web/WebView2/Win32/struct.ICoreWebView2Controller.html
+                        webview.controller().SetZoomFactor(zoomfactor).unwrap();
+                    }
+
+                    //   #[cfg(target_os = "macos")]
+                    //   unsafe {
+                    //     let () = msg_send![webview.inner(), setPageZoom: 4.];
+                    //   }
+                })
+                .unwrap();
+
             Ok(())
         })
         .plugin(tauri_plugin_shell::init())

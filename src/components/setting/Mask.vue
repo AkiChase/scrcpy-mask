@@ -12,10 +12,9 @@ import {
   NIcon,
   FormInst,
   useMessage,
+  NP,
 } from "naive-ui";
 import {
-  LogicalPosition,
-  LogicalSize,
   PhysicalPosition,
   PhysicalSize,
   getCurrent,
@@ -27,21 +26,17 @@ let unlistenResize: UnlistenFn = () => {};
 let unlistenMove: UnlistenFn = () => {};
 
 async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
-  const factor = await getCurrent().scaleFactor();
-
-  const logicalSize = size?.toLogical(factor);
-  const logicalPos = pos?.toLogical(factor);
   // header size and sidebar size
   const mt = 30;
   const ml = 70;
 
-  if (logicalPos !== undefined) {
-    areaModel.value.posX = Math.floor(logicalPos.x + ml);
-    areaModel.value.posY = Math.floor(logicalPos.y + mt);
+  if (size !== undefined) {
+    areaModel.value.sizeW = Math.floor(size.width - ml);
+    areaModel.value.sizeH = Math.floor(size.height - mt);
   }
-  if (logicalSize !== undefined) {
-    areaModel.value.sizeW = Math.floor(logicalSize.width - ml);
-    areaModel.value.sizeH = Math.floor(logicalSize.height - mt);
+  if (pos !== undefined) {
+    areaModel.value.posX = Math.floor(pos.x + ml);
+    areaModel.value.posY = Math.floor(pos.y + mt);
   }
 }
 
@@ -106,16 +101,12 @@ async function adjustMaskArea() {
 
   const appWindow = getCurrent();
 
-  const pos = new LogicalPosition(
+  const pos = new PhysicalPosition(
     areaModel.value.posX - ml,
     areaModel.value.posY - mt
   );
 
-  if (pos.x <= 0 || pos.y <= 0) {
-    message.warning("蒙版区域坐标过小，可能导致其他部分不可见");
-  }
-
-  const size = new LogicalSize(
+  const size = new PhysicalSize(
     areaModel.value.sizeW + ml,
     areaModel.value.sizeH + mt
   );
@@ -194,6 +185,7 @@ onUnmounted(() => {
           />
         </NFormItemGi>
       </NGrid>
+      <NP>提示：使用物理坐标、尺寸</NP>
     </NForm>
   </div>
 </template>
