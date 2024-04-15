@@ -803,6 +803,7 @@ export function listenToKeyEvent() {
     });
   }, 50);
 
+  // setInterval(()=>console.log(loopDownKeyCBMap), 3000);
 }
 
 export function unlistenToKeyEvent() {
@@ -836,18 +837,23 @@ export function initShortcuts(
     100,
     1
   );
-  addDirectionalSkillShortcuts("KeyQ", 950, 610, 100, 2); // skill 1
-  addDirectionalSkillShortcuts("AltLeft", 1025, 500, 100, 2); // skill 2
-  addDirectionalSkillShortcuts("KeyE", 1160, 420, 100, 2); // skill 3
+  addDirectionalSkillShortcuts("KeyQ", 950, 610, 200, 2); // skill 1
+  addDirectionalSkillShortcuts("AltLeft", 1025, 500, 200, 2); // skill 2
+  addDirectionalSkillShortcuts("KeyE", 1160, 420, 200, 2); // skill 3
   addTriggerWhenPressedSkillShortcuts("M4", 1160, 420, false, 0, 2); // skill 3 (no direction and trigger when pressed)
   addDirectionlessSkillShortcuts("M1", 1150, 280, 2); // equipment skill (middle mouse click)
   addCancelSkillShortcuts("Space", 1160, 140, 2); // cancel skill
 
   addTapShortcuts("KeyB", 650, 650, 3); // home
   addTapShortcuts("KeyC", 740, 650, 3); // recover
-  addDirectionalSkillShortcuts("KeyF", 840, 650, 100, 2); // summoner skills
+  addDirectionalSkillShortcuts("KeyF", 840, 650, 200, 2); // summoner skills
   addTriggerWhenPressedSkillShortcuts("ControlLeft", 840, 650, false, 0, 3); // summoner skills (no direction and trigger when pressed)
   addTapShortcuts("M2", 1165, 620, 3); // attack (right click)
+  addTapShortcuts("Digit1", 880, 560, 3); // skill 1 upgrade
+  addTapShortcuts("Digit2", 960, 430, 3); // skill 2 upgrade
+  addTapShortcuts("Digit3", 1090, 350, 3); // skill 3 upgrade
+  addTapShortcuts("Digit4", 130, 300, 3); // quick buy 1
+  addTapShortcuts("Digit5", 130, 370, 3); // quick buy 2
 
   addObservationShortcuts("M3", 1000, 200, 0.5, 4); // observation
 
@@ -890,6 +896,28 @@ export function initShortcuts(
         {
           type: "touch",
           args: ["default", 5, 1200, 60],
+        },
+      ]);
+    }
+  );
+
+  // map
+  addShortcut(
+    "KeyZ",
+    async () => {
+      await execMacro([
+        {
+          type: "touch",
+          args: ["default", 5, 250, 230],
+        },
+      ]);
+    },
+    undefined,
+    async () => {
+      await execMacro([
+        {
+          type: "touch",
+          args: ["default", 5, 640, 150],
         },
       ]);
     }

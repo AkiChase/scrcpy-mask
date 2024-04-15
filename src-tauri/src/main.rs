@@ -96,7 +96,7 @@ fn start_scrcpy_server(
         let share_app = app.clone();
         let listen_handler = share_app.listen("front-command", move |event| {
             let sender = front_msg_sender.clone();
-            println!("收到front-command: {}", event.payload());
+            // println!("收到front-command: {}", event.payload());
             tokio::spawn(async move {
                 if let Err(e) = sender.send(event.payload().into()).await {
                     println!("front-command转发失败: {}", e);
