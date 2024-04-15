@@ -855,8 +855,8 @@ export function initShortcuts(
   addTapShortcuts("Digit1", 880, 560, 3); // skill 1 upgrade
   addTapShortcuts("Digit2", 960, 430, 3); // skill 2 upgrade
   addTapShortcuts("Digit3", 1090, 350, 3); // skill 3 upgrade
-  addTapShortcuts("Digit4", 130, 300, 3); // quick buy 1
-  addTapShortcuts("Digit5", 130, 370, 3); // quick buy 2
+  addTapShortcuts("Digit5", 130, 300, 3); // quick buy 1
+  addTapShortcuts("Digit6", 130, 370, 3); // quick buy 2
 
   addObservationShortcuts("M3", 1000, 200, 0.5, 4); // observation
 
