@@ -793,23 +793,26 @@ async function execMacro(macro: any[]) {
   }
 }
 
-let timmerId: number = 0;
+let loopFlag = false;
+function execLoopCB() {
+  loopDownKeyCBMap.forEach((cb) => {
+    cb();
+  });
+  if (loopFlag) requestAnimationFrame(execLoopCB);
+}
+
 export function listenToKeyEvent() {
   document.addEventListener("keydown", keydownHandler);
   document.addEventListener("keyup", keyupHandler);
-  timmerId = setInterval(() => {
-    loopDownKeyCBMap.forEach((cb) => {
-      cb();
-    });
-  }, 50);
-
+  loopFlag = true;
+  execLoopCB();
   // setInterval(()=>console.log(loopDownKeyCBMap), 3000);
 }
 
 export function unlistenToKeyEvent() {
   document.removeEventListener("keydown", keydownHandler);
   document.removeEventListener("keyup", keyupHandler);
-  clearInterval(timmerId);
+  loopFlag = false;
 }
 
 export function initShortcuts(
