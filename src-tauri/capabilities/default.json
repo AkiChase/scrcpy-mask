@@ -13,6 +13,8 @@
     "window:allow-close",
     "window:allow-is-maximizable",
     "window:allow-start-dragging",
-    "window:allow-unmaximize"
+    "window:allow-unmaximize",
+    "os:default",
+    "os:allow-platform"
   ]
 }

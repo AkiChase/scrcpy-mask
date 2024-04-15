@@ -1,7 +1,12 @@
 use crate::resource::{ResHelper, ResourceName};
 use std::{
-    io::BufRead, os::windows::process::CommandExt, path::PathBuf, process::{Child, Command, Stdio}
+    io::BufRead,
+    path::PathBuf,
+    process::{Child, Command, Stdio},
 };
+
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 use anyhow::{Context, Ok, Result};
 
@@ -87,12 +92,14 @@ pub struct Adb;
 /// But some output of command won't be output, like adb service startup information.
 impl Adb {
     fn cmd_base(res_dir: &PathBuf) -> Command {
-        let mut cmd = Command::new(ResHelper::get_file_path(res_dir, ResourceName::Adb));
-        
-        #[cfg(target_os = "windows")]
-        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW 
-
-        cmd
+        #[cfg(target_os = "windows")]{
+            let mut cmd = Command::new(ResHelper::get_file_path(res_dir, ResourceName::Adb));
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+            cmd
+        }
+        #[cfg(not(target_os = "windows"))]{
+            Command::new(ResHelper::get_file_path(res_dir, ResourceName::Adb))
+        }
     }
 
     /// execute "adb devices" and return devices list
