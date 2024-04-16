@@ -6,6 +6,8 @@ import {
   touch,
 } from "./frontcommand/scrcpyMaskCmd";
 
+
+// TODO 根据当前蒙版的尺寸换算屏幕尺寸
 function clientxToPosx(clientx: number) {
   return clientx < 70 ? 0 : Math.floor(clientx - 70);
 }

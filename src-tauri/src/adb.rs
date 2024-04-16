@@ -58,32 +58,6 @@ impl Device {
             .spawn()
             .context("Failed to execute 'adb shell'")?)
     }
-
-    pub fn cmd_screen_size(res_dir: &PathBuf, id: &str) -> Result<(u16, u16)> {
-        let mut adb_command = Adb::cmd_base(res_dir);
-        let output = adb_command
-            .args(&["-s", id, "shell", "wm", "size"])
-            .output()
-            .context("Failed to execute 'adb shell wm size'")?;
-        let lines = output.stdout.lines();
-        let mut size = (0, 0);
-        for line in lines {
-            if let std::result::Result::Ok(s) = line {
-                println!("{}", s);
-                if s.starts_with("Physical size:") {
-                    let mut iter = s.split_whitespace();
-                    iter.next();
-                    iter.next();
-                    let mut size_str = iter.next().unwrap().split('x');
-                    let width = size_str.next().unwrap().parse::<u16>().unwrap();
-                    let height = size_str.next().unwrap().parse::<u16>().unwrap();
-                    size = (width, height);
-                    break;
-                }
-            }
-        }
-        Ok(size)
-    }
 }
 
 pub struct Adb;

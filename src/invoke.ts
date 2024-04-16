@@ -9,10 +9,6 @@ export async function adbDevices(): Promise<Device[]> {
   return await invoke("adb_devices");
 }
 
-export async function getScreenSize(id: string): Promise<[number, number]> {
-  return await invoke("get_screen_size", { id });
-}
-
 export async function forwardServerPort(
   id: string,
   scid: string,

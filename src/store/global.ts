@@ -15,15 +15,19 @@ export const useGlobalStore = defineStore("counter", () => {
     scid: string;
     deviceName: string;
     device: Device;
-    screenSize: [number, number];
   }
 
-  const controledDevice: Ref<ControledDevice|null> = ref(null);
+  const screenSizeW: Ref<number> = ref(1280);
+  const screenSizeH: Ref<number> = ref(720);
+
+  const controledDevice: Ref<ControledDevice | null> = ref(null);
 
   return {
     showLoading,
     hideLoading,
     showLoadingRef,
     controledDevice,
+    screenSizeW,
+    screenSizeH,
   };
 });

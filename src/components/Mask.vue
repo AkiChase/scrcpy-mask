@@ -3,11 +3,7 @@ import { onActivated, ref } from "vue";
 import { NDialog } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
-import {
-  initShortcuts,
-  listenToKeyEvent,
-  unlistenToKeyEvent,
-} from "../hotkey";
+import { initShortcuts, listenToKeyEvent, unlistenToKeyEvent } from "../hotkey";
 
 const maskRef = ref<HTMLElement | null>(null);
 
@@ -33,7 +29,7 @@ onActivated(async () => {
   }
   if (store.controledDevice) {
     if (maskRef.value) {
-      initShortcuts(store.controledDevice.screenSize, maskRef.value);
+      initShortcuts([store.screenSizeW, store.screenSizeH], maskRef.value);
       listenToKeyEvent();
       isShortcutInited = true;
     }

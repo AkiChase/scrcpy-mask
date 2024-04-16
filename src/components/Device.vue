@@ -15,7 +15,6 @@ import {
   pushServerFile,
   forwardServerPort,
   startScrcpyServer,
-  getScreenSize,
 } from "../invoke";
 import {
   NH4,
@@ -26,11 +25,13 @@ import {
   NEmpty,
   NTooltip,
   NFlex,
+  NFormItem,
   NIcon,
   NSpin,
   DataTableColumns,
   DropdownOption,
   useDialog,
+  useMessage,
 } from "naive-ui";
 import { CloseCircle, InformationCircle } from "@vicons/ionicons5";
 import { Refresh } from "@vicons/ionicons5";
@@ -40,6 +41,7 @@ import { useGlobalStore } from "../store/global";
 
 const dialog = useDialog();
 const store = useGlobalStore();
+const message = useMessage();
 
 const port = ref(27183);
 
@@ -168,13 +170,20 @@ async function onMenuSelect(key: string) {
       if (!port.value) {
         port.value = 27183;
       }
+
+      if (!(store.screenSizeW > 0) || !(store.screenSizeH > 0)) {
+        message.error("请正确输入当前控制设备的屏幕尺寸");
+        store.screenSizeW = 0;
+        store.screenSizeH = 0;
+        store.hideLoading();
+        return;
+      }
+
       let device = devices.value[rowIndex];
 
       let scid = (
         "00000000" + Math.floor(Math.random() * 100000).toString(16)
       ).slice(-8);
-
-      let screenSize = await getScreenSize(device.id);
 
       await pushServerFile(device.id);
       await forwardServerPort(device.id, scid, port.value);
@@ -186,7 +195,6 @@ async function onMenuSelect(key: string) {
           scid,
           deviceName,
           device,
-          screenSize,
         };
         nextTick(() => {
           store.hideLoading();
@@ -202,13 +210,6 @@ async function refreshDevices() {
   devices.value = await adbDevices();
   store.hideLoading();
 }
-
-const screenSizeInfo = computed(() => {
-  if (store.controledDevice) {
-    return `${store.controledDevice.screenSize[0]} x ${store.controledDevice.screenSize[1]}`;
-  }
-  return "";
-});
 </script>
 
 <template>
@@ -222,6 +223,28 @@ const screenSizeInfo = computed(() => {
         :max="49151"
         style="max-width: 300px"
       />
+      <NH4 prefix="bar">屏幕尺寸</NH4>
+      <NFlex justify="left" align="center">
+        <NFormItem label="宽度">
+          <NInputNumber
+            v-model:value="store.screenSizeW"
+            placeholder="屏幕宽度"
+            :min="0"
+            :disabled="store.controledDevice !== null"
+          />
+        </NFormItem>
+        <NFormItem label="高度">
+          <NInputNumber
+            v-model:value="store.screenSizeH"
+            placeholder="屏幕高度"
+            :min="0"
+            :disabled="store.controledDevice !== null"
+          />
+        </NFormItem>
+      </NFlex>
+      <NP
+        >提示：请正确输入当前控制设备的屏幕尺寸，这是成功发送触摸事件的必要参数</NP
+      >
       <NH4 prefix="bar">受控设备</NH4>
       <div class="controled-device-list">
         <NEmpty
@@ -246,7 +269,6 @@ const screenSizeInfo = computed(() => {
               </template>
               scid: {{ store.controledDevice.scid }} <br />status:
               {{ store.controledDevice.device.status }} <br />screen:
-              {{ screenSizeInfo }}
             </NTooltip>
             <NButton quaternary circle type="error" @click="shutdownSC()">
               <template #icon>

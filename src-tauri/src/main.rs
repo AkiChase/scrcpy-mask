@@ -21,16 +21,6 @@ fn adb_devices(app: tauri::AppHandle) -> Result<Vec<Device>, String> {
 }
 
 #[tauri::command]
-/// get screen size of the device
-fn get_screen_size(id: String, app: tauri::AppHandle) -> Result<(u16, u16), String> {
-    let dir = app.path().resource_dir().unwrap().join("resource");
-    match ScrcpyClient::get_screen_size(&dir, &id) {
-        Ok(size) => Ok(size),
-        Err(e) => Err(e.to_string()),
-    }
-}
-
-#[tauri::command]
 /// forward local port to the device port
 fn forward_server_port(
     app: tauri::AppHandle,
@@ -170,7 +160,6 @@ async fn main() {
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             adb_devices,
-            get_screen_size,
             forward_server_port,
             push_server_file,
             start_scrcpy_server
