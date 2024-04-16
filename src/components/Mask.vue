@@ -83,12 +83,12 @@ function toStartServer() {
 
 <style scoped lang="scss">
 .mask {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: transparent;
   overflow: hidden;
   cursor: pointer;
 }
 .notice {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;

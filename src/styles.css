@@ -1,12 +1,12 @@
 :root {
-  --primary-color: #63E2B7;
-  --primary-hover-color: #7FE7C4;
-  --primary-pressed-color: #5ACEA7;
+  --primary-color: #63e2b7;
+  --primary-hover-color: #7fe7c4;
+  --primary-pressed-color: #5acea7;
+
   --bg-color: #101014;
-  --content-bg-color: #18181C;
-  --content-hl-color: #26262A;
-  
-  --light-color: rgba(255, 255, 255, 0.9);
+  --content-bg-color: #18181c;
+  --content-hl-color: #26262a;
+  --light-color: rgba(255, 255, 255, 0.82);
   --gray-color: #6b6e76;
   --red-color: #fc5185;
   --red-pressed-color: #f4336d;
@@ -24,4 +24,3 @@ div#app {
   height: 100%;
   box-sizing: border-box;
 }
-

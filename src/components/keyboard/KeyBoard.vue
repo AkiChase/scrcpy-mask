@@ -34,19 +34,41 @@ function keyupHandler(event: KeyboardEvent) {
   } else keyboardCodeList.value.push(event.code);
 }
 
+function mousedownHandler(event: MouseEvent) {
+  event.preventDefault();
+  const key = `M${event.button}`;
+  if (keyboardCodeList.value.length > 10) {
+    keyboardCodeList.value.shift();
+    keyboardCodeList.value.push(key);
+  } else keyboardCodeList.value.push(key);
+}
+
+function mouseupHandler(event: MouseEvent) {
+  event.preventDefault();
+  const key = `M${event.button}`;
+  if (keyboardCodeList.value.length > 10) {
+    keyboardCodeList.value.shift();
+    keyboardCodeList.value.push(key);
+  } else keyboardCodeList.value.push(key);
+}
+
 onActivated(() => {
   keyboardElement.value?.addEventListener("mousemove", mousemoveHandler);
+  keyboardElement.value?.addEventListener("mousedown", mousedownHandler);
+  keyboardElement.value?.addEventListener("mouseup", mouseupHandler);
   document.addEventListener("keyup", keyupHandler);
 });
 
 onBeforeRouteLeave(() => {
   keyboardElement.value?.removeEventListener("mousemove", mousemoveHandler);
+  keyboardElement.value?.removeEventListener("mousedown", mousedownHandler);
+  keyboardElement.value?.removeEventListener("mouseup", mouseupHandler);
   document.removeEventListener("keyup", keyupHandler);
 });
 </script>
 
 <template>
-  <div ref="keyboardElement" class="keyboard">
+  <div ref="keyboardElement" class="keyboard" @contextmenu.prevent>
     此处最好用其他颜色的蒙版，和右侧的按键列表区同色
     <div>{{ mouseX }}, {{ mouseY }}</div>
     <div v-for="code in keyboardCodeList">
@@ -57,7 +79,8 @@ onBeforeRouteLeave(() => {
 
 <style scoped>
 .keyboard {
-  background-color: rgba(255, 255, 255, 0.5);
+  color: var(--light-color);
+  background-color: rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 </style>
