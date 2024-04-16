@@ -20,40 +20,25 @@ import {
   PhysicalSize,
   getCurrent,
 } from "@tauri-apps/api/window";
+import { Store } from "@tauri-apps/plugin-store";
 import { SettingsOutline } from "@vicons/ionicons5";
 import { UnlistenFn } from "@tauri-apps/api/event";
 
 let unlistenResize: UnlistenFn = () => {};
 let unlistenMove: UnlistenFn = () => {};
-
 let factor = 1;
 
-// macos: use logical position and size to refresh the area model
-// others: use pyhsical position and size to refresh the area model
-async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
-  const lSize = size?.toLogical(factor);
-  const lPos = pos?.toLogical(factor);
-
-  // header size and sidebar size
-  const mt = 30;
-  const ml = 70;
-
-  // use logical position and size
-  if (lSize !== undefined) {
-    areaModel.value.sizeW = lSize.width - ml;
-    areaModel.value.sizeH = lSize.height - mt;
-  }
-  if (lPos !== undefined) {
-    areaModel.value.posX = lPos.x + ml;
-    areaModel.value.posY = lPos.y + mt;
-  }
-}
-
+const localStore = new Store("store.bin");
 const message = useMessage();
-
 const formRef = ref<FormInst | null>(null);
 
 // logical pos and size of the mask area
+interface MaskArea {
+  posX: number;
+  posY: number;
+  sizeW: number;
+  sizeH: number;
+}
 const areaModel = ref({
   posX: 0,
   posY: 0,
@@ -88,12 +73,32 @@ const areaFormRules: FormRules = {
   },
 };
 
+async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
+  const lSize = size?.toLogical(factor);
+  const lPos = pos?.toLogical(factor);
+
+  // header size and sidebar size
+  const mt = 30;
+  const ml = 70;
+
+  // use logical position and size
+  if (lSize !== undefined) {
+    areaModel.value.sizeW = lSize.width - ml;
+    areaModel.value.sizeH = lSize.height - mt;
+  }
+  if (lPos !== undefined) {
+    areaModel.value.posX = lPos.x + ml;
+    areaModel.value.posY = lPos.y + mt;
+  }
+}
+
 function handleAdjustClick(e: MouseEvent) {
   e.preventDefault();
   formRef.value?.validate((errors) => {
     if (!errors) {
       adjustMaskArea().then(() => {
-        message.success("调整完成");
+        localStore.set("maskArea", areaModel.value);
+        message.success("蒙版区域已保存");
       });
     } else {
       message.error("请正确输入蒙版的坐标和尺寸");
@@ -126,6 +131,11 @@ async function adjustMaskArea() {
 onMounted(async () => {
   const appWindow = getCurrent();
   factor = await appWindow.scaleFactor();
+
+  let maskArea: null | MaskArea = await localStore.get("maskArea");
+  if (maskArea !== null) {
+    areaModel.value = maskArea;
+  }
 
   unlistenResize = await appWindow.onResized(({ payload: size }) => {
     refreshAreaModel(size, undefined);

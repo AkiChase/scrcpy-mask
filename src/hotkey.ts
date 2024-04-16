@@ -85,7 +85,6 @@ function calculateMacroPosList(
   });
 }
 
-// TODO 偶尔不定时抽风（切换一下程序就能恢复），表现为setinterval中的回调函数未执行
 // TODO 技能界面实际上是有投影变换的，需要一定的算法，不能仅仅相对坐标 （640,400）
 
 // add shortcuts for observation

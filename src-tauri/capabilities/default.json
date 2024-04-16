@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "event:default",
     "window:default",
@@ -13,6 +15,11 @@
     "window:allow-close",
     "window:allow-is-maximizable",
     "window:allow-start-dragging",
-    "window:allow-unmaximize"
+    "window:allow-unmaximize",
+    "store:default",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-save",
+    "store:allow-load"
   ]
 }

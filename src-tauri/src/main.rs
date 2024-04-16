@@ -111,14 +111,41 @@ fn start_scrcpy_server(
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
-            // let main_window = app.get_webview_window("main").unwrap();
-            // main_window
-            //     .set_size(tauri::Size::Logical(tauri::LogicalSize {
-            //         width: 1350.,
-            //         height: 750.,
-            //     }))
-            //     .unwrap();
+            let stores = app
+                .app_handle()
+                .state::<tauri_plugin_store::StoreCollection<tauri::Wry>>();
+            let path = std::path::PathBuf::from("store.bin");
+            tauri_plugin_store::with_store(app.app_handle().clone(), stores, path, |store| {
+                // restore window position and size
+                match store.get("maskArea") {
+                    Some(value) => {
+                        let pos_x = value["posX"].as_i64().unwrap();
+                        let pos_y = value["posY"].as_i64().unwrap();
+                        let size_w = value["sizeW"].as_i64().unwrap();
+                        let size_h = value["sizeH"].as_i64().unwrap();
+                        let main_window: tauri::WebviewWindow =
+                            app.get_webview_window("main").unwrap();
+                        main_window
+                            .set_position(tauri::Position::Logical(tauri::LogicalPosition {
+                                x: (pos_x - 70) as f64,
+                                y: (pos_y - 30) as f64,
+                            }))
+                            .unwrap();
+                        main_window
+                            .set_size(tauri::Size::Logical(tauri::LogicalSize {
+                                width: (size_w + 70) as f64,
+                                height: (size_h + 30) as f64,
+                            }))
+                            .unwrap();
+                    }
+                    None => {}
+                }
+
+                Ok(())
+            })
+            .unwrap();
 
             // check resource files
             ResHelper::res_init(
