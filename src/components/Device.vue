@@ -18,6 +18,7 @@ import {
 } from "../invoke";
 import {
   NH4,
+  NP,
   NInputNumber,
   NButton,
   NDataTable,
@@ -37,6 +38,7 @@ import {
 import { CloseCircle, InformationCircle } from "@vicons/ionicons5";
 import { Refresh } from "@vicons/ionicons5";
 import { UnlistenFn, listen } from "@tauri-apps/api/event";
+import { Store } from "@tauri-apps/plugin-store";
 import { shutdown } from "../frontcommand/scrcpyMaskCmd";
 import { useGlobalStore } from "../store/global";
 
@@ -46,11 +48,20 @@ const message = useMessage();
 
 const port = ref(27183);
 
+const localStore = new Store("store.bin");
+
 //#region listener
 const deviceWaitForMetadataTask: ((deviceName: string) => void)[] = [];
 
 let unlisten: UnlistenFn | undefined;
 onMounted(async () => {
+  const screenSize: null | { sizeW: number; sizeH: number } =
+    await localStore.get("screenSize");
+  if (screenSize !== null) {
+    store.screenSizeW = screenSize.sizeW;
+    store.screenSizeH = screenSize.sizeH;
+  }
+
   unlisten = await listen("device-reply", (event) => {
     try {
       let payload = JSON.parse(event.payload as string);
@@ -179,6 +190,12 @@ async function onMenuSelect(key: string) {
         store.hideLoading();
         return;
       }
+
+      localStore.set("screenSize", {
+        sizeW: store.screenSizeW,
+        sizeH: store.screenSizeH,
+      });
+      message.info("屏幕尺寸已保存，正在启动控制服务");
 
       let device = devices.value[rowIndex];
 
@@ -322,6 +339,7 @@ async function refreshDevices() {
   color: var(--light-color);
   background-color: var(--bg-color);
   padding: 0 20px;
+  height: 100%;
 }
 
 .controled-device-list {

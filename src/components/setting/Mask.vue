@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import {
   NH4,
+  NP,
   NForm,
   NGrid,
   NFormItemGi,
@@ -206,6 +207,9 @@ onUnmounted(() => {
           />
         </NFormItemGi>
       </NGrid>
+      <NP
+        >提示：蒙版尺寸与设备尺寸将用于坐标转换，请保证尺寸的准确性</NP
+      >
     </NForm>
   </div>
 </template>

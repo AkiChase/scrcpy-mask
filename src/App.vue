@@ -14,11 +14,11 @@ import {
     <NMessageProvider>
       <Header />
       <NDialogProvider>
-          <RouterView v-slot="{ Component }">
-            <KeepAlive>
-              <component :is="Component" />
-            </KeepAlive>
-          </RouterView>
+        <RouterView v-slot="{ Component }">
+          <KeepAlive>
+            <component :is="Component" />
+          </KeepAlive>
+        </RouterView>
       </NDialogProvider>
       <Sidebar />
     </NMessageProvider>
@@ -35,5 +35,9 @@ import {
   grid-template-areas:
     "sidebar header"
     "sidebar content";
+}
+
+.n-scrollbar-content {
+  height: 100%;
 }
 </style>
