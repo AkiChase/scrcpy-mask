@@ -112,6 +112,14 @@ fn start_scrcpy_server(
 async fn main() {
     tauri::Builder::default()
         .setup(|app| {
+            // let main_window = app.get_webview_window("main").unwrap();
+            // main_window
+            //     .set_size(tauri::Size::Logical(tauri::LogicalSize {
+            //         width: 1350.,
+            //         height: 750.,
+            //     }))
+            //     .unwrap();
+
             // check resource files
             ResHelper::res_init(
                 &app.path()
@@ -120,44 +128,8 @@ async fn main() {
                     .join("resource"),
             )
             .unwrap();
-
-            let main_window = app.get_webview_window("main").unwrap();
-
-            #[cfg(windows)]
-            {
-                let scale_factor = main_window.scale_factor().unwrap();
-                main_window
-                    .set_size(tauri::Size::Physical(tauri::PhysicalSize {
-                        width: 1350,
-                        height: 750,
-                    }))
-                    .unwrap();
-
-                main_window
-                    .with_webview(move |webview| {
-                        unsafe {
-                            // see https://docs.rs/webview2-com/0.19.1/webview2_com/Microsoft/Web/WebView2/Win32/struct.ICoreWebView2Controller.html
-                            webview
-                                .controller()
-                                .SetZoomFactor(1.0 / scale_factor)
-                                .unwrap();
-                        }
-                    })
-                    .unwrap();
-            }
-            #[cfg(target_os = "macos")]
-            {
-                main_window
-                    .set_size(tauri::Size::Logical(tauri::LogicalSize {
-                        width: 1350.,
-                        height: 750.,
-                    }))
-                    .unwrap();
-            }
-
             Ok(())
         })
-        .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             adb_devices,
             forward_server_port,

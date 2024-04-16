@@ -29,7 +29,6 @@ import {
 .container {
   background-color: transparent;
   height: 100%;
-  overflow: auto;
   display: grid;
   grid-template-columns: 70px 1fr;
   grid-template-rows: 30px 1fr;

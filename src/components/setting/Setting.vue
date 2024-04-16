@@ -31,7 +31,8 @@ import { NTabs, NTabPane, NScrollbar } from "naive-ui";
 .setting {
   background-color: var(--content-bg-color);
   color: var(--light-color);
-  overflow: hidden;
+  height: 100%;
+  overflow-y: auto;
   display: flex;
 
   .NTabPane {

@@ -28,6 +28,7 @@ import {
   NFormItem,
   NIcon,
   NSpin,
+  NScrollbar,
   DataTableColumns,
   DropdownOption,
   useDialog,
@@ -213,116 +214,114 @@ async function refreshDevices() {
 </script>
 
 <template>
-  <div class="device">
-    <NSpin :show="store.showLoadingRef">
-      <NH4 prefix="bar">本地端口</NH4>
-      <NInputNumber
-        v-model:value="port"
-        :show-button="false"
-        :min="16384"
-        :max="49151"
-        style="max-width: 300px"
-      />
-      <NH4 prefix="bar">屏幕尺寸</NH4>
-      <NFlex justify="left" align="center">
-        <NFormItem label="宽度">
-          <NInputNumber
-            v-model:value="store.screenSizeW"
-            placeholder="屏幕宽度"
-            :min="0"
-            :disabled="store.controledDevice !== null"
-          />
-        </NFormItem>
-        <NFormItem label="高度">
-          <NInputNumber
-            v-model:value="store.screenSizeH"
-            placeholder="屏幕高度"
-            :min="0"
-            :disabled="store.controledDevice !== null"
-          />
-        </NFormItem>
-      </NFlex>
-      <NP
-        >提示：请正确输入当前控制设备的屏幕尺寸，这是成功发送触摸事件的必要参数</NP
-      >
-      <NH4 prefix="bar">受控设备</NH4>
-      <div class="controled-device-list">
-        <NEmpty
-          size="small"
-          description="No Controled Device"
-          v-if="!store.controledDevice"
+  <NScrollbar>
+    <div class="device">
+      <NSpin :show="store.showLoadingRef">
+        <NH4 prefix="bar">本地端口</NH4>
+        <NInputNumber
+          v-model:value="port"
+          :show-button="false"
+          :min="16384"
+          :max="49151"
+          style="max-width: 300px"
         />
-        <div class="controled-device" v-if="store.controledDevice">
-          <div>
-            {{ store.controledDevice.deviceName }} ({{
-              store.controledDevice.device.id
-            }})
-          </div>
-          <div class="device-op">
-            <NTooltip trigger="hover">
-              <template #trigger>
-                <NButton quaternary circle type="info">
-                  <template #icon>
-                    <NIcon><InformationCircle /></NIcon>
-                  </template>
-                </NButton>
-              </template>
-              scid: {{ store.controledDevice.scid }} <br />status:
-              {{ store.controledDevice.device.status }} <br />screen:
-            </NTooltip>
-            <NButton quaternary circle type="error" @click="shutdownSC()">
-              <template #icon>
-                <NIcon><CloseCircle /></NIcon>
-              </template>
-            </NButton>
+        <NH4 prefix="bar">设备尺寸</NH4>
+        <NFlex justify="left" align="center">
+          <NFormItem label="宽度">
+            <NInputNumber
+              v-model:value="store.screenSizeW"
+              placeholder="屏幕宽度"
+              :min="0"
+              :disabled="store.controledDevice !== null"
+            />
+          </NFormItem>
+          <NFormItem label="高度">
+            <NInputNumber
+              v-model:value="store.screenSizeH"
+              placeholder="屏幕高度"
+              :min="0"
+              :disabled="store.controledDevice !== null"
+            />
+          </NFormItem>
+        </NFlex>
+        <NP
+          >提示：请正确输入当前控制设备的屏幕尺寸，这是成功发送触摸事件的必要参数</NP
+        >
+        <NH4 prefix="bar">受控设备</NH4>
+        <div class="controled-device-list">
+          <NEmpty
+            size="small"
+            description="No Controled Device"
+            v-if="!store.controledDevice"
+          />
+          <div class="controled-device" v-if="store.controledDevice">
+            <div>
+              {{ store.controledDevice.deviceName }} ({{
+                store.controledDevice.device.id
+              }})
+            </div>
+            <div class="device-op">
+              <NTooltip trigger="hover">
+                <template #trigger>
+                  <NButton quaternary circle type="info">
+                    <template #icon>
+                      <NIcon><InformationCircle /></NIcon>
+                    </template>
+                  </NButton>
+                </template>
+                scid: {{ store.controledDevice.scid }} <br />status:
+                {{ store.controledDevice.device.status }} <br />screen:
+              </NTooltip>
+              <NButton quaternary circle type="error" @click="shutdownSC()">
+                <template #icon>
+                  <NIcon><CloseCircle /></NIcon>
+                </template>
+              </NButton>
+            </div>
           </div>
         </div>
-      </div>
-      <NFlex justify="space-between" align="center">
-        <NH4 prefix="bar">可用设备</NH4>
-        <NButton
-          tertiary
-          circle
-          type="primary"
-          @click="refreshDevices"
-          style="margin-right: 20px"
-        >
-          <template #icon>
-            <NIcon><Refresh /></NIcon>
-          </template>
-        </NButton>
-      </NFlex>
-      <NDataTable
-        max-height="120"
-        :columns="tableCols"
-        :data="availableDevice"
-        :row-props="tableRowProps"
-        :pagination="false"
-        :bordered="false"
-      />
-      <NDropdown
-        placement="bottom-start"
-        trigger="manual"
-        :x="menuX"
-        :y="menuY"
-        :options="menuOptions"
-        :show="showMenu"
-        :on-clickoutside="onMenuClickoutside"
-        @select="onMenuSelect"
-      />
-    </NSpin>
-  </div>
+        <NFlex justify="space-between" align="center">
+          <NH4 prefix="bar">可用设备</NH4>
+          <NButton
+            tertiary
+            circle
+            type="primary"
+            @click="refreshDevices"
+            style="margin-right: 20px"
+          >
+            <template #icon>
+              <NIcon><Refresh /></NIcon>
+            </template>
+          </NButton>
+        </NFlex>
+        <NDataTable
+          max-height="120"
+          :columns="tableCols"
+          :data="availableDevice"
+          :row-props="tableRowProps"
+          :pagination="false"
+          :bordered="false"
+        />
+        <NDropdown
+          placement="bottom-start"
+          trigger="manual"
+          :x="menuX"
+          :y="menuY"
+          :options="menuOptions"
+          :show="showMenu"
+          :on-clickoutside="onMenuClickoutside"
+          @select="onMenuSelect"
+        />
+      </NSpin>
+    </div>
+  </NScrollbar>
 </template>
 
 <style scoped lang="scss">
 .device {
   color: var(--light-color);
   background-color: var(--bg-color);
-  padding: 0 25px;
-}
-
-.n-h4 {
-  margin-top: 20px;
+  padding: 0 20px;
 }
 
 .controled-device-list {
