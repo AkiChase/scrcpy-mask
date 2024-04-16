@@ -6,14 +6,16 @@ import {
   touch,
 } from "./frontcommand/scrcpyMaskCmd";
 
-
-// TODO 根据当前蒙版的尺寸换算屏幕尺寸
 function clientxToPosx(clientx: number) {
-  return clientx < 70 ? 0 : Math.floor(clientx - 70);
+  return clientx < 70
+    ? 0
+    : Math.floor((clientx - 70) * (screenSizeW / maskSizeW));
 }
 
 function clientyToPosy(clienty: number) {
-  return clienty < 30 ? 0 : Math.floor(clienty - 30);
+  return clienty < 30
+    ? 0
+    : Math.floor((clienty - 30) * (screenSizeH / maskSizeH));
 }
 
 function clientxToPosOffsetx(clientx: number, posx: number, scale: number) {
@@ -567,6 +569,8 @@ function addClickShortcuts(key: string, pointerId: number) {
 
 let screenSizeW: number;
 let screenSizeH: number;
+let maskSizeW: number;
+let maskSizeH: number;
 let mouseX = 0;
 let mouseY = 0;
 
@@ -816,13 +820,17 @@ export function unlistenToKeyEvent() {
   loopFlag = false;
 }
 
-export function initShortcuts(
+export function updateScreenSizeAndMaskArea(
   screenSize: [number, number],
-  element: HTMLElement
+  maskArea: [number, number]
 ) {
   screenSizeW = screenSize[0];
   screenSizeH = screenSize[1];
+  maskSizeW = maskArea[0];
+  maskSizeH = maskArea[1];
+}
 
+export function initShortcuts(element: HTMLElement) {
   element.addEventListener("mousedown", handleMouseDown);
   element.addEventListener("mousemove", handleMouseMove);
   element.addEventListener("mouseup", handleMouseUp);
