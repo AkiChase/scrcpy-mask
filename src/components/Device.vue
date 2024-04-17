@@ -51,7 +51,7 @@ const port = ref(27183);
 const localStore = new Store("store.bin");
 
 //#region listener
-const deviceWaitForMetadataTask: ((deviceName: string) => void)[] = [];
+let deviceWaitForMetadataTask: ((deviceName: string) => void) | null = null;
 
 let unlisten: UnlistenFn | undefined;
 onMounted(async () => {
@@ -67,8 +67,7 @@ onMounted(async () => {
       let payload = JSON.parse(event.payload as string);
       switch (payload.type) {
         case "MetaData":
-          let task = deviceWaitForMetadataTask.shift();
-          task?.(payload.deviceName);
+          deviceWaitForMetadataTask?.(payload.deviceName);
           break;
         case "ClipboardChanged":
           console.log("剪切板变动", payload.clipboard);
@@ -195,7 +194,7 @@ async function onMenuSelect(key: string) {
         sizeW: store.screenSizeW,
         sizeH: store.screenSizeH,
       });
-      message.info("屏幕尺寸已保存，正在启动控制服务");
+      message.info("屏幕尺寸已保存，正在启动控制服务，请保持设备亮屏");
 
       let device = devices.value[rowIndex];
 
@@ -207,17 +206,29 @@ async function onMenuSelect(key: string) {
       await forwardServerPort(device.id, scid, port.value);
       await startScrcpyServer(device.id, scid, `127.0.0.1:${port.value}`);
 
+      // connection timeout check
+      let id = setTimeout(async () => {
+        if (deviceWaitForMetadataTask) {
+          await shutdown();
+          store.controledDevice = null;
+          store.hideLoading();
+          message.error("设备连接超时");
+        }
+      }, 4000);
+
       // add cb for metadata
-      deviceWaitForMetadataTask.push((deviceName: string) => {
+      deviceWaitForMetadataTask = (deviceName: string) => {
         store.controledDevice = {
           scid,
           deviceName,
           device,
         };
         nextTick(() => {
+          deviceWaitForMetadataTask = null;
+          clearTimeout(id);
           store.hideLoading();
         });
-      });
+      };
       break;
   }
 }
