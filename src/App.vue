@@ -37,6 +37,10 @@ import {
     "sidebar content";
 }
 
+.n-scrollbar-container{
+  background-color: var(--bg-color);
+}
+
 .n-scrollbar-content {
   height: 100%;
 }

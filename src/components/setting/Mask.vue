@@ -84,12 +84,12 @@ async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
 
   // use logical position and size
   if (lSize !== undefined) {
-    areaModel.value.sizeW = lSize.width - ml;
-    areaModel.value.sizeH = lSize.height - mt;
+    areaModel.value.sizeW = Math.round(lSize.width) - ml;
+    areaModel.value.sizeH = Math.round(lSize.height) - mt;
   }
   if (lPos !== undefined) {
-    areaModel.value.posX = lPos.x + ml;
-    areaModel.value.posY = lPos.y + mt;
+    areaModel.value.posX = Math.round(lPos.x) + ml;
+    areaModel.value.posY = Math.round(lPos.y) + mt;
   }
 }
 

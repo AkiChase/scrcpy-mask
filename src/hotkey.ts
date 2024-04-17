@@ -46,30 +46,42 @@ async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function calculateMacroPosX(pos: [string, number] | number): number {
-  if (typeof pos === "number") {
-    return pos;
+function calculateMacroPosX(
+  posX: [string, number] | number,
+  relativeSizeW: number
+): number {
+  if (typeof posX === "number") {
+    return Math.round(posX * (screenSizeW / relativeSizeW));
   }
-  if (typeof pos === "string") {
+  if (typeof posX === "string") {
     return clientxToPosx(mouseX);
   } else {
-    if (pos[0] === "mouse") {
-      return clientxToPosx(mouseX) + pos[1];
+    if (posX[0] === "mouse") {
+      return (
+        clientxToPosx(mouseX) +
+        Math.round(posX[1] * (screenSizeW / relativeSizeW))
+      );
     } else {
       throw new Error("Invalid pos");
     }
   }
 }
 
-function calculateMacroPosY(pos: [string, number] | number): number {
-  if (typeof pos === "number") {
-    return pos;
+function calculateMacroPosY(
+  posY: [string, number] | number,
+  relativeSizeH: number
+): number {
+  if (typeof posY === "number") {
+    return Math.round(posY * (screenSizeH / relativeSizeH));
   }
-  if (typeof pos === "string") {
+  if (typeof posY === "string") {
     return clientyToPosy(mouseY);
   } else {
-    if (pos[0] === "mouse") {
-      return clientyToPosy(mouseY) + pos[1];
+    if (posY[0] === "mouse") {
+      return (
+        clientyToPosy(mouseY) +
+        Math.round(posY[1] * (screenSizeH / relativeSizeH))
+      );
     } else {
       throw new Error("Invalid pos");
     }
@@ -77,12 +89,13 @@ function calculateMacroPosY(pos: [string, number] | number): number {
 }
 
 function calculateMacroPosList(
-  posList: [[string, number] | number, [string, number] | number][]
+  posList: [[string, number] | number, [string, number] | number][],
+  relativeSize: { w: number; h: number }
 ): { x: number; y: number }[] {
   return posList.map((posPair) => {
     return {
-      x: calculateMacroPosX(posPair[0]),
-      y: calculateMacroPosY(posPair[1]),
+      x: calculateMacroPosX(posPair[0], relativeSize.w),
+      y: calculateMacroPosY(posPair[1], relativeSize.h),
     };
   });
 }
@@ -92,6 +105,7 @@ function calculateMacroPosList(
 // add shortcuts for observation
 function addObservationShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   posX: number,
   posY: number,
   scale: number,
@@ -99,6 +113,8 @@ function addObservationShortcuts(
 ) {
   let observationMouseX = 0;
   let observationMouseY = 0;
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   addShortcut(
     key,
     async () => {
@@ -151,10 +167,13 @@ function addObservationShortcuts(
 // add shortcuts for simple tap (touch for 100 ms when pressed)
 function addTapShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   posX: number,
   posY: number,
   pointerId: number
 ) {
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   addShortcut(
     key,
     async () => {
@@ -179,10 +198,13 @@ function addTapShortcuts(
 // add shortcuts for cancel skill
 function addCancelSkillShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   posX: number,
   posY: number,
   pointerId: number
 ) {
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   addShortcut(
     key,
     async () => {
@@ -230,6 +252,7 @@ function addCancelSkillShortcuts(
 // add shortcuts for trigger when pressed skill
 function addTriggerWhenPressedSkillShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   // pos relative to the device
   posX: number,
   posY: number,
@@ -239,6 +262,8 @@ function addTriggerWhenPressedSkillShortcuts(
   pointerId: number
 ) {
   if (directional) {
+    posX = Math.round((posX / relativeSize.w) * screenSizeW);
+    posY = Math.round((posY / relativeSize.h) * screenSizeH);
     addShortcut(
       key,
       // down
@@ -264,18 +289,21 @@ function addTriggerWhenPressedSkillShortcuts(
       undefined
     );
   } else {
-    addTapShortcuts(key, posX, posY, pointerId);
+    addTapShortcuts(key, relativeSize, posX, posY, pointerId);
   }
 }
 
 // add shortcuts for directionless skill (cancelable)
 function addDirectionlessSkillShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   // pos relative to the device
   posX: number,
   posY: number,
   pointerId: number
 ) {
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   addShortcut(
     key,
     // down
@@ -317,12 +345,15 @@ function addDirectionlessSkillShortcuts(
 // add shortcuts for directional skill (cancelable)
 function addDirectionalSkillShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   // pos relative to the device
   posX: number,
   posY: number,
   range: number,
   pointerId: number
 ) {
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   addShortcut(
     key,
     // down
@@ -381,6 +412,7 @@ function addDirectionalSkillShortcuts(
 // add shortcuts for steering wheel
 function addSteeringWheelKeyboardShortcuts(
   key: wheelKey,
+  relativeSize: { w: number; h: number },
   // pos relative to the device
   posX: number,
   posY: number,
@@ -390,6 +422,8 @@ function addSteeringWheelKeyboardShortcuts(
   let loopFlag = false;
   let curPosX = 0;
   let curPosY = 0;
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
 
   // calculate the end coordinates of the eight directions of the direction wheel
   let offsetHalf = Math.round(offset / 1.414);
@@ -717,7 +751,8 @@ function addShortcut(
  *  },
  * ]);
  */
-async function execMacro(macro: any[]) {
+
+async function execMacro(relativeSize: { w: number; h: number }, macro: any[]) {
   for (const cmd of macro) {
     if (!cmd.hasOwnProperty("type") || !cmd.hasOwnProperty("args")) {
       console.error("Invalid command: ", cmd);
@@ -755,8 +790,8 @@ async function execMacro(macro: any[]) {
               h: screenSizeH,
             },
             pos: {
-              x: calculateMacroPosX(cmd.args[2]),
-              y: calculateMacroPosY(cmd.args[3]),
+              x: calculateMacroPosX(cmd.args[2], relativeSize.w),
+              y: calculateMacroPosY(cmd.args[3], relativeSize.h),
             },
           });
           break;
@@ -783,7 +818,7 @@ async function execMacro(macro: any[]) {
               w: screenSizeW,
               h: screenSizeH,
             },
-            pos: calculateMacroPosList(cmd.args[2]),
+            pos: calculateMacroPosList(cmd.args[2], relativeSize),
             intervalBetweenPos: cmd.args[3],
           });
           break;
@@ -836,6 +871,9 @@ export function initShortcuts(element: HTMLElement) {
   element.addEventListener("mouseup", handleMouseUp);
   element.addEventListener("mouseout", handleMouseUp); // mouse out of the element as mouse up
 
+  // 读取按键配置文件时获取
+  const relativeSize = { w: 1280, h: 720 };
+
   addClickShortcuts("M0", 0);
   addSteeringWheelKeyboardShortcuts(
     {
@@ -844,36 +882,53 @@ export function initShortcuts(element: HTMLElement) {
       up: "KeyW",
       down: "KeyS",
     },
+    relativeSize,
     180,
     560,
     100,
     1
   );
-  addDirectionalSkillShortcuts("KeyQ", 950, 610, 200, 2); // skill 1
-  addDirectionalSkillShortcuts("AltLeft", 1025, 500, 200, 2); // skill 2
-  addDirectionalSkillShortcuts("KeyE", 1160, 420, 200, 2); // skill 3
-  addTriggerWhenPressedSkillShortcuts("M4", 1160, 420, false, 0, 2); // skill 3 (no direction and trigger when pressed)
-  addDirectionlessSkillShortcuts("M1", 1150, 280, 2); // equipment skill (middle mouse click)
-  addCancelSkillShortcuts("Space", 1160, 140, 2); // cancel skill
+  addDirectionalSkillShortcuts("KeyQ", relativeSize, 950, 610, 200, 2); // skill 1
+  addDirectionalSkillShortcuts("AltLeft", relativeSize, 1025, 500, 200, 2); // skill 2
+  addDirectionalSkillShortcuts("KeyE", relativeSize, 1160, 420, 200, 2); // skill 3
+  addTriggerWhenPressedSkillShortcuts(
+    "M4",
+    relativeSize,
+    1160,
+    420,
+    false,
+    0,
+    2
+  ); // skill 3 (no direction and trigger when pressed)
+  addDirectionlessSkillShortcuts("M1", relativeSize, 1150, 280, 2); // equipment skill (middle mouse click)
+  addCancelSkillShortcuts("Space", relativeSize, 1160, 140, 2); // cancel skill
 
-  addTapShortcuts("KeyB", 650, 650, 3); // home
-  addTapShortcuts("KeyC", 740, 650, 3); // recover
-  addDirectionalSkillShortcuts("KeyF", 840, 650, 200, 2); // summoner skills
-  addTriggerWhenPressedSkillShortcuts("ControlLeft", 840, 650, false, 0, 3); // summoner skills (no direction and trigger when pressed)
-  addTapShortcuts("M2", 1165, 620, 3); // attack (right click)
-  addTapShortcuts("Digit1", 880, 560, 3); // skill 1 upgrade
-  addTapShortcuts("Digit2", 960, 430, 3); // skill 2 upgrade
-  addTapShortcuts("Digit3", 1090, 350, 3); // skill 3 upgrade
-  addTapShortcuts("Digit5", 130, 300, 3); // quick buy 1
-  addTapShortcuts("Digit6", 130, 370, 3); // quick buy 2
+  addTapShortcuts("KeyB", relativeSize, 650, 650, 3); // home
+  addTapShortcuts("KeyC", relativeSize, 740, 650, 3); // recover
+  addDirectionalSkillShortcuts("KeyF", relativeSize, 840, 650, 200, 2); // summoner skills
+  addTriggerWhenPressedSkillShortcuts(
+    "ControlLeft",
+    relativeSize,
+    840,
+    650,
+    false,
+    0,
+    3
+  ); // summoner skills (no direction and trigger when pressed)
+  addTapShortcuts("M2", relativeSize, 1165, 620, 3); // attack (right click)
+  addTapShortcuts("Digit1", relativeSize, 880, 560, 3); // skill 1 upgrade
+  addTapShortcuts("Digit2", relativeSize, 960, 430, 3); // skill 2 upgrade
+  addTapShortcuts("Digit3", relativeSize, 1090, 350, 3); // skill 3 upgrade
+  addTapShortcuts("Digit5", relativeSize, 130, 300, 3); // quick buy 1
+  addTapShortcuts("Digit6", relativeSize, 130, 370, 3); // quick buy 2
 
-  addObservationShortcuts("M3", 1000, 200, 0.5, 4); // observation
+  addObservationShortcuts("M3", relativeSize, 1000, 200, 0.5, 4); // observation
 
   // panel
   addShortcut(
     "Tab",
     async () => {
-      await execMacro([
+      await execMacro(relativeSize, [
         {
           type: "touch",
           args: ["default", 5, 1185, 40],
@@ -882,7 +937,7 @@ export function initShortcuts(element: HTMLElement) {
     },
     undefined,
     async () => {
-      await execMacro([
+      await execMacro(relativeSize, [
         {
           type: "touch",
           args: ["default", 5, 1220, 100],
@@ -895,7 +950,7 @@ export function initShortcuts(element: HTMLElement) {
   addShortcut(
     "ShiftLeft",
     async () => {
-      await execMacro([
+      await execMacro(relativeSize, [
         {
           type: "touch",
           args: ["default", 5, 40, 300],
@@ -904,7 +959,7 @@ export function initShortcuts(element: HTMLElement) {
     },
     undefined,
     async () => {
-      await execMacro([
+      await execMacro(relativeSize, [
         {
           type: "touch",
           args: ["default", 5, 1200, 60],
@@ -917,7 +972,7 @@ export function initShortcuts(element: HTMLElement) {
   addShortcut(
     "KeyZ",
     async () => {
-      await execMacro([
+      await execMacro(relativeSize, [
         {
           type: "touch",
           args: ["default", 5, 250, 230],
@@ -926,7 +981,7 @@ export function initShortcuts(element: HTMLElement) {
     },
     undefined,
     async () => {
-      await execMacro([
+      await execMacro(relativeSize, [
         {
           type: "touch",
           args: ["default", 5, 640, 150],

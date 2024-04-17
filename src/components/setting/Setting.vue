@@ -35,7 +35,7 @@ import { NTabs, NTabPane, NScrollbar } from "naive-ui";
   overflow-y: auto;
   display: flex;
 
-  .NTabPane {
+  .n-tab-pane {
     padding: 0;
   }
 

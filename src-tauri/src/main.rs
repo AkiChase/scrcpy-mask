@@ -121,12 +121,13 @@ async fn main() {
                 // restore window position and size
                 match store.get("maskArea") {
                     Some(value) => {
-                        let pos_x = value["posX"].as_i64().unwrap();
-                        let pos_y = value["posY"].as_i64().unwrap();
-                        let size_w = value["sizeW"].as_i64().unwrap();
-                        let size_h = value["sizeH"].as_i64().unwrap();
+                        let pos_x = value["posX"].as_i64().unwrap_or(100);
+                        let pos_y = value["posY"].as_i64().unwrap_or(100);
+                        let size_w = value["sizeW"].as_i64().unwrap_or(800);
+                        let size_h = value["sizeH"].as_i64().unwrap_or(600);
                         let main_window: tauri::WebviewWindow =
                             app.get_webview_window("main").unwrap();
+                        main_window.set_zoom(1.).unwrap();
                         main_window
                             .set_position(tauri::Position::Logical(tauri::LogicalPosition {
                                 x: (pos_x - 70) as f64,
