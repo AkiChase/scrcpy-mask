@@ -56,8 +56,7 @@ function toStartServer() {
   router.replace({ name: "device" });
 }
 
-// TODO 按键设置
-// TODO 渲染按钮
+// TODO 3. 根据配置渲染按钮
 </script>
 
 <template>

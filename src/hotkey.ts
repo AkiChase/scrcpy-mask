@@ -100,7 +100,9 @@ function calculateMacroPosList(
   });
 }
 
-// TODO 技能界面实际上是有投影变换的，需要一定的算法，不能仅仅相对坐标 （640,400）
+// TODO 1. 适配鼠标滚轮作为热键
+// TODO 2. 根据配置初始化快捷键
+// TODO ? 技能界面实际上是有投影变换的，需要一定的算法，不能仅仅相对坐标 （640,400）
 
 // add shortcuts for observation
 function addObservationShortcuts(

@@ -2,8 +2,8 @@
 import { Ref, onActivated, ref } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 
-// TODO 添加右侧按键列表用于拖放
-// TODO 在进入此页面时扩宽窗口，离开时恢复窗口大小
+// TODO 4. 右键空白区域添加按键
+// TODO 5. 左键可拖动按钮（并显示到顶部），右键按钮进行修改、删除
 
 const keyboardElement = ref<HTMLElement | null>(null);
 const mouseX = ref(0);
