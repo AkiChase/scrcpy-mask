@@ -25,7 +25,6 @@ onBeforeRouteLeave(() => {
 });
 
 onActivated(async () => {
-  // TODO 每次进入都要重新应用快捷键，因为设定的屏幕尺寸可能都变了，但是闭包内提前换算的坐标的不会随之改变，只能重新添加，后续需要和配置文件结合（配置文件读取到store中，不要每次都io读取）
   if (maskRef.value && store.controledDevice) {
     const mt = 30;
     const ml = 70;
@@ -48,6 +47,8 @@ function toStartServer() {
 }
 
 // TODO 3. 根据配置渲染按钮
+  // 配置文件读取到store中，不要每次都io读取
+
 </script>
 
 <template>

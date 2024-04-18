@@ -668,6 +668,21 @@ function handleMouseMove(event: MouseEvent) {
   mouseY = event.clientY;
 }
 
+let lastWheelDownTime: number = 0;
+let lastWheelUpTime: number = 0;
+function handleMouseWheel(event: WheelEvent) {
+  event.preventDefault();
+  if (event.deltaY > 0 && event.timeStamp - lastWheelDownTime > 50) {
+    lastWheelDownTime = event.timeStamp;
+    // WheelDown
+    downKeyCBMap.get("WheelDown")?.();
+  } else if (event.deltaY < 0 && event.timeStamp - lastWheelUpTime > 50) {
+    lastWheelUpTime = event.timeStamp;
+    // WheelUp
+    downKeyCBMap.get("WheelUp")?.();
+  }
+}
+
 function addShortcut(
   key: string,
   downCB: () => Promise<void>,
@@ -875,13 +890,23 @@ export function updateScreenSizeAndMaskArea(
   maskSizeH = maskArea[1];
 }
 
+// TODO 1.Tap默认模式添加时间参数
+
 export function applyShortcuts(element: HTMLElement) {
   element.addEventListener("mousedown", handleMouseDown);
   element.addEventListener("mousemove", handleMouseMove);
   element.addEventListener("mouseup", handleMouseUp);
+  element.addEventListener("wheel", handleMouseWheel);
   // TODO 使用setCursorGrab相关来限制移出，而不是使用下面的方法
   // TODO 任何down的时候都要限制移出
   element.addEventListener("mouseout", handleMouseUp); // mouse out of the element as mouse up
+
+  downKeyCBMap.set("WheelDown", async () => {
+    console.log("WheelDown");
+  });
+  downKeyCBMap.set("WheelUp", async () => {
+    console.log("WheelUp");
+  });
 
   // 读取按键配置文件时获取
   const relativeSize = { w: 1280, h: 720 };
@@ -933,6 +958,8 @@ export function applyShortcuts(element: HTMLElement) {
   addTapShortcuts("Digit3", relativeSize, 1090, 350, 3); // skill 3 upgrade
   addTapShortcuts("Digit5", relativeSize, 130, 300, 3); // quick buy 1
   addTapShortcuts("Digit6", relativeSize, 130, 370, 3); // quick buy 2
+
+  addTapShortcuts("WheelDown", relativeSize, 130, 440, 3); // equipment skill
 
   addObservationShortcuts("M3", relativeSize, 1000, 200, 0.5, 4); // observation
 
