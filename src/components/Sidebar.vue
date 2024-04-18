@@ -5,11 +5,13 @@ import {
   LogoAndroid,
   SettingsOutline,
   ReturnDownBackOutline,
+  VolumeHighOutline,
+  VolumeLowOutline,
   StopOutline,
   ListOutline,
 } from "@vicons/ionicons5";
 import { Keyboard24Regular } from "@vicons/fluent";
-import { NIcon } from "naive-ui";
+import { NIcon, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { sendInjectKeycode } from "../frontcommand/controlMsg";
 import {
@@ -21,6 +23,7 @@ import {
 const router = useRouter();
 const route = useRoute();
 const store = useGlobalStore();
+const message = useMessage();
 
 function nav(name: string) {
   router.replace({ name });
@@ -49,6 +52,8 @@ async function sendKeyCodeToDevice(code: AndroidKeycode) {
       repeat: 0,
       metastate: AndroidMetastate.AMETA_NONE,
     });
+  } else {
+    message.error("未连接设备");
   }
 }
 </script>
@@ -83,6 +88,16 @@ async function sendKeyCodeToDevice(code: AndroidKeycode) {
     </div>
 
     <div class="nav">
+      <div @click="sendKeyCodeToDevice(AndroidKeycode.AKEYCODE_VOLUME_UP)">
+        <NIcon>
+          <VolumeHighOutline />
+        </NIcon>
+      </div>
+      <div @click="sendKeyCodeToDevice(AndroidKeycode.AKEYCODE_VOLUME_DOWN)">
+        <NIcon>
+          <VolumeLowOutline />
+        </NIcon>
+      </div>
       <div @click="sendKeyCodeToDevice(AndroidKeycode.AKEYCODE_BACK)">
         <NIcon>
           <ReturnDownBackOutline />
@@ -173,16 +188,14 @@ async function sendKeyCodeToDevice(code: AndroidKeycode) {
       justify-content: center;
       align-items: center;
 
-      .NIcon {
-        cursor: pointer;
-        transition: transform 0.3s ease;
-      }
+      cursor: pointer;
+      transition: transform 0.3s ease;
 
-      .NIcon:hover {
+      &:hover {
         color: var(--primary-hover-color);
         transform: scale(1.1);
       }
-      .NIcon:active {
+      &:active {
         color: var(--primary-pressed-color);
         transform: scale(0.9);
       }
