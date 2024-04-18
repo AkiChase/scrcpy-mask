@@ -857,6 +857,14 @@ export function unlistenToKeyEvent() {
   loopFlag = false;
 }
 
+export function clearShortcuts() {
+  downKeyMap.clear();
+  downKeyCBMap.clear();
+  loopDownKeyCBMap.clear();
+  upKeyCBMap.clear();
+  cancelAbleKeyList.length = 0;
+}
+
 export function updateScreenSizeAndMaskArea(
   screenSize: [number, number],
   maskArea: [number, number]
@@ -867,10 +875,12 @@ export function updateScreenSizeAndMaskArea(
   maskSizeH = maskArea[1];
 }
 
-export function initShortcuts(element: HTMLElement) {
+export function applyShortcuts(element: HTMLElement) {
   element.addEventListener("mousedown", handleMouseDown);
   element.addEventListener("mousemove", handleMouseMove);
   element.addEventListener("mouseup", handleMouseUp);
+  // TODO 使用setCursorGrab相关来限制移出，而不是使用下面的方法
+  // TODO 任何down的时候都要限制移出
   element.addEventListener("mouseout", handleMouseUp); // mouse out of the element as mouse up
 
   // 读取按键配置文件时获取

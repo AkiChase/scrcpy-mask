@@ -4,7 +4,8 @@ import { NDialog } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
 import {
-  initShortcuts,
+  applyShortcuts,
+  clearShortcuts,
   listenToKeyEvent,
   unlistenToKeyEvent,
   updateScreenSizeAndMaskArea,
@@ -16,39 +17,29 @@ const maskRef = ref<HTMLElement | null>(null);
 const store = useGlobalStore();
 const router = useRouter();
 
-let isShortcutInited = false;
-
 onBeforeRouteLeave(() => {
-  if (isShortcutInited) {
-    if (maskRef.value) {
-      unlistenToKeyEvent();
-    }
+  if (maskRef.value && store.controledDevice) {
+    unlistenToKeyEvent();
+    clearShortcuts();
   }
 });
 
 onActivated(async () => {
-  if (isShortcutInited) {
-    if (maskRef.value) {
-      listenToKeyEvent();
-    }
-    return;
-  }
-  if (store.controledDevice) {
-    if (maskRef.value) {
-      const mt = 30;
-      const ml = 70;
-      const appWindow = getCurrent();
-      const size = (await appWindow.outerSize()).toLogical(
-        await appWindow.scaleFactor()
-      );
-      updateScreenSizeAndMaskArea(
-        [store.screenSizeW, store.screenSizeH],
-        [size.width - ml, size.height - mt]
-      );
-      initShortcuts(maskRef.value);
-      listenToKeyEvent();
-      isShortcutInited = true;
-    }
+  // TODO 每次进入都要重新应用快捷键，因为设定的屏幕尺寸可能都变了，但是闭包内提前换算的坐标的不会随之改变，只能重新添加，后续需要和配置文件结合（配置文件读取到store中，不要每次都io读取）
+  if (maskRef.value && store.controledDevice) {
+    const mt = 30;
+    const ml = 70;
+    const appWindow = getCurrent();
+    const size = (await appWindow.outerSize()).toLogical(
+      await appWindow.scaleFactor()
+    );
+    updateScreenSizeAndMaskArea(
+      [store.screenSizeW, store.screenSizeH],
+      [size.width - ml, size.height - mt]
+    );
+
+    applyShortcuts(maskRef.value);
+    listenToKeyEvent();
   }
 });
 
