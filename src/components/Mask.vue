@@ -37,7 +37,7 @@ onActivated(async () => {
       [size.width - ml, size.height - mt]
     );
 
-    applyShortcuts(maskRef.value);
+    applyShortcuts(maskRef.value, store.curKeyMappingConfig);
     listenToKeyEvent();
   }
 });
@@ -47,8 +47,7 @@ function toStartServer() {
 }
 
 // TODO 3. 根据配置渲染按钮
-  // 配置文件读取到store中，不要每次都io读取
-
+// 配置文件读取到store中，不要每次都io读取
 </script>
 
 <template>

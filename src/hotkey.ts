@@ -100,7 +100,6 @@ function calculateMacroPosList(
   });
 }
 
-// TODO 2. 根据配置初始化快捷键
 // TODO ? 技能界面实际上是有投影变换的，需要一定的算法，不能仅仅相对坐标 （640,400）
 
 // add shortcuts for observation
@@ -260,8 +259,9 @@ function addTriggerWhenPressedSkillShortcuts(
   posX: number,
   posY: number,
   directional: boolean,
-  // range is needed when directional is true
-  range: number,
+  // range: when directional is true
+  // time: when directional is false
+  rangeOrTime: number,
   pointerId: number
 ) {
   if (directional) {
@@ -281,8 +281,8 @@ function addTriggerWhenPressedSkillShortcuts(
           pos: [
             { x: posX, y: posY },
             {
-              x: posX + clientxToCenterOffsetx(mouseX, range),
-              y: posY + clientyToCenterOffsety(mouseY, range),
+              x: posX + clientxToCenterOffsetx(mouseX, rangeOrTime),
+              y: posY + clientyToCenterOffsety(mouseY, rangeOrTime),
             },
           ],
           intervalBetweenPos: 0,
@@ -292,7 +292,7 @@ function addTriggerWhenPressedSkillShortcuts(
       undefined
     );
   } else {
-    addTapShortcuts(key, relativeSize, 80, posX, posY, pointerId);
+    addTapShortcuts(key, relativeSize, rangeOrTime, posX, posY, pointerId);
   }
 }
 
@@ -687,7 +687,7 @@ function handleMouseWheel(event: WheelEvent) {
 
 function addShortcut(
   key: string,
-  downCB: () => Promise<void>,
+  downCB?: () => Promise<void>,
   loopCB?: () => Promise<void>,
   upCB?: () => Promise<void>,
   cancelAble = false // only work with downCB && upCB
@@ -870,6 +870,113 @@ function execLoopCB() {
   if (loopFlag) requestAnimationFrame(execLoopCB);
 }
 
+function applyKeyMappingConfigShortcuts(keyMappingConfig: any): boolean {
+  try {
+    const relativeSize = keyMappingConfig.relativeSize;
+    for (const item of keyMappingConfig.list) {
+      switch (item.type) {
+        case "SteeringWheel":
+          addSteeringWheelKeyboardShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.offset,
+            item.pointerId
+          );
+          break;
+        case "DirectionalSkill":
+          addDirectionalSkillShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.range,
+            item.pointerId
+          );
+          break;
+        case "DirectionlessSkill":
+          addDirectionlessSkillShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.pointerId
+          );
+          break;
+        case "CancelSkill":
+          addCancelSkillShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.pointerId
+          );
+          break;
+        case "Tap":
+          addTapShortcuts(
+            item.key,
+            relativeSize,
+            item.time,
+            item.posX,
+            item.posY,
+            item.pointerId
+          );
+          break;
+        case "TriggerWhenPressedSkill":
+          addTriggerWhenPressedSkillShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.directional,
+            item.rangeOrTime,
+            item.pointerId
+          );
+          break;
+        case "Observation":
+          addObservationShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.scale,
+            item.pointerId
+          );
+          break;
+        case "Macro":
+          addShortcut(
+            item.key,
+            item.macro.down === null
+              ? undefined
+              : async () => {
+                  await execMacro(relativeSize, item.macro.down);
+                },
+            item.macro.loop === null
+              ? undefined
+              : async () => {
+                  await execMacro(relativeSize, item.macro.loop);
+                },
+            item.macro.up === null
+              ? undefined
+              : async () => {
+                  await execMacro(relativeSize, item.macro.up);
+                }
+          );
+          break;
+        default:
+          console.error("Invalid item type: ", item.type);
+          break;
+      }
+    }
+    return true;
+  } catch (e) {
+    console.error("Invalid keyMappingConfig: ", keyMappingConfig, e);
+    clearShortcuts();
+    return false;
+  }
+}
+
 export function listenToKeyEvent() {
   document.addEventListener("keydown", keydownHandler);
   document.addEventListener("keyup", keyupHandler);
@@ -902,133 +1009,13 @@ export function updateScreenSizeAndMaskArea(
   maskSizeH = maskArea[1];
 }
 
-export function applyShortcuts(element: HTMLElement) {
+export function applyShortcuts(element: HTMLElement, keyMappingConfig: any) {
   element.addEventListener("mousedown", handleMouseDown);
   element.addEventListener("mousemove", handleMouseMove);
   element.addEventListener("mouseup", handleMouseUp);
   element.addEventListener("wheel", handleMouseWheel);
-  // TODO 1.2 使用setCursorGrab相关来限制移出，而不是使用下面的方法
-  // TODO 任何down的时候都要限制移出
   element.addEventListener("mouseout", handleMouseUp); // mouse out of the element as mouse up
 
-  // 读取按键配置文件时获取
-  const relativeSize = { w: 1280, h: 720 };
-
   addClickShortcuts("M0", 0);
-  addSteeringWheelKeyboardShortcuts(
-    {
-      left: "KeyA",
-      right: "KeyD",
-      up: "KeyW",
-      down: "KeyS",
-    },
-    relativeSize,
-    180,
-    560,
-    100,
-    1
-  );
-  addDirectionalSkillShortcuts("KeyQ", relativeSize, 950, 610, 200, 2); // skill 1
-  addDirectionalSkillShortcuts("AltLeft", relativeSize, 1025, 500, 200, 2); // skill 2
-  addDirectionalSkillShortcuts("KeyE", relativeSize, 1160, 420, 200, 2); // skill 3
-  addTriggerWhenPressedSkillShortcuts(
-    "M4",
-    relativeSize,
-    1160,
-    420,
-    false,
-    0,
-    2
-  ); // skill 3 (no direction and trigger when pressed)
-  addDirectionlessSkillShortcuts("M1", relativeSize, 1150, 280, 2); // equipment skill (middle mouse click)
-  addCancelSkillShortcuts("Space", relativeSize, 1160, 140, 2); // cancel skill
-
-  addTapShortcuts("KeyB", relativeSize, 80, 650, 650, 3); // home
-  addTapShortcuts("KeyC", relativeSize, 80, 740, 650, 3); // recover
-  addDirectionalSkillShortcuts("KeyF", relativeSize, 840, 650, 200, 2); // summoner skills
-  addTriggerWhenPressedSkillShortcuts(
-    "ControlLeft",
-    relativeSize,
-    840,
-    650,
-    false,
-    0,
-    3
-  ); // summoner skills (no direction and trigger when pressed)
-  addTapShortcuts("M2", relativeSize, 80, 1165, 620, 3); // attack (right click)
-  addTapShortcuts("Digit1", relativeSize, 80, 880, 560, 3); // skill 1 upgrade
-  addTapShortcuts("Digit2", relativeSize, 80, 960, 430, 3); // skill 2 upgrade
-  addTapShortcuts("Digit3", relativeSize, 80, 1090, 350, 3); // skill 3 upgrade
-  addTapShortcuts("Digit5", relativeSize, 80, 130, 300, 3); // quick buy 1
-  addTapShortcuts("Digit6", relativeSize, 80, 130, 370, 3); // quick buy 2
-
-  addTapShortcuts("WheelDown", relativeSize, 80, 130, 440, 3); // equipment skill
-
-  addObservationShortcuts("M3", relativeSize, 1000, 200, 0.5, 4); // observation
-
-  // panel
-  addShortcut(
-    "Tab",
-    async () => {
-      await execMacro(relativeSize, [
-        {
-          type: "touch",
-          args: ["default", 5, 1185, 40, 80],
-        },
-      ]);
-    },
-    undefined,
-    async () => {
-      await execMacro(relativeSize, [
-        {
-          type: "touch",
-          args: ["default", 5, 1220, 100, 80],
-        },
-      ]);
-    }
-  );
-
-  // shop
-  addShortcut(
-    "ShiftLeft",
-    async () => {
-      await execMacro(relativeSize, [
-        {
-          type: "touch",
-          args: ["default", 5, 40, 300, 80],
-        },
-      ]);
-    },
-    undefined,
-    async () => {
-      await execMacro(relativeSize, [
-        {
-          type: "touch",
-          args: ["default", 5, 1200, 60, 80],
-        },
-      ]);
-    }
-  );
-
-  // map
-  addShortcut(
-    "KeyZ",
-    async () => {
-      await execMacro(relativeSize, [
-        {
-          type: "touch",
-          args: ["default", 5, 250, 230, 80],
-        },
-      ]);
-    },
-    undefined,
-    async () => {
-      await execMacro(relativeSize, [
-        {
-          type: "touch",
-          args: ["default", 5, 640, 150, 80],
-        },
-      ]);
-    }
-  );
+  applyKeyMappingConfigShortcuts(keyMappingConfig);
 }
