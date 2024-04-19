@@ -100,7 +100,6 @@ function calculateMacroPosList(
   });
 }
 
-// TODO 1. 适配鼠标滚轮作为热键
 // TODO 2. 根据配置初始化快捷键
 // TODO ? 技能界面实际上是有投影变换的，需要一定的算法，不能仅仅相对坐标 （640,400）
 
@@ -170,6 +169,7 @@ function addObservationShortcuts(
 function addTapShortcuts(
   key: string,
   relativeSize: { w: number; h: number },
+  time: number,
   posX: number,
   posY: number,
   pointerId: number
@@ -190,6 +190,7 @@ function addTapShortcuts(
           x: posX,
           y: posY,
         },
+        time,
       });
     },
     undefined,
@@ -291,7 +292,7 @@ function addTriggerWhenPressedSkillShortcuts(
       undefined
     );
   } else {
-    addTapShortcuts(key, relativeSize, posX, posY, pointerId);
+    addTapShortcuts(key, relativeSize, 80, posX, posY, pointerId);
   }
 }
 
@@ -672,6 +673,7 @@ let lastWheelDownTime: number = 0;
 let lastWheelUpTime: number = 0;
 function handleMouseWheel(event: WheelEvent) {
   event.preventDefault();
+  // trigger interval is 50ms
   if (event.deltaY > 0 && event.timeStamp - lastWheelDownTime > 50) {
     lastWheelDownTime = event.timeStamp;
     // WheelDown
@@ -737,20 +739,29 @@ function addShortcut(
  * @param macro
  * @example
  * await execMacro([
+ *  // touch down
  *   {
  *    type: "touch",
  *    // op, pointerId, posX, posY
  *    args: ["down", 5, ["mouse", -10], 600],
  *  },
+ *  // sleep 1000ms
  *  {
  *   type: "sleep",
- *   // time(ms)
+ *  // time(ms)
  *   args: [1000],
  *  },
+ *  // touch up
  *  {
  *  type: "touch",
  *  args: ["up", 5, ["mouse", 10], 600],
  *  },
+ *  // touch 1000ms
+ *  {
+ *  type: "touch",
+ *  args: ["default", 5, ["mouse", 10], 600, 1000],
+ *  },
+ *  // swipe
  *  {
  *   type: "swipe",
  *   // op, pointerId, posList, intervalBetweenPos
@@ -810,6 +821,7 @@ async function execMacro(relativeSize: { w: number; h: number }, macro: any[]) {
               x: calculateMacroPosX(cmd.args[2], relativeSize.w),
               y: calculateMacroPosY(cmd.args[3], relativeSize.h),
             },
+            time: cmd.args.length > 4 ? cmd.args[4] : undefined,
           });
           break;
         case "swipe":
@@ -890,23 +902,14 @@ export function updateScreenSizeAndMaskArea(
   maskSizeH = maskArea[1];
 }
 
-// TODO 1.Tap默认模式添加时间参数
-
 export function applyShortcuts(element: HTMLElement) {
   element.addEventListener("mousedown", handleMouseDown);
   element.addEventListener("mousemove", handleMouseMove);
   element.addEventListener("mouseup", handleMouseUp);
   element.addEventListener("wheel", handleMouseWheel);
-  // TODO 使用setCursorGrab相关来限制移出，而不是使用下面的方法
+  // TODO 1.2 使用setCursorGrab相关来限制移出，而不是使用下面的方法
   // TODO 任何down的时候都要限制移出
   element.addEventListener("mouseout", handleMouseUp); // mouse out of the element as mouse up
-
-  downKeyCBMap.set("WheelDown", async () => {
-    console.log("WheelDown");
-  });
-  downKeyCBMap.set("WheelUp", async () => {
-    console.log("WheelUp");
-  });
 
   // 读取按键配置文件时获取
   const relativeSize = { w: 1280, h: 720 };
@@ -940,8 +943,8 @@ export function applyShortcuts(element: HTMLElement) {
   addDirectionlessSkillShortcuts("M1", relativeSize, 1150, 280, 2); // equipment skill (middle mouse click)
   addCancelSkillShortcuts("Space", relativeSize, 1160, 140, 2); // cancel skill
 
-  addTapShortcuts("KeyB", relativeSize, 650, 650, 3); // home
-  addTapShortcuts("KeyC", relativeSize, 740, 650, 3); // recover
+  addTapShortcuts("KeyB", relativeSize, 80, 650, 650, 3); // home
+  addTapShortcuts("KeyC", relativeSize, 80, 740, 650, 3); // recover
   addDirectionalSkillShortcuts("KeyF", relativeSize, 840, 650, 200, 2); // summoner skills
   addTriggerWhenPressedSkillShortcuts(
     "ControlLeft",
@@ -952,14 +955,14 @@ export function applyShortcuts(element: HTMLElement) {
     0,
     3
   ); // summoner skills (no direction and trigger when pressed)
-  addTapShortcuts("M2", relativeSize, 1165, 620, 3); // attack (right click)
-  addTapShortcuts("Digit1", relativeSize, 880, 560, 3); // skill 1 upgrade
-  addTapShortcuts("Digit2", relativeSize, 960, 430, 3); // skill 2 upgrade
-  addTapShortcuts("Digit3", relativeSize, 1090, 350, 3); // skill 3 upgrade
-  addTapShortcuts("Digit5", relativeSize, 130, 300, 3); // quick buy 1
-  addTapShortcuts("Digit6", relativeSize, 130, 370, 3); // quick buy 2
+  addTapShortcuts("M2", relativeSize, 80, 1165, 620, 3); // attack (right click)
+  addTapShortcuts("Digit1", relativeSize, 80, 880, 560, 3); // skill 1 upgrade
+  addTapShortcuts("Digit2", relativeSize, 80, 960, 430, 3); // skill 2 upgrade
+  addTapShortcuts("Digit3", relativeSize, 80, 1090, 350, 3); // skill 3 upgrade
+  addTapShortcuts("Digit5", relativeSize, 80, 130, 300, 3); // quick buy 1
+  addTapShortcuts("Digit6", relativeSize, 80, 130, 370, 3); // quick buy 2
 
-  addTapShortcuts("WheelDown", relativeSize, 130, 440, 3); // equipment skill
+  addTapShortcuts("WheelDown", relativeSize, 80, 130, 440, 3); // equipment skill
 
   addObservationShortcuts("M3", relativeSize, 1000, 200, 0.5, 4); // observation
 
@@ -970,7 +973,7 @@ export function applyShortcuts(element: HTMLElement) {
       await execMacro(relativeSize, [
         {
           type: "touch",
-          args: ["default", 5, 1185, 40],
+          args: ["default", 5, 1185, 40, 80],
         },
       ]);
     },
@@ -979,7 +982,7 @@ export function applyShortcuts(element: HTMLElement) {
       await execMacro(relativeSize, [
         {
           type: "touch",
-          args: ["default", 5, 1220, 100],
+          args: ["default", 5, 1220, 100, 80],
         },
       ]);
     }
@@ -992,7 +995,7 @@ export function applyShortcuts(element: HTMLElement) {
       await execMacro(relativeSize, [
         {
           type: "touch",
-          args: ["default", 5, 40, 300],
+          args: ["default", 5, 40, 300, 80],
         },
       ]);
     },
@@ -1001,7 +1004,7 @@ export function applyShortcuts(element: HTMLElement) {
       await execMacro(relativeSize, [
         {
           type: "touch",
-          args: ["default", 5, 1200, 60],
+          args: ["default", 5, 1200, 60, 80],
         },
       ]);
     }
@@ -1014,7 +1017,7 @@ export function applyShortcuts(element: HTMLElement) {
       await execMacro(relativeSize, [
         {
           type: "touch",
-          args: ["default", 5, 250, 230],
+          args: ["default", 5, 250, 230, 80],
         },
       ]);
     },
@@ -1023,7 +1026,7 @@ export function applyShortcuts(element: HTMLElement) {
       await execMacro(relativeSize, [
         {
           type: "touch",
-          args: ["default", 5, 640, 150],
+          args: ["default", 5, 640, 150, 80],
         },
       ]);
     }

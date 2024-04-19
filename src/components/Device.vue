@@ -214,7 +214,7 @@ async function onMenuSelect(key: string) {
           store.hideLoading();
           message.error("设备连接超时");
         }
-      }, 4000);
+      }, 6000);
 
       // add cb for metadata
       deviceWaitForMetadataTask = (deviceName: string) => {
