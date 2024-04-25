@@ -190,6 +190,12 @@ async function onMenuSelect(key: string) {
         return;
       }
 
+      if (store.controledDevice) {
+        message.error("请先关闭当前控制设备");
+        store.hideLoading();
+        return;
+      }
+
       localStore.set("screenSize", {
         sizeW: store.screenSizeW,
         sizeH: store.screenSizeH,
@@ -309,7 +315,7 @@ async function refreshDevices() {
           </div>
         </div>
         <NFlex justify="space-between" align="center">
-          <NH4 prefix="bar">可用设备</NH4>
+          <NH4 style="margin: 20px 0" prefix="bar">可用设备</NH4>
           <NButton
             tertiary
             circle

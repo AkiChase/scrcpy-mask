@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onActivated, ref } from "vue";
+import { Ref, onActivated, ref } from "vue";
 import { NDialog } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
@@ -16,6 +16,8 @@ const maskRef = ref<HTMLElement | null>(null);
 
 const store = useGlobalStore();
 const router = useRouter();
+
+const renderedButtons: Ref<any[]> = ref([]);
 
 onBeforeRouteLeave(() => {
   if (maskRef.value && store.controledDevice) {
@@ -37,6 +39,7 @@ onActivated(async () => {
       [size.width - ml, size.height - mt]
     );
 
+    refreshKeyMappingButton();
     applyShortcuts(maskRef.value, store.curKeyMappingConfig);
     listenToKeyEvent();
   }
@@ -46,8 +49,29 @@ function toStartServer() {
   router.replace({ name: "device" });
 }
 
-// TODO 3. 根据配置渲染按钮
-// 配置文件读取到store中，不要每次都io读取
+function refreshKeyMappingButton() {
+  const curKeyMappingConfig = store.curKeyMappingConfig;
+  const relativeSize = curKeyMappingConfig.relativeSize;
+  const maskSizeW = maskRef?.value?.clientWidth;
+  const maskSizeH = maskRef?.value?.clientHeight;
+  if (maskSizeW && maskSizeH) {
+    const relativePosToMaskPos = (x: number, y: number) => {
+      return {
+        x: Math.round((x / relativeSize.w) * maskSizeW),
+        y: Math.round((y / relativeSize.h) * maskSizeH),
+      };
+    };
+    const buttons: any = [];
+    for (let keyObject of curKeyMappingConfig.list) {
+      const { x, y } = relativePosToMaskPos(keyObject.posX, keyObject.posY);
+      keyObject.x = x;
+      keyObject.y = y;
+      buttons.push(keyObject);
+    }
+    renderedButtons.value = buttons;
+    console.log(renderedButtons.value);
+  }
+}
 </script>
 
 <template>
@@ -68,7 +92,40 @@ function toStartServer() {
     @contextmenu.prevent
     class="mask"
     ref="maskRef"
-  ></div>
+  >
+    <template v-for="button in renderedButtons">
+      <div
+        v-if="button.type === 'SteeringWheel'"
+        class="mask-steering-wheel"
+        :style="{
+          left: button.x - 75 + 'px',
+          top: button.y - 75 + 'px',
+        }"
+      >
+        <div class="wheel-container">
+          <i></i>
+          <div>{{ button.key.up }}</div>
+          <i></i>
+          <div>{{ button.key.left }}</div>
+          <div class="wheel-center"></div>
+          <div>{{ button.key.right }}</div>
+          <i></i>
+          <div>{{ button.key.down }}</div>
+          <i></i>
+        </div>
+      </div>
+      <div
+        v-else
+        class="mask-button"
+        :style="{
+          left: button.x + 'px',
+          top: button.y - 14 + 'px',
+        }"
+      >
+        {{ button.key }}
+      </div>
+    </template>
+  </div>
 </template>
 
 <style scoped lang="scss">
@@ -76,6 +133,37 @@ function toStartServer() {
   background-color: transparent;
   overflow: hidden;
   cursor: pointer;
+  position: relative;
+  border-right: 1px solid var(--bg-color);
+  border-bottom: 1px solid var(--bg-color);
+  border-radius: 0 0 5px 0;
+
+  & > .mask-button {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, 0.6);
+    border-radius: 5px;
+    padding: 5px;
+    font-size: 12px;
+  }
+
+  & > .mask-steering-wheel {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    width: 150px;
+    height: 150px;
+    font-size: 12px;
+
+    .wheel-container {
+      display: grid;
+      grid-template-columns: repeat(3, 50px);
+      grid-template-rows: repeat(3, 50px);
+      justify-items: center;
+      align-items: center;
+    }
+  }
 }
 .notice {
   background-color: rgba(0, 0, 0, 0.5);

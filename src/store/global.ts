@@ -22,7 +22,7 @@ export const useGlobalStore = defineStore("counter", () => {
 
   const controledDevice: Ref<ControledDevice | null> = ref(null);
 
-  const curKeyMappingConfig = {
+  const curKeyMappingConfig: any = {
     relativeSize: { w: 1280, h: 720 },
     title: "王者荣耀-暃",
     list: [
@@ -107,8 +107,8 @@ export const useGlobalStore = defineStore("counter", () => {
         note: "回复",
         key: "KeyC",
         time: 80,
-        posX: 650,
-        posY: 740,
+        posX: 740,
+        posY: 650,
         pointerId: 3,
       },
       {
@@ -188,8 +188,8 @@ export const useGlobalStore = defineStore("counter", () => {
         type: "TriggerWhenPressedSkill",
         note: "装备技能",
         key: "WheelDown",
-        posX: 130,
-        posY: 440,
+        posX: 1150,
+        posY: 280,
         directional: false,
         rangeOrTime: 80,
         pointerId: 3,
@@ -222,6 +222,8 @@ export const useGlobalStore = defineStore("counter", () => {
             },
           ],
         },
+        posX: 1185,
+        posY: 40,
         pointerId: 5,
       },
       {
@@ -243,6 +245,8 @@ export const useGlobalStore = defineStore("counter", () => {
             },
           ],
         },
+        posX: 40,
+        posY: 300,
         pointerId: 5,
       },
       {
@@ -264,6 +268,8 @@ export const useGlobalStore = defineStore("counter", () => {
             },
           ],
         },
+        posX: 250,
+        posY: 230,
         pointerId: 5,
       },
     ],
@@ -276,6 +282,6 @@ export const useGlobalStore = defineStore("counter", () => {
     controledDevice,
     screenSizeW,
     screenSizeH,
-    curKeyMappingConfig
+    curKeyMappingConfig,
   };
 });

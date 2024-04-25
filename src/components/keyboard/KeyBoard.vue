@@ -2,7 +2,7 @@
 import { Ref, onActivated, ref } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 
-// TODO 4-. 读写本地配置文件，加载到global store中
+// TODO 4-. 读写本地配置文件，替换到global store中的curKeyMappingConfig
 // TODO 4. 右键空白区域添加按键
 // TODO 5. 左键可拖动按钮（并显示到顶部），右键按钮进行修改、删除
 
