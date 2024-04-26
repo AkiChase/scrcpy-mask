@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Ref, onActivated, ref } from "vue";
-import { NDialog } from "naive-ui";
+import { NDialog, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
 import {
@@ -16,13 +16,14 @@ const maskRef = ref<HTMLElement | null>(null);
 
 const store = useGlobalStore();
 const router = useRouter();
+const message = useMessage();
 
 const renderedButtons: Ref<any[]> = ref([]);
 
 onBeforeRouteLeave(() => {
   if (maskRef.value && store.controledDevice) {
     unlistenToKeyEvent();
-    clearShortcuts();
+    clearShortcuts(maskRef.value);
   }
 });
 
@@ -40,8 +41,16 @@ onActivated(async () => {
     );
 
     refreshKeyMappingButton();
-    applyShortcuts(maskRef.value, store.curKeyMappingConfig);
-    listenToKeyEvent();
+    if (
+      applyShortcuts(
+        maskRef.value,
+        store.keyMappingConfigList[store.curKeyMappingIndex]
+      )
+    ) {
+      listenToKeyEvent();
+    }else{
+      message.error("")
+    }
   }
 });
 
@@ -50,7 +59,8 @@ function toStartServer() {
 }
 
 function refreshKeyMappingButton() {
-  const curKeyMappingConfig = store.curKeyMappingConfig;
+  const curKeyMappingConfig =
+    store.keyMappingConfigList[store.curKeyMappingIndex];
   const relativeSize = curKeyMappingConfig.relativeSize;
   const maskSizeW = maskRef?.value?.clientWidth;
   const maskSizeH = maskRef?.value?.clientHeight;
@@ -61,12 +71,14 @@ function refreshKeyMappingButton() {
         y: Math.round((y / relativeSize.h) * maskSizeH),
       };
     };
-    const buttons: any = [];
+    const buttons = [];
     for (let keyObject of curKeyMappingConfig.list) {
       const { x, y } = relativePosToMaskPos(keyObject.posX, keyObject.posY);
-      keyObject.x = x;
-      keyObject.y = y;
-      buttons.push(keyObject);
+      buttons.push({
+        ...keyObject,
+        x,
+        y,
+      });
     }
     renderedButtons.value = buttons;
   }

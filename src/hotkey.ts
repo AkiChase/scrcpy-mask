@@ -5,6 +5,18 @@ import {
   swipe,
   touch,
 } from "./frontcommand/scrcpyMaskCmd";
+import {
+  KeyCancelSkill,
+  KeyDirectionalSkill,
+  KeyDirectionlessSkill,
+  KeyMacro,
+  KeyMacroList,
+  KeyMappingConfig,
+  KeyObservation,
+  KeySteeringWheel,
+  KeyTap,
+  KeyTriggerWhenPressedSkill,
+} from "./keyMappingConfig";
 
 function clientxToPosx(clientx: number) {
   return clientx < 70
@@ -780,7 +792,11 @@ function addShortcut(
  * ]);
  */
 
-async function execMacro(relativeSize: { w: number; h: number }, macro: any[]) {
+async function execMacro(
+  relativeSize: { w: number; h: number },
+  macro: KeyMacroList
+) {
+  if (macro === null) return;
   for (const cmd of macro) {
     if (!cmd.hasOwnProperty("type") || !cmd.hasOwnProperty("args")) {
       console.error("Invalid command: ", cmd);
@@ -870,12 +886,19 @@ function execLoopCB() {
   if (loopFlag) requestAnimationFrame(execLoopCB);
 }
 
-function applyKeyMappingConfigShortcuts(keyMappingConfig: any): boolean {
+// change ts type
+function asType<T>(_val: any): asserts _val is T {}
+
+function applyKeyMappingConfigShortcuts(
+  keyMappingConfig: KeyMappingConfig,
+  element: HTMLElement
+): boolean {
   try {
     const relativeSize = keyMappingConfig.relativeSize;
     for (const item of keyMappingConfig.list) {
       switch (item.type) {
         case "SteeringWheel":
+          asType<KeySteeringWheel>(item);
           addSteeringWheelKeyboardShortcuts(
             item.key,
             relativeSize,
@@ -886,6 +909,7 @@ function applyKeyMappingConfigShortcuts(keyMappingConfig: any): boolean {
           );
           break;
         case "DirectionalSkill":
+          asType<KeyDirectionalSkill>(item);
           addDirectionalSkillShortcuts(
             item.key,
             relativeSize,
@@ -896,6 +920,7 @@ function applyKeyMappingConfigShortcuts(keyMappingConfig: any): boolean {
           );
           break;
         case "DirectionlessSkill":
+          asType<KeyDirectionlessSkill>(item);
           addDirectionlessSkillShortcuts(
             item.key,
             relativeSize,
@@ -905,6 +930,7 @@ function applyKeyMappingConfigShortcuts(keyMappingConfig: any): boolean {
           );
           break;
         case "CancelSkill":
+          asType<KeyCancelSkill>(item);
           addCancelSkillShortcuts(
             item.key,
             relativeSize,
@@ -914,6 +940,7 @@ function applyKeyMappingConfigShortcuts(keyMappingConfig: any): boolean {
           );
           break;
         case "Tap":
+          asType<KeyTap>(item);
           addTapShortcuts(
             item.key,
             relativeSize,
@@ -924,6 +951,7 @@ function applyKeyMappingConfigShortcuts(keyMappingConfig: any): boolean {
           );
           break;
         case "TriggerWhenPressedSkill":
+          asType<KeyTriggerWhenPressedSkill>(item);
           addTriggerWhenPressedSkillShortcuts(
             item.key,
             relativeSize,
@@ -935,6 +963,7 @@ function applyKeyMappingConfigShortcuts(keyMappingConfig: any): boolean {
           );
           break;
         case "Observation":
+          asType<KeyObservation>(item);
           addObservationShortcuts(
             item.key,
             relativeSize,
@@ -945,6 +974,7 @@ function applyKeyMappingConfigShortcuts(keyMappingConfig: any): boolean {
           );
           break;
         case "Macro":
+          asType<KeyMacro>(item);
           addShortcut(
             item.key,
             item.macro.down === null
@@ -972,7 +1002,7 @@ function applyKeyMappingConfigShortcuts(keyMappingConfig: any): boolean {
     return true;
   } catch (e) {
     console.error("Invalid keyMappingConfig: ", keyMappingConfig, e);
-    clearShortcuts();
+    clearShortcuts(element);
     return false;
   }
 }
@@ -982,7 +1012,6 @@ export function listenToKeyEvent() {
   document.addEventListener("keyup", keyupHandler);
   loopFlag = true;
   execLoopCB();
-  // setInterval(()=>console.log(loopDownKeyCBMap), 3000);
 }
 
 export function unlistenToKeyEvent() {
@@ -991,7 +1020,13 @@ export function unlistenToKeyEvent() {
   loopFlag = false;
 }
 
-export function clearShortcuts() {
+export function clearShortcuts(element: HTMLElement) {
+  element.removeEventListener("mousedown", handleMouseDown);
+  element.removeEventListener("mousemove", handleMouseMove);
+  element.removeEventListener("mouseup", handleMouseUp);
+  element.removeEventListener("wheel", handleMouseWheel);
+  element.removeEventListener("mouseout", handleMouseUp);
+
   downKeyMap.clear();
   downKeyCBMap.clear();
   loopDownKeyCBMap.clear();
@@ -1009,7 +1044,10 @@ export function updateScreenSizeAndMaskArea(
   maskSizeH = maskArea[1];
 }
 
-export function applyShortcuts(element: HTMLElement, keyMappingConfig: any) {
+export function applyShortcuts(
+  element: HTMLElement,
+  keyMappingConfig: KeyMappingConfig
+) {
   element.addEventListener("mousedown", handleMouseDown);
   element.addEventListener("mousemove", handleMouseMove);
   element.addEventListener("mouseup", handleMouseUp);
@@ -1017,5 +1055,5 @@ export function applyShortcuts(element: HTMLElement, keyMappingConfig: any) {
   element.addEventListener("mouseout", handleMouseUp); // mouse out of the element as mouse up
 
   addClickShortcuts("M0", 0);
-  applyKeyMappingConfigShortcuts(keyMappingConfig);
+  return applyKeyMappingConfigShortcuts(keyMappingConfig, element);
 }

@@ -1,18 +1,41 @@
 <script setup lang="ts">
 import { Settings, CloseCircle } from "@vicons/ionicons5";
-import { NButton, NIcon, NH4, NSelect, NFlex } from "naive-ui";
-import { ref } from "vue";
+import {
+  NButton,
+  NIcon,
+  NH4,
+  NSelect,
+  NFlex,
+  NP,
+  NModal,
+  NCard,
+  NInput,
+  useMessage,
+} from "naive-ui";
+import { computed, ref } from "vue";
+import { useGlobalStore } from "../../store/global";
+
+const store = useGlobalStore();
+const message = useMessage();
 
 const showKeyInfoFlag = defineModel({ required: true });
 
 const showSetting = ref(false);
-const selectedKeyMappingName = ref("王者荣耀-暃");
-const KeyMappingNameOptions = ref([
-  {
-    label: "王者荣耀-暃",
-    value: "王者荣耀-暃",
-  },
-]);
+const showImportModal = ref(false);
+const importModalInputValue = ref("");
+
+const keyMappingNameOptions = computed(() => {
+  return store.keyMappingConfigList.map((item, index) => {
+    return {
+      label: item.title,
+      value: index,
+    };
+  });
+});
+
+const curKeyMappingrelativeSize = computed(() => {
+  return store.keyMappingConfigList[store.curKeyMappingIndex].relativeSize;
+});
 
 function dragHandler(downEvent: MouseEvent) {
   const target = document.querySelector(
@@ -52,6 +75,20 @@ function dragHandler(downEvent: MouseEvent) {
   };
   window.addEventListener("mouseup", upHandler);
 }
+
+function importKeyMappingConfig() {
+  let keyMappingConfig;
+  try {
+    keyMappingConfig = JSON.parse(importModalInputValue.value);
+  } catch (e) {
+    console.error(e);
+    message.error("导入失败");
+    return;
+  }
+  store.keyMappingConfigList.push(keyMappingConfig);
+  store.curKeyMappingIndex = store.keyMappingConfigList.length - 1;
+  showImportModal.value = false;
+}
 </script>
 
 <template>
@@ -72,9 +109,13 @@ function dragHandler(downEvent: MouseEvent) {
     </NButton>
     <NH4 prefix="bar">按键方案</NH4>
     <NSelect
-      v-model:value="selectedKeyMappingName"
-      :options="KeyMappingNameOptions"
+      v-model:value="store.curKeyMappingIndex"
+      :options="keyMappingNameOptions"
     />
+    <NP>
+      Relative Size: {{ curKeyMappingrelativeSize.w }} x
+      {{ curKeyMappingrelativeSize.h }}
+    </NP>
     <NFlex style="margin-top: 20px">
       <NButton>新建方案</NButton>
       <NButton>复制方案</NButton>
@@ -83,11 +124,26 @@ function dragHandler(downEvent: MouseEvent) {
     </NFlex>
     <NH4 prefix="bar">其他</NH4>
     <NFlex>
-      <NButton>导入</NButton>
+      <NButton @click="showImportModal = true">导入</NButton>
       <NButton>导出</NButton>
       <NButton @click="showKeyInfoFlag = !showKeyInfoFlag">按键信息</NButton>
     </NFlex>
   </div>
+  <NModal v-model:show="showImportModal">
+    <NCard style="width: 40%; height: 50%" title="导入按键方案">
+      <NFlex vertical style="height: 100%">
+        <NInput
+          type="textarea"
+          style="flex-grow: 1"
+          placeholder="粘贴单个按键方案的JSON文本 (此处无法对按键方案的合法性进行判断, 请确保JSON内容正确)"
+          v-model:value="importModalInputValue"
+          round
+          clearable
+        />
+        <NButton round @click="importKeyMappingConfig">导入</NButton>
+      </NFlex>
+    </NCard>
+  </NModal>
 </template>
 
 <style scoped lang="scss">
