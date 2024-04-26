@@ -1,81 +1,20 @@
 <script setup lang="ts">
-import { Ref, onActivated, ref } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
+import { ref } from "vue";
+import KeyInfo from "./KeyInfo.vue";
+import KeySetting from "./KeySetting.vue";
 
 // TODO 4-. 读写本地配置文件，替换到global store中的curKeyMappingConfig
 // TODO 4. 右键空白区域添加按键
 // TODO 5. 左键可拖动按钮（并显示到顶部），右键按钮进行修改、删除
 
-const keyboardElement = ref<HTMLElement | null>(null);
-const mouseX = ref(0);
-const mouseY = ref(0);
-
-function clientxToPosx(clientx: number) {
-  return clientx < 70 ? 0 : Math.floor(clientx - 70);
-}
-
-function clientyToPosy(clienty: number) {
-  return clienty < 30 ? 0 : Math.floor(clienty - 30);
-}
-
-let ignoreMousemove = true;
-function mousemoveHandler(event: MouseEvent) {
-  ignoreMousemove = !ignoreMousemove;
-  if (ignoreMousemove) return;
-  mouseX.value = clientxToPosx(event.clientX);
-  mouseY.value = clientyToPosy(event.clientY);
-}
-
-const keyboardCodeList: Ref<string[]> = ref([]);
-function keyupHandler(event: KeyboardEvent) {
-  event.preventDefault();
-  if (keyboardCodeList.value.length > 10) {
-    keyboardCodeList.value.shift();
-    keyboardCodeList.value.push(event.code);
-  } else keyboardCodeList.value.push(event.code);
-}
-
-function mousedownHandler(event: MouseEvent) {
-  event.preventDefault();
-  const key = `M${event.button}`;
-  if (keyboardCodeList.value.length > 10) {
-    keyboardCodeList.value.shift();
-    keyboardCodeList.value.push(key);
-  } else keyboardCodeList.value.push(key);
-}
-
-function mouseupHandler(event: MouseEvent) {
-  event.preventDefault();
-  const key = `M${event.button}`;
-  if (keyboardCodeList.value.length > 10) {
-    keyboardCodeList.value.shift();
-    keyboardCodeList.value.push(key);
-  } else keyboardCodeList.value.push(key);
-}
-
-onActivated(() => {
-  keyboardElement.value?.addEventListener("mousemove", mousemoveHandler);
-  keyboardElement.value?.addEventListener("mousedown", mousedownHandler);
-  keyboardElement.value?.addEventListener("mouseup", mouseupHandler);
-  document.addEventListener("keyup", keyupHandler);
-});
-
-onBeforeRouteLeave(() => {
-  keyboardElement.value?.removeEventListener("mousemove", mousemoveHandler);
-  keyboardElement.value?.removeEventListener("mousedown", mousedownHandler);
-  keyboardElement.value?.removeEventListener("mouseup", mouseupHandler);
-  document.removeEventListener("keyup", keyupHandler);
-});
+const keyInfoShowFlag = ref(false);
 </script>
 
 <template>
-  <div ref="keyboardElement" class="keyboard" @contextmenu.prevent>
-    此处最好用其他颜色的蒙版，和右侧的按键列表区同色
-    <div>{{ mouseX }}, {{ mouseY }}</div>
-    <div v-for="code in keyboardCodeList">
-      {{ code }}
+    <div id="keyboardElement" class="keyboard">
+      <KeySetting v-model="keyInfoShowFlag"/>
+      <KeyInfo v-model="keyInfoShowFlag" />
     </div>
-  </div>
 </template>
 
 <style scoped>
@@ -83,5 +22,6 @@ onBeforeRouteLeave(() => {
   color: var(--light-color);
   background-color: rgba(0, 0, 0, 0.5);
   overflow: hidden;
+  position: relative;
 }
 </style>

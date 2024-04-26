@@ -69,7 +69,6 @@ function refreshKeyMappingButton() {
       buttons.push(keyObject);
     }
     renderedButtons.value = buttons;
-    console.log(renderedButtons.value);
   }
 }
 </script>
@@ -104,13 +103,13 @@ function refreshKeyMappingButton() {
       >
         <div class="wheel-container">
           <i></i>
-          <div>{{ button.key.up }}</div>
+          <span>{{ button.key.up }}</span>
           <i></i>
-          <div>{{ button.key.left }}</div>
-          <div class="wheel-center"></div>
-          <div>{{ button.key.right }}</div>
+          <span>{{ button.key.left }}</span>
+          <span class="wheel-center"></span>
+          <span>{{ button.key.right }}</span>
           <i></i>
-          <div>{{ button.key.down }}</div>
+          <span>{{ button.key.down }}</span>
           <i></i>
         </div>
       </div>
