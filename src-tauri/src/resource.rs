@@ -4,7 +4,7 @@ use std::path::PathBuf;
 pub enum ResourceName {
     Adb,
     ScrcpyServer,
-    DefaultKeyConfig
+    DefaultKeyConfig,
 }
 
 pub struct ResHelper {

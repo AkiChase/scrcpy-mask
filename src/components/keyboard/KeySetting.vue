@@ -15,6 +15,7 @@ import {
 import { computed, onMounted, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
 import { Store } from "@tauri-apps/plugin-store";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { loadDefaultKeyconfig } from "../../invoke";
 import { KeyMappingConfig } from "../../keyMappingConfig";
 
@@ -26,7 +27,9 @@ const showKeyInfoFlag = defineModel({ required: true });
 
 const showSetting = ref(false);
 const showImportModal = ref(false);
+const showRenameModal = ref(false);
 const importModalInputValue = ref("");
+const renameModalInputValue = ref("");
 
 const keyMappingNameOptions = computed(() => {
   return store.keyMappingConfigList.map((item, index) => {
@@ -163,6 +166,78 @@ async function importDefaultKeyMappingConfig() {
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
   message.success(`已导入${count}个默认方案`);
 }
+
+function createKeyMappingConfig() {
+  const keyboardElement = document.getElementById(
+    "keyboardElement"
+  ) as HTMLElement;
+  const newConfig: KeyMappingConfig = {
+    title: "新方案",
+    relativeSize: {
+      w: keyboardElement.clientWidth,
+      h: keyboardElement.clientHeight,
+    },
+    list: [],
+  };
+  store.keyMappingConfigList.push(newConfig);
+  store.curKeyMappingIndex = store.keyMappingConfigList.length - 1;
+  localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+  localStore.set("curKeyMappingIndex", store.curKeyMappingIndex);
+  message.success("新方案已创建");
+}
+
+function copyCurKeyMappingConfig() {
+  const curConfig = store.keyMappingConfigList[store.curKeyMappingIndex];
+  const newConfig: KeyMappingConfig = {
+    title: curConfig.title + "-副本",
+    relativeSize: curConfig.relativeSize,
+    list: curConfig.list,
+  };
+  store.keyMappingConfigList.push(newConfig);
+  store.curKeyMappingIndex = store.keyMappingConfigList.length - 1;
+  localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+  localStore.set("curKeyMappingIndex", store.curKeyMappingIndex);
+  message.success("方案已复制为：" + curConfig.title + "-副本");
+}
+
+function delCurKeyMappingConfig() {
+  if (store.keyMappingConfigList.length <= 1) {
+    message.error("至少保留一个方案");
+    return;
+  }
+  const title = store.keyMappingConfigList[store.curKeyMappingIndex].title;
+  store.keyMappingConfigList.splice(store.curKeyMappingIndex, 1);
+  store.curKeyMappingIndex =
+    store.curKeyMappingIndex > 0 ? store.curKeyMappingIndex - 1 : 0;
+  localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+  localStore.set("curKeyMappingIndex", store.curKeyMappingIndex);
+  message.success("方案已删除：" + title);
+}
+
+function renameKeyMappingConfig() {
+  const newTitle = renameModalInputValue.value;
+  showRenameModal.value = false;
+  if (newTitle !== "") {
+    store.keyMappingConfigList[store.curKeyMappingIndex].title = newTitle;
+    localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+    message.success("方案已重命名为：" + newTitle);
+  } else {
+    message.error("方案名不能为空");
+  }
+}
+
+function exportKeyMappingConfig() {
+  const config = store.keyMappingConfigList[store.curKeyMappingIndex];
+  const data = JSON.stringify(config, null, 2);
+  writeText(data)
+    .then(() => {
+      message.success("当前按键方案已导出到剪切板");
+    })
+    .catch((e) => {
+      console.error(e);
+      message.error("按键方案导出失败");
+    });
+}
 </script>
 
 <template>
@@ -193,15 +268,28 @@ async function importDefaultKeyMappingConfig() {
       {{ curKeyMappingrelativeSize.h }}
     </NP>
     <NFlex style="margin-top: 20px">
-      <NButton>新建方案</NButton>
-      <NButton>复制方案</NButton>
-      <NButton>删除方案</NButton>
-      <NButton>重命名</NButton>
+      <NButton @click="createKeyMappingConfig">新建方案</NButton>
+      <NButton @click="copyCurKeyMappingConfig">复制方案</NButton>
+      <NButton @click="delCurKeyMappingConfig">删除方案</NButton>
+      <NButton
+        @click="
+          showRenameModal = true;
+          renameModalInputValue =
+            store.keyMappingConfigList[store.curKeyMappingIndex].title;
+        "
+        >重命名</NButton
+      >
     </NFlex>
     <NH4 prefix="bar">其他</NH4>
     <NFlex>
-      <NButton @click="showImportModal = true">导入</NButton>
-      <NButton>导出</NButton>
+      <NButton
+        @click="
+          showImportModal = true;
+          importModalInputValue = '';
+        "
+        >导入方案</NButton
+      >
+      <NButton @click="exportKeyMappingConfig">导出方案</NButton>
       <NButton @click="importDefaultKeyMappingConfig">导入默认</NButton>
       <NButton @click="showKeyInfoFlag = !showKeyInfoFlag">按键信息</NButton>
     </NFlex>
@@ -218,6 +306,14 @@ async function importDefaultKeyMappingConfig() {
           clearable
         />
         <NButton round @click="importKeyMappingConfig">导入</NButton>
+      </NFlex>
+    </NCard>
+  </NModal>
+  <NModal v-model:show="showRenameModal">
+    <NCard style="width: 40%" title="重命名按键方案">
+      <NFlex vertical>
+        <NInput v-model:value="renameModalInputValue" clearable />
+        <NButton round @click="renameKeyMappingConfig">重命名</NButton>
       </NFlex>
     </NCard>
   </NModal>

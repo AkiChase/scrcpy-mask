@@ -121,6 +121,7 @@ fn load_default_keyconfig(app: tauri::AppHandle) -> Result<String, String> {
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
             let stores = app
