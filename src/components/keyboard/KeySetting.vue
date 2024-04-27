@@ -185,6 +185,7 @@ async function importDefaultKeyMappingConfig() {
     <NH4 prefix="bar">按键方案</NH4>
     <NSelect
       v-model:value="store.curKeyMappingIndex"
+      @update:value="(value: string)=>localStore.set('curKeyMappingIndex', value)"
       :options="keyMappingNameOptions"
     />
     <NP>
