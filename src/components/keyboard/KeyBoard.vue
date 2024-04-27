@@ -1,32 +1,24 @@
 <script setup lang="ts">
-import { onActivated, ref } from "vue";
+import { ref } from "vue";
 import KeyInfo from "./KeyInfo.vue";
 import KeySetting from "./KeySetting.vue";
 import KeyCommon from "./KeyCommon.vue";
 import { useGlobalStore } from "../../store/global";
-import { useDialog, useMessage } from "naive-ui";
+import { useDialog } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 
 // TODO 左键空白区域，关闭设置或active设为-1
 // TODO 右键空白区域添加按键
 // TODO 左键可拖动按钮（并显示到顶部），右键按钮进行修改、删除
-// TODO 设置界面添加清空本地数据的按钮
+// TODO 设置界面添加本地数据编辑器（类似utools）
 // TODO 添加开发者工具打开按钮
 
 const keyInfoShowFlag = ref(false);
 const store = useGlobalStore();
-const message = useMessage();
 const dialog = useDialog();
 
 const activeButtonIndex = ref(-1);
 let edited = ref(false);
-
-onActivated(() => {
-  // migrate keyMappingConfig if relativeSize does not match
-  migrateKeyMappingConfig();
-  // reset editKeyMappingList as the same as keyMappingList
-  store.resetEditKeyMappingList();
-});
 
 onBeforeRouteLeave(() => {
   if (edited.value) {
@@ -46,48 +38,6 @@ onBeforeRouteLeave(() => {
     });
   }
 });
-
-function migrateKeyMappingConfig() {
-  const keyboardElement = document.getElementById(
-    "keyboardElement"
-  ) as HTMLElement;
-  const curKeyMappingConfig =
-    store.keyMappingConfigList[store.curKeyMappingIndex];
-
-  const relativeSize = curKeyMappingConfig.relativeSize;
-  const sizeW = keyboardElement.clientWidth;
-  const sizeH = keyboardElement.clientHeight;
-
-  if (sizeW !== relativeSize.w || sizeH !== relativeSize.h) {
-    const newConfig = {
-      ...curKeyMappingConfig,
-      relativeSize: {
-        w: sizeW,
-        h: sizeH,
-      },
-    };
-
-    const relativePosToMaskPos = (x: number, y: number) => {
-      return {
-        x: Math.round((x / relativeSize.w) * sizeW),
-        y: Math.round((y / relativeSize.h) * sizeH),
-      };
-    };
-
-    for (let keyMapping of curKeyMappingConfig.list) {
-      const { x, y } = relativePosToMaskPos(keyMapping.posX, keyMapping.posY);
-      keyMapping.posX = x;
-      keyMapping.posY = y;
-    }
-    newConfig.title += "-迁移";
-    store.keyMappingConfigList.splice(store.curKeyMappingIndex, 1, newConfig);
-    store.curKeyMappingIndex += 1;
-
-    message.warning(
-      "当前按键方案与蒙版尺寸不一致，已自动迁移到新方案：" + newConfig.title
-    );
-  }
-}
 </script>
 
 <template>

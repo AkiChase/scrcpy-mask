@@ -55,8 +55,9 @@ let deviceWaitForMetadataTask: ((deviceName: string) => void) | null = null;
 
 let unlisten: UnlistenFn | undefined;
 onMounted(async () => {
-  const screenSize: null | { sizeW: number; sizeH: number } =
-    await localStore.get("screenSize");
+  const screenSize = await localStore.get<{ sizeW: number; sizeH: number }>(
+    "screenSize"
+  );
   if (screenSize !== null) {
     store.screenSizeW = screenSize.sizeW;
     store.screenSizeH = screenSize.sizeH;

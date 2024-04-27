@@ -19,6 +19,9 @@
     "store:allow-set",
     "store:allow-save",
     "store:allow-load",
+    "store:allow-clear",
+    "store:allow-entries",
+    "store:allow-delete",
     "clipboard-manager:default",
     "clipboard-manager:allow-write-text"
   ]

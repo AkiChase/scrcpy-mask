@@ -133,7 +133,7 @@ onMounted(async () => {
   const appWindow = getCurrent();
   factor = await appWindow.scaleFactor();
 
-  let maskArea: null | MaskArea = await localStore.get("maskArea");
+  let maskArea = await localStore.get<MaskArea>("maskArea");
   if (maskArea !== null) {
     areaModel.value = maskArea;
   }
@@ -207,9 +207,7 @@ onUnmounted(() => {
           />
         </NFormItemGi>
       </NGrid>
-      <NP
-        >提示：蒙版尺寸与设备尺寸将用于坐标转换，请保证尺寸的准确性</NP
-      >
+      <NP>提示：蒙版尺寸与设备尺寸将用于坐标转换，请保证尺寸的准确性</NP>
     </NForm>
   </div>
 </template>

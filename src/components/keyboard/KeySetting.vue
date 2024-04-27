@@ -12,7 +12,7 @@ import {
   NInput,
   useMessage,
 } from "naive-ui";
-import { computed, onMounted, ref } from "vue";
+import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useGlobalStore } from "../../store/global";
 import { Store } from "@tauri-apps/plugin-store";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -40,63 +40,69 @@ const keyMappingNameOptions = computed(() => {
   });
 });
 
-const curKeyMappingrelativeSize = computed(() => {
+const curRelativeSize = computed(() => {
+  if (store.keyMappingConfigList.length === 0) {
+    return { w: 800, h: 600 };
+  }
   return store.keyMappingConfigList[store.curKeyMappingIndex].relativeSize;
 });
 
-const keySettingPos = { x: 100, y: 100 };
+const keySettingPos = ref({ x: 100, y: 100 });
 
 onMounted(async () => {
   // loading keySettingPos from local store
-  const lastPos: { x: number; y: number } | null = await localStore.get(
+  let storedPos = await localStore.get<{ x: number; y: number }>(
     "keySettingPos"
   );
-  if (lastPos === null) {
-    await localStore.set("keySettingPos", keySettingPos);
-  } else {
-    keySettingPos.x = lastPos.x;
-    keySettingPos.y = lastPos.y;
+
+  if (storedPos === null) {
+    await localStore.set("keySettingPos", keySettingPos.value);
+    storedPos = { x: 100, y: 100 };
   }
   // apply keySettingPos
-  const target = document.querySelector(
-    ".keyboard .key-setting-btn"
-  ) as HTMLElement;
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
   const maxWidth = keyboardElement.clientWidth - 40;
   const maxHeight = keyboardElement.clientHeight - 40;
-  if (keySettingPos.x < 0) keySettingPos.x = 0;
-  else if (keySettingPos.x > maxWidth) keySettingPos.x = maxWidth;
-  if (keySettingPos.y < 0) keySettingPos.y = 0;
-  else if (keySettingPos.y > maxHeight) keySettingPos.y = maxHeight;
-  target.style.setProperty("right", `${keySettingPos.x}px`);
-  target.style.setProperty("bottom", `${keySettingPos.y}px`);
+  keySettingPos.value.x = Math.max(0, Math.min(storedPos.x, maxWidth));
+  keySettingPos.value.y = Math.max(0, Math.min(storedPos.y, maxHeight));
 });
 
+onActivated(() => {
+  // reset editKeyMappingList as the same as keyMappingList
+  store.resetEditKeyMappingList();
+  // check config relative size
+  checkConfigSize();
+});
+
+watch(
+  () => store.curKeyMappingIndex,
+  () => {
+    // check config relative size
+    checkConfigSize();
+  }
+);
+
 function dragHandler(downEvent: MouseEvent) {
-  const target = document.querySelector(
-    ".keyboard .key-setting-btn"
-  ) as HTMLElement;
+  const target = document.getElementById("keySettingBtn") as HTMLElement;
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
   const maxWidth = keyboardElement.clientWidth - 40;
   const maxHeight = keyboardElement.clientHeight - 40;
 
+  const oldX = keySettingPos.value.x;
+  const oldY = keySettingPos.value.y;
   const x = downEvent.clientX;
   const y = downEvent.clientY;
 
   let moveFlag = false;
   const moveHandler = (moveEvent: MouseEvent) => {
-    let right = keySettingPos.x + x - moveEvent.clientX;
-    let bottom = keySettingPos.y + y - moveEvent.clientY;
-    if (right < 0) right = 0;
-    else if (right > maxWidth) right = maxWidth;
-    if (bottom < 0) bottom = 0;
-    else if (bottom > maxHeight) bottom = maxHeight;
-    target.style.setProperty("right", `${right}px`);
-    target.style.setProperty("bottom", `${bottom}px`);
+    const newX = oldX + moveEvent.clientX - x;
+    const newY = oldY + moveEvent.clientY - y;
+    keySettingPos.value.x = Math.max(0, Math.min(newX, maxWidth));
+    keySettingPos.value.y = Math.max(0, Math.min(newY, maxHeight));
   };
 
   const timer = setTimeout(() => {
@@ -105,22 +111,14 @@ function dragHandler(downEvent: MouseEvent) {
     window.addEventListener("mousemove", moveHandler);
   }, 1000);
 
-  const upHandler = (upEvent: MouseEvent) => {
+  const upHandler = () => {
     clearTimeout(timer);
     window.removeEventListener("mousemove", moveHandler);
     window.removeEventListener("mouseup", upHandler);
     if (moveFlag) {
       // move up
-      keySettingPos.x += x - upEvent.clientX;
-      keySettingPos.y += y - upEvent.clientY;
-
-      if (keySettingPos.x < 0) keySettingPos.x = 0;
-      else if (keySettingPos.x > maxWidth) keySettingPos.x = maxWidth;
-      if (keySettingPos.y < 0) keySettingPos.y = 0;
-      else if (keySettingPos.y > maxHeight) keySettingPos.y = maxHeight;
-
       target.style.setProperty("cursor", "pointer");
-      localStore.set("keySettingPos", keySettingPos);
+      localStore.set("keySettingPos", keySettingPos.value);
     } else {
       // click up
       showSetting.value = !showSetting.value;
@@ -234,6 +232,63 @@ function exportKeyMappingConfig() {
       message.error("按键方案导出失败");
     });
 }
+
+function checkConfigSize() {
+  const keyboardElement = document.getElementById(
+    "keyboardElement"
+  ) as HTMLElement;
+  const curKeyMappingConfig =
+    store.keyMappingConfigList[store.curKeyMappingIndex];
+  const relativeSize = curKeyMappingConfig.relativeSize;
+
+  if (
+    keyboardElement.clientWidth !== relativeSize.w ||
+    keyboardElement.clientHeight !== relativeSize.h
+  ) {
+    message.warning(
+      `请注意当前按键方案"${curKeyMappingConfig.title}"与蒙版尺寸不一致，若有需要可进行迁移`
+    );
+  }
+}
+
+function migrateKeyMappingConfig() {
+  const keyboardElement = document.getElementById(
+    "keyboardElement"
+  ) as HTMLElement;
+  const curKeyMappingConfig =
+    store.keyMappingConfigList[store.curKeyMappingIndex];
+
+  const relativeSize = curKeyMappingConfig.relativeSize;
+  const sizeW = keyboardElement.clientWidth;
+  const sizeH = keyboardElement.clientHeight;
+
+  if (sizeW !== relativeSize.w || sizeH !== relativeSize.h) {
+    // deep clone
+    const newConfig = JSON.parse(JSON.stringify(curKeyMappingConfig));
+    // migrate relativeSize
+    newConfig.relativeSize = {
+      w: sizeW,
+      h: sizeH,
+    };
+    // migrate key pos
+    for (const keyMapping of newConfig.list) {
+      keyMapping.posX = Math.round((keyMapping.posX / relativeSize.w) * sizeW);
+      keyMapping.posY = Math.round((keyMapping.posY / relativeSize.h) * sizeH);
+    }
+    // migrate title
+    newConfig.title += "-迁移";
+
+    store.keyMappingConfigList.splice(
+      store.curKeyMappingIndex + 1,
+      0,
+      newConfig
+    );
+    store.setKeyMappingIndex(store.curKeyMappingIndex + 1);
+    message.success("已迁移到新方案：" + newConfig.title);
+  } else {
+    message.info("当前方案符合蒙版尺寸，无需迁移");
+  }
+}
 </script>
 
 <template>
@@ -242,8 +297,13 @@ function exportKeyMappingConfig() {
     type="info"
     size="large"
     class="key-setting-btn"
+    id="keySettingBtn"
     title="长按可拖动"
     @mousedown="dragHandler"
+    :style="{
+      left: keySettingPos.x + 'px',
+      top: keySettingPos.y + 'px',
+    }"
   >
     <template #icon>
       <NIcon><Settings /></NIcon>
@@ -259,13 +319,11 @@ function exportKeyMappingConfig() {
       @update:value="(value: number)=>store.setKeyMappingIndex(value)"
       :options="keyMappingNameOptions"
     />
-    <NP>
-      Relative Size: {{ curKeyMappingrelativeSize.w }} x
-      {{ curKeyMappingrelativeSize.h }}
-    </NP>
+    <NP> Relative Size:{{ curRelativeSize.w }}x{{ curRelativeSize.h }} </NP>
     <NFlex style="margin-top: 20px">
       <NButton @click="createKeyMappingConfig">新建方案</NButton>
       <NButton @click="copyCurKeyMappingConfig">复制方案</NButton>
+      <NButton @click="migrateKeyMappingConfig">迁移方案</NButton>
       <NButton @click="delCurKeyMappingConfig">删除方案</NButton>
       <NButton
         @click="

@@ -17,18 +17,19 @@ const store = useGlobalStore();
 onMounted(async () => {
   // loading keyMappingConfigList from local store
   const localStore = new Store("store.bin");
-  let keyMappingConfigList: KeyMappingConfig[] | null = await localStore.get(
+  let keyMappingConfigList = await localStore.get<KeyMappingConfig[]>(
     "keyMappingConfigList"
   );
   if (keyMappingConfigList === null || keyMappingConfigList.length === 0) {
+    // add empty key mapping config
     // unable to get mask element when app is not ready
     // so we use the stored mask area to get relative size
-    const maskArea: {
+    const maskArea = await localStore.get<{
       posX: number;
       posY: number;
       sizeW: number;
       sizeH: number;
-    } | null = await localStore.get("maskArea");
+    }>("maskArea");
     let relativeSize = { w: 800, h: 600 };
     if (maskArea !== null) {
       relativeSize = {
@@ -43,12 +44,12 @@ onMounted(async () => {
         list: [],
       },
     ];
+    await localStore.set("keyMappingConfigList", keyMappingConfigList);
   }
   store.keyMappingConfigList = keyMappingConfigList;
+
   // loading curKeyMappingIndex from local store
-  let curKeyMappingIndex: number | null = await localStore.get(
-    "curKeyMappingIndex"
-  );
+  let curKeyMappingIndex = await localStore.get<number>("curKeyMappingIndex");
   if (
     curKeyMappingIndex === null ||
     curKeyMappingIndex >= keyMappingConfigList.length

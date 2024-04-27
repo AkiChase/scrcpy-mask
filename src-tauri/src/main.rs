@@ -161,6 +161,17 @@ async fn main() {
                                 height: (600 + 30) as f64,
                             }))
                             .unwrap();
+                        store
+                            .insert(
+                                "maskArea".to_string(),
+                                serde_json::json!({
+                                    "posX": 0,
+                                    "posY": 0,
+                                    "sizeW": 800,
+                                    "sizeH": 600
+                                }),
+                            )
+                            .unwrap();
                     }
                 }
 
