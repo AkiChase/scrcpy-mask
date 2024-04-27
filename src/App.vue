@@ -8,7 +8,6 @@ import {
   NDialogProvider,
 } from "naive-ui";
 import { Store } from "@tauri-apps/plugin-store";
-import { getCurrent } from "@tauri-apps/api/window";
 import { KeyMappingConfig } from "./keyMappingConfig";
 import { onMounted } from "vue";
 import { useGlobalStore } from "./store/global";
@@ -22,30 +21,43 @@ onMounted(async () => {
     "keyMappingConfigList"
   );
   if (keyMappingConfigList === null || keyMappingConfigList.length === 0) {
+    // unable to get mask element when app is not ready
+    // so we use the stored mask area to get relative size
+    const maskArea: {
+      posX: number;
+      posY: number;
+      sizeW: number;
+      sizeH: number;
+    } | null = await localStore.get("maskArea");
+    let relativeSize = { w: 800, h: 600 };
+    if (maskArea !== null) {
+      relativeSize = {
+        w: maskArea.sizeW,
+        h: maskArea.sizeH,
+      };
+    }
     keyMappingConfigList = [
       {
-        relativeSize: await calMaskSize(),
+        relativeSize,
         title: "空白方案",
         list: [],
       },
     ];
   }
-
   store.keyMappingConfigList = keyMappingConfigList;
-});
-
-async function calMaskSize() {
-  const appWindow = getCurrent();
-  const ml = 70;
-  const mt = 30;
-  let size = (await appWindow.outerSize()).toLogical(
-    await appWindow.scaleFactor()
+  // loading curKeyMappingIndex from local store
+  let curKeyMappingIndex: number | null = await localStore.get(
+    "curKeyMappingIndex"
   );
-  return {
-    w: Math.round(size.width) - ml,
-    h: Math.round(size.height) - mt,
-  };
-}
+  if (
+    curKeyMappingIndex === null ||
+    curKeyMappingIndex >= keyMappingConfigList.length
+  ) {
+    curKeyMappingIndex = 0;
+    localStore.set("curKeyMappingIndex", curKeyMappingIndex);
+  }
+  store.curKeyMappingIndex = curKeyMappingIndex;
+});
 </script>
 
 <template>
@@ -84,6 +96,3 @@ async function calMaskSize() {
   height: 100%;
 }
 </style>
-import { getCurrent } from "@tauri-apps/api/webview"; import { Store } from
-"@tauri-apps/plugin-store"; import { KeyMappingConfig } from
-"./keyMappingConfig";

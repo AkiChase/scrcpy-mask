@@ -12,8 +12,6 @@ import {
 } from "../hotkey";
 import { getCurrent } from "@tauri-apps/api/window";
 
-const maskRef = ref<HTMLElement | null>(null);
-
 const store = useGlobalStore();
 const router = useRouter();
 const message = useMessage();
@@ -21,14 +19,18 @@ const message = useMessage();
 const renderedButtons: Ref<any[]> = ref([]);
 
 onBeforeRouteLeave(() => {
-  if (maskRef.value && store.controledDevice) {
+  const maskElement = document.getElementById("mask") as HTMLElement;
+
+  if (store.controledDevice) {
     unlistenToKeyEvent();
-    clearShortcuts(maskRef.value);
+    clearShortcuts(maskElement);
   }
 });
 
 onActivated(async () => {
-  if (maskRef.value && store.controledDevice) {
+  const maskElement = document.getElementById("mask") as HTMLElement;
+
+  if (store.controledDevice) {
     const mt = 30;
     const ml = 70;
     const appWindow = getCurrent();
@@ -43,13 +45,13 @@ onActivated(async () => {
     refreshKeyMappingButton();
     if (
       applyShortcuts(
-        maskRef.value,
+        maskElement,
         store.keyMappingConfigList[store.curKeyMappingIndex]
       )
     ) {
       listenToKeyEvent();
-    }else{
-      message.error("")
+    } else {
+      message.error("按键方案异常，请删除此方案");
     }
   }
 });
@@ -59,11 +61,13 @@ function toStartServer() {
 }
 
 function refreshKeyMappingButton() {
+  const maskElement = document.getElementById("mask") as HTMLElement;
+
   const curKeyMappingConfig =
     store.keyMappingConfigList[store.curKeyMappingIndex];
   const relativeSize = curKeyMappingConfig.relativeSize;
-  const maskSizeW = maskRef?.value?.clientWidth;
-  const maskSizeH = maskRef?.value?.clientHeight;
+  const maskSizeW = maskElement.clientWidth;
+  const maskSizeH = maskElement.clientHeight;
   if (maskSizeW && maskSizeH) {
     const relativePosToMaskPos = (x: number, y: number) => {
       return {
@@ -102,7 +106,7 @@ function refreshKeyMappingButton() {
     v-show="store.controledDevice"
     @contextmenu.prevent
     class="mask"
-    ref="maskRef"
+    id="mask"
   >
     <template v-for="button in renderedButtons">
       <div

@@ -12,10 +12,12 @@ import {
   NInput,
   useMessage,
 } from "naive-ui";
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
+import { Store } from "@tauri-apps/plugin-store";
 
 const store = useGlobalStore();
+const localStore = new Store("store.bin");
 const message = useMessage();
 
 const showKeyInfoFlag = defineModel({ required: true });
@@ -37,22 +39,60 @@ const curKeyMappingrelativeSize = computed(() => {
   return store.keyMappingConfigList[store.curKeyMappingIndex].relativeSize;
 });
 
+const keySettingPos = { x: 100, y: 100 };
+
+onMounted(async () => {
+  // loading keySettingPos from local store
+  const lastPos: { x: number; y: number } | null = await localStore.get(
+    "keySettingPos"
+  );
+  if (lastPos === null) {
+    await localStore.set("keySettingPos", keySettingPos);
+  } else {
+    keySettingPos.x = lastPos.x;
+    keySettingPos.y = lastPos.y;
+  }
+  // apply keySettingPos
+  const target = document.querySelector(
+    ".keyboard .key-setting-btn"
+  ) as HTMLElement;
+  const keyboardElement = document.getElementById(
+    "keyboardElement"
+  ) as HTMLElement;
+  const maxWidth = keyboardElement.clientWidth - 40;
+  const maxHeight = keyboardElement.clientHeight - 40;
+  if (keySettingPos.x < 0) keySettingPos.x = 0;
+  else if (keySettingPos.x > maxWidth) keySettingPos.x = maxWidth;
+  if (keySettingPos.y < 0) keySettingPos.y = 0;
+  else if (keySettingPos.y > maxHeight) keySettingPos.y = maxHeight;
+  target.style.setProperty("right", `${keySettingPos.x}px`);
+  target.style.setProperty("bottom", `${keySettingPos.y}px`);
+  console.log("keySettingPos", keySettingPos);
+});
+
 function dragHandler(downEvent: MouseEvent) {
   const target = document.querySelector(
     ".keyboard .key-setting-btn"
   ) as HTMLElement;
-  downEvent.preventDefault();
+  const keyboardElement = document.getElementById(
+    "keyboardElement"
+  ) as HTMLElement;
+  const maxWidth = keyboardElement.clientWidth - 40;
+  const maxHeight = keyboardElement.clientHeight - 40;
+
   const x = downEvent.clientX;
   const y = downEvent.clientY;
 
   let moveFlag = false;
-  let lastPosX = 100;
-  let lastPosY = 100;
   const moveHandler = (moveEvent: MouseEvent) => {
-    let right = lastPosX + x - moveEvent.clientX;
-    let bottom = lastPosY + y - moveEvent.clientY;
-    target.style.setProperty("right", `${right < 0 ? 0 : right}px`);
-    target.style.setProperty("bottom", `${bottom < 0 ? 0 : bottom}px`);
+    let right = keySettingPos.x + x - moveEvent.clientX;
+    let bottom = keySettingPos.y + y - moveEvent.clientY;
+    if (right < 0) right = 0;
+    else if (right > maxWidth) right = maxWidth;
+    if (bottom < 0) bottom = 0;
+    else if (bottom > maxHeight) bottom = maxHeight;
+    target.style.setProperty("right", `${right}px`);
+    target.style.setProperty("bottom", `${bottom}px`);
   };
 
   const timer = setTimeout(() => {
@@ -66,10 +106,19 @@ function dragHandler(downEvent: MouseEvent) {
     window.removeEventListener("mousemove", moveHandler);
     window.removeEventListener("mouseup", upHandler);
     if (moveFlag) {
-      lastPosX = lastPosX + x - upEvent.clientX;
-      lastPosY = lastPosY + y - upEvent.clientY;
+      // move up
+      keySettingPos.x += x - upEvent.clientX;
+      keySettingPos.y += y - upEvent.clientY;
+
+      if (keySettingPos.x < 0) keySettingPos.x = 0;
+      else if (keySettingPos.x > maxWidth) keySettingPos.x = maxWidth;
+      if (keySettingPos.y < 0) keySettingPos.y = 0;
+      else if (keySettingPos.y > maxHeight) keySettingPos.y = maxHeight;
+
       target.style.setProperty("cursor", "pointer");
+      localStore.set("keySettingPos", keySettingPos);
     } else {
+      // click up
       showSetting.value = !showSetting.value;
     }
   };
@@ -88,6 +137,9 @@ function importKeyMappingConfig() {
   store.keyMappingConfigList.push(keyMappingConfig);
   store.curKeyMappingIndex = store.keyMappingConfigList.length - 1;
   showImportModal.value = false;
+  localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+  localStore.set("curKeyMappingIndex", store.curKeyMappingIndex);
+  message.success("按键方案已导入");
 }
 </script>
 
@@ -97,6 +149,7 @@ function importKeyMappingConfig() {
     type="info"
     size="large"
     class="key-setting-btn"
+    title="长按可拖动"
     @mousedown="dragHandler"
   >
     <template #icon>
@@ -126,6 +179,7 @@ function importKeyMappingConfig() {
     <NFlex>
       <NButton @click="showImportModal = true">导入</NButton>
       <NButton>导出</NButton>
+      <NButton>导入默认</NButton>
       <NButton @click="showKeyInfoFlag = !showKeyInfoFlag">按键信息</NButton>
     </NFlex>
   </div>
@@ -150,8 +204,6 @@ function importKeyMappingConfig() {
 .key-setting-btn {
   position: absolute;
   z-index: 9;
-  right: 100px;
-  bottom: 100px;
 }
 
 .key-setting {
