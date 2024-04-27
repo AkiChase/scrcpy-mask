@@ -23,9 +23,10 @@ const store = useGlobalStore();
 const localStore = new Store("store.bin");
 const message = useMessage();
 
-const showKeyInfoFlag = defineModel({ required: true });
+const showKeyInfoFlag = defineModel("showKeyInfoFlag", { required: true });
+const showSettingFlag = defineModel("showSettingFlag", { required: true });
+const edited = defineModel("edited", { required: true });
 
-const showSetting = ref(false);
 const showImportModal = ref(false);
 const showRenameModal = ref(false);
 const importModalInputValue = ref("");
@@ -121,7 +122,7 @@ function dragHandler(downEvent: MouseEvent) {
       localStore.set("keySettingPos", keySettingPos.value);
     } else {
       // click up
-      showSetting.value = !showSetting.value;
+      showSettingFlag.value = !showSettingFlag.value;
     }
   };
   window.addEventListener("mouseup", upHandler);
@@ -233,6 +234,16 @@ function exportKeyMappingConfig() {
     });
 }
 
+function saveKeyMappingConfig() {
+  store.applyEditKeyMappingList();
+  edited.value = false;
+}
+
+function resetKeyMappingConfig() {
+  store.resetEditKeyMappingList();
+  edited.value = false;
+}
+
 function checkConfigSize() {
   const keyboardElement = document.getElementById(
     "keyboardElement"
@@ -309,8 +320,8 @@ function migrateKeyMappingConfig() {
       <NIcon><Settings /></NIcon>
     </template>
   </NButton>
-  <div class="key-setting" v-show="showSetting">
-    <NButton text class="key-setting-close" @click="showSetting = false">
+  <div class="key-setting" v-show="showSettingFlag">
+    <NButton text class="key-setting-close" @click="showSettingFlag = false">
       <NIcon><CloseCircle></CloseCircle></NIcon>
     </NButton>
     <NH4 prefix="bar">按键方案</NH4>
@@ -321,6 +332,10 @@ function migrateKeyMappingConfig() {
     />
     <NP> Relative Size:{{ curRelativeSize.w }}x{{ curRelativeSize.h }} </NP>
     <NFlex style="margin-top: 20px">
+      <template v-if="edited">
+        <NButton type="success" @click="saveKeyMappingConfig">保存方案</NButton>
+        <NButton type="error" @click="resetKeyMappingConfig">还原方案</NButton>
+      </template>
       <NButton @click="createKeyMappingConfig">新建方案</NButton>
       <NButton @click="copyCurKeyMappingConfig">复制方案</NButton>
       <NButton @click="migrateKeyMappingConfig">迁移方案</NButton>

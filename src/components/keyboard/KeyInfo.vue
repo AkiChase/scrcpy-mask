@@ -4,7 +4,7 @@ import { CloseCircle } from "@vicons/ionicons5";
 import { Ref, onActivated, ref } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 
-const showFlag = defineModel({ required: true });
+const showKeyInfoFlag = defineModel("showKeyInfoFlag", { required: true });
 
 const mouseX = ref(0);
 const mouseY = ref(0);
@@ -94,10 +94,10 @@ function dragHandler(downEvent: MouseEvent) {
 </script>
 
 <template>
-  <div v-show="showFlag" class="key-info" @contextmenu.prevent>
+  <div v-show="showKeyInfoFlag" class="key-info" @contextmenu.prevent>
     <div class="key-info-header" @mousedown="dragHandler">
       Key Info
-      <div class="key-info-close" @click="showFlag = false">
+      <div class="key-info-close" @click="showKeyInfoFlag = false">
         <NIcon><CloseCircle></CloseCircle></NIcon>
       </div>
     </div>
