@@ -72,7 +72,6 @@ onMounted(async () => {
   else if (keySettingPos.y > maxHeight) keySettingPos.y = maxHeight;
   target.style.setProperty("right", `${keySettingPos.x}px`);
   target.style.setProperty("bottom", `${keySettingPos.y}px`);
-  console.log("keySettingPos", keySettingPos);
 });
 
 function dragHandler(downEvent: MouseEvent) {
@@ -140,10 +139,9 @@ function importKeyMappingConfig() {
     return;
   }
   store.keyMappingConfigList.push(keyMappingConfig);
-  store.curKeyMappingIndex = store.keyMappingConfigList.length - 1;
+  store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
   showImportModal.value = false;
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
-  localStore.set("curKeyMappingIndex", store.curKeyMappingIndex);
   message.success("按键方案已导入");
 }
 
@@ -180,9 +178,8 @@ function createKeyMappingConfig() {
     list: [],
   };
   store.keyMappingConfigList.push(newConfig);
-  store.curKeyMappingIndex = store.keyMappingConfigList.length - 1;
+  store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
-  localStore.set("curKeyMappingIndex", store.curKeyMappingIndex);
   message.success("新方案已创建");
 }
 
@@ -194,9 +191,8 @@ function copyCurKeyMappingConfig() {
     list: curConfig.list,
   };
   store.keyMappingConfigList.push(newConfig);
-  store.curKeyMappingIndex = store.keyMappingConfigList.length - 1;
+  store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
-  localStore.set("curKeyMappingIndex", store.curKeyMappingIndex);
   message.success("方案已复制为：" + curConfig.title + "-副本");
 }
 
@@ -207,10 +203,10 @@ function delCurKeyMappingConfig() {
   }
   const title = store.keyMappingConfigList[store.curKeyMappingIndex].title;
   store.keyMappingConfigList.splice(store.curKeyMappingIndex, 1);
-  store.curKeyMappingIndex =
-    store.curKeyMappingIndex > 0 ? store.curKeyMappingIndex - 1 : 0;
+  store.setKeyMappingIndex(
+    store.curKeyMappingIndex > 0 ? store.curKeyMappingIndex - 1 : 0
+  );
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
-  localStore.set("curKeyMappingIndex", store.curKeyMappingIndex);
   message.success("方案已删除：" + title);
 }
 
@@ -259,8 +255,8 @@ function exportKeyMappingConfig() {
     </NButton>
     <NH4 prefix="bar">按键方案</NH4>
     <NSelect
-      v-model:value="store.curKeyMappingIndex"
-      @update:value="(value: string)=>localStore.set('curKeyMappingIndex', value)"
+      :value="store.curKeyMappingIndex"
+      @update:value="(value: number)=>store.setKeyMappingIndex(value)"
       :options="keyMappingNameOptions"
     />
     <NP>

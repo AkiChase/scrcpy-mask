@@ -19,7 +19,7 @@ const message = useMessage();
 const renderedButtons: Ref<any[]> = ref([]);
 
 onBeforeRouteLeave(() => {
-  const maskElement = document.getElementById("mask") as HTMLElement;
+  const maskElement = document.getElementById("maskElement") as HTMLElement;
 
   if (store.controledDevice) {
     unlistenToKeyEvent();
@@ -28,7 +28,7 @@ onBeforeRouteLeave(() => {
 });
 
 onActivated(async () => {
-  const maskElement = document.getElementById("mask") as HTMLElement;
+  const maskElement = document.getElementById("maskElement") as HTMLElement;
 
   if (store.controledDevice) {
     const mt = 30;
@@ -42,13 +42,13 @@ onActivated(async () => {
       [size.width - ml, size.height - mt]
     );
 
-    refreshKeyMappingButton();
     if (
       applyShortcuts(
         maskElement,
         store.keyMappingConfigList[store.curKeyMappingIndex]
       )
     ) {
+      refreshKeyMappingButton();
       listenToKeyEvent();
     } else {
       message.error("按键方案异常，请删除此方案");
@@ -61,31 +61,29 @@ function toStartServer() {
 }
 
 function refreshKeyMappingButton() {
-  const maskElement = document.getElementById("mask") as HTMLElement;
+  const maskElement = document.getElementById("maskElement") as HTMLElement;
 
   const curKeyMappingConfig =
     store.keyMappingConfigList[store.curKeyMappingIndex];
   const relativeSize = curKeyMappingConfig.relativeSize;
   const maskSizeW = maskElement.clientWidth;
   const maskSizeH = maskElement.clientHeight;
-  if (maskSizeW && maskSizeH) {
-    const relativePosToMaskPos = (x: number, y: number) => {
-      return {
-        x: Math.round((x / relativeSize.w) * maskSizeW),
-        y: Math.round((y / relativeSize.h) * maskSizeH),
-      };
+  const relativePosToMaskPos = (x: number, y: number) => {
+    return {
+      x: Math.round((x / relativeSize.w) * maskSizeW),
+      y: Math.round((y / relativeSize.h) * maskSizeH),
     };
-    const buttons = [];
-    for (let keyObject of curKeyMappingConfig.list) {
-      const { x, y } = relativePosToMaskPos(keyObject.posX, keyObject.posY);
-      buttons.push({
-        ...keyObject,
-        x,
-        y,
-      });
-    }
-    renderedButtons.value = buttons;
+  };
+  const buttons = [];
+  for (let keyObject of curKeyMappingConfig.list) {
+    const { x, y } = relativePosToMaskPos(keyObject.posX, keyObject.posY);
+    buttons.push({
+      ...keyObject,
+      x,
+      y,
+    });
   }
+  renderedButtons.value = buttons;
 }
 </script>
 
@@ -106,7 +104,7 @@ function refreshKeyMappingButton() {
     v-show="store.controledDevice"
     @contextmenu.prevent
     class="mask"
-    id="mask"
+    id="maskElement"
   >
     <template v-for="button in renderedButtons">
       <div

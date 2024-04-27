@@ -1,7 +1,10 @@
 import { defineStore } from "pinia";
 import { Ref, ref } from "vue";
 import { Device } from "../invoke";
-import { KeyMappingConfig } from "../keyMappingConfig";
+import { KeyMapping, KeyMappingConfig } from "../keyMappingConfig";
+import { Store } from "@tauri-apps/plugin-store";
+
+const localStore = new Store("store.bin");
 
 export const useGlobalStore = defineStore("counter", () => {
   const showLoadingRef = ref(false);
@@ -23,8 +26,27 @@ export const useGlobalStore = defineStore("counter", () => {
 
   const controledDevice: Ref<ControledDevice | null> = ref(null);
 
-  const keyMappingConfigList: KeyMappingConfig[] = [];
+  const keyMappingConfigList: Ref<KeyMappingConfig[]> = ref([]);
   const curKeyMappingIndex = ref(0);
+  const editKeyMappingList: Ref<KeyMapping[]> = ref([]);
+
+  function applyEditKeyMappingList() {
+    keyMappingConfigList.value[curKeyMappingIndex.value].list =
+      editKeyMappingList.value;
+    localStore.set("keyMappingConfigList", keyMappingConfigList.value);
+  }
+
+  function resetEditKeyMappingList() {
+    editKeyMappingList.value = JSON.parse(
+      JSON.stringify(keyMappingConfigList.value[curKeyMappingIndex.value].list)
+    );
+  }
+
+  function setKeyMappingIndex(index: number) {
+    curKeyMappingIndex.value = index;
+    resetEditKeyMappingList();
+    localStore.set("curKeyMappingIndex", index);
+  }
 
   return {
     showLoading,
@@ -35,5 +57,9 @@ export const useGlobalStore = defineStore("counter", () => {
     screenSizeH,
     keyMappingConfigList,
     curKeyMappingIndex,
+    editKeyMappingList,
+    applyEditKeyMappingList,
+    resetEditKeyMappingList,
+    setKeyMappingIndex,
   };
 });

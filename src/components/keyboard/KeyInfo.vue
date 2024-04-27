@@ -82,8 +82,8 @@ function dragHandler(downEvent: MouseEvent) {
     };
     window.addEventListener("mousemove", moveHandler);
     const upHandler = (upEvent: MouseEvent) => {
-      lastPosX = lastPosX + upEvent.clientX - x;
-      lastPosY = lastPosY + upEvent.clientY - y;
+      lastPosX += upEvent.clientX - x;
+      lastPosY += upEvent.clientY - y;
       window.removeEventListener("mousemove", moveHandler);
       window.removeEventListener("mouseup", upHandler);
       target.style.setProperty("cursor", "grab");
