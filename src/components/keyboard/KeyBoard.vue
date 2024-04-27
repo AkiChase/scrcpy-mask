@@ -7,8 +7,16 @@ import { useGlobalStore } from "../../store/global";
 import { useDialog } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 
+// TODO 方向轮盘按钮 KeySteeringWheel
+//      有四个按钮+offset
+// TODO 技能按钮 KeyDirectionalSkill，KeyDirectionlessSkill，KeyTriggerWhenPressedSkill（有区分directional)
+//      单个键，靠两个flag来区分这四种情况，还有range或time要视情况
+// TODO 添加视野按钮 KeyObservation
+//      单个键，有灵敏度scale
+// TODO 普通按钮 KeyMacro，KeyCancelSkill，KeyTap
+//      单个键，KeyMacro有输入框
+// TODO 右键按钮打开菜单修改、删除
 // TODO 右键空白区域添加按键
-// TODO 左键可拖动按钮（并显示到顶部），右键按钮进行修改、删除
 // TODO 设置界面添加本地数据编辑器（类似utools）
 // TODO 添加开发者工具打开按钮
 

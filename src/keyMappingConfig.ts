@@ -37,11 +37,6 @@ interface KeyCancelSkill extends Key {
   key: string;
 }
 
-interface KeyTap extends Key {
-  key: string;
-  time: number;
-}
-
 interface KeyTriggerWhenPressedSkill extends Key {
   key: string;
   directional: boolean;
@@ -51,6 +46,11 @@ interface KeyTriggerWhenPressedSkill extends Key {
 interface KeyObservation extends Key {
   key: string;
   scale: number;
+}
+
+interface KeyTap extends Key {
+  key: string;
+  time: number;
 }
 
 type KeyMacroType = "touch" | "sleep" | "swipe";
@@ -73,11 +73,11 @@ type KeyMapping =
   | KeySteeringWheel
   | KeyDirectionalSkill
   | KeyDirectionlessSkill
-  | KeyCancelSkill
-  | KeyTap
   | KeyTriggerWhenPressedSkill
   | KeyObservation
-  | KeyMacro;
+  | KeyMacro
+  | KeyCancelSkill
+  | KeyTap;
 
 interface KeyMappingConfig {
   relativeSize: { w: number; h: number };

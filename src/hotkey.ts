@@ -176,7 +176,7 @@ function addObservationShortcuts(
   );
 }
 
-// add shortcuts for simple tap (touch for 100 ms when pressed)
+// add shortcuts for simple tap (touch when press down)
 function addTapShortcuts(
   key: string,
   relativeSize: { w: number; h: number },

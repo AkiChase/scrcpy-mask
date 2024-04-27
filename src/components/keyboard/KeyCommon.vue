@@ -88,5 +88,6 @@ function dragHandler(downEvent: MouseEvent) {
 .active {
   border: 2px solid var(--primary-color);
   color: var(--primary-color);
+  z-index: 2;
 }
 </style>
