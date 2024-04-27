@@ -4,10 +4,10 @@
 use scrcpy_mask::{
     adb::{Adb, Device},
     client::ScrcpyClient,
-    resource::ResHelper,
+    resource::{ResHelper, ResourceName},
     socket::connect_socket,
 };
-use std::sync::Arc;
+use std::{fs::read_to_string, sync::Arc};
 use tauri::Manager;
 
 #[tauri::command]
@@ -108,6 +108,16 @@ fn start_scrcpy_server(
     Ok(())
 }
 
+#[tauri::command]
+fn load_default_keyconfig(app: tauri::AppHandle) -> Result<String, String> {
+    let dir = app.path().resource_dir().unwrap().join("resource");
+    let file = ResHelper::get_file_path(&dir, ResourceName::DefaultKeyConfig);
+    match read_to_string(file) {
+        Ok(content) => Ok(content),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
@@ -141,7 +151,16 @@ async fn main() {
                             }))
                             .unwrap();
                     }
-                    None => {}
+                    None => {
+                        let main_window: tauri::WebviewWindow =
+                            app.get_webview_window("main").unwrap();
+                        main_window
+                            .set_size(tauri::Size::Logical(tauri::LogicalSize {
+                                width: (800 + 70) as f64,
+                                height: (600 + 30) as f64,
+                            }))
+                            .unwrap();
+                    }
                 }
 
                 Ok(())
@@ -162,7 +181,8 @@ async fn main() {
             adb_devices,
             forward_server_port,
             push_server_file,
-            start_scrcpy_server
+            start_scrcpy_server,
+            load_default_keyconfig
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

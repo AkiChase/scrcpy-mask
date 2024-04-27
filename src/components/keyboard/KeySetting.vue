@@ -15,6 +15,8 @@ import {
 import { computed, onMounted, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
 import { Store } from "@tauri-apps/plugin-store";
+import { loadDefaultKeyconfig } from "../../invoke";
+import { KeyMappingConfig } from "../../keyMappingConfig";
 
 const store = useGlobalStore();
 const localStore = new Store("store.bin");
@@ -141,6 +143,26 @@ function importKeyMappingConfig() {
   localStore.set("curKeyMappingIndex", store.curKeyMappingIndex);
   message.success("按键方案已导入");
 }
+
+async function importDefaultKeyMappingConfig() {
+  const data = await loadDefaultKeyconfig();
+  let defaultConfigs: KeyMappingConfig[];
+  let count = 0;
+  try {
+    defaultConfigs = JSON.parse(data);
+    for (const config of defaultConfigs) {
+      store.keyMappingConfigList.push(config);
+      count++;
+    }
+  } catch (e) {
+    console.error(e);
+    message.error("默认按键方案导入失败");
+    return;
+  }
+
+  localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+  message.success(`已导入${count}个默认方案`);
+}
 </script>
 
 <template>
@@ -179,7 +201,7 @@ function importKeyMappingConfig() {
     <NFlex>
       <NButton @click="showImportModal = true">导入</NButton>
       <NButton>导出</NButton>
-      <NButton>导入默认</NButton>
+      <NButton @click="importDefaultKeyMappingConfig">导入默认</NButton>
       <NButton @click="showKeyInfoFlag = !showKeyInfoFlag">按键信息</NButton>
     </NFlex>
   </div>

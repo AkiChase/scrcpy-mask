@@ -4,6 +4,7 @@ use std::path::PathBuf;
 pub enum ResourceName {
     Adb,
     ScrcpyServer,
+    DefaultKeyConfig
 }
 
 pub struct ResHelper {
@@ -32,6 +33,7 @@ impl ResHelper {
             ResourceName::Adb => dir.join("adb"),
 
             ResourceName::ScrcpyServer => dir.join("scrcpy-server-v2.4"),
+            ResourceName::DefaultKeyConfig => dir.join("default-key-config.json"),
         }
     }
 

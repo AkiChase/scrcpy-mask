@@ -29,4 +29,8 @@ export async function startScrcpyServer(
   return await invoke("start_scrcpy_server", { id, scid, address });
 }
 
+export async function loadDefaultKeyconfig(): Promise<string> {
+  return await invoke("load_default_keyconfig");
+}
+
 export type { Device };
