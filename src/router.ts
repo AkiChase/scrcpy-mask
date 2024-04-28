@@ -5,7 +5,7 @@ import KeyBoard from "./components/keyboard/KeyBoard.vue";
 import Device from "./components/Device.vue";
 
 const routes = [
-  { path: "/", name: "mask", component: Mask },
+  { path: "/mask", name: "mask", component: Mask },
   { path: "/device", name: "device", component: Device },
   { path: "/setting", name: "setting", component: Setting },
   { path: "/keyboard", name: "keyboard", component: KeyBoard },

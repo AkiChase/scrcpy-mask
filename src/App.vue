@@ -11,12 +11,25 @@ import { Store } from "@tauri-apps/plugin-store";
 import { KeyMappingConfig } from "./keyMappingConfig";
 import { onMounted } from "vue";
 import { useGlobalStore } from "./store/global";
+import { useRouter } from "vue-router";
 
 const store = useGlobalStore();
+const router = useRouter();
 
 onMounted(async () => {
-  // loading keyMappingConfigList from local store
+  router.replace({ name: "mask" });
+
   const localStore = new Store("store.bin");
+  // loading screenSize from local store
+  const screenSize = await localStore.get<{ sizeW: number; sizeH: number }>(
+    "screenSize"
+  );
+  if (screenSize !== null) {
+    store.screenSizeW = screenSize.sizeW;
+    store.screenSizeH = screenSize.sizeH;
+  }
+
+  // loading keyMappingConfigList from local store
   let keyMappingConfigList = await localStore.get<KeyMappingConfig[]>(
     "keyMappingConfigList"
   );

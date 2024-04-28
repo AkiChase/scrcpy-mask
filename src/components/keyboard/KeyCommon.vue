@@ -4,18 +4,19 @@ import { useGlobalStore } from "../../store/global";
 
 const emit = defineEmits<{
   edit: [];
-  active: [];
 }>();
 
 const props = defineProps<{
   index: number;
-  activeIndex: number;
 }>();
+
+const activeIndex = defineModel("activeIndex", { required: true });
+
 const store = useGlobalStore();
 const elementRef = ref<HTMLElement | null>(null);
 
 function dragHandler(downEvent: MouseEvent) {
-  emit("active");
+  activeIndex.value = props.index;
   const oldX = store.editKeyMappingList[props.index].posX;
   const oldY = store.editKeyMappingList[props.index].posY;
   const element = elementRef.value;

@@ -3,6 +3,7 @@ import { onActivated, ref } from "vue";
 import KeyInfo from "./KeyInfo.vue";
 import KeySetting from "./KeySetting.vue";
 import KeyCommon from "./KeyCommon.vue";
+import KeySteeringWheel from "./KeySteeringWheel.vue";
 import { useGlobalStore } from "../../store/global";
 import { useDialog } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
@@ -55,6 +56,7 @@ function setCurButtonKey(curKey: string) {
   } else {
     keyMapping.key = curKey;
   }
+  edited.value = true;
 }
 
 function handleClick(event: MouseEvent) {
@@ -66,6 +68,7 @@ function handleClick(event: MouseEvent) {
         return;
       }
       activeButtonIndex.value = -1;
+      activeSteeringWheelButtonKeyIndex.value = -1;
     }
   } else if (event.button === 2) {
     // right click
@@ -73,6 +76,7 @@ function handleClick(event: MouseEvent) {
       // add button
       if (showSettingFlag.value) showSettingFlag.value = false;
       activeButtonIndex.value = -1;
+      activeSteeringWheelButtonKeyIndex.value = -1;
 
       console.log("弹出新增");
     } else if (
@@ -159,17 +163,26 @@ onBeforeRouteLeave(() => {
     @contextmenu.prevent
   >
     <KeySetting
-      v-model:showKeyInfoFlag="showKeyInfoFlag"
-      v-model:showSettingFlag="showSettingFlag"
+      v-model:show-key-info-flag="showKeyInfoFlag"
+      v-model:show-setting-flag="showSettingFlag"
       v-model:edited="edited"
     />
     <KeyInfo v-model:showKeyInfoFlag="showKeyInfoFlag" />
     <template v-for="(_, index) in store.editKeyMappingList">
-      <KeyCommon
+      <KeySteeringWheel
+        v-if="store.editKeyMappingList[index].type === 'SteeringWheel'"
         @edit="edited = true"
-        @active="activeButtonIndex = index"
         :index="index"
-        :activeIndex="activeButtonIndex"
+        v-model:active-index="activeButtonIndex"
+        v-model:active-steering-wheel-button-key-index="
+          activeSteeringWheelButtonKeyIndex
+        "
+      />
+      <KeyCommon
+        v-else
+        @edit="edited = true"
+        :index="index"
+        v-model:active-index="activeButtonIndex"
       />
     </template>
   </div>

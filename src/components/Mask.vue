@@ -116,15 +116,15 @@ function refreshKeyMappingButton() {
         }"
       >
         <div class="wheel-container">
-          <i></i>
+          <i />
           <span>{{ button.key.up }}</span>
-          <i></i>
+          <i />
           <span>{{ button.key.left }}</span>
-          <span class="wheel-center"></span>
+          <i />
           <span>{{ button.key.right }}</span>
-          <i></i>
+          <i />
           <span>{{ button.key.down }}</span>
-          <i></i>
+          <i />
         </div>
       </div>
       <div
