@@ -63,7 +63,7 @@ function dragHandler(downEvent: MouseEvent) {
     class="key-common"
     ref="elementRef"
   >
-    {{ store.editKeyMappingList[props.index].key }}
+    <span>{{ store.editKeyMappingList[props.index].key }}</span>
   </div>
 </template>
 
