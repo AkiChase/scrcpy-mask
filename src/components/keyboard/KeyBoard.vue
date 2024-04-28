@@ -4,19 +4,22 @@ import KeyInfo from "./KeyInfo.vue";
 import KeySetting from "./KeySetting.vue";
 import KeyCommon from "./KeyCommon.vue";
 import KeySteeringWheel from "./KeySteeringWheel.vue";
+import KeySkill from "./KeySkill.vue";
 import { KeySteeringWheel as KeyMappingSteeringWheel } from "../../keyMappingConfig";
 import { useGlobalStore } from "../../store/global";
 import { useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
+import KeyObservation from "./KeyObservation.vue";
 
 // TODO 普通按钮 KeyMacro，KeyCancelSkill，KeyTap
-//      单个键，KeyMacro有输入框
+//      KeyMacro有输入框
 // TODO 方向轮盘按钮 KeySteeringWheel
-//      有四个按钮+offset
+//      offset
 // TODO 技能按钮 KeyDirectionalSkill，KeyDirectionlessSkill，KeyTriggerWhenPressedSkill（有区分directional)
-//      单个键，靠两个flag来区分这四种情况，还有range或time要视情况
+//      靠两个flag来区分这四种情况，还有range或time要视情况
 // TODO 添加视野按钮 KeyObservation
-//      单个键，有灵敏度scale
+//      有灵敏度scale
+
 // TODO 按钮齿轮图标可修改、删除
 // TODO 右键空白区域添加按键
 // TODO 设置界面添加本地数据编辑器（类似utools）
@@ -190,6 +193,7 @@ onBeforeRouteLeave(() => {
 
 <template>
   <div
+    v-if="store.keyMappingConfigList.length"
     id="keyboardElement"
     class="keyboard"
     @mousedown="handleClick"
@@ -211,6 +215,22 @@ onBeforeRouteLeave(() => {
           activeSteeringWheelButtonKeyIndex
         "
       />
+      <KeySkill
+        v-else-if="
+          store.editKeyMappingList[index].type === 'DirectionalSkill' ||
+          store.editKeyMappingList[index].type === 'DirectionlessSkill' ||
+          store.editKeyMappingList[index].type === 'TriggerWhenPressedSkill'
+        "
+        @edit="edited = true"
+        :index="index"
+        v-model:active-index="activeButtonIndex"
+      />
+      <KeyObservation
+        v-else-if="store.editKeyMappingList[index].type === 'Observation'"
+        @edit="edited = true"
+        :index="index"
+        v-model:active-index="activeButtonIndex"
+      />
       <KeyCommon
         v-else
         @edit="edited = true"
@@ -227,6 +247,8 @@ onBeforeRouteLeave(() => {
   background-color: rgba(0, 0, 0, 0.5);
   overflow: hidden;
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
 
   .keyboard-button {
     position: absolute;

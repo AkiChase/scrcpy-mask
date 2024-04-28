@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Ref, onActivated, ref } from "vue";
+import { onActivated } from "vue";
 import { NDialog, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
@@ -10,13 +10,11 @@ import {
   unlistenToKeyEvent,
   updateScreenSizeAndMaskArea,
 } from "../hotkey";
-import { getCurrent } from "@tauri-apps/api/window";
+import { KeySteeringWheel } from "../keyMappingConfig";
 
 const store = useGlobalStore();
 const router = useRouter();
 const message = useMessage();
-
-const renderedButtons: Ref<any[]> = ref([]);
 
 onBeforeRouteLeave(() => {
   const maskElement = document.getElementById("maskElement") as HTMLElement;
@@ -31,15 +29,9 @@ onActivated(async () => {
   const maskElement = document.getElementById("maskElement") as HTMLElement;
 
   if (store.controledDevice) {
-    const mt = 30;
-    const ml = 70;
-    const appWindow = getCurrent();
-    const size = (await appWindow.outerSize()).toLogical(
-      await appWindow.scaleFactor()
-    );
     updateScreenSizeAndMaskArea(
       [store.screenSizeW, store.screenSizeH],
-      [size.width - ml, size.height - mt]
+      [maskElement.clientWidth, maskElement.clientHeight]
     );
 
     if (
@@ -48,7 +40,6 @@ onActivated(async () => {
         store.keyMappingConfigList[store.curKeyMappingIndex]
       )
     ) {
-      refreshKeyMappingButton();
       listenToKeyEvent();
     } else {
       message.error("按键方案异常，请删除此方案");
@@ -58,32 +49,6 @@ onActivated(async () => {
 
 function toStartServer() {
   router.replace({ name: "device" });
-}
-
-function refreshKeyMappingButton() {
-  const maskElement = document.getElementById("maskElement") as HTMLElement;
-
-  const curKeyMappingConfig =
-    store.keyMappingConfigList[store.curKeyMappingIndex];
-  const relativeSize = curKeyMappingConfig.relativeSize;
-  const maskSizeW = maskElement.clientWidth;
-  const maskSizeH = maskElement.clientHeight;
-  const relativePosToMaskPos = (x: number, y: number) => {
-    return {
-      x: Math.round((x / relativeSize.w) * maskSizeW),
-      y: Math.round((y / relativeSize.h) * maskSizeH),
-    };
-  };
-  const buttons = [];
-  for (let keyObject of curKeyMappingConfig.list) {
-    const { x, y } = relativePosToMaskPos(keyObject.posX, keyObject.posY);
-    buttons.push({
-      ...keyObject,
-      x,
-      y,
-    });
-  }
-  renderedButtons.value = buttons;
 }
 </script>
 
@@ -101,29 +66,32 @@ function refreshKeyMappingButton() {
     </div>
   </div>
   <div
-    v-show="store.controledDevice"
+    v-if="store.keyMappingConfigList.length"
     @contextmenu.prevent
     class="mask"
     id="maskElement"
   >
-    <template v-for="button in renderedButtons">
+    <template
+      v-for="button in store.keyMappingConfigList[store.curKeyMappingIndex]
+        .list"
+    >
       <div
         v-if="button.type === 'SteeringWheel'"
         class="mask-steering-wheel"
         :style="{
-          left: button.x - 75 + 'px',
-          top: button.y - 75 + 'px',
+          left: button.posX - 75 + 'px',
+          top: button.posY - 75 + 'px',
         }"
       >
         <div class="wheel-container">
           <i />
-          <span>{{ button.key.up }}</span>
+          <span>{{ (button as KeySteeringWheel).key.up }}</span>
           <i />
-          <span>{{ button.key.left }}</span>
+          <span>{{ (button as KeySteeringWheel).key.left }}</span>
           <i />
-          <span>{{ button.key.right }}</span>
+          <span>{{ (button as KeySteeringWheel).key.right }}</span>
           <i />
-          <span>{{ button.key.down }}</span>
+          <span>{{ (button as KeySteeringWheel).key.down }}</span>
           <i />
         </div>
       </div>
@@ -131,8 +99,8 @@ function refreshKeyMappingButton() {
         v-else
         class="mask-button"
         :style="{
-          left: button.x + 'px',
-          top: button.y - 14 + 'px',
+          left: button.posX + 'px',
+          top: button.posY - 14 + 'px',
         }"
       >
         {{ button.key }}
@@ -183,6 +151,12 @@ function refreshKeyMappingButton() {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1;
+  position: absolute;
+  left: 70px;
+  top: 30px;
+  right: 0;
+  bottom: 0;
 
   .content {
     width: 80%;
