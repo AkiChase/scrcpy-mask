@@ -235,8 +235,11 @@ function exportKeyMappingConfig() {
 }
 
 function saveKeyMappingConfig() {
-  store.applyEditKeyMappingList();
-  edited.value = false;
+  if (store.applyEditKeyMappingList()) {
+    edited.value = false;
+  } else {
+    message.error("存在重复按键，无法保存");
+  }
 }
 
 function resetKeyMappingConfig() {

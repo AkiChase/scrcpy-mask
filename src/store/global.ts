@@ -1,7 +1,11 @@
 import { defineStore } from "pinia";
 import { Ref, ref } from "vue";
 import { Device } from "../invoke";
-import { KeyMapping, KeyMappingConfig } from "../keyMappingConfig";
+import {
+  KeyMapping,
+  KeyMappingConfig,
+  KeySteeringWheel,
+} from "../keyMappingConfig";
 import { Store } from "@tauri-apps/plugin-store";
 
 const localStore = new Store("store.bin");
@@ -30,10 +34,30 @@ export const useGlobalStore = defineStore("counter", () => {
   const curKeyMappingIndex = ref(0);
   const editKeyMappingList: Ref<KeyMapping[]> = ref([]);
 
-  function applyEditKeyMappingList() {
+  function applyEditKeyMappingList(): boolean {
+    const set = new Set<string>();
+    for (const keyMapping of editKeyMappingList.value) {
+      if (keyMapping.type === "SteeringWheel") {
+        const nameList: ["up", "down", "left", "right"] = [
+          "up",
+          "down",
+          "left",
+          "right",
+        ];
+        for (const name of nameList) {
+          if (set.has((keyMapping as KeySteeringWheel).key[name])) return false;
+          set.add((keyMapping as KeySteeringWheel).key[name]);
+        }
+      } else {
+        if (set.has(keyMapping.key as string)) return false;
+        set.add(keyMapping.key as string);
+      }
+    }
+
     keyMappingConfigList.value[curKeyMappingIndex.value].list =
       editKeyMappingList.value;
     localStore.set("keyMappingConfigList", keyMappingConfigList.value);
+    return true;
   }
 
   function resetEditKeyMappingList() {

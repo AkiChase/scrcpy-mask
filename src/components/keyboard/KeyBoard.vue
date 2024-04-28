@@ -4,8 +4,9 @@ import KeyInfo from "./KeyInfo.vue";
 import KeySetting from "./KeySetting.vue";
 import KeyCommon from "./KeyCommon.vue";
 import KeySteeringWheel from "./KeySteeringWheel.vue";
+import { KeySteeringWheel as KeyMappingSteeringWheel } from "../../keyMappingConfig";
 import { useGlobalStore } from "../../store/global";
-import { useDialog } from "naive-ui";
+import { useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 
 // TODO 普通按钮 KeyMacro，KeyCancelSkill，KeyTap
@@ -25,12 +26,42 @@ const showKeyInfoFlag = ref(false);
 const showSettingFlag = ref(false);
 const store = useGlobalStore();
 const dialog = useDialog();
+const message = useMessage();
 
 const activeButtonIndex = ref(-1);
 const activeSteeringWheelButtonKeyIndex = ref(-1);
 let edited = ref(false);
 
+function isKeyUnique(curKey: string): boolean {
+  const set = new Set<string>();
+  for (const keyMapping of store.editKeyMappingList) {
+    if (keyMapping.type === "SteeringWheel") {
+      const nameList: ["up", "down", "left", "right"] = [
+        "up",
+        "down",
+        "left",
+        "right",
+      ];
+      for (const name of nameList) {
+        if (set.has((keyMapping as KeyMappingSteeringWheel).key[name]))
+          return false;
+        set.add((keyMapping as KeyMappingSteeringWheel).key[name]);
+      }
+    } else {
+      if (set.has(keyMapping.key as string)) return false;
+      set.add(keyMapping.key as string);
+    }
+  }
+  if (set.has(curKey)) return false;
+  return true;
+}
+
 function setCurButtonKey(curKey: string) {
+  if (!isKeyUnique(curKey)) {
+    message.error("按键重复：" + curKey);
+    return;
+  }
+
   const keyMapping = store.editKeyMappingList[activeButtonIndex.value];
   if (keyMapping.type === "SteeringWheel") {
     const keyObject = keyMapping.key as {
@@ -39,19 +70,18 @@ function setCurButtonKey(curKey: string) {
       up: string;
       down: string;
     };
-    switch (activeSteeringWheelButtonKeyIndex.value) {
-      case 0:
-        keyObject.up = curKey;
-        break;
-      case 1:
-        keyObject.down = curKey;
-        break;
-      case 2:
-        keyObject.left = curKey;
-        break;
-      case 3:
-        keyObject.right = curKey;
-        break;
+    const nameList: ["up", "down", "left", "right"] = [
+      "up",
+      "down",
+      "left",
+      "right",
+    ];
+    if (
+      activeSteeringWheelButtonKeyIndex.value >= 0 &&
+      activeSteeringWheelButtonKeyIndex.value <= 3
+    ) {
+      const curName = nameList[activeSteeringWheelButtonKeyIndex.value];
+      keyObject[curName] = curKey;
     }
   } else {
     keyMapping.key = curKey;
@@ -143,8 +173,11 @@ onBeforeRouteLeave(() => {
       positiveText: "保存",
       negativeText: "取消",
       onPositiveClick: () => {
-        store.applyEditKeyMappingList();
-        edited.value = false;
+        if (store.applyEditKeyMappingList()) {
+          edited.value = false;
+        } else {
+          message.error("存在重复按键，无法保存");
+        }
       },
       onNegativeClick: () => {
         store.resetEditKeyMappingList();
