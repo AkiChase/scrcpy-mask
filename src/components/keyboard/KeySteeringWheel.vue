@@ -82,6 +82,23 @@ function delCurKeyMapping() {
   activeIndex.value = -1;
   store.editKeyMappingList.splice(props.index, 1);
 }
+
+const settingPosX = ref(0);
+const settingPosY = ref(0);
+function showSetting() {
+  const keyboardElement = document.getElementById(
+    "keyboardElement"
+  ) as HTMLElement;
+  const maxWidth = keyboardElement.clientWidth - 150;
+  const maxHeight = keyboardElement.clientHeight - 220;
+
+  settingPosX.value = Math.min(
+    keyMapping.value.posX + offset.value + 10,
+    maxWidth
+  );
+  settingPosY.value = Math.min(keyMapping.value.posY - offset.value, maxHeight);
+  showButtonSettingFlag.value = true;
+}
 </script>
 
 <template>
@@ -151,7 +168,7 @@ function delCurKeyMapping() {
     <NButton
       class="key-setting-btn"
       text
-      @click="showButtonSettingFlag = true"
+      @click="showSetting"
       :type="isActive ? 'primary' : 'info'"
       :style="{
         left: `${offset * 2 + 10}px`,
@@ -169,8 +186,8 @@ function delCurKeyMapping() {
     class="key-setting"
     v-if="isActive && showButtonSettingFlag"
     :style="{
-      left: `${keyMapping.posX + offset + 10}px`,
-      top: `${keyMapping.posY - 120}px`,
+      left: `${settingPosX}px`,
+      top: `${settingPosY}px`,
     }"
   >
     <NH4 prefix="bar">键盘行走</NH4>
@@ -197,7 +214,9 @@ function delCurKeyMapping() {
   display: flex;
   flex-direction: column;
   padding: 10px 20px;
-  width: 100px;
+  box-sizing: border-box;
+  width: 150px;
+  height: 220px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);

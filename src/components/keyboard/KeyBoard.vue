@@ -11,7 +11,6 @@ import { useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 import KeyObservation from "./KeyObservation.vue";
 
-// TODO 设置面板的出现位置，不应该超出范围
 // TODO 为技能添加圆形边框范围，将range属性转换为技能的灵敏度，鼠标移动按比例缩放，100时技能范围最大，最不灵敏，0时就是直接指向对应方向的技能边框的
 // TODO 右键空白区域添加按键
 // TODO 设置界面添加本地数据编辑器（类似utools）

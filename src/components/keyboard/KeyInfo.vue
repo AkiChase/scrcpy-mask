@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { NIcon } from "naive-ui";
 import { CloseCircle } from "@vicons/ionicons5";
-import { Ref, onActivated, ref } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
+import { Ref, ref, watch } from "vue";
 
 const showKeyInfoFlag = defineModel("showKeyInfoFlag", { required: true });
 
@@ -28,7 +27,7 @@ function mousemoveHandler(event: MouseEvent) {
 const keyboardCodeList: Ref<string[]> = ref([]);
 function keyupHandler(event: KeyboardEvent) {
   event.preventDefault();
-  if (keyboardCodeList.value.length > 10) {
+  if (keyboardCodeList.value.length > 5) {
     keyboardCodeList.value.shift();
     keyboardCodeList.value.push(event.code);
   } else keyboardCodeList.value.push(event.code);
@@ -36,27 +35,25 @@ function keyupHandler(event: KeyboardEvent) {
 
 function mousedownHandler(event: MouseEvent) {
   const key = `M${event.button}`;
-  if (keyboardCodeList.value.length > 10) {
+  if (keyboardCodeList.value.length > 5) {
     keyboardCodeList.value.shift();
     keyboardCodeList.value.push(key);
   } else keyboardCodeList.value.push(key);
 }
 
-onActivated(() => {
-  const keyboardElement = document.getElementById("keyboardElement");
-  if (keyboardElement) {
+watch(showKeyInfoFlag, (value) => {
+  const keyboardElement = document.getElementById(
+    "keyboardElement"
+  ) as HTMLElement;
+  if (value) {
     keyboardElement.addEventListener("mousemove", mousemoveHandler);
     keyboardElement.addEventListener("mousedown", mousedownHandler);
     document.addEventListener("keyup", keyupHandler);
-  }
-});
-
-onBeforeRouteLeave(() => {
-  const keyboardElement = document.getElementById("keyboardElement");
-  if (keyboardElement) {
+  } else {
     keyboardElement.removeEventListener("mousemove", mousemoveHandler);
     keyboardElement.removeEventListener("mousedown", mousedownHandler);
     document.removeEventListener("keyup", keyupHandler);
+    keyboardCodeList.value.splice(0, keyboardCodeList.value.length);
   }
 });
 
@@ -70,14 +67,27 @@ function dragHandler(downEvent: MouseEvent) {
     const target = downEvent.target;
     downEvent.preventDefault();
     target.style.setProperty("cursor", "grabbing");
+
     const element = downEvent.target.parentElement;
+    const keyboardElement = document.getElementById(
+      "keyboardElement"
+    ) as HTMLElement;
+    const maxWidth = keyboardElement.clientWidth - 120;
+    const maxHeight = keyboardElement.clientHeight - 200;
+
     const x = downEvent.clientX;
     const y = downEvent.clientY;
     const moveHandler = (moveEvent: MouseEvent) => {
-      let left = lastPosX + moveEvent.clientX - x;
-      let top = lastPosY + moveEvent.clientY - y;
-      element?.style.setProperty("left", `${left < 0 ? 0 : left}px`);
-      element?.style.setProperty("top", `${top < 0 ? 0 : top}px`);
+      const newX = lastPosX + moveEvent.clientX - x;
+      const newY = lastPosY + moveEvent.clientY - y;
+      element?.style.setProperty(
+        "left",
+        `${Math.max(0, Math.min(newX, maxWidth))}px`
+      );
+      element?.style.setProperty(
+        "top",
+        `${Math.max(0, Math.min(newY, maxHeight))}px`
+      );
     };
     window.addEventListener("mousemove", moveHandler);
     const upHandler = (upEvent: MouseEvent) => {
@@ -117,8 +127,10 @@ function dragHandler(downEvent: MouseEvent) {
   color: var(--light-color);
   background-color: var(--content-bg-color);
   width: 120px;
+  height: 200px;
   border-radius: 10px;
   position: absolute;
+  text-align: center;
   z-index: 8;
 
   .key-info-header {
@@ -127,7 +139,6 @@ function dragHandler(downEvent: MouseEvent) {
     font-weight: bold;
     height: 20px;
     border-radius: 10px 10px 0 0;
-    text-align: center;
     cursor: grab;
     position: relative;
 
@@ -152,8 +163,10 @@ function dragHandler(downEvent: MouseEvent) {
   }
 
   .key-info-content {
-    text-align: center;
+    height: 180px;
+    box-sizing: border-box;
     border: 1px solid var(--gray-color);
+    border-radius: 0 0 10px 10px;
     padding: 10px;
   }
 }

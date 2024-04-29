@@ -14,11 +14,7 @@ import {
   NInputNumber,
 } from "naive-ui";
 import { CloseCircle, Settings } from "@vicons/ionicons5";
-import {
-  KeyMacro,
-  KeyMacroList,
-  KeyTap,
-} from "../../keyMappingConfig";
+import { KeyMacro, KeyMacroList, KeyTap } from "../../keyMappingConfig";
 
 const emit = defineEmits<{
   edit: [];
@@ -148,6 +144,20 @@ function saveMacro() {
     message.error("宏代码保存失败，请检查代码格式是否正确");
   }
 }
+
+const settingPosX = ref(0);
+const settingPosY = ref(0);
+function showSetting() {
+  const keyboardElement = document.getElementById(
+    "keyboardElement"
+  ) as HTMLElement;
+  const maxWidth = keyboardElement.clientWidth - 150;
+  const maxHeight = keyboardElement.clientHeight - 220;
+
+  settingPosX.value = Math.min(keyMapping.value.posX + 25, maxWidth);
+  settingPosY.value = Math.min(keyMapping.value.posY - 25, maxHeight);
+  showButtonSettingFlag.value = true;
+}
 </script>
 
 <template>
@@ -177,7 +187,7 @@ function saveMacro() {
     <NButton
       class="key-setting-btn"
       text
-      @click="showButtonSettingFlag = true"
+      @click="showSetting"
       :type="isActive ? 'primary' : 'info'"
     >
       <template #icon>
@@ -191,8 +201,8 @@ function saveMacro() {
     class="key-setting"
     v-if="isActive && showButtonSettingFlag"
     :style="{
-      left: `${keyMapping.posX + 25}px`,
-      top: `${keyMapping.posY - 45}px`,
+      left: `${settingPosX}px`,
+      top: `${settingPosY}px`,
     }"
   >
     <NH4 prefix="bar">{{
@@ -269,7 +279,9 @@ function saveMacro() {
   display: flex;
   flex-direction: column;
   padding: 10px 20px;
-  width: 100px;
+  box-sizing: border-box;
+  width: 150px;
+  height: 220px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);

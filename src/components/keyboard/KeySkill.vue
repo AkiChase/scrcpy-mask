@@ -130,6 +130,20 @@ function changeSkillType(flag: string) {
     }
   }
 }
+
+const settingPosX = ref(0);
+const settingPosY = ref(0);
+function showSetting() {
+  const keyboardElement = document.getElementById(
+    "keyboardElement"
+  ) as HTMLElement;
+  const maxWidth = keyboardElement.clientWidth - 200;
+  const maxHeight = keyboardElement.clientHeight - 350;
+
+  settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
+  settingPosY.value = Math.min(keyMapping.value.posY - 30, maxHeight);
+  showButtonSettingFlag.value = true;
+}
 </script>
 
 <template>
@@ -160,7 +174,7 @@ function changeSkillType(flag: string) {
     <NButton
       class="key-setting-btn"
       text
-      @click="showButtonSettingFlag = true"
+      @click="showSetting"
       :type="isActive ? 'primary' : 'info'"
     >
       <template #icon>
@@ -174,8 +188,8 @@ function changeSkillType(flag: string) {
     class="key-setting"
     v-if="isActive && showButtonSettingFlag"
     :style="{
-      left: `${keyMapping.posX + 65}px`,
-      top: `${keyMapping.posY - 90}px`,
+      left: `${settingPosX}px`,
+      top: `${settingPosY}px`,
     }"
   >
     <NH4 prefix="bar">技能</NH4>
@@ -238,7 +252,9 @@ function changeSkillType(flag: string) {
   display: flex;
   flex-direction: column;
   padding: 10px 20px;
-  width: 120px;
+  box-sizing: border-box;
+  width: 200px;
+  height: 350px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);
