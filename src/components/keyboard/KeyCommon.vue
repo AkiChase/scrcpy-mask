@@ -11,9 +11,14 @@ import {
   NCard,
   useMessage,
   NFlex,
+  NInputNumber,
 } from "naive-ui";
 import { CloseCircle, Settings } from "@vicons/ionicons5";
-import { KeyMacro, KeyMacroList } from "../../keyMappingConfig";
+import {
+  KeyMacro,
+  KeyMacroList,
+  KeyTap,
+} from "../../keyMappingConfig";
 
 const emit = defineEmits<{
   edit: [];
@@ -199,6 +204,14 @@ function saveMacro() {
     }}</NH4>
     <NFormItem v-if="keyMapping.type === 'Macro'" label="宏代码">
       <NButton type="success" @click="editMacro"> 编辑代码 </NButton>
+    </NFormItem>
+    <NFormItem v-if="keyMapping.type === 'Tap'" label="触摸时长">
+      <NInputNumber
+        v-model:value="(keyMapping as KeyTap).time"
+        :min="0"
+        placeholder="请输入触摸时长(ms)"
+        @update:value="emit('edit')"
+      />
     </NFormItem>
     <NFormItem label="备注">
       <NInput

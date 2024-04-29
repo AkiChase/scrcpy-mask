@@ -19,6 +19,10 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { loadDefaultKeyconfig } from "../../invoke";
 import { KeyMappingConfig } from "../../keyMappingConfig";
 
+const emit = defineEmits<{
+  resetEditKeyMappingList: [];
+}>();
+
 const store = useGlobalStore();
 const localStore = new Store("store.bin");
 const message = useMessage();
@@ -242,11 +246,6 @@ function saveKeyMappingConfig() {
   }
 }
 
-function resetKeyMappingConfig() {
-  store.resetEditKeyMappingList();
-  edited.value = false;
-}
-
 function checkConfigSize() {
   const keyboardElement = document.getElementById(
     "keyboardElement"
@@ -337,7 +336,9 @@ function migrateKeyMappingConfig() {
     <NFlex style="margin-top: 20px">
       <template v-if="edited">
         <NButton type="success" @click="saveKeyMappingConfig">保存方案</NButton>
-        <NButton type="error" @click="resetKeyMappingConfig">还原方案</NButton>
+        <NButton type="error" @click="emit('resetEditKeyMappingList')"
+          >还原方案</NButton
+        >
       </template>
       <NButton @click="createKeyMappingConfig">新建方案</NButton>
       <NButton @click="copyCurKeyMappingConfig">复制方案</NButton>
@@ -377,7 +378,9 @@ function migrateKeyMappingConfig() {
           round
           clearable
         />
-        <NButton round @click="importKeyMappingConfig">导入</NButton>
+        <NButton type="success" round @click="importKeyMappingConfig"
+          >导入</NButton
+        >
       </NFlex>
     </NCard>
   </NModal>
@@ -385,7 +388,9 @@ function migrateKeyMappingConfig() {
     <NCard style="width: 40%" title="重命名按键方案">
       <NFlex vertical>
         <NInput v-model:value="renameModalInputValue" clearable />
-        <NButton round @click="renameKeyMappingConfig">重命名</NButton>
+        <NButton type="success" round @click="renameKeyMappingConfig"
+          >重命名</NButton
+        >
       </NFlex>
     </NCard>
   </NModal>

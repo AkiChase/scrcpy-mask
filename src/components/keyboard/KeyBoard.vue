@@ -11,16 +11,8 @@ import { useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 import KeyObservation from "./KeyObservation.vue";
 
-// TODO 按钮齿轮图标可修改
-// TODO 普通按钮 KeyMacro，KeyCancelSkill，KeyTap
-//      KeyMacro有输入框
-// TODO 方向轮盘按钮 KeySteeringWheel
-//      offset
-// TODO 技能按钮 KeyDirectionalSkill，KeyDirectionlessSkill，KeyTriggerWhenPressedSkill（有区分directional)
-//      靠两个flag来区分这四种情况，还有range或time要视情况
-// TODO 添加视野按钮 KeyObservation
-//      有灵敏度scale
-
+// TODO 设置面板的出现位置，不应该超出范围
+// TODO 为技能添加圆形边框范围，将range属性转换为技能的灵敏度，鼠标移动按比例缩放，100时技能范围最大，最不灵敏，0时就是直接指向对应方向的技能边框的
 // TODO 右键空白区域添加按键
 // TODO 设置界面添加本地数据编辑器（类似utools）
 // TODO 添加开发者工具打开按钮

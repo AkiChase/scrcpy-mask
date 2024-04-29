@@ -1,8 +1,21 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
-import { Flash } from "@vicons/ionicons5";
-import { NIcon } from "naive-ui";
+import { Flash, CloseCircle, Settings } from "@vicons/ionicons5";
+import {
+  NIcon,
+  NButton,
+  NH4,
+  NFormItem,
+  NInput,
+  NInputNumber,
+  NCheckbox,
+  NFlex,
+} from "naive-ui";
+import {
+  KeyDirectionalSkill,
+  KeyTriggerWhenPressedSkill,
+} from "../../keyMappingConfig";
 const emit = defineEmits<{
   edit: [];
 }>();
@@ -12,14 +25,21 @@ const props = defineProps<{
 }>();
 
 const activeIndex = defineModel("activeIndex", { required: true });
+const showButtonSettingFlag = defineModel("showButtonSettingFlag", {
+  required: true,
+});
 
 const store = useGlobalStore();
 const elementRef = ref<HTMLElement | null>(null);
 
+const isActive = computed(() => props.index === activeIndex.value);
+const keyMapping = computed(() => store.editKeyMappingList[props.index]);
+
 function dragHandler(downEvent: MouseEvent) {
   activeIndex.value = props.index;
-  const oldX = store.editKeyMappingList[props.index].posX;
-  const oldY = store.editKeyMappingList[props.index].posY;
+  showButtonSettingFlag.value = false;
+  const oldX = keyMapping.value.posX;
+  const oldY = keyMapping.value.posY;
   const element = elementRef.value;
   if (element) {
     const keyboardElement = document.getElementById(
@@ -35,42 +55,196 @@ function dragHandler(downEvent: MouseEvent) {
       let newY = oldY + moveEvent.clientY - y;
       newX = Math.max(0, Math.min(newX, maxX));
       newY = Math.max(0, Math.min(newY, maxY));
-      store.editKeyMappingList[props.index].posX = newX;
-      store.editKeyMappingList[props.index].posY = newY;
+      keyMapping.value.posX = newX;
+      keyMapping.value.posY = newY;
     };
     window.addEventListener("mousemove", moveHandler);
     const upHandler = () => {
       window.removeEventListener("mousemove", moveHandler);
       window.removeEventListener("mouseup", upHandler);
-      if (
-        oldX !== store.editKeyMappingList[props.index].posX ||
-        oldY !== store.editKeyMappingList[props.index].posY
-      ) {
+      if (oldX !== keyMapping.value.posX || oldY !== keyMapping.value.posY) {
         emit("edit");
       }
     };
     window.addEventListener("mouseup", upHandler);
   }
 }
+
+function delCurKeyMapping() {
+  emit("edit");
+  activeIndex.value = -1;
+  store.editKeyMappingList.splice(props.index, 1);
+}
+
+const isDirectionless = computed(
+  () =>
+    keyMapping.value.type === "DirectionlessSkill" ||
+    (keyMapping.value.type === "TriggerWhenPressedSkill" &&
+      !(keyMapping.value as KeyTriggerWhenPressedSkill).directional)
+);
+
+const isTriggerWhenPressed = computed(
+  () => keyMapping.value.type === "TriggerWhenPressedSkill"
+);
+
+function changeSkillType(flag: string) {
+  // the design of skill keymapping type is not good
+  const t = keyMapping.value.type;
+  if (flag === "direction") {
+    emit("edit");
+    if (t === "DirectionalSkill") {
+      delete (keyMapping.value as any).range;
+      keyMapping.value.type = "DirectionlessSkill";
+    } else if (t === "DirectionlessSkill") {
+      (keyMapping.value as any).range = 0;
+      keyMapping.value.type = "DirectionalSkill";
+    } else {
+      const k = keyMapping.value as KeyTriggerWhenPressedSkill;
+      k.directional = !k.directional;
+      k.rangeOrTime = k.directional ? 0 : 80;
+    }
+  } else if (flag === "trigger") {
+    emit("edit");
+    if (t === "DirectionalSkill") {
+      const k = keyMapping.value as any;
+      k.directional = true;
+      k.rangeOrTime = k.range;
+      delete k.range;
+      k.type = "TriggerWhenPressedSkill";
+    } else if (t === "DirectionlessSkill") {
+      const k = keyMapping.value as any;
+      k.directional = false;
+      k.rangeOrTime = 80; // touch time
+      k.type = "TriggerWhenPressedSkill";
+    } else {
+      const k = keyMapping.value as any;
+      if (k.directional) {
+        k.range = k.rangeOrTime;
+        delete k.rangeOrTime;
+        k.type = "DirectionalSkill";
+      } else {
+        delete k.rangeOrTime;
+        k.type = "DirectionlessSkill";
+      }
+      delete k.directional;
+    }
+  }
+}
 </script>
 
 <template>
   <div
-    :class="{ active: props.index === activeIndex }"
+    :class="{ active: isActive }"
     :style="{
-      left: `${store.editKeyMappingList[props.index].posX - 30}px`,
-      top: `${store.editKeyMappingList[props.index].posY - 30}px`,
+      left: `${keyMapping.posX - 30}px`,
+      top: `${keyMapping.posY - 30}px`,
     }"
     @mousedown="dragHandler"
     class="key-skill"
     ref="elementRef"
   >
-    <NIcon size="25"><Flash style="color: var(--blue-color)" /></NIcon>
-    <span>{{ store.editKeyMappingList[props.index].key }}</span>
+    <NIcon size="25"><Flash /></NIcon>
+    <span>{{ keyMapping.key }}</span>
+    <NButton
+      class="key-close-btn"
+      text
+      @click="delCurKeyMapping"
+      :type="isActive ? 'primary' : 'info'"
+    >
+      <template #icon>
+        <NIcon size="15">
+          <CloseCircle />
+        </NIcon>
+      </template>
+    </NButton>
+    <NButton
+      class="key-setting-btn"
+      text
+      @click="showButtonSettingFlag = true"
+      :type="isActive ? 'primary' : 'info'"
+    >
+      <template #icon>
+        <NIcon size="15">
+          <Settings />
+        </NIcon>
+      </template>
+    </NButton>
+  </div>
+  <div
+    class="key-setting"
+    v-if="isActive && showButtonSettingFlag"
+    :style="{
+      left: `${keyMapping.posX + 65}px`,
+      top: `${keyMapping.posY - 90}px`,
+    }"
+  >
+    <NH4 prefix="bar">技能</NH4>
+    <NFormItem label="选项">
+      <NFlex vertical>
+        <NCheckbox
+          @click="changeSkillType('direction')"
+          :checked="isDirectionless"
+          >无方向技能</NCheckbox
+        >
+        <NCheckbox
+          @click="changeSkillType('trigger')"
+          :checked="isTriggerWhenPressed"
+          >按下时触发</NCheckbox
+        >
+      </NFlex>
+    </NFormItem>
+    <NFormItem v-if="!isDirectionless" label="范围">
+      <NInputNumber
+        v-if="keyMapping.type === 'DirectionalSkill'"
+        v-model:value="(keyMapping as KeyDirectionalSkill).range"
+        placeholder="请输入技能范围"
+        :min="0"
+        :max="100"
+        @update:value="emit('edit')"
+      />
+      <NInputNumber
+        v-else
+        v-model:value="(keyMapping as KeyTriggerWhenPressedSkill).rangeOrTime"
+        placeholder="请输入技能范围"
+        :min="0"
+        :max="100"
+        @update:value="emit('edit')"
+      />
+    </NFormItem>
+    <NFormItem
+      v-if="(keyMapping.type==='TriggerWhenPressedSkill'&&!(keyMapping as KeyTriggerWhenPressedSkill).directional)"
+      label="触摸时长"
+    >
+      <NInputNumber
+        v-model:value="(keyMapping as KeyTriggerWhenPressedSkill).rangeOrTime"
+        :min="0"
+        placeholder="请输入触摸时长(ms)"
+        @update:value="emit('edit')"
+      />
+    </NFormItem>
+    <NFormItem label="备注">
+      <NInput
+        v-model:value="keyMapping.note"
+        placeholder="请输入备注"
+        @update:value="emit('edit')"
+      />
+    </NFormItem>
   </div>
 </template>
 
 <style scoped lang="scss">
+.key-setting {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 20px;
+  width: 120px;
+  border-radius: 5px;
+  border: 2px solid var(--light-color);
+  background-color: var(--bg-color);
+  z-index: 3;
+}
+
 .key-skill {
   position: absolute;
   height: 60px;
@@ -85,13 +259,39 @@ function dragHandler(downEvent: MouseEvent) {
   font-weight: bold;
   cursor: pointer;
 
+  .n-icon {
+    color: var(--blue-color);
+  }
+
   &:not(.active):hover {
     border: 2px solid var(--light-color);
+    color: var(--light-color);
+
+    .n-icon {
+      color: var(--light-color);
+    }
+  }
+
+  .key-close-btn {
+    position: absolute;
+    left: 65px;
+    bottom: 45px;
+  }
+
+  .key-setting-btn {
+    position: absolute;
+    left: 65px;
+    top: 45px;
   }
 }
+
 .active {
   border: 2px solid var(--primary-color);
   color: var(--primary-color);
   z-index: 2;
+
+  .n-icon {
+    color: var(--primary-color);
+  }
 }
 </style>
