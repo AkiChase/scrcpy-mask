@@ -2,6 +2,8 @@
 import { computed, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
 import { KeySteeringWheel } from "../../keyMappingConfig";
+import { NButton, NFormItem, NH4, NIcon, NInput, NInputNumber } from "naive-ui";
+import { CloseCircle, Move, Settings } from "@vicons/ionicons5";
 
 const emit = defineEmits<{
   edit: [];
@@ -17,9 +19,17 @@ const activeSteeringWheelButtonKeyIndex = defineModel(
 );
 
 const activeIndex = defineModel("activeIndex", { required: true });
+const showButtonSettingFlag = defineModel("showButtonSettingFlag", {
+  required: true,
+});
 
 const store = useGlobalStore();
 const elementRef = ref<HTMLElement | null>(null);
+
+const isActive = computed(() => props.index === activeIndex.value);
+const keyMapping = computed(
+  () => store.editKeyMappingList[props.index] as KeySteeringWheel
+);
 
 const offset = computed(() => {
   const keyboardElement = document.getElementById(
@@ -28,16 +38,15 @@ const offset = computed(() => {
   const clientWidth = keyboardElement.clientWidth;
   const screenSizeW = store.screenSizeW === 0 ? clientWidth : store.screenSizeW;
   return (
-    ((store.editKeyMappingList[props.index] as KeySteeringWheel).offset *
-      clientWidth) /
-    screenSizeW
+    ((keyMapping.value as KeySteeringWheel).offset * clientWidth) / screenSizeW
   );
 });
 
 function dragHandler(downEvent: MouseEvent) {
   activeIndex.value = props.index;
-  const oldX = store.editKeyMappingList[props.index].posX;
-  const oldY = store.editKeyMappingList[props.index].posY;
+  showButtonSettingFlag.value = false;
+  const oldX = keyMapping.value.posX;
+  const oldY = keyMapping.value.posY;
   const element = elementRef.value;
   if (element) {
     const keyboardElement = document.getElementById(
@@ -53,31 +62,34 @@ function dragHandler(downEvent: MouseEvent) {
       let newY = oldY + moveEvent.clientY - y;
       newX = Math.max(0, Math.min(newX, maxX));
       newY = Math.max(0, Math.min(newY, maxY));
-      store.editKeyMappingList[props.index].posX = newX;
-      store.editKeyMappingList[props.index].posY = newY;
+      keyMapping.value.posX = newX;
+      keyMapping.value.posY = newY;
     };
     window.addEventListener("mousemove", moveHandler);
     const upHandler = () => {
       window.removeEventListener("mousemove", moveHandler);
       window.removeEventListener("mouseup", upHandler);
-      if (
-        oldX !== store.editKeyMappingList[props.index].posX ||
-        oldY !== store.editKeyMappingList[props.index].posY
-      ) {
+      if (oldX !== keyMapping.value.posX || oldY !== keyMapping.value.posY) {
         emit("edit");
       }
     };
     window.addEventListener("mouseup", upHandler);
   }
 }
+
+function delCurKeyMapping() {
+  emit("edit");
+  activeIndex.value = -1;
+  store.editKeyMappingList.splice(props.index, 1);
+}
 </script>
 
 <template>
   <div
-    :class="{ active: props.index === activeIndex }"
+    :class="{ active: isActive }"
     :style="{
-      left: `${store.editKeyMappingList[props.index].posX - offset}px`,
-      top: `${store.editKeyMappingList[props.index].posY - offset}px`,
+      left: `${keyMapping.posX - offset}px`,
+      top: `${keyMapping.posY - offset}px`,
       width: `${offset * 2}px`,
       height: `${offset * 2}px`,
     }"
@@ -89,51 +101,109 @@ function dragHandler(downEvent: MouseEvent) {
     <span
       @mousedown="activeSteeringWheelButtonKeyIndex = 0"
       :class="{
-        'active-wheel':
-          props.index === activeIndex && activeSteeringWheelButtonKeyIndex == 0,
+        'active-wheel': isActive && activeSteeringWheelButtonKeyIndex == 0,
       }"
-      >{{
-        (store.editKeyMappingList[props.index] as KeySteeringWheel).key.up
-      }}</span
+      >{{ keyMapping.key.up }}</span
     >
     <i />
     <span
       @mousedown="activeSteeringWheelButtonKeyIndex = 2"
       :class="{
-        'active-wheel':
-          props.index === activeIndex && activeSteeringWheelButtonKeyIndex == 2,
+        'active-wheel': isActive && activeSteeringWheelButtonKeyIndex == 2,
       }"
-      >{{
-        (store.editKeyMappingList[props.index] as KeySteeringWheel).key.left
-      }}</span
+      >{{ keyMapping.key.left }}</span
     >
-    <i />
+    <NIcon size="20">
+      <Move />
+    </NIcon>
     <span
       @mousedown="activeSteeringWheelButtonKeyIndex = 3"
       :class="{
-        'active-wheel':
-          props.index === activeIndex && activeSteeringWheelButtonKeyIndex == 3,
+        'active-wheel': isActive && activeSteeringWheelButtonKeyIndex == 3,
       }"
-      >{{
-        (store.editKeyMappingList[props.index] as KeySteeringWheel).key.right
-      }}</span
+      >{{ keyMapping.key.right }}</span
     >
     <i />
     <span
       @mousedown="activeSteeringWheelButtonKeyIndex = 1"
       :class="{
-        'active-wheel':
-          props.index === activeIndex && activeSteeringWheelButtonKeyIndex == 1,
+        'active-wheel': isActive && activeSteeringWheelButtonKeyIndex == 1,
       }"
-      >{{
-        (store.editKeyMappingList[props.index] as KeySteeringWheel).key.down
-      }}</span
+      >{{ keyMapping.key.down }}</span
     >
     <i />
+    <NButton
+      class="key-close-btn"
+      text
+      @click="delCurKeyMapping"
+      :type="isActive ? 'primary' : 'info'"
+      :style="{
+        left: `${offset * 2 + 10}px`,
+        bottom: `${offset * 2 - 20}px`,
+      }"
+    >
+      <template #icon>
+        <NIcon size="15">
+          <CloseCircle />
+        </NIcon>
+      </template>
+    </NButton>
+    <NButton
+      class="key-setting-btn"
+      text
+      @click="showButtonSettingFlag = true"
+      :type="isActive ? 'primary' : 'info'"
+      :style="{
+        left: `${offset * 2 + 10}px`,
+        top: `${offset * 2 - 20}px`,
+      }"
+    >
+      <template #icon>
+        <NIcon size="15">
+          <Settings />
+        </NIcon>
+      </template>
+    </NButton>
+  </div>
+  <div
+    class="key-setting"
+    v-if="isActive && showButtonSettingFlag"
+    :style="{
+      left: `${keyMapping.posX + offset + 10}px`,
+      top: `${keyMapping.posY - 120}px`,
+    }"
+  >
+    <NH4>方向键设置</NH4>
+    <NFormItem label="偏移">
+      <NInputNumber
+        v-model:value="keyMapping.offset"
+        :min="1"
+        @update:value="emit('edit')"
+      />
+    </NFormItem>
+    <NFormItem label="备注">
+      <NInput
+        v-model:value="keyMapping.note"
+        placeholder="请输入备注"
+        @update:value="emit('edit')"
+      />
+    </NFormItem>
   </div>
 </template>
 
 <style scoped lang="scss">
+.key-setting {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 20px;
+  width: 100px;
+  border-radius: 5px;
+  border: 2px solid var(--light-color);
+  background-color: var(--bg-color);
+  z-index: 3;
+}
+
 .key-steering-wheel {
   position: absolute;
   border-radius: 50%;
@@ -152,6 +222,11 @@ function dragHandler(downEvent: MouseEvent) {
 
   &:not(.active):hover {
     border: 2px solid var(--light-color);
+    color: var(--light-color);
+
+    .n-icon {
+      color: var(--light-color);
+    }
   }
 
   span {
@@ -160,10 +235,20 @@ function dragHandler(downEvent: MouseEvent) {
       color: var(--primary-hover-color);
     }
   }
+
+  .key-setting-btn,
+  .key-close-btn {
+    position: absolute;
+  }
 }
+
 .active {
   border: 2px solid var(--primary-color);
   z-index: 2;
+
+  .n-icon {
+    color: var(--primary-color);
+  }
 }
 
 .active-wheel {
