@@ -32,14 +32,16 @@ const keyMapping = computed(
 );
 
 const offset = computed(() => {
-  const keyboardElement = document.getElementById(
-    "keyboardElement"
-  ) as HTMLElement;
-  const clientWidth = keyboardElement.clientWidth;
-  const screenSizeW = store.screenSizeW === 0 ? clientWidth : store.screenSizeW;
-  return (
-    ((keyMapping.value as KeySteeringWheel).offset * clientWidth) / screenSizeW
-  );
+  const keyboardElement = document.getElementById("keyboardElement");
+  if (keyboardElement) {
+    const clientWidth = keyboardElement.clientWidth;
+    const screenSizeW =
+      store.screenSizeW === 0 ? clientWidth : store.screenSizeW;
+    return (
+      ((keyMapping.value as KeySteeringWheel).offset * clientWidth) /
+      screenSizeW
+    );
+  } else return (keyMapping.value as KeySteeringWheel).offset;
 });
 
 function dragHandler(downEvent: MouseEvent) {

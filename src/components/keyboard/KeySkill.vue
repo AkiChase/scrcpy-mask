@@ -133,16 +133,39 @@ function changeSkillType(flag: string) {
 
 const settingPosX = ref(0);
 const settingPosY = ref(0);
+
 function showSetting() {
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
+  // setting
   const maxWidth = keyboardElement.clientWidth - 200;
   const maxHeight = keyboardElement.clientHeight - 350;
-
   settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
   settingPosY.value = Math.min(keyMapping.value.posY - 30, maxHeight);
+  updateRangeIndicator(keyboardElement);
   showButtonSettingFlag.value = true;
+}
+
+const rangeIndicatorTop = ref(0);
+const indicatorLength = ref(0);
+function updateRangeIndicator(element?: HTMLElement) {
+  if (!element)
+    element = document.getElementById("keyboardElement") as HTMLElement;
+
+  if (!isDirectionless.value) {
+    // indicator
+    const range =
+      keyMapping.value.type === "DirectionalSkill"
+        ? (keyMapping.value as KeyDirectionalSkill).range
+        : (keyMapping.value as KeyTriggerWhenPressedSkill).rangeOrTime;
+    indicatorLength.value = Math.round(
+      ((element.clientHeight * range) / 100) * 2
+    );
+    rangeIndicatorTop.value = Math.round(
+      element.clientHeight / 2 - indicatorLength.value / 4
+    );
+  }
 }
 </script>
 
@@ -214,7 +237,10 @@ function showSetting() {
         placeholder="请输入技能范围"
         :min="0"
         :max="100"
-        @update:value="emit('edit')"
+        @update:value="
+          emit('edit');
+          updateRangeIndicator();
+        "
       />
       <NInputNumber
         v-else
@@ -222,7 +248,10 @@ function showSetting() {
         placeholder="请输入技能范围"
         :min="0"
         :max="100"
-        @update:value="emit('edit')"
+        @update:value="
+          emit('edit');
+          updateRangeIndicator();
+        "
       />
     </NFormItem>
     <NFormItem
@@ -244,9 +273,28 @@ function showSetting() {
       />
     </NFormItem>
   </div>
+  <div
+    v-if="isActive && showButtonSettingFlag"
+    class="range-indicator"
+    :style="{
+      top: `${rangeIndicatorTop}px`,
+      width: `${indicatorLength}px`,
+      height: `${indicatorLength}px`,
+    }"
+  ></div>
 </template>
 
 <style scoped lang="scss">
+.range-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: auto;
+
+  background-color: var(--blue-color);
+  clip-path: polygon(0 0, 100% 0, 50% 25%);
+}
+
 .key-setting {
   position: absolute;
   display: flex;
