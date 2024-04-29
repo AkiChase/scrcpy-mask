@@ -173,7 +173,7 @@ function delCurKeyMapping() {
       top: `${keyMapping.posY - 120}px`,
     }"
   >
-    <NH4>方向键设置</NH4>
+    <NH4 prefix="bar">键盘行走</NH4>
     <NFormItem label="偏移">
       <NInputNumber
         v-model:value="keyMapping.offset"

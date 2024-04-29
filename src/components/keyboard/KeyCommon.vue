@@ -1,6 +1,19 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
+import {
+  NButton,
+  NFormItem,
+  NH4,
+  NIcon,
+  NInput,
+  NModal,
+  NCard,
+  useMessage,
+  NFlex,
+} from "naive-ui";
+import { CloseCircle, Settings } from "@vicons/ionicons5";
+import { KeyMacro, KeyMacroList } from "../../keyMappingConfig";
 
 const emit = defineEmits<{
   edit: [];
@@ -11,14 +24,29 @@ const props = defineProps<{
 }>();
 
 const activeIndex = defineModel("activeIndex", { required: true });
+const showButtonSettingFlag = defineModel("showButtonSettingFlag", {
+  required: true,
+});
 
 const store = useGlobalStore();
+const message = useMessage();
 const elementRef = ref<HTMLElement | null>(null);
+
+const isActive = computed(() => props.index === activeIndex.value);
+const keyMapping = computed(() => store.editKeyMappingList[props.index]);
+
+const showMacroModal = ref(false);
+const editedMacroRaw = ref({
+  down: "",
+  loop: "",
+  up: "",
+});
 
 function dragHandler(downEvent: MouseEvent) {
   activeIndex.value = props.index;
-  const oldX = store.editKeyMappingList[props.index].posX;
-  const oldY = store.editKeyMappingList[props.index].posY;
+  showButtonSettingFlag.value = false;
+  const oldX = keyMapping.value.posX;
+  const oldY = keyMapping.value.posY;
   const element = elementRef.value;
   if (element) {
     const keyboardElement = document.getElementById(
@@ -34,41 +62,207 @@ function dragHandler(downEvent: MouseEvent) {
       let newY = oldY + moveEvent.clientY - y;
       newX = Math.max(0, Math.min(newX, maxX));
       newY = Math.max(0, Math.min(newY, maxY));
-      store.editKeyMappingList[props.index].posX = newX;
-      store.editKeyMappingList[props.index].posY = newY;
+      keyMapping.value.posX = newX;
+      keyMapping.value.posY = newY;
     };
     window.addEventListener("mousemove", moveHandler);
     const upHandler = () => {
       window.removeEventListener("mousemove", moveHandler);
       window.removeEventListener("mouseup", upHandler);
-      if (
-        oldX !== store.editKeyMappingList[props.index].posX ||
-        oldY !== store.editKeyMappingList[props.index].posY
-      ) {
+      if (oldX !== keyMapping.value.posX || oldY !== keyMapping.value.posY) {
         emit("edit");
       }
     };
     window.addEventListener("mouseup", upHandler);
   }
 }
+
+function delCurKeyMapping() {
+  emit("edit");
+  activeIndex.value = -1;
+  store.editKeyMappingList.splice(props.index, 1);
+}
+
+function parseMacro(macroRaw: string): KeyMacroList {
+  // simple parsing and possible to let the wrong code pass
+  if (macroRaw === "") {
+    return null;
+  }
+  const macro: KeyMacroList = JSON.parse(macroRaw);
+  if (macro === null) return macro;
+  for (const macroItem of macro) {
+    if (typeof macroItem !== "object") {
+      throw ["macroItem is not object", macroItem];
+    }
+    if (!("type" in macroItem)) {
+      throw ["macroItem has no type attribute", macroItem];
+    }
+    if (!("args" in macroItem)) {
+      throw ["macroItem has no args attribute", macroItem];
+    }
+  }
+  return macro;
+}
+
+let editedFlag = false;
+function editMacro() {
+  editedFlag = false;
+  const macro = (keyMapping.value as KeyMacro).macro;
+  editedMacroRaw.value = {
+    down: macro.down === null ? "" : JSON.stringify(macro.down, null, 2),
+    loop: macro.loop === null ? "" : JSON.stringify(macro.loop, null, 2),
+    up: macro.up === null ? "" : JSON.stringify(macro.up, null, 2),
+  };
+  showMacroModal.value = true;
+}
+
+function saveMacro() {
+  if (!editedFlag) return;
+  try {
+    const macro: {
+      down: KeyMacroList;
+      loop: KeyMacroList;
+      up: KeyMacroList;
+    } = {
+      down: null,
+      loop: null,
+      up: null,
+    };
+    const keyList: ["down", "loop", "up"] = ["down", "loop", "up"];
+    for (const key of keyList) {
+      const macroRaw = editedMacroRaw.value[key];
+      macro[key] = parseMacro(macroRaw);
+    }
+
+    (keyMapping.value as KeyMacro).macro = macro;
+    showMacroModal.value = false;
+    emit("edit");
+    message.success("宏代码解析成功，但不保证代码正确性，请自行测试");
+  } catch (e) {
+    console.error(e);
+    message.error("宏代码保存失败，请检查代码格式是否正确");
+  }
+}
 </script>
 
 <template>
   <div
-    :class="{ active: props.index === activeIndex }"
+    :class="{ active: isActive }"
     :style="{
-      left: `${store.editKeyMappingList[props.index].posX - 20}px`,
-      top: `${store.editKeyMappingList[props.index].posY - 20}px`,
+      left: `${keyMapping.posX - 20}px`,
+      top: `${keyMapping.posY - 20}px`,
     }"
     @mousedown="dragHandler"
     class="key-common"
     ref="elementRef"
   >
-    <span>{{ store.editKeyMappingList[props.index].key }}</span>
+    <span>{{ keyMapping.key }}</span>
+    <NButton
+      class="key-close-btn"
+      text
+      @click="delCurKeyMapping"
+      :type="isActive ? 'primary' : 'info'"
+    >
+      <template #icon>
+        <NIcon size="15">
+          <CloseCircle />
+        </NIcon>
+      </template>
+    </NButton>
+    <NButton
+      class="key-setting-btn"
+      text
+      @click="showButtonSettingFlag = true"
+      :type="isActive ? 'primary' : 'info'"
+    >
+      <template #icon>
+        <NIcon size="15">
+          <Settings />
+        </NIcon>
+      </template>
+    </NButton>
+  </div>
+  <div
+    class="key-setting"
+    v-if="isActive && showButtonSettingFlag"
+    :style="{
+      left: `${keyMapping.posX + 25}px`,
+      top: `${keyMapping.posY - 45}px`,
+    }"
+  >
+    <NH4 prefix="bar">{{
+      keyMapping.type === "CancelSkill"
+        ? "技能取消"
+        : keyMapping.type === "Tap"
+        ? "普通点击"
+        : "宏"
+    }}</NH4>
+    <NFormItem v-if="keyMapping.type === 'Macro'" label="宏代码">
+      <NButton type="success" @click="editMacro"> 编辑代码 </NButton>
+    </NFormItem>
+    <NFormItem label="备注">
+      <NInput
+        v-model:value="keyMapping.note"
+        placeholder="请输入备注"
+        @update:value="emit('edit')"
+      />
+    </NFormItem>
+    <NModal
+      v-if="keyMapping.type === 'Macro'"
+      v-model:show="showMacroModal"
+      @before-leave="saveMacro"
+    >
+      <NCard style="width: 50%; height: 80%" title="宏编辑">
+        <NFlex vertical style="height: 100%">
+          <div>按下按键执行</div>
+          <NInput
+            type="textarea"
+            style="flex-grow: 1"
+            placeholder="JSON宏代码, 可为空"
+            v-model:value="editedMacroRaw.down"
+            @update:value="editedFlag = true"
+            round
+            clearable
+          />
+          <div>按住执行</div>
+          <NInput
+            type="textarea"
+            style="flex-grow: 1"
+            placeholder="JSON宏代码, 可为空"
+            v-model:value="editedMacroRaw.loop"
+            @update:value="editedFlag = true"
+            round
+            clearable
+          />
+          <div>抬起执行</div>
+          <NInput
+            type="textarea"
+            style="flex-grow: 1"
+            placeholder="JSON宏代码, 可为空"
+            v-model:value="editedMacroRaw.up"
+            @update:value="editedFlag = true"
+            round
+            clearable
+          />
+        </NFlex>
+      </NCard>
+    </NModal>
   </div>
 </template>
 
 <style scoped lang="scss">
+.key-setting {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 20px;
+  width: 100px;
+  border-radius: 5px;
+  border: 2px solid var(--light-color);
+  background-color: var(--bg-color);
+  z-index: 3;
+}
+
 .key-common {
   position: absolute;
   height: 40px;
@@ -84,6 +278,18 @@ function dragHandler(downEvent: MouseEvent) {
 
   &:not(.active):hover {
     border: 2px solid var(--light-color);
+  }
+
+  .key-close-btn {
+    position: absolute;
+    left: 45px;
+    bottom: 25px;
+  }
+
+  .key-setting-btn {
+    position: absolute;
+    left: 45px;
+    top: 25px;
   }
 }
 .active {

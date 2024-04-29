@@ -11,6 +11,7 @@ import { useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 import KeyObservation from "./KeyObservation.vue";
 
+// TODO 按钮齿轮图标可修改
 // TODO 普通按钮 KeyMacro，KeyCancelSkill，KeyTap
 //      KeyMacro有输入框
 // TODO 方向轮盘按钮 KeySteeringWheel
@@ -20,13 +21,13 @@ import KeyObservation from "./KeyObservation.vue";
 // TODO 添加视野按钮 KeyObservation
 //      有灵敏度scale
 
-// TODO 按钮齿轮图标可修改、删除
 // TODO 右键空白区域添加按键
 // TODO 设置界面添加本地数据编辑器（类似utools）
 // TODO 添加开发者工具打开按钮
 
 const showKeyInfoFlag = ref(false);
 const showSettingFlag = ref(false);
+const showButtonSettingFlag = ref(false);
 const store = useGlobalStore();
 const dialog = useDialog();
 const message = useMessage();
@@ -98,10 +99,11 @@ function handleClick(event: MouseEvent) {
     if (event.target === document.getElementById("keyboardElement")) {
       if (showSettingFlag.value) {
         showSettingFlag.value = false;
-        return;
+      } else {
+        activeButtonIndex.value = -1;
+        activeSteeringWheelButtonKeyIndex.value = -1;
+        showButtonSettingFlag.value = false;
       }
-      activeButtonIndex.value = -1;
-      activeSteeringWheelButtonKeyIndex.value = -1;
     }
   } else if (event.button === 2) {
     // right click
@@ -115,19 +117,20 @@ function handleClick(event: MouseEvent) {
     } else if (
       // modify key
       activeButtonIndex.value !== -1 &&
-      activeButtonIndex.value < store.editKeyMappingList.length
+      activeButtonIndex.value < store.editKeyMappingList.length &&
+      !showButtonSettingFlag.value
     ) {
-      event.preventDefault();
       const curKey = `M${event.button}`;
       setCurButtonKey(curKey);
     }
   } else {
     // other click
+    event.preventDefault();
     if (
       activeButtonIndex.value !== -1 &&
-      activeButtonIndex.value < store.editKeyMappingList.length
+      activeButtonIndex.value < store.editKeyMappingList.length &&
+      !showButtonSettingFlag.value
     ) {
-      event.preventDefault();
       const curKey = `M${event.button}`;
       setCurButtonKey(curKey);
     }
@@ -137,9 +140,9 @@ function handleClick(event: MouseEvent) {
 function handleKeyUp(event: KeyboardEvent) {
   if (
     activeButtonIndex.value !== -1 &&
-    activeButtonIndex.value < store.editKeyMappingList.length
+    activeButtonIndex.value < store.editKeyMappingList.length &&
+    !showButtonSettingFlag.value
   ) {
-    event.preventDefault();
     const curKey = event.code;
     setCurButtonKey(curKey);
   }
@@ -148,9 +151,9 @@ function handleKeyUp(event: KeyboardEvent) {
 function handleMouseWheel(event: WheelEvent) {
   if (
     activeButtonIndex.value !== -1 &&
-    activeButtonIndex.value < store.editKeyMappingList.length
+    activeButtonIndex.value < store.editKeyMappingList.length &&
+    !showButtonSettingFlag.value
   ) {
-    event.preventDefault();
     if (event.deltaY > 0) {
       // WheelDown
       setCurButtonKey("WheelDown");
@@ -159,6 +162,14 @@ function handleMouseWheel(event: WheelEvent) {
       setCurButtonKey("WheelUp");
     }
   }
+}
+
+function resetEditKeyMappingList() {
+  showSettingFlag.value = false;
+  activeButtonIndex.value = -1;
+  activeSteeringWheelButtonKeyIndex.value = -1;
+  store.resetEditKeyMappingList();
+  edited.value = false;
 }
 
 onActivated(() => {
@@ -183,8 +194,7 @@ onBeforeRouteLeave(() => {
         }
       },
       onNegativeClick: () => {
-        store.resetEditKeyMappingList();
-        edited.value = false;
+        resetEditKeyMappingList();
       },
     });
   }
@@ -203,6 +213,7 @@ onBeforeRouteLeave(() => {
       v-model:show-key-info-flag="showKeyInfoFlag"
       v-model:show-setting-flag="showSettingFlag"
       v-model:edited="edited"
+      @reset-edit-key-mapping-list="resetEditKeyMappingList"
     />
     <KeyInfo v-model:showKeyInfoFlag="showKeyInfoFlag" />
     <template v-for="(_, index) in store.editKeyMappingList">
@@ -214,6 +225,7 @@ onBeforeRouteLeave(() => {
         v-model:active-steering-wheel-button-key-index="
           activeSteeringWheelButtonKeyIndex
         "
+        v-model:show-button-setting-flag="showButtonSettingFlag"
       />
       <KeySkill
         v-else-if="
@@ -224,18 +236,21 @@ onBeforeRouteLeave(() => {
         @edit="edited = true"
         :index="index"
         v-model:active-index="activeButtonIndex"
+        v-model:show-button-setting-flag="showButtonSettingFlag"
       />
       <KeyObservation
         v-else-if="store.editKeyMappingList[index].type === 'Observation'"
         @edit="edited = true"
         :index="index"
         v-model:active-index="activeButtonIndex"
+        v-model:show-button-setting-flag="showButtonSettingFlag"
       />
       <KeyCommon
         v-else
         @edit="edited = true"
         :index="index"
         v-model:active-index="activeButtonIndex"
+        v-model:show-button-setting-flag="showButtonSettingFlag"
       />
     </template>
   </div>
