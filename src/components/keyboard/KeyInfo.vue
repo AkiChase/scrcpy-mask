@@ -35,7 +35,6 @@ function keyupHandler(event: KeyboardEvent) {
 }
 
 function mousedownHandler(event: MouseEvent) {
-  event.preventDefault();
   const key = `M${event.button}`;
   if (keyboardCodeList.value.length > 10) {
     keyboardCodeList.value.shift();
@@ -119,8 +118,6 @@ function dragHandler(downEvent: MouseEvent) {
   background-color: var(--content-bg-color);
   width: 120px;
   border-radius: 10px;
-  user-select: none;
-  -webkit-user-select: none;
   position: absolute;
   z-index: 8;
 
