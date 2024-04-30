@@ -30,28 +30,47 @@ function clientyToPosy(clienty: number) {
     : Math.floor((clienty - 30) * (screenSizeH / maskSizeH));
 }
 
-function clientxToPosOffsetx(clientx: number, posx: number, scale: number) {
+function clientxToPosOffsetx(clientx: number, posx: number, scale = 1) {
   let offsetX = clientxToPosx(clientx) - posx;
   return Math.round(offsetX * scale);
 }
 
-function clientyToPosOffsety(clienty: number, posy: number, scale: number) {
+function clientyToPosOffsety(clienty: number, posy: number, scale = 1) {
   let offsetY = clientyToPosy(clienty) - posy;
   return Math.round(offsetY * scale);
 }
 
-function clientxToCenterOffsetx(clientx: number, range: number, scale = 0.5) {
-  return Math.max(
-    -range,
-    Math.min(range, clientxToPosOffsetx(clientx, screenSizeW / 2, scale))
-  );
-}
+function clientPosToSkillOffset(
+  clientPos: { x: number; y: number },
+  range: number
+): { offsetX: number; offsetY: number } {
+  const maxLength = (100 / maskSizeH) * screenSizeH;
+  const centerX = maskSizeW * 0.5;
+  const centerY = maskSizeH * 0.55;
+  const cOffsetX = clientPos.x - 70 - centerX;
+  const cOffsetY = clientPos.y - 30 - centerY;
+  const offsetD = Math.sqrt(cOffsetX ** 2 + cOffsetY ** 2);
+  if (offsetD == 0) {
+    return {
+      offsetX: 0,
+      offsetY: 0,
+    };
+  }
 
-function clientyToCenterOffsety(clienty: number, range: number, scale = 0.5) {
-  return Math.max(
-    -range,
-    Math.min(range, clientyToPosOffsety(clienty, screenSizeH * 0.55, scale))
-  );
+  const rangeD = (maskSizeH - centerY) * range * 0.01;
+  if (offsetD >= rangeD) {
+    // include the case of rangeD == 0
+    return {
+      offsetX: Math.round((maxLength / offsetD) * cOffsetX),
+      offsetY: Math.round((maxLength / offsetD) * cOffsetY),
+    };
+  } else {
+    const factor = offsetD / rangeD;
+    return {
+      offsetX: Math.round((cOffsetX / rangeD) * maxLength * factor),
+      offsetY: Math.round((cOffsetY / rangeD) * maxLength * factor),
+    };
+  }
 }
 
 async function sleep(ms: number) {
@@ -283,6 +302,10 @@ function addTriggerWhenPressedSkillShortcuts(
       key,
       // down
       async () => {
+        const skillOffset = clientPosToSkillOffset(
+          { x: mouseX, y: mouseY },
+          rangeOrTime
+        );
         await swipe({
           action: SwipeAction.Default,
           pointerId,
@@ -293,8 +316,8 @@ function addTriggerWhenPressedSkillShortcuts(
           pos: [
             { x: posX, y: posY },
             {
-              x: posX + clientxToCenterOffsetx(mouseX, rangeOrTime),
-              y: posY + clientyToCenterOffsety(mouseY, rangeOrTime),
+              x: posX + skillOffset.offsetX,
+              y: posY + skillOffset.offsetY,
             },
           ],
           intervalBetweenPos: 0,
@@ -373,6 +396,10 @@ function addDirectionalSkillShortcuts(
     key,
     // down
     async () => {
+      const skillOffset = clientPosToSkillOffset(
+        { x: mouseX, y: mouseY },
+        range
+      );
       await swipe({
         action: SwipeAction.NoUp,
         pointerId,
@@ -383,8 +410,8 @@ function addDirectionalSkillShortcuts(
         pos: [
           { x: posX, y: posY },
           {
-            x: posX + clientxToCenterOffsetx(mouseX, range),
-            y: posY + clientyToCenterOffsety(mouseY, range),
+            x: posX + skillOffset.offsetX,
+            y: posY + skillOffset.offsetY,
           },
         ],
         intervalBetweenPos: 0,
@@ -392,6 +419,10 @@ function addDirectionalSkillShortcuts(
     },
     // loop
     async () => {
+      const skillOffset = clientPosToSkillOffset(
+        { x: mouseX, y: mouseY },
+        range
+      );
       await touch({
         action: TouchAction.Move,
         pointerId,
@@ -400,13 +431,17 @@ function addDirectionalSkillShortcuts(
           h: screenSizeH,
         },
         pos: {
-          x: posX + clientxToCenterOffsetx(mouseX, range),
-          y: posY + clientyToCenterOffsety(mouseY, range),
+          x: posX + skillOffset.offsetX,
+          y: posY + skillOffset.offsetY,
         },
       });
     },
     // up
     async () => {
+      const skillOffset = clientPosToSkillOffset(
+        { x: mouseX, y: mouseY },
+        range
+      );
       await touch({
         action: TouchAction.Up,
         pointerId,
@@ -415,8 +450,8 @@ function addDirectionalSkillShortcuts(
           h: screenSizeH,
         },
         pos: {
-          x: posX + clientxToCenterOffsetx(mouseX, range),
-          y: posY + clientyToCenterOffsety(mouseY, range),
+          x: posX + skillOffset.offsetX,
+          y: posY + skillOffset.offsetY,
         },
       });
     },
@@ -622,6 +657,7 @@ let maskSizeW: number;
 let maskSizeH: number;
 let mouseX = 0;
 let mouseY = 0;
+let maskElement: HTMLElement;
 
 const downKeyMap: Map<string, boolean> = new Map();
 const downKeyCBMap: Map<string, () => Promise<void>> = new Map();
@@ -651,6 +687,7 @@ function keyupHandler(event: KeyboardEvent) {
 }
 
 function handleMouseDown(event: MouseEvent) {
+  if (event.target !== maskElement) return;
   mouseX = event.clientX;
   mouseY = event.clientY;
   event.preventDefault();
@@ -668,7 +705,7 @@ function handleMouseUp(event: MouseEvent) {
   mouseY = event.clientY;
   event.preventDefault();
   let key = "M" + event.button.toString();
-  if (downKeyMap.has(key)) {
+  if (downKeyMap.has(key) && downKeyMap.get(key)) {
     downKeyMap.set(key, false);
     // execute the up callback asyncily
     let cb = upKeyCBMap.get(key);
@@ -791,7 +828,6 @@ function addShortcut(
  *  },
  * ]);
  */
-
 async function execMacro(
   relativeSize: { w: number; h: number },
   macro: KeyMacroList
@@ -890,8 +926,7 @@ function execLoopCB() {
 function asType<T>(_val: any): asserts _val is T {}
 
 function applyKeyMappingConfigShortcuts(
-  keyMappingConfig: KeyMappingConfig,
-  element: HTMLElement
+  keyMappingConfig: KeyMappingConfig
 ): boolean {
   try {
     const relativeSize = keyMappingConfig.relativeSize;
@@ -1002,30 +1037,29 @@ function applyKeyMappingConfigShortcuts(
     return true;
   } catch (e) {
     console.error("Invalid keyMappingConfig: ", keyMappingConfig, e);
-    clearShortcuts(element);
+    clearShortcuts();
     return false;
   }
 }
 
 export function listenToKeyEvent() {
-  document.addEventListener("keydown", keydownHandler);
-  document.addEventListener("keyup", keyupHandler);
+  window.addEventListener("keydown", keydownHandler);
+  window.addEventListener("keyup", keyupHandler);
   loopFlag = true;
   execLoopCB();
 }
 
 export function unlistenToKeyEvent() {
-  document.removeEventListener("keydown", keydownHandler);
-  document.removeEventListener("keyup", keyupHandler);
+  window.removeEventListener("keydown", keydownHandler);
+  window.removeEventListener("keyup", keyupHandler);
   loopFlag = false;
 }
 
-export function clearShortcuts(element: HTMLElement) {
-  element.removeEventListener("mousedown", handleMouseDown);
-  element.removeEventListener("mousemove", handleMouseMove);
-  element.removeEventListener("mouseup", handleMouseUp);
-  element.removeEventListener("wheel", handleMouseWheel);
-  element.removeEventListener("mouseout", handleMouseUp);
+export function clearShortcuts() {
+  window.removeEventListener("mousedown", handleMouseDown);
+  window.removeEventListener("mousemove", handleMouseMove);
+  window.removeEventListener("mouseup", handleMouseUp);
+  window.removeEventListener("wheel", handleMouseWheel);
 
   downKeyMap.clear();
   downKeyCBMap.clear();
@@ -1048,12 +1082,12 @@ export function applyShortcuts(
   element: HTMLElement,
   keyMappingConfig: KeyMappingConfig
 ) {
-  element.addEventListener("mousedown", handleMouseDown);
-  element.addEventListener("mousemove", handleMouseMove);
-  element.addEventListener("mouseup", handleMouseUp);
-  element.addEventListener("wheel", handleMouseWheel);
-  element.addEventListener("mouseout", handleMouseUp); // mouse out of the element as mouse up
+  maskElement = element;
+  window.addEventListener("mousedown", handleMouseDown);
+  window.addEventListener("mousemove", handleMouseMove);
+  window.addEventListener("mouseup", handleMouseUp);
+  window.addEventListener("wheel", handleMouseWheel);
 
   addClickShortcuts("M0", 0);
-  return applyKeyMappingConfigShortcuts(keyMappingConfig, element);
+  return applyKeyMappingConfigShortcuts(keyMappingConfig);
 }

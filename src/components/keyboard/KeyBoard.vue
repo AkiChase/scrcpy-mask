@@ -11,11 +11,13 @@ import { useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 import KeyObservation from "./KeyObservation.vue";
 
-// TODO 为技能添加圆形边框范围
-// TODO 将range属性转换为技能的灵敏度，鼠标移动按比例缩放，100时技能范围最大（半个屏幕高度），最不灵敏，0时就是无范围的指向技能
+// TODO 打开设置时要关闭active，建议将各种数据打包到一个对象中共享，省的麻烦
+// TODO 切换按键方案时提示未保存，然后修改edit
+// TODO 方向轮盘具体按键还没激活时也会触发按键检查
 // TODO 右键空白区域添加按键
 // TODO 设置界面添加本地数据编辑器（类似utools）
 // TODO 添加开发者工具打开按钮
+// TODO 添加息屏按键
 
 const showKeyInfoFlag = ref(false);
 const showSettingFlag = ref(false);

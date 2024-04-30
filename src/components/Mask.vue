@@ -17,11 +17,9 @@ const router = useRouter();
 const message = useMessage();
 
 onBeforeRouteLeave(() => {
-  const maskElement = document.getElementById("maskElement") as HTMLElement;
-
   if (store.controledDevice) {
     unlistenToKeyEvent();
-    clearShortcuts(maskElement);
+    clearShortcuts();
   }
 });
 
@@ -65,48 +63,64 @@ function toStartServer() {
       />
     </div>
   </div>
-  <div
-    v-if="store.keyMappingConfigList.length"
-    @contextmenu.prevent
-    class="mask"
-    id="maskElement"
-  >
-    <template
-      v-for="button in store.keyMappingConfigList[store.curKeyMappingIndex]
-        .list"
-    >
+  <template v-if="store.keyMappingConfigList.length">
+    <div @contextmenu.prevent class="mask" id="maskElement"></div>
+    <div class="button-layer">
       <div
-        v-if="button.type === 'SteeringWheel'"
-        class="mask-steering-wheel"
-        :style="{
-          left: button.posX - 75 + 'px',
-          top: button.posY - 75 + 'px',
-        }"
+        style="
+          position: absolute;
+          height: 1px;
+          width: 100%;
+          background-color: red;
+          top: 55%;
+        "
+      ></div>
+      <div
+        style="
+          position: absolute;
+          height: 100%;
+          width: 1px;
+          background-color: red;
+          left: 50%;
+        "
+      ></div>
+      <template
+        v-for="button in store.keyMappingConfigList[store.curKeyMappingIndex]
+          .list"
       >
-        <div class="wheel-container">
-          <i />
-          <span>{{ (button as KeySteeringWheel).key.up }}</span>
-          <i />
-          <span>{{ (button as KeySteeringWheel).key.left }}</span>
-          <i />
-          <span>{{ (button as KeySteeringWheel).key.right }}</span>
-          <i />
-          <span>{{ (button as KeySteeringWheel).key.down }}</span>
-          <i />
+        <div
+          v-if="button.type === 'SteeringWheel'"
+          class="mask-steering-wheel"
+          :style="{
+            left: button.posX - 75 + 'px',
+            top: button.posY - 75 + 'px',
+          }"
+        >
+          <div class="wheel-container">
+            <i />
+            <span>{{ (button as KeySteeringWheel).key.up }}</span>
+            <i />
+            <span>{{ (button as KeySteeringWheel).key.left }}</span>
+            <i />
+            <span>{{ (button as KeySteeringWheel).key.right }}</span>
+            <i />
+            <span>{{ (button as KeySteeringWheel).key.down }}</span>
+            <i />
+          </div>
         </div>
-      </div>
-      <div
-        v-else
-        class="mask-button"
-        :style="{
-          left: button.posX + 'px',
-          top: button.posY - 14 + 'px',
-        }"
-      >
-        {{ button.key }}
-      </div>
-    </template>
-  </div>
+        <div
+          v-else
+          class="mask-button"
+          :style="{
+            left: button.posX + 'px',
+            top: button.posY - 14 + 'px',
+          }"
+        >
+          {{ button.key }}
+        </div>
+      </template>
+    </div>
+  </template>
 </template>
 
 <style scoped lang="scss">
@@ -120,6 +134,19 @@ function toStartServer() {
   border-radius: 0 0 5px 0;
   user-select: none;
   -webkit-user-select: none;
+  z-index: 2;
+}
+
+.button-layer {
+  position: absolute;
+  left: 70px;
+  top: 30px;
+  right: 0;
+  bottom: 0;
+  background-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 1;
 
   & > .mask-button {
     position: absolute;
@@ -148,6 +175,7 @@ function toStartServer() {
     }
   }
 }
+
 .notice {
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
@@ -159,6 +187,7 @@ function toStartServer() {
   top: 30px;
   right: 0;
   bottom: 0;
+  z-index: 3;
 
   .content {
     width: 80%;
