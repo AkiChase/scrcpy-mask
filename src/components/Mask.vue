@@ -1,41 +1,46 @@
 <script setup lang="ts">
-import { onActivated, ref } from "vue";
-import { NDialog } from "naive-ui";
+import { onActivated } from "vue";
+import { NDialog, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
 import {
-  initShortcuts,
+  applyShortcuts,
+  clearShortcuts,
   listenToKeyEvent,
   unlistenToKeyEvent,
+  updateScreenSizeAndMaskArea,
 } from "../hotkey";
-
-const maskRef = ref<HTMLElement | null>(null);
+import { KeySteeringWheel } from "../keyMappingConfig";
 
 const store = useGlobalStore();
 const router = useRouter();
-
-let isShortcutInited = false;
+const message = useMessage();
 
 onBeforeRouteLeave(() => {
-  if (isShortcutInited) {
-    if (maskRef.value) {
-      unlistenToKeyEvent();
-    }
+  if (store.controledDevice) {
+    unlistenToKeyEvent();
+    clearShortcuts();
   }
 });
 
 onActivated(async () => {
-  if (isShortcutInited) {
-    if (maskRef.value) {
-      listenToKeyEvent();
-    }
-    return;
-  }
+  const maskElement = document.getElementById("maskElement") as HTMLElement;
+
   if (store.controledDevice) {
-    if (maskRef.value) {
-      initShortcuts(store.controledDevice.screenSize, maskRef.value);
+    updateScreenSizeAndMaskArea(
+      [store.screenSizeW, store.screenSizeH],
+      [maskElement.clientWidth, maskElement.clientHeight]
+    );
+
+    if (
+      applyShortcuts(
+        maskElement,
+        store.keyMappingConfigList[store.curKeyMappingIndex]
+      )
+    ) {
       listenToKeyEvent();
-      isShortcutInited = true;
+    } else {
+      message.error("按键方案异常，请删除此方案");
     }
   }
 });
@@ -43,9 +48,6 @@ onActivated(async () => {
 function toStartServer() {
   router.replace({ name: "device" });
 }
-
-// TODO 按键设置
-// TODO 渲染按钮
 </script>
 
 <template>
@@ -61,25 +63,113 @@ function toStartServer() {
       />
     </div>
   </div>
-  <div
-    v-show="store.controledDevice"
-    @contextmenu.prevent
-    class="mask"
-    ref="maskRef"
-  ></div>
+  <template v-if="store.keyMappingConfigList.length">
+    <div @contextmenu.prevent class="mask" id="maskElement"></div>
+    <div class="button-layer">
+      <template
+        v-for="button in store.keyMappingConfigList[store.curKeyMappingIndex]
+          .list"
+      >
+        <div
+          v-if="button.type === 'SteeringWheel'"
+          class="mask-steering-wheel"
+          :style="{
+            left: button.posX - 75 + 'px',
+            top: button.posY - 75 + 'px',
+          }"
+        >
+          <div class="wheel-container">
+            <i />
+            <span>{{ (button as KeySteeringWheel).key.up }}</span>
+            <i />
+            <span>{{ (button as KeySteeringWheel).key.left }}</span>
+            <i />
+            <span>{{ (button as KeySteeringWheel).key.right }}</span>
+            <i />
+            <span>{{ (button as KeySteeringWheel).key.down }}</span>
+            <i />
+          </div>
+        </div>
+        <div
+          v-else
+          class="mask-button"
+          :style="{
+            left: button.posX + 'px',
+            top: button.posY - 14 + 'px',
+          }"
+        >
+          {{ button.key }}
+        </div>
+      </template>
+    </div>
+  </template>
 </template>
 
 <style scoped lang="scss">
 .mask {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: transparent;
   overflow: hidden;
   cursor: pointer;
+  position: relative;
+  border-right: 1px solid var(--bg-color);
+  border-bottom: 1px solid var(--bg-color);
+  border-radius: 0 0 5px 0;
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 2;
 }
+
+.button-layer {
+  position: absolute;
+  left: 70px;
+  top: 30px;
+  right: 0;
+  bottom: 0;
+  background-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 1;
+
+  & > .mask-button {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, 0.6);
+    border-radius: 5px;
+    padding: 5px;
+    font-size: 12px;
+  }
+
+  & > .mask-steering-wheel {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    width: 150px;
+    height: 150px;
+    font-size: 12px;
+
+    .wheel-container {
+      display: grid;
+      grid-template-columns: repeat(3, 50px);
+      grid-template-rows: repeat(3, 50px);
+      justify-items: center;
+      align-items: center;
+    }
+  }
+}
+
 .notice {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1;
+  position: absolute;
+  left: 70px;
+  top: 30px;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
 
   .content {
     width: 80%;

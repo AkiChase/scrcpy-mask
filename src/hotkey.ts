@@ -5,67 +5,114 @@ import {
   swipe,
   touch,
 } from "./frontcommand/scrcpyMaskCmd";
+import {
+  KeyCancelSkill,
+  KeyDirectionalSkill,
+  KeyDirectionlessSkill,
+  KeyMacro,
+  KeyMacroList,
+  KeyMappingConfig,
+  KeyObservation,
+  KeySteeringWheel,
+  KeyTap,
+  KeyTriggerWhenPressedSkill,
+} from "./keyMappingConfig";
 
 function clientxToPosx(clientx: number) {
-  return clientx < 70 ? 0 : Math.floor(clientx - 70);
+  return clientx < 70
+    ? 0
+    : Math.floor((clientx - 70) * (screenSizeW / maskSizeW));
 }
 
 function clientyToPosy(clienty: number) {
-  return clienty < 30 ? 0 : Math.floor(clienty - 30);
+  return clienty < 30
+    ? 0
+    : Math.floor((clienty - 30) * (screenSizeH / maskSizeH));
 }
 
-function clientxToPosOffsetx(clientx: number, posx: number, scale: number) {
+function clientxToPosOffsetx(clientx: number, posx: number, scale = 1) {
   let offsetX = clientxToPosx(clientx) - posx;
   return Math.round(offsetX * scale);
 }
 
-function clientyToPosOffsety(clienty: number, posy: number, scale: number) {
+function clientyToPosOffsety(clienty: number, posy: number, scale = 1) {
   let offsetY = clientyToPosy(clienty) - posy;
   return Math.round(offsetY * scale);
 }
 
-function clientxToCenterOffsetx(clientx: number, range: number, scale = 0.5) {
-  return Math.max(
-    -range,
-    Math.min(range, clientxToPosOffsetx(clientx, screenSizeW / 2, scale))
-  );
-}
+function clientPosToSkillOffset(
+  clientPos: { x: number; y: number },
+  range: number
+): { offsetX: number; offsetY: number } {
+  const maxLength = (100 / maskSizeH) * screenSizeH;
+  const centerX = maskSizeW * 0.5;
+  const centerY = maskSizeH * 0.55;
+  const cOffsetX = clientPos.x - 70 - centerX;
+  const cOffsetY = clientPos.y - 30 - centerY;
+  const offsetD = Math.sqrt(cOffsetX ** 2 + cOffsetY ** 2);
+  if (offsetD == 0) {
+    return {
+      offsetX: 0,
+      offsetY: 0,
+    };
+  }
 
-function clientyToCenterOffsety(clienty: number, range: number, scale = 0.5) {
-  return Math.max(
-    -range,
-    Math.min(range, clientyToPosOffsety(clienty, screenSizeH * 0.55, scale))
-  );
+  const rangeD = (maskSizeH - centerY) * range * 0.01;
+  if (offsetD >= rangeD) {
+    // include the case of rangeD == 0
+    return {
+      offsetX: Math.round((maxLength / offsetD) * cOffsetX),
+      offsetY: Math.round((maxLength / offsetD) * cOffsetY),
+    };
+  } else {
+    const factor = offsetD / rangeD;
+    return {
+      offsetX: Math.round((cOffsetX / rangeD) * maxLength * factor),
+      offsetY: Math.round((cOffsetY / rangeD) * maxLength * factor),
+    };
+  }
 }
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function calculateMacroPosX(pos: [string, number] | number): number {
-  if (typeof pos === "number") {
-    return pos;
+function calculateMacroPosX(
+  posX: [string, number] | number,
+  relativeSizeW: number
+): number {
+  if (typeof posX === "number") {
+    return Math.round(posX * (screenSizeW / relativeSizeW));
   }
-  if (typeof pos === "string") {
+  if (typeof posX === "string") {
     return clientxToPosx(mouseX);
   } else {
-    if (pos[0] === "mouse") {
-      return clientxToPosx(mouseX) + pos[1];
+    if (posX[0] === "mouse") {
+      return (
+        clientxToPosx(mouseX) +
+        Math.round(posX[1] * (screenSizeW / relativeSizeW))
+      );
     } else {
       throw new Error("Invalid pos");
     }
   }
 }
 
-function calculateMacroPosY(pos: [string, number] | number): number {
-  if (typeof pos === "number") {
-    return pos;
+function calculateMacroPosY(
+  posY: [string, number] | number,
+  relativeSizeH: number
+): number {
+  if (typeof posY === "number") {
+    return Math.round(posY * (screenSizeH / relativeSizeH));
   }
-  if (typeof pos === "string") {
+  if (typeof posY === "string") {
     return clientyToPosy(mouseY);
   } else {
-    if (pos[0] === "mouse") {
-      return clientyToPosy(mouseY) + pos[1];
+    if (posY[0] === "mouse") {
+      return (
+        clientyToPosy(mouseY) +
+        Math.round(posY[1] * (screenSizeH / relativeSizeH))
+      );
     } else {
       throw new Error("Invalid pos");
     }
@@ -73,22 +120,23 @@ function calculateMacroPosY(pos: [string, number] | number): number {
 }
 
 function calculateMacroPosList(
-  posList: [[string, number] | number, [string, number] | number][]
+  posList: [[string, number] | number, [string, number] | number][],
+  relativeSize: { w: number; h: number }
 ): { x: number; y: number }[] {
   return posList.map((posPair) => {
     return {
-      x: calculateMacroPosX(posPair[0]),
-      y: calculateMacroPosY(posPair[1]),
+      x: calculateMacroPosX(posPair[0], relativeSize.w),
+      y: calculateMacroPosY(posPair[1], relativeSize.h),
     };
   });
 }
 
-// TODO 偶尔不定时抽风（切换一下程序就能恢复），表现为setinterval中的回调函数未执行
-// TODO 技能界面实际上是有投影变换的，需要一定的算法，不能仅仅相对坐标 （640,400）
+// TODO ? 技能界面实际上是有投影变换的，需要一定的算法，不能仅仅相对坐标 （640,400）
 
 // add shortcuts for observation
 function addObservationShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   posX: number,
   posY: number,
   scale: number,
@@ -96,6 +144,8 @@ function addObservationShortcuts(
 ) {
   let observationMouseX = 0;
   let observationMouseY = 0;
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   addShortcut(
     key,
     async () => {
@@ -145,13 +195,17 @@ function addObservationShortcuts(
   );
 }
 
-// add shortcuts for simple tap (touch for 100 ms when pressed)
+// add shortcuts for simple tap (touch when press down)
 function addTapShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
+  time: number,
   posX: number,
   posY: number,
   pointerId: number
 ) {
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   addShortcut(
     key,
     async () => {
@@ -166,6 +220,7 @@ function addTapShortcuts(
           x: posX,
           y: posY,
         },
+        time,
       });
     },
     undefined,
@@ -176,10 +231,13 @@ function addTapShortcuts(
 // add shortcuts for cancel skill
 function addCancelSkillShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   posX: number,
   posY: number,
   pointerId: number
 ) {
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   addShortcut(
     key,
     async () => {
@@ -227,19 +285,27 @@ function addCancelSkillShortcuts(
 // add shortcuts for trigger when pressed skill
 function addTriggerWhenPressedSkillShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   // pos relative to the device
   posX: number,
   posY: number,
   directional: boolean,
-  // range is needed when directional is true
-  range: number,
+  // range: when directional is true
+  // time: when directional is false
+  rangeOrTime: number,
   pointerId: number
 ) {
   if (directional) {
+    posX = Math.round((posX / relativeSize.w) * screenSizeW);
+    posY = Math.round((posY / relativeSize.h) * screenSizeH);
     addShortcut(
       key,
       // down
       async () => {
+        const skillOffset = clientPosToSkillOffset(
+          { x: mouseX, y: mouseY },
+          rangeOrTime
+        );
         await swipe({
           action: SwipeAction.Default,
           pointerId,
@@ -250,8 +316,8 @@ function addTriggerWhenPressedSkillShortcuts(
           pos: [
             { x: posX, y: posY },
             {
-              x: posX + clientxToCenterOffsetx(mouseX, range),
-              y: posY + clientyToCenterOffsety(mouseY, range),
+              x: posX + skillOffset.offsetX,
+              y: posY + skillOffset.offsetY,
             },
           ],
           intervalBetweenPos: 0,
@@ -261,18 +327,21 @@ function addTriggerWhenPressedSkillShortcuts(
       undefined
     );
   } else {
-    addTapShortcuts(key, posX, posY, pointerId);
+    addTapShortcuts(key, relativeSize, rangeOrTime, posX, posY, pointerId);
   }
 }
 
 // add shortcuts for directionless skill (cancelable)
 function addDirectionlessSkillShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   // pos relative to the device
   posX: number,
   posY: number,
   pointerId: number
 ) {
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   addShortcut(
     key,
     // down
@@ -314,16 +383,23 @@ function addDirectionlessSkillShortcuts(
 // add shortcuts for directional skill (cancelable)
 function addDirectionalSkillShortcuts(
   key: string,
+  relativeSize: { w: number; h: number },
   // pos relative to the device
   posX: number,
   posY: number,
   range: number,
   pointerId: number
 ) {
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   addShortcut(
     key,
     // down
     async () => {
+      const skillOffset = clientPosToSkillOffset(
+        { x: mouseX, y: mouseY },
+        range
+      );
       await swipe({
         action: SwipeAction.NoUp,
         pointerId,
@@ -334,8 +410,8 @@ function addDirectionalSkillShortcuts(
         pos: [
           { x: posX, y: posY },
           {
-            x: posX + clientxToCenterOffsetx(mouseX, range),
-            y: posY + clientyToCenterOffsety(mouseY, range),
+            x: posX + skillOffset.offsetX,
+            y: posY + skillOffset.offsetY,
           },
         ],
         intervalBetweenPos: 0,
@@ -343,6 +419,10 @@ function addDirectionalSkillShortcuts(
     },
     // loop
     async () => {
+      const skillOffset = clientPosToSkillOffset(
+        { x: mouseX, y: mouseY },
+        range
+      );
       await touch({
         action: TouchAction.Move,
         pointerId,
@@ -351,13 +431,17 @@ function addDirectionalSkillShortcuts(
           h: screenSizeH,
         },
         pos: {
-          x: posX + clientxToCenterOffsetx(mouseX, range),
-          y: posY + clientyToCenterOffsety(mouseY, range),
+          x: posX + skillOffset.offsetX,
+          y: posY + skillOffset.offsetY,
         },
       });
     },
     // up
     async () => {
+      const skillOffset = clientPosToSkillOffset(
+        { x: mouseX, y: mouseY },
+        range
+      );
       await touch({
         action: TouchAction.Up,
         pointerId,
@@ -366,8 +450,8 @@ function addDirectionalSkillShortcuts(
           h: screenSizeH,
         },
         pos: {
-          x: posX + clientxToCenterOffsetx(mouseX, range),
-          y: posY + clientyToCenterOffsety(mouseY, range),
+          x: posX + skillOffset.offsetX,
+          y: posY + skillOffset.offsetY,
         },
       });
     },
@@ -378,6 +462,7 @@ function addDirectionalSkillShortcuts(
 // add shortcuts for steering wheel
 function addSteeringWheelKeyboardShortcuts(
   key: wheelKey,
+  relativeSize: { w: number; h: number },
   // pos relative to the device
   posX: number,
   posY: number,
@@ -387,6 +472,8 @@ function addSteeringWheelKeyboardShortcuts(
   let loopFlag = false;
   let curPosX = 0;
   let curPosY = 0;
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
 
   // calculate the end coordinates of the eight directions of the direction wheel
   let offsetHalf = Math.round(offset / 1.414);
@@ -566,8 +653,11 @@ function addClickShortcuts(key: string, pointerId: number) {
 
 let screenSizeW: number;
 let screenSizeH: number;
+let maskSizeW: number;
+let maskSizeH: number;
 let mouseX = 0;
 let mouseY = 0;
+let maskElement: HTMLElement;
 
 const downKeyMap: Map<string, boolean> = new Map();
 const downKeyCBMap: Map<string, () => Promise<void>> = new Map();
@@ -597,6 +687,7 @@ function keyupHandler(event: KeyboardEvent) {
 }
 
 function handleMouseDown(event: MouseEvent) {
+  if (event.target !== maskElement) return;
   mouseX = event.clientX;
   mouseY = event.clientY;
   event.preventDefault();
@@ -614,7 +705,7 @@ function handleMouseUp(event: MouseEvent) {
   mouseY = event.clientY;
   event.preventDefault();
   let key = "M" + event.button.toString();
-  if (downKeyMap.has(key)) {
+  if (downKeyMap.has(key) && downKeyMap.get(key)) {
     downKeyMap.set(key, false);
     // execute the up callback asyncily
     let cb = upKeyCBMap.get(key);
@@ -627,9 +718,25 @@ function handleMouseMove(event: MouseEvent) {
   mouseY = event.clientY;
 }
 
+let lastWheelDownTime: number = 0;
+let lastWheelUpTime: number = 0;
+function handleMouseWheel(event: WheelEvent) {
+  event.preventDefault();
+  // trigger interval is 50ms
+  if (event.deltaY > 0 && event.timeStamp - lastWheelDownTime > 50) {
+    lastWheelDownTime = event.timeStamp;
+    // WheelDown
+    downKeyCBMap.get("WheelDown")?.();
+  } else if (event.deltaY < 0 && event.timeStamp - lastWheelUpTime > 50) {
+    lastWheelUpTime = event.timeStamp;
+    // WheelUp
+    downKeyCBMap.get("WheelUp")?.();
+  }
+}
+
 function addShortcut(
   key: string,
-  downCB: () => Promise<void>,
+  downCB?: () => Promise<void>,
   loopCB?: () => Promise<void>,
   upCB?: () => Promise<void>,
   cancelAble = false // only work with downCB && upCB
@@ -681,20 +788,29 @@ function addShortcut(
  * @param macro
  * @example
  * await execMacro([
+ *  // touch down
  *   {
  *    type: "touch",
  *    // op, pointerId, posX, posY
  *    args: ["down", 5, ["mouse", -10], 600],
  *  },
+ *  // sleep 1000ms
  *  {
  *   type: "sleep",
- *   // time(ms)
+ *  // time(ms)
  *   args: [1000],
  *  },
+ *  // touch up
  *  {
  *  type: "touch",
  *  args: ["up", 5, ["mouse", 10], 600],
  *  },
+ *  // touch 1000ms
+ *  {
+ *  type: "touch",
+ *  args: ["default", 5, ["mouse", 10], 600, 1000],
+ *  },
+ *  // swipe
  *  {
  *   type: "swipe",
  *   // op, pointerId, posList, intervalBetweenPos
@@ -712,7 +828,11 @@ function addShortcut(
  *  },
  * ]);
  */
-async function execMacro(macro: any[]) {
+async function execMacro(
+  relativeSize: { w: number; h: number },
+  macro: KeyMacroList
+) {
+  if (macro === null) return;
   for (const cmd of macro) {
     if (!cmd.hasOwnProperty("type") || !cmd.hasOwnProperty("args")) {
       console.error("Invalid command: ", cmd);
@@ -750,9 +870,10 @@ async function execMacro(macro: any[]) {
               h: screenSizeH,
             },
             pos: {
-              x: calculateMacroPosX(cmd.args[2]),
-              y: calculateMacroPosY(cmd.args[3]),
+              x: calculateMacroPosX(cmd.args[2], relativeSize.w),
+              y: calculateMacroPosY(cmd.args[3], relativeSize.h),
             },
+            time: cmd.args.length > 4 ? cmd.args[4] : undefined,
           });
           break;
         case "swipe":
@@ -778,7 +899,7 @@ async function execMacro(macro: any[]) {
               w: screenSizeW,
               h: screenSizeH,
             },
-            pos: calculateMacroPosList(cmd.args[2]),
+            pos: calculateMacroPosList(cmd.args[2], relativeSize),
             intervalBetweenPos: cmd.args[3],
           });
           break;
@@ -801,128 +922,172 @@ function execLoopCB() {
   if (loopFlag) requestAnimationFrame(execLoopCB);
 }
 
+// change ts type
+function asType<T>(_val: any): asserts _val is T {}
+
+function applyKeyMappingConfigShortcuts(
+  keyMappingConfig: KeyMappingConfig
+): boolean {
+  try {
+    const relativeSize = keyMappingConfig.relativeSize;
+    for (const item of keyMappingConfig.list) {
+      switch (item.type) {
+        case "SteeringWheel":
+          asType<KeySteeringWheel>(item);
+          addSteeringWheelKeyboardShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.offset,
+            item.pointerId
+          );
+          break;
+        case "DirectionalSkill":
+          asType<KeyDirectionalSkill>(item);
+          addDirectionalSkillShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.range,
+            item.pointerId
+          );
+          break;
+        case "DirectionlessSkill":
+          asType<KeyDirectionlessSkill>(item);
+          addDirectionlessSkillShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.pointerId
+          );
+          break;
+        case "CancelSkill":
+          asType<KeyCancelSkill>(item);
+          addCancelSkillShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.pointerId
+          );
+          break;
+        case "Tap":
+          asType<KeyTap>(item);
+          addTapShortcuts(
+            item.key,
+            relativeSize,
+            item.time,
+            item.posX,
+            item.posY,
+            item.pointerId
+          );
+          break;
+        case "TriggerWhenPressedSkill":
+          asType<KeyTriggerWhenPressedSkill>(item);
+          addTriggerWhenPressedSkillShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.directional,
+            item.rangeOrTime,
+            item.pointerId
+          );
+          break;
+        case "Observation":
+          asType<KeyObservation>(item);
+          addObservationShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.scale,
+            item.pointerId
+          );
+          break;
+        case "Macro":
+          asType<KeyMacro>(item);
+          addShortcut(
+            item.key,
+            item.macro.down === null
+              ? undefined
+              : async () => {
+                  await execMacro(relativeSize, item.macro.down);
+                },
+            item.macro.loop === null
+              ? undefined
+              : async () => {
+                  await execMacro(relativeSize, item.macro.loop);
+                },
+            item.macro.up === null
+              ? undefined
+              : async () => {
+                  await execMacro(relativeSize, item.macro.up);
+                }
+          );
+          break;
+        default:
+          console.error("Invalid item type: ", item.type);
+          break;
+      }
+    }
+    return true;
+  } catch (e) {
+    console.error("Invalid keyMappingConfig: ", keyMappingConfig, e);
+    clearShortcuts();
+    return false;
+  }
+}
+
 export function listenToKeyEvent() {
-  document.addEventListener("keydown", keydownHandler);
-  document.addEventListener("keyup", keyupHandler);
+  window.addEventListener("keydown", keydownHandler);
+  window.addEventListener("keyup", keyupHandler);
   loopFlag = true;
   execLoopCB();
-  // setInterval(()=>console.log(loopDownKeyCBMap), 3000);
 }
 
 export function unlistenToKeyEvent() {
-  document.removeEventListener("keydown", keydownHandler);
-  document.removeEventListener("keyup", keyupHandler);
+  window.removeEventListener("keydown", keydownHandler);
+  window.removeEventListener("keyup", keyupHandler);
   loopFlag = false;
 }
 
-export function initShortcuts(
+export function clearShortcuts() {
+  window.removeEventListener("mousedown", handleMouseDown);
+  window.removeEventListener("mousemove", handleMouseMove);
+  window.removeEventListener("mouseup", handleMouseUp);
+  window.removeEventListener("wheel", handleMouseWheel);
+
+  downKeyMap.clear();
+  downKeyCBMap.clear();
+  loopDownKeyCBMap.clear();
+  upKeyCBMap.clear();
+  cancelAbleKeyList.length = 0;
+}
+
+export function updateScreenSizeAndMaskArea(
   screenSize: [number, number],
-  element: HTMLElement
+  maskArea: [number, number]
 ) {
   screenSizeW = screenSize[0];
   screenSizeH = screenSize[1];
+  maskSizeW = maskArea[0];
+  maskSizeH = maskArea[1];
+}
 
-  element.addEventListener("mousedown", handleMouseDown);
-  element.addEventListener("mousemove", handleMouseMove);
-  element.addEventListener("mouseup", handleMouseUp);
-  element.addEventListener("mouseout", handleMouseUp); // mouse out of the element as mouse up
+export function applyShortcuts(
+  element: HTMLElement,
+  keyMappingConfig: KeyMappingConfig
+) {
+  maskElement = element;
+  window.addEventListener("mousedown", handleMouseDown);
+  window.addEventListener("mousemove", handleMouseMove);
+  window.addEventListener("mouseup", handleMouseUp);
+  window.addEventListener("wheel", handleMouseWheel);
 
   addClickShortcuts("M0", 0);
-  addSteeringWheelKeyboardShortcuts(
-    {
-      left: "KeyA",
-      right: "KeyD",
-      up: "KeyW",
-      down: "KeyS",
-    },
-    180,
-    560,
-    100,
-    1
-  );
-  addDirectionalSkillShortcuts("KeyQ", 950, 610, 200, 2); // skill 1
-  addDirectionalSkillShortcuts("AltLeft", 1025, 500, 200, 2); // skill 2
-  addDirectionalSkillShortcuts("KeyE", 1160, 420, 200, 2); // skill 3
-  addTriggerWhenPressedSkillShortcuts("M4", 1160, 420, false, 0, 2); // skill 3 (no direction and trigger when pressed)
-  addDirectionlessSkillShortcuts("M1", 1150, 280, 2); // equipment skill (middle mouse click)
-  addCancelSkillShortcuts("Space", 1160, 140, 2); // cancel skill
-
-  addTapShortcuts("KeyB", 650, 650, 3); // home
-  addTapShortcuts("KeyC", 740, 650, 3); // recover
-  addDirectionalSkillShortcuts("KeyF", 840, 650, 200, 2); // summoner skills
-  addTriggerWhenPressedSkillShortcuts("ControlLeft", 840, 650, false, 0, 3); // summoner skills (no direction and trigger when pressed)
-  addTapShortcuts("M2", 1165, 620, 3); // attack (right click)
-  addTapShortcuts("Digit1", 880, 560, 3); // skill 1 upgrade
-  addTapShortcuts("Digit2", 960, 430, 3); // skill 2 upgrade
-  addTapShortcuts("Digit3", 1090, 350, 3); // skill 3 upgrade
-  addTapShortcuts("Digit5", 130, 300, 3); // quick buy 1
-  addTapShortcuts("Digit6", 130, 370, 3); // quick buy 2
-
-  addObservationShortcuts("M3", 1000, 200, 0.5, 4); // observation
-
-  // panel
-  addShortcut(
-    "Tab",
-    async () => {
-      await execMacro([
-        {
-          type: "touch",
-          args: ["default", 5, 1185, 40],
-        },
-      ]);
-    },
-    undefined,
-    async () => {
-      await execMacro([
-        {
-          type: "touch",
-          args: ["default", 5, 1220, 100],
-        },
-      ]);
-    }
-  );
-
-  // shop
-  addShortcut(
-    "ShiftLeft",
-    async () => {
-      await execMacro([
-        {
-          type: "touch",
-          args: ["default", 5, 40, 300],
-        },
-      ]);
-    },
-    undefined,
-    async () => {
-      await execMacro([
-        {
-          type: "touch",
-          args: ["default", 5, 1200, 60],
-        },
-      ]);
-    }
-  );
-
-  // map
-  addShortcut(
-    "KeyZ",
-    async () => {
-      await execMacro([
-        {
-          type: "touch",
-          args: ["default", 5, 250, 230],
-        },
-      ]);
-    },
-    undefined,
-    async () => {
-      await execMacro([
-        {
-          type: "touch",
-          args: ["default", 5, 640, 150],
-        },
-      ]);
-    }
-  );
+  return applyKeyMappingConfigShortcuts(keyMappingConfig);
 }

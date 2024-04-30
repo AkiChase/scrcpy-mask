@@ -14,6 +14,7 @@ export async function sendKey(payload: CmdDataSendKey) {
 }
 
 export async function touch(payload: CmdDataTouch) {
+  if (!("time" in payload) || payload.time === undefined) payload.time = 80;
   await sendScrcpyMaskCmd(ScrcpyMaskCmdType.Touch, payload);
 }
 
@@ -32,11 +33,7 @@ export enum ScrcpyMaskCmdType {
   Shutdown = 18,
 }
 
-type ScrcpyMaskCmdData =
-  | CmdDataSendKey
-  | CmdDataTouch
-  | CmdDataSwipe
-  | String;
+type ScrcpyMaskCmdData = CmdDataSendKey | CmdDataTouch | CmdDataSwipe | String;
 
 enum SendKeyAction {
   Default = 0,
@@ -62,6 +59,7 @@ interface CmdDataTouch {
   pointerId: number;
   screen: { w: number; h: number };
   pos: { x: number; y: number };
+  time?: number; // valid only when action is Default, default 80 milliseconds
 }
 
 export enum SwipeAction {

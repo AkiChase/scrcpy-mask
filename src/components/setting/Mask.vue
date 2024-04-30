@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import {
   NH4,
+  NP,
   NForm,
   NGrid,
   NFormItemGi,
@@ -12,57 +13,33 @@ import {
   NIcon,
   FormInst,
   useMessage,
-  NP,
 } from "naive-ui";
 import {
+  LogicalPosition,
+  LogicalSize,
   PhysicalPosition,
   PhysicalSize,
   getCurrent,
 } from "@tauri-apps/api/window";
-import { platform } from "@tauri-apps/plugin-os";
+import { Store } from "@tauri-apps/plugin-store";
 import { SettingsOutline } from "@vicons/ionicons5";
 import { UnlistenFn } from "@tauri-apps/api/event";
 
 let unlistenResize: UnlistenFn = () => {};
 let unlistenMove: UnlistenFn = () => {};
-
 let factor = 1;
-let platformName = "";
 
-// macos: use logical position and size to refresh the area model
-// others: use pyhsical position and size to refresh the area model
-async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
-  // header size and sidebar size
-  const mt = 30;
-  const ml = 70;
-
-  if (platformName === "macos") {
-    // use logical position and size
-    if (size !== undefined) {
-      areaModel.value.sizeW = Math.floor((size.width - ml) / factor);
-      areaModel.value.sizeH = Math.floor((size.height - mt) / factor);
-    }
-    if (pos !== undefined) {
-      areaModel.value.posX = Math.floor((pos.x + ml) / factor);
-      areaModel.value.posY = Math.floor((pos.y + mt) / factor);
-    }
-  } else {
-    if (size !== undefined) {
-      areaModel.value.sizeW = Math.floor(size.width - ml);
-      areaModel.value.sizeH = Math.floor(size.height - mt);
-    }
-    if (pos !== undefined) {
-      areaModel.value.posX = Math.floor(pos.x + ml);
-      areaModel.value.posY = Math.floor(pos.y + mt);
-    }
-  }
-}
-
+const localStore = new Store("store.bin");
 const message = useMessage();
-
 const formRef = ref<FormInst | null>(null);
 
 // logical pos and size of the mask area
+interface MaskArea {
+  posX: number;
+  posY: number;
+  sizeW: number;
+  sizeH: number;
+}
 const areaModel = ref({
   posX: 0,
   posY: 0,
@@ -97,12 +74,32 @@ const areaFormRules: FormRules = {
   },
 };
 
+async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
+  const lSize = size?.toLogical(factor);
+  const lPos = pos?.toLogical(factor);
+
+  // header size and sidebar size
+  const mt = 30;
+  const ml = 70;
+
+  // use logical position and size
+  if (lSize !== undefined) {
+    areaModel.value.sizeW = Math.round(lSize.width) - ml;
+    areaModel.value.sizeH = Math.round(lSize.height) - mt;
+  }
+  if (lPos !== undefined) {
+    areaModel.value.posX = Math.round(lPos.x) + ml;
+    areaModel.value.posY = Math.round(lPos.y) + mt;
+  }
+}
+
 function handleAdjustClick(e: MouseEvent) {
   e.preventDefault();
   formRef.value?.validate((errors) => {
     if (!errors) {
       adjustMaskArea().then(() => {
-        message.success("调整完成");
+        localStore.set("maskArea", areaModel.value);
+        message.success("蒙版区域已保存");
       });
     } else {
       message.error("请正确输入蒙版的坐标和尺寸");
@@ -110,7 +107,6 @@ function handleAdjustClick(e: MouseEvent) {
   });
 }
 
-// TODO 等待官方合并修复分支后检查表现是否正常
 // move and resize window to the selected window (control) area
 async function adjustMaskArea() {
   // header size and sidebar size
@@ -119,30 +115,28 @@ async function adjustMaskArea() {
 
   const appWindow = getCurrent();
 
-  const pos = new PhysicalPosition(
+  const pos = new LogicalPosition(
     areaModel.value.posX - ml,
     areaModel.value.posY - mt
   );
 
-  const size = new PhysicalSize(
+  const size = new LogicalSize(
     areaModel.value.sizeW + ml,
     areaModel.value.sizeH + mt
   );
 
-  if (platformName === "macos") {
-    // use logical position and size
-    await appWindow.setPosition(pos.toLogical(factor));
-    await appWindow.setSize(size.toLogical(factor));
-  } else {
-    await appWindow.setPosition(pos);
-    await appWindow.setSize(size);
-  }
+  await appWindow.setPosition(pos);
+  await appWindow.setSize(size);
 }
 
 onMounted(async () => {
   const appWindow = getCurrent();
   factor = await appWindow.scaleFactor();
-  platformName = await platform();
+
+  let maskArea = await localStore.get<MaskArea>("maskArea");
+  if (maskArea !== null) {
+    areaModel.value = maskArea;
+  }
 
   unlistenResize = await appWindow.onResized(({ payload: size }) => {
     refreshAreaModel(size, undefined);
@@ -165,7 +159,7 @@ onUnmounted(() => {
 <template>
   <div class="setting-page">
     <NFlex justify="space-between" align="center">
-      <NH4 prefix="bar">手动调整</NH4>
+      <NH4 prefix="bar">蒙版调整</NH4>
       <NButton
         tertiary
         circle
@@ -213,7 +207,7 @@ onUnmounted(() => {
           />
         </NFormItemGi>
       </NGrid>
-      <NP>提示：使用物理坐标、尺寸</NP>
+      <NP>提示：蒙版尺寸与设备尺寸将用于坐标转换，请保证尺寸的准确性</NP>
     </NForm>
   </div>
 </template>

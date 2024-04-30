@@ -14,7 +14,19 @@
     "window:allow-is-maximizable",
     "window:allow-start-dragging",
     "window:allow-unmaximize",
-    "os:default",
-    "os:allow-platform"
+    "store:default",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-save",
+    "store:allow-load",
+    "store:allow-clear",
+    "store:allow-entries",
+    "store:allow-delete",
+    "clipboard-manager:default",
+    "clipboard-manager:allow-write-text",
+    "process:default",
+    "process:allow-restart",
+    "webview:default",
+    "webview:allow-internal-toggle-devtools"
   ]
 }

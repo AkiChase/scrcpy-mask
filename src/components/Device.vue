@@ -15,10 +15,13 @@ import {
   pushServerFile,
   forwardServerPort,
   startScrcpyServer,
-  getScreenSize,
+  getDeviceScreenSize,
+  adbConnect,
 } from "../invoke";
 import {
   NH4,
+  NP,
+  NInput,
   NInputNumber,
   NButton,
   NDataTable,
@@ -26,25 +29,34 @@ import {
   NEmpty,
   NTooltip,
   NFlex,
+  NFormItem,
   NIcon,
   NSpin,
+  NScrollbar,
   DataTableColumns,
   DropdownOption,
   useDialog,
+  useMessage,
+  NInputGroup,
 } from "naive-ui";
 import { CloseCircle, InformationCircle } from "@vicons/ionicons5";
 import { Refresh } from "@vicons/ionicons5";
 import { UnlistenFn, listen } from "@tauri-apps/api/event";
+import { Store } from "@tauri-apps/plugin-store";
 import { shutdown } from "../frontcommand/scrcpyMaskCmd";
 import { useGlobalStore } from "../store/global";
 
 const dialog = useDialog();
 const store = useGlobalStore();
+const message = useMessage();
 
 const port = ref(27183);
+const address = ref("");
+
+const localStore = new Store("store.bin");
 
 //#region listener
-const deviceWaitForMetadataTask: ((deviceName: string) => void)[] = [];
+let deviceWaitForMetadataTask: ((deviceName: string) => void) | null = null;
 
 let unlisten: UnlistenFn | undefined;
 onMounted(async () => {
@@ -53,8 +65,7 @@ onMounted(async () => {
       let payload = JSON.parse(event.payload as string);
       switch (payload.type) {
         case "MetaData":
-          let task = deviceWaitForMetadataTask.shift();
-          task?.(payload.deviceName);
+          deviceWaitForMetadataTask?.(payload.deviceName);
           break;
         case "ClipboardChanged":
           console.log("剪切板变动", payload.clipboard);
@@ -154,10 +165,81 @@ const menuOptions: DropdownOption[] = [
     label: () => h("span", "控制此设备"),
     key: "control",
   },
+  {
+    label: () => h("span", "获取屏幕尺寸"),
+    key: "screen",
+  },
 ];
 
 function onMenuClickoutside() {
   showMenu.value = false;
+}
+
+async function deviceControl() {
+  if (!port.value) {
+    port.value = 27183;
+  }
+
+  if (!(store.screenSizeW > 0) || !(store.screenSizeH > 0)) {
+    message.error("请正确输入当前控制设备的屏幕尺寸");
+    store.screenSizeW = 0;
+    store.screenSizeH = 0;
+    store.hideLoading();
+    return;
+  }
+
+  if (store.controledDevice) {
+    message.error("请先关闭当前控制设备");
+    store.hideLoading();
+    return;
+  }
+
+  localStore.set("screenSize", {
+    sizeW: store.screenSizeW,
+    sizeH: store.screenSizeH,
+  });
+  message.info("屏幕尺寸已保存，正在启动控制服务，请保持设备亮屏");
+
+  const device = devices.value[rowIndex];
+
+  let scid = (
+    "00000000" + Math.floor(Math.random() * 100000).toString(16)
+  ).slice(-8);
+
+  await pushServerFile(device.id);
+  await forwardServerPort(device.id, scid, port.value);
+  await startScrcpyServer(device.id, scid, `127.0.0.1:${port.value}`);
+
+  // connection timeout check
+  let id = setTimeout(async () => {
+    if (deviceWaitForMetadataTask) {
+      await shutdown();
+      store.controledDevice = null;
+      store.hideLoading();
+      message.error("设备连接超时");
+    }
+  }, 6000);
+
+  // add cb for metadata
+  deviceWaitForMetadataTask = (deviceName: string) => {
+    store.controledDevice = {
+      scid,
+      deviceName,
+      device,
+    };
+    nextTick(() => {
+      deviceWaitForMetadataTask = null;
+      clearTimeout(id);
+      store.hideLoading();
+    });
+  };
+}
+
+async function deviceGetScreenSize() {
+  let id = devices.value[rowIndex].id;
+  const size = await getDeviceScreenSize(id);
+  store.hideLoading();
+  message.success(`设备屏幕尺寸为: ${size[0]} x ${size[1]}`);
 }
 
 async function onMenuSelect(key: string) {
@@ -165,33 +247,10 @@ async function onMenuSelect(key: string) {
   store.showLoading();
   switch (key) {
     case "control":
-      if (!port.value) {
-        port.value = 27183;
-      }
-      let device = devices.value[rowIndex];
-
-      let scid = (
-        "00000000" + Math.floor(Math.random() * 100000).toString(16)
-      ).slice(-8);
-
-      let screenSize = await getScreenSize(device.id);
-
-      await pushServerFile(device.id);
-      await forwardServerPort(device.id, scid, port.value);
-      await startScrcpyServer(device.id, scid, `127.0.0.1:${port.value}`);
-
-      // add cb for metadata
-      deviceWaitForMetadataTask.push((deviceName: string) => {
-        store.controledDevice = {
-          scid,
-          deviceName,
-          device,
-          screenSize,
-        };
-        nextTick(() => {
-          store.hideLoading();
-        });
-      });
+      await deviceControl();
+      break;
+    case "screen":
+      await deviceGetScreenSize();
       break;
   }
 }
@@ -203,104 +262,138 @@ async function refreshDevices() {
   store.hideLoading();
 }
 
-const screenSizeInfo = computed(() => {
-  if (store.controledDevice) {
-    return `${store.controledDevice.screenSize[0]} x ${store.controledDevice.screenSize[1]}`;
+async function connectDevice() {
+  if (!address.value) {
+    message.error("请输入无线调试地址");
+    return;
   }
-  return "";
-});
+
+  store.showLoading();
+  message.info(await adbConnect(address.value));
+  await refreshDevices();
+}
 </script>
 
 <template>
-  <div class="device">
-    <NSpin :show="store.showLoadingRef">
-      <NH4 prefix="bar">本地端口</NH4>
-      <NInputNumber
-        v-model:value="port"
-        :show-button="false"
-        :min="16384"
-        :max="49151"
-        style="max-width: 300px"
-      />
-      <NH4 prefix="bar">受控设备</NH4>
-      <div class="controled-device-list">
-        <NEmpty
-          size="small"
-          description="No Controled Device"
-          v-if="!store.controledDevice"
+  <NScrollbar>
+    <div class="device">
+      <NSpin :show="store.showLoadingRef">
+        <NH4 prefix="bar">本地端口</NH4>
+        <NInputNumber
+          v-model:value="port"
+          :show-button="false"
+          :min="16384"
+          :max="49151"
+          placeholder="Scrcpy 本地端口"
+          style="max-width: 300px"
         />
-        <div class="controled-device" v-if="store.controledDevice">
-          <div>
-            {{ store.controledDevice.deviceName }} ({{
-              store.controledDevice.device.id
-            }})
-          </div>
-          <div class="device-op">
-            <NTooltip trigger="hover">
-              <template #trigger>
-                <NButton quaternary circle type="info">
-                  <template #icon>
-                    <NIcon><InformationCircle /></NIcon>
-                  </template>
-                </NButton>
-              </template>
-              scid: {{ store.controledDevice.scid }} <br />status:
-              {{ store.controledDevice.device.status }} <br />screen:
-              {{ screenSizeInfo }}
-            </NTooltip>
-            <NButton quaternary circle type="error" @click="shutdownSC()">
-              <template #icon>
-                <NIcon><CloseCircle /></NIcon>
-              </template>
-            </NButton>
+        <NH4 prefix="bar">无线连接</NH4>
+        <NInputGroup style="max-width: 300px">
+          <NInput
+            v-model:value="address"
+            clearable
+            placeholder="无线调试地址"
+          />
+          <NButton type="primary" @click="connectDevice">连接</NButton>
+        </NInputGroup>
+        <NH4 prefix="bar">设备尺寸</NH4>
+        <NFlex justify="left" align="center">
+          <NFormItem label="宽度">
+            <NInputNumber
+              v-model:value="store.screenSizeW"
+              placeholder="屏幕宽度"
+              :min="0"
+              :disabled="store.controledDevice !== null"
+            />
+          </NFormItem>
+          <NFormItem label="高度">
+            <NInputNumber
+              v-model:value="store.screenSizeH"
+              placeholder="屏幕高度"
+              :min="0"
+              :disabled="store.controledDevice !== null"
+            />
+          </NFormItem>
+        </NFlex>
+        <NP
+          >提示：请正确输入当前控制设备的屏幕尺寸，这是成功发送触摸事件的必要参数</NP
+        >
+        <NH4 prefix="bar">受控设备</NH4>
+        <div class="controled-device-list">
+          <NEmpty
+            size="small"
+            description="No Controled Device"
+            v-if="!store.controledDevice"
+          />
+          <div class="controled-device" v-if="store.controledDevice">
+            <div>
+              {{ store.controledDevice.deviceName }} ({{
+                store.controledDevice.device.id
+              }})
+            </div>
+            <div class="device-op">
+              <NTooltip trigger="hover">
+                <template #trigger>
+                  <NButton quaternary circle type="info">
+                    <template #icon>
+                      <NIcon><InformationCircle /></NIcon>
+                    </template>
+                  </NButton>
+                </template>
+                scid: {{ store.controledDevice.scid }} <br />status:
+                {{ store.controledDevice.device.status }}
+              </NTooltip>
+              <NButton quaternary circle type="error" @click="shutdownSC()">
+                <template #icon>
+                  <NIcon><CloseCircle /></NIcon>
+                </template>
+              </NButton>
+            </div>
           </div>
         </div>
-      </div>
-      <NFlex justify="space-between" align="center">
-        <NH4 prefix="bar">可用设备</NH4>
-        <NButton
-          tertiary
-          circle
-          type="primary"
-          @click="refreshDevices"
-          style="margin-right: 20px"
-        >
-          <template #icon>
-            <NIcon><Refresh /></NIcon>
-          </template>
-        </NButton>
-      </NFlex>
-      <NDataTable
-        max-height="120"
-        :columns="tableCols"
-        :data="availableDevice"
-        :row-props="tableRowProps"
-        :pagination="false"
-        :bordered="false"
-      />
-      <NDropdown
-        placement="bottom-start"
-        trigger="manual"
-        :x="menuX"
-        :y="menuY"
-        :options="menuOptions"
-        :show="showMenu"
-        :on-clickoutside="onMenuClickoutside"
-        @select="onMenuSelect"
-      />
-    </NSpin>
-  </div>
+        <NFlex justify="space-between" align="center">
+          <NH4 style="margin: 20px 0" prefix="bar">可用设备</NH4>
+          <NButton
+            tertiary
+            circle
+            type="primary"
+            @click="refreshDevices"
+            style="margin-right: 20px"
+          >
+            <template #icon>
+              <NIcon><Refresh /></NIcon>
+            </template>
+          </NButton>
+        </NFlex>
+        <NDataTable
+          max-height="120"
+          :columns="tableCols"
+          :data="availableDevice"
+          :row-props="tableRowProps"
+          :pagination="false"
+          :bordered="false"
+        />
+        <NDropdown
+          placement="bottom-start"
+          trigger="manual"
+          :x="menuX"
+          :y="menuY"
+          :options="menuOptions"
+          :show="showMenu"
+          :on-clickoutside="onMenuClickoutside"
+          @select="onMenuSelect"
+        />
+      </NSpin>
+    </div>
+  </NScrollbar>
 </template>
 
 <style scoped lang="scss">
 .device {
   color: var(--light-color);
   background-color: var(--bg-color);
-  padding: 0 25px;
-}
-
-.n-h4 {
-  margin-top: 20px;
+  padding: 0 20px;
+  height: 100%;
 }
 
 .controled-device-list {

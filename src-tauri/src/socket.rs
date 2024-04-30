@@ -22,7 +22,6 @@ pub async fn connect_socket(
     listen_handler: u32,
     app: Arc<tauri::AppHandle>,
 ) -> anyhow::Result<()> {
-
     let client = TcpStream::connect(address)
         .await
         .context("Socket connect failed")?;
@@ -193,8 +192,7 @@ async fn recv_front_msg(
                             .await
                         }
                     }
-                }
-                else{
+                } else {
                     eprintln!("fc-command非法");
                     eprintln!("{:?}", payload);
                 }

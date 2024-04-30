@@ -77,12 +77,13 @@ pub async fn handle_sm_cmd(
             let h = payload["screen"]["h"].as_u64().unwrap() as u16;
             let x = payload["pos"]["x"].as_i64().unwrap() as i32;
             let y = payload["pos"]["y"].as_i64().unwrap() as i32;
+            let time = payload["time"].as_u64().unwrap();
             match payload["action"].as_u64().unwrap() {
                 // default
                 0 => {
                     // down
                     touch(ctrl_msg_type, pointer_id, x, y, w, h, 0, writer).await;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(time)).await;
                     // up
                     touch(ctrl_msg_type, pointer_id, x, y, w, h, 1, writer).await;
                 }

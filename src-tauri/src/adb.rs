@@ -59,30 +59,25 @@ impl Device {
             .context("Failed to execute 'adb shell'")?)
     }
 
-    pub fn cmd_screen_size(res_dir: &PathBuf, id: &str) -> Result<(u16, u16)> {
+    /// execute "adb shell wm size" to get screen size
+    pub fn cmd_screen_size(res_dir: &PathBuf, id: &str) -> Result<(u32, u32)> {
         let mut adb_command = Adb::cmd_base(res_dir);
         let output = adb_command
             .args(&["-s", id, "shell", "wm", "size"])
             .output()
             .context("Failed to execute 'adb shell wm size'")?;
-        let lines = output.stdout.lines();
-        let mut size = (0, 0);
-        for line in lines {
-            if let std::result::Result::Ok(s) = line {
-                println!("{}", s);
-                if s.starts_with("Physical size:") {
-                    let mut iter = s.split_whitespace();
-                    iter.next();
-                    iter.next();
-                    let mut size_str = iter.next().unwrap().split('x');
-                    let width = size_str.next().unwrap().parse::<u16>().unwrap();
-                    let height = size_str.next().unwrap().parse::<u16>().unwrap();
-                    size = (width, height);
-                    break;
+
+        for line in output.stdout.lines() {
+            if let std::result::Result::Ok(line) = line {
+                if line.starts_with("Physical size: ") {
+                    let size_str = line.trim_start_matches("Physical size: ").split('x');
+                    let width = size_str.clone().next().unwrap().parse::<u32>().unwrap();
+                    let height = size_str.clone().last().unwrap().parse::<u32>().unwrap();
+                    return Ok((width, height));
                 }
             }
         }
-        Ok(size)
+        Err(anyhow::anyhow!("Failed to get screen size"))
     }
 }
 
@@ -92,12 +87,14 @@ pub struct Adb;
 /// But some output of command won't be output, like adb service startup information.
 impl Adb {
     fn cmd_base(res_dir: &PathBuf) -> Command {
-        #[cfg(target_os = "windows")]{
+        #[cfg(target_os = "windows")]
+        {
             let mut cmd = Command::new(ResHelper::get_file_path(res_dir, ResourceName::Adb));
             cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
             cmd
         }
-        #[cfg(not(target_os = "windows"))]{
+        #[cfg(not(target_os = "windows"))]
+        {
             Command::new(ResHelper::get_file_path(res_dir, ResourceName::Adb))
         }
     }
@@ -169,4 +166,22 @@ impl Adb {
             .context("Failed to execute 'adb start-server'")?;
         Ok(())
     }
+
+    pub fn cmd_connect(res_dir: &PathBuf, address: &str) -> Result<String> {
+        let mut adb_command = Adb::cmd_base(res_dir);
+        let output = adb_command
+            .args(&["connect", address])
+            .output()
+            .context(format!("Failed to execute 'adb connect {}'", address))?;
+
+        let res = String::from_utf8(output.stdout)?;
+        Ok(res)
+    }
+}
+
+#[test]
+fn t() {
+    let res_dir = PathBuf::from("/Users/akichase/Projects/github/scrcpy-mask/src-tauri/resource/");
+    let res = Adb::cmd_connect(&res_dir, "127.0.0.1:1234").unwrap();
+    println!("{}", res)
 }

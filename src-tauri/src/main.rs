@@ -4,10 +4,10 @@
 use scrcpy_mask::{
     adb::{Adb, Device},
     client::ScrcpyClient,
-    resource::ResHelper,
+    resource::{ResHelper, ResourceName},
     socket::connect_socket,
 };
-use std::sync::Arc;
+use std::{fs::read_to_string, sync::Arc};
 use tauri::Manager;
 
 #[tauri::command]
@@ -16,16 +16,6 @@ fn adb_devices(app: tauri::AppHandle) -> Result<Vec<Device>, String> {
     let dir = app.path().resource_dir().unwrap().join("resource");
     match Adb::cmd_devices(&dir) {
         Ok(devices) => Ok(devices),
-        Err(e) => Err(e.to_string()),
-    }
-}
-
-#[tauri::command]
-/// get screen size of the device
-fn get_screen_size(id: String, app: tauri::AppHandle) -> Result<(u16, u16), String> {
-    let dir = app.path().resource_dir().unwrap().join("resource");
-    match ScrcpyClient::get_screen_size(&dir, &id) {
-        Ok(size) => Ok(size),
         Err(e) => Err(e.to_string()),
     }
 }
@@ -118,10 +108,99 @@ fn start_scrcpy_server(
     Ok(())
 }
 
+#[tauri::command]
+/// get device screen size
+fn get_device_screen_size(id: String, app: tauri::AppHandle) -> Result<(u32, u32), String> {
+    let dir = app.path().resource_dir().unwrap().join("resource");
+    match ScrcpyClient::get_device_screen_size(&dir, &id) {
+        Ok(size) => Ok(size),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+/// connect to wireless device
+fn adb_connect(address: String, app: tauri::AppHandle) -> Result<String, String> {
+    let dir = app.path().resource_dir().unwrap().join("resource");
+    match Adb::cmd_connect(&dir, &address) {
+        Ok(res) => Ok(res),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+/// load default key mapping config file
+fn load_default_keyconfig(app: tauri::AppHandle) -> Result<String, String> {
+    let dir = app.path().resource_dir().unwrap().join("resource");
+    let file = ResHelper::get_file_path(&dir, ResourceName::DefaultKeyConfig);
+    match read_to_string(file) {
+        Ok(content) => Ok(content),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
+            let stores = app
+                .app_handle()
+                .state::<tauri_plugin_store::StoreCollection<tauri::Wry>>();
+            let path = std::path::PathBuf::from("store.bin");
+            tauri_plugin_store::with_store(app.app_handle().clone(), stores, path, |store| {
+                // restore window position and size
+                match store.get("maskArea") {
+                    Some(value) => {
+                        let pos_x = value["posX"].as_i64().unwrap_or(100);
+                        let pos_y = value["posY"].as_i64().unwrap_or(100);
+                        let size_w = value["sizeW"].as_i64().unwrap_or(800);
+                        let size_h = value["sizeH"].as_i64().unwrap_or(600);
+                        let main_window: tauri::WebviewWindow =
+                            app.get_webview_window("main").unwrap();
+                        main_window.set_zoom(1.).unwrap();
+                        main_window
+                            .set_position(tauri::Position::Logical(tauri::LogicalPosition {
+                                x: (pos_x - 70) as f64,
+                                y: (pos_y - 30) as f64,
+                            }))
+                            .unwrap();
+                        main_window
+                            .set_size(tauri::Size::Logical(tauri::LogicalSize {
+                                width: (size_w + 70) as f64,
+                                height: (size_h + 30) as f64,
+                            }))
+                            .unwrap();
+                    }
+                    None => {
+                        let main_window: tauri::WebviewWindow =
+                            app.get_webview_window("main").unwrap();
+                        main_window
+                            .set_size(tauri::Size::Logical(tauri::LogicalSize {
+                                width: (800 + 70) as f64,
+                                height: (600 + 30) as f64,
+                            }))
+                            .unwrap();
+                        store
+                            .insert(
+                                "maskArea".to_string(),
+                                serde_json::json!({
+                                    "posX": 0,
+                                    "posY": 0,
+                                    "sizeW": 800,
+                                    "sizeH": 600
+                                }),
+                            )
+                            .unwrap();
+                    }
+                }
+
+                Ok(())
+            })
+            .unwrap();
+
             // check resource files
             ResHelper::res_init(
                 &app.path()
@@ -130,50 +209,16 @@ async fn main() {
                     .join("resource"),
             )
             .unwrap();
-
-            let main_window = app.get_webview_window("main").unwrap();
-
-            #[cfg(windows)]
-            {
-                let scale_factor = main_window.scale_factor().unwrap();
-                main_window
-                    .set_size(tauri::Size::Physical(tauri::PhysicalSize {
-                        width: 1350,
-                        height: 750,
-                    }))
-                    .unwrap();
-
-                main_window
-                    .with_webview(move |webview| {
-                        unsafe {
-                            // see https://docs.rs/webview2-com/0.19.1/webview2_com/Microsoft/Web/WebView2/Win32/struct.ICoreWebView2Controller.html
-                            webview
-                                .controller()
-                                .SetZoomFactor(1.0 / scale_factor)
-                                .unwrap();
-                        }
-                    })
-                    .unwrap();
-            }
-            #[cfg(target_os = "macos")]
-            {
-                main_window
-                    .set_size(tauri::Size::Logical(tauri::LogicalSize {
-                        width: 1350.,
-                        height: 750.,
-                    }))
-                    .unwrap();
-            }
-
             Ok(())
         })
-        .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             adb_devices,
-            get_screen_size,
             forward_server_port,
             push_server_file,
-            start_scrcpy_server
+            start_scrcpy_server,
+            get_device_screen_size,
+            adb_connect,
+            load_default_keyconfig
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

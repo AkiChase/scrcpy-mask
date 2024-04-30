@@ -40,8 +40,8 @@ impl ScrcpyClient {
         Adb::cmd_forward_remove(res_dir)
     }
 
-    /// get the screen size of the device
-    pub fn get_screen_size(res_dir: &PathBuf, id: &str) -> Result<(u16, u16)> {
+    // get the screen size of the device
+    pub fn get_device_screen_size(res_dir: &PathBuf, id: &str) -> Result<(u32, u32)> {
         Device::cmd_screen_size(res_dir, id)
     }
 

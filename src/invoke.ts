@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from "@tauri-apps/api/core";
 
 interface Device {
   id: string;
@@ -7,10 +7,6 @@ interface Device {
 
 export async function adbDevices(): Promise<Device[]> {
   return await invoke("adb_devices");
-}
-
-export async function getScreenSize(id: string): Promise<[number, number]> {
-  return await invoke("get_screen_size", { id });
 }
 
 export async function forwardServerPort(
@@ -31,6 +27,20 @@ export async function startScrcpyServer(
   address: string
 ): Promise<void> {
   return await invoke("start_scrcpy_server", { id, scid, address });
+}
+
+export async function getDeviceScreenSize(
+  id: string
+): Promise<[number, number]> {
+  return await invoke("get_device_screen_size", { id });
+}
+
+export async function adbConnect(address: string): Promise<string> {
+  return await invoke("adb_connect", { address });
+}
+
+export async function loadDefaultKeyconfig(): Promise<string> {
+  return await invoke("load_default_keyconfig");
 }
 
 export type { Device };
