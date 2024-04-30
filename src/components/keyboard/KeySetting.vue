@@ -421,7 +421,7 @@ function resetKeyMappingConfig() {
     <NP style="margin-top: 40px">提示：右键空白区域可添加按键</NP>
   </div>
   <NModal v-model:show="showImportModal">
-    <NCard style="width: 40%; height: 50%" title="导入按键方案">
+    <NCard style="width: 40%; height: 50%">
       <NFlex vertical style="height: 100%">
         <NInput
           type="textarea"

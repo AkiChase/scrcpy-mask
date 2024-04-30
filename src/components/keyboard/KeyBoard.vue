@@ -18,8 +18,6 @@ import { DropdownOption, NDropdown, useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 import { useKeyboardStore } from "../../store/keyboard";
 
-// TODO 缺少pointer_id的编辑，注意所有按键包括技能取消都有这个内容
-// TODO 设置界面添加本地数据编辑器（类似utools）
 // TODO 添加开发者工具打开按钮
 // TODO 添加息屏按键
 // TODO 添加无线调试（rust加一条指令connet即可）
