@@ -54,16 +54,16 @@ function dragHandler(downEvent: MouseEvent) {
     const keyboardElement = document.getElementById(
       "keyboardElement"
     ) as HTMLElement;
-    const maxX = keyboardElement.clientWidth - 40;
-    const maxY = keyboardElement.clientHeight - 40;
+    const maxX = keyboardElement.clientWidth - offset.value;
+    const maxY = keyboardElement.clientHeight - offset.value;
 
     const x = downEvent.clientX;
     const y = downEvent.clientY;
     const moveHandler = (moveEvent: MouseEvent) => {
       let newX = oldX + moveEvent.clientX - x;
       let newY = oldY + moveEvent.clientY - y;
-      newX = Math.max(0, Math.min(newX, maxX));
-      newY = Math.max(0, Math.min(newY, maxY));
+      newX = Math.max(offset.value, Math.min(newX, maxX));
+      newY = Math.max(offset.value, Math.min(newY, maxY));
       keyMapping.value.posX = newX;
       keyMapping.value.posY = newY;
     };
@@ -228,6 +228,7 @@ function showSetting() {
 .key-steering-wheel {
   position: absolute;
   border-radius: 50%;
+  box-sizing: border-box;
   border: 2px solid var(--blue-color);
   display: flex;
   justify-content: center;
