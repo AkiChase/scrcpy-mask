@@ -83,7 +83,7 @@ function showSetting() {
     "keyboardElement"
   ) as HTMLElement;
   const maxWidth = keyboardElement.clientWidth - 150;
-  const maxHeight = keyboardElement.clientHeight - 220;
+  const maxHeight = keyboardElement.clientHeight - 300;
 
   settingPosX.value = Math.min(
     keyMapping.value.posX + offset.value + 10,
@@ -195,6 +195,14 @@ function showSetting() {
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
+    <NFormItem label="触点ID">
+      <NInputNumber
+        v-model:value="keyMapping.pointerId"
+        :min="0"
+        placeholder="请输入触点ID"
+        @update:value="keyboardStore.edited = true"
+      />
+    </NFormItem>
     <NFormItem label="备注">
       <NInput
         v-model:value="keyMapping.note"
@@ -213,7 +221,7 @@ function showSetting() {
   padding: 10px 20px;
   box-sizing: border-box;
   width: 150px;
-  height: 220px;
+  height: 300px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);
