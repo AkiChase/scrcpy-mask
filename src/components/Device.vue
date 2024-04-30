@@ -269,9 +269,8 @@ async function connectDevice() {
   }
 
   store.showLoading();
-  const msg = await adbConnect(address.value);
-  store.hideLoading();
-  message.info(msg);
+  message.info(await adbConnect(address.value));
+  await refreshDevices();
 }
 </script>
 
