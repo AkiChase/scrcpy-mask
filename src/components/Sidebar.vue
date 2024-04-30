@@ -9,21 +9,29 @@ import {
   VolumeLowOutline,
   StopOutline,
   ListOutline,
+  BulbOutline,
+  Bulb,
 } from "@vicons/ionicons5";
 import { Keyboard24Regular } from "@vicons/fluent";
 import { NIcon, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
-import { sendInjectKeycode } from "../frontcommand/controlMsg";
+import {
+  sendInjectKeycode,
+  sendSetScreenPowerMode,
+} from "../frontcommand/controlMsg";
 import {
   AndroidKeyEventAction,
   AndroidKeycode,
   AndroidMetastate,
 } from "../frontcommand/android";
+import { ref } from "vue";
 
 const router = useRouter();
 const route = useRoute();
 const store = useGlobalStore();
 const message = useMessage();
+
+const nextScreenPowerMode = ref(0);
 
 function nav(name: string) {
   router.replace({ name });
@@ -88,6 +96,17 @@ async function sendKeyCodeToDevice(code: AndroidKeycode) {
     </div>
 
     <div class="nav">
+      <div
+        @click="
+          sendSetScreenPowerMode({ mode: nextScreenPowerMode });
+          nextScreenPowerMode = nextScreenPowerMode ? 0 : 2;
+        "
+      >
+        <NIcon>
+          <Bulb v-if="nextScreenPowerMode" />
+          <BulbOutline v-else />
+        </NIcon>
+      </div>
       <div @click="sendKeyCodeToDevice(AndroidKeycode.AKEYCODE_VOLUME_UP)">
         <NIcon>
           <VolumeHighOutline />

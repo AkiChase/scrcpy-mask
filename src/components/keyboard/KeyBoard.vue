@@ -18,8 +18,6 @@ import { DropdownOption, NDropdown, useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 import { useKeyboardStore } from "../../store/keyboard";
 
-// TODO 添加开发者工具打开按钮
-// TODO 添加息屏按键
 // TODO 添加无线调试（rust加一条指令connet即可）
 
 const store = useGlobalStore();
