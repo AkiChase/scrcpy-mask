@@ -20,10 +20,6 @@ import { loadDefaultKeyconfig } from "../../invoke";
 import { KeyMappingConfig } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 
-const emit = defineEmits<{
-  resetEditKeyMappingList: [];
-}>();
-
 const store = useGlobalStore();
 const keyboardStore = useKeyboardStore();
 const localStore = new Store("store.bin");
@@ -74,7 +70,7 @@ onMounted(async () => {
 
 onActivated(() => {
   // reset editKeyMappingList as the same as keyMappingList
-  store.resetEditKeyMappingList();
+  resetKeyMappingConfig();
   // check config relative size
   checkConfigSize();
 });
@@ -124,6 +120,8 @@ function dragHandler(downEvent: MouseEvent) {
       localStore.set("keySettingPos", keySettingPos.value);
     } else {
       // click up
+      keyboardStore.activeButtonIndex = -1;
+      keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
       keyboardStore.showSettingFlag = !keyboardStore.showSettingFlag;
     }
   };
@@ -167,6 +165,11 @@ async function importDefaultKeyMappingConfig() {
 }
 
 function createKeyMappingConfig() {
+  if (keyboardStore.edited) {
+    message.error("请先保存或还原当前方案");
+    return;
+  }
+
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
@@ -185,6 +188,11 @@ function createKeyMappingConfig() {
 }
 
 function copyCurKeyMappingConfig() {
+  if (keyboardStore.edited) {
+    message.error("请先保存或还原当前方案");
+    return;
+  }
+
   const curConfig = store.keyMappingConfigList[store.curKeyMappingIndex];
   const newConfig: KeyMappingConfig = {
     title: curConfig.title + "-副本",
@@ -192,6 +200,8 @@ function copyCurKeyMappingConfig() {
     list: curConfig.list,
   };
   store.keyMappingConfigList.push(newConfig);
+  keyboardStore.activeButtonIndex = -1;
+  keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
   store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
   message.success("方案已复制为：" + curConfig.title + "-副本");
@@ -204,6 +214,11 @@ function delCurKeyMappingConfig() {
   }
   const title = store.keyMappingConfigList[store.curKeyMappingIndex].title;
   store.keyMappingConfigList.splice(store.curKeyMappingIndex, 1);
+
+  // reset active and edit status
+  keyboardStore.activeButtonIndex = -1;
+  keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
+  keyboardStore.edited = false;
   store.setKeyMappingIndex(
     store.curKeyMappingIndex > 0 ? store.curKeyMappingIndex - 1 : 0
   );
@@ -263,6 +278,11 @@ function checkConfigSize() {
 }
 
 function migrateKeyMappingConfig() {
+  if (keyboardStore.edited) {
+    message.error("请先保存或还原当前按键方案");
+    return;
+  }
+
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
@@ -294,11 +314,31 @@ function migrateKeyMappingConfig() {
       0,
       newConfig
     );
-    store.setKeyMappingIndex(store.curKeyMappingIndex + 1);
     message.success("已迁移到新方案：" + newConfig.title);
+    keyboardStore.activeButtonIndex = -1;
+    keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
+    store.setKeyMappingIndex(store.curKeyMappingIndex + 1);
   } else {
     message.info("当前方案符合蒙版尺寸，无需迁移");
   }
+}
+
+function selectKeyMappingConfig(index: number) {
+  if (keyboardStore.edited) {
+    message.error("请先保存或还原当前按键方案");
+    return;
+  }
+
+  keyboardStore.activeButtonIndex = -1;
+  keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
+  store.setKeyMappingIndex(index);
+}
+
+function resetKeyMappingConfig() {
+  keyboardStore.activeButtonIndex = -1;
+  keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
+  store.resetEditKeyMappingList();
+  keyboardStore.edited = false;
 }
 </script>
 
@@ -320,7 +360,14 @@ function migrateKeyMappingConfig() {
       <NIcon><Settings /></NIcon>
     </template>
   </NButton>
-  <div class="key-setting" v-show="keyboardStore.showSettingFlag">
+  <div
+    class="key-setting"
+    v-show="keyboardStore.showSettingFlag"
+    @mousedown="
+      keyboardStore.activeButtonIndex = -1;
+      keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
+    "
+  >
     <NButton
       text
       class="key-setting-close"
@@ -331,16 +378,14 @@ function migrateKeyMappingConfig() {
     <NH4 prefix="bar">按键方案</NH4>
     <NSelect
       :value="store.curKeyMappingIndex"
-      @update:value="(value: number)=>store.setKeyMappingIndex(value)"
+      @update:value="selectKeyMappingConfig"
       :options="keyMappingNameOptions"
     />
     <NP> Relative Size:{{ curRelativeSize.w }}x{{ curRelativeSize.h }} </NP>
     <NFlex style="margin-top: 20px">
       <template v-if="keyboardStore.edited">
         <NButton type="success" @click="saveKeyMappingConfig">保存方案</NButton>
-        <NButton type="error" @click="emit('resetEditKeyMappingList')"
-          >还原方案</NButton
-        >
+        <NButton type="error" @click="resetKeyMappingConfig">还原方案</NButton>
       </template>
       <NButton @click="createKeyMappingConfig">新建方案</NButton>
       <NButton @click="copyCurKeyMappingConfig">复制方案</NButton>

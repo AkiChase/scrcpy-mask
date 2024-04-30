@@ -12,9 +12,6 @@ import { onBeforeRouteLeave } from "vue-router";
 import KeyObservation from "./KeyObservation.vue";
 import { useKeyboardStore } from "../../store/keyboard";
 
-// TODO 打开设置时要关闭active，建议将各种数据打包到一个对象中共享，省的麻烦
-// TODO 切换按键方案时提示未保存，然后修改edit
-// TODO 方向轮盘具体按键还没激活时也会触发按键检查
 // TODO 右键空白区域添加按键
 // TODO 设置界面添加本地数据编辑器（类似utools）
 // TODO 添加开发者工具打开按钮
@@ -50,12 +47,24 @@ function isKeyUnique(curKey: string): boolean {
 }
 
 function setCurButtonKey(curKey: string) {
+  if (
+    keyboardStore.activeButtonIndex === -1 ||
+    keyboardStore.activeButtonIndex >= store.editKeyMappingList.length
+  )
+    return;
+
+  const keyMapping = store.editKeyMappingList[keyboardStore.activeButtonIndex];
+  if (
+    keyMapping.type === "SteeringWheel" &&
+    keyboardStore.activeSteeringWheelButtonKeyIndex === -1
+  )
+    return;
+
   if (!isKeyUnique(curKey)) {
     message.error("按键重复：" + curKey);
     return;
   }
 
-  const keyMapping = store.editKeyMappingList[keyboardStore.activeButtonIndex];
   if (keyMapping.type === "SteeringWheel") {
     const keyObject = keyMapping.key as {
       left: string;
@@ -100,65 +109,39 @@ function handleClick(event: MouseEvent) {
     // right click
     if (event.target === document.getElementById("keyboardElement")) {
       // add button
-      if (keyboardStore.showSettingFlag) keyboardStore.showSettingFlag = false;
+      keyboardStore.showSettingFlag = false;
       keyboardStore.activeButtonIndex = -1;
       keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
 
       console.log("弹出新增");
-    } else if (
-      // modify key
-      keyboardStore.activeButtonIndex !== -1 &&
-      keyboardStore.activeButtonIndex < store.editKeyMappingList.length &&
-      !keyboardStore.showButtonSettingFlag
-    ) {
-      const curKey = `M${event.button}`;
-      setCurButtonKey(curKey);
+    } else {
+      setCurButtonKey(`M${event.button}`);
     }
   } else {
     // other click
     event.preventDefault();
-    if (
-      keyboardStore.activeButtonIndex !== -1 &&
-      keyboardStore.activeButtonIndex < store.editKeyMappingList.length &&
-      !keyboardStore.showButtonSettingFlag
-    ) {
-      const curKey = `M${event.button}`;
-      setCurButtonKey(curKey);
-    }
+    setCurButtonKey(`M${event.button}`);
   }
 }
 
 function handleKeyUp(event: KeyboardEvent) {
-  if (
-    keyboardStore.activeButtonIndex !== -1 &&
-    keyboardStore.activeButtonIndex < store.editKeyMappingList.length &&
-    !keyboardStore.showButtonSettingFlag
-  ) {
-    const curKey = event.code;
-    setCurButtonKey(curKey);
-  }
+  setCurButtonKey(event.code);
 }
 
 function handleMouseWheel(event: WheelEvent) {
-  if (
-    keyboardStore.activeButtonIndex !== -1 &&
-    keyboardStore.activeButtonIndex < store.editKeyMappingList.length &&
-    !keyboardStore.showButtonSettingFlag
-  ) {
-    if (event.deltaY > 0) {
-      // WheelDown
-      setCurButtonKey("WheelDown");
-    } else if (event.deltaY < 0) {
-      // WheelUp
-      setCurButtonKey("WheelUp");
-    }
+  if (event.deltaY > 0) {
+    // WheelDown
+    setCurButtonKey("WheelDown");
+  } else if (event.deltaY < 0) {
+    // WheelUp
+    setCurButtonKey("WheelUp");
   }
 }
 
-function resetEditKeyMappingList() {
-  keyboardStore.showSettingFlag = false;
+function resetKeyMappingConfig() {
   keyboardStore.activeButtonIndex = -1;
   keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
+  keyboardStore.showSettingFlag = false;
   store.resetEditKeyMappingList();
   keyboardStore.edited = false;
 }
@@ -185,7 +168,7 @@ onBeforeRouteLeave(() => {
         }
       },
       onNegativeClick: () => {
-        resetEditKeyMappingList();
+        resetKeyMappingConfig();
       },
     });
   }
@@ -200,7 +183,7 @@ onBeforeRouteLeave(() => {
     @mousedown="handleClick"
     @contextmenu.prevent
   >
-    <KeySetting @reset-edit-key-mapping-list="resetEditKeyMappingList" />
+    <KeySetting />
     <KeyInfo />
     <template v-for="(_, index) in store.editKeyMappingList">
       <KeySteeringWheel
