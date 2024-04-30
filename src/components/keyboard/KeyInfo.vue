@@ -2,8 +2,9 @@
 import { NIcon } from "naive-ui";
 import { CloseCircle } from "@vicons/ionicons5";
 import { Ref, ref, watch } from "vue";
+import { useKeyboardStore } from "../../store/keyboard";
 
-const showKeyInfoFlag = defineModel("showKeyInfoFlag", { required: true });
+const keyboardStore = useKeyboardStore();
 
 const mouseX = ref(0);
 const mouseY = ref(0);
@@ -41,21 +42,24 @@ function mousedownHandler(event: MouseEvent) {
   } else keyboardCodeList.value.push(key);
 }
 
-watch(showKeyInfoFlag, (value) => {
-  const keyboardElement = document.getElementById(
-    "keyboardElement"
-  ) as HTMLElement;
-  if (value) {
-    keyboardElement.addEventListener("mousemove", mousemoveHandler);
-    keyboardElement.addEventListener("mousedown", mousedownHandler);
-    document.addEventListener("keyup", keyupHandler);
-  } else {
-    keyboardElement.removeEventListener("mousemove", mousemoveHandler);
-    keyboardElement.removeEventListener("mousedown", mousedownHandler);
-    document.removeEventListener("keyup", keyupHandler);
-    keyboardCodeList.value.splice(0, keyboardCodeList.value.length);
+watch(
+  () => keyboardStore.showKeyInfoFlag,
+  (value) => {
+    const keyboardElement = document.getElementById(
+      "keyboardElement"
+    ) as HTMLElement;
+    if (value) {
+      keyboardElement.addEventListener("mousemove", mousemoveHandler);
+      keyboardElement.addEventListener("mousedown", mousedownHandler);
+      document.addEventListener("keyup", keyupHandler);
+    } else {
+      keyboardElement.removeEventListener("mousemove", mousemoveHandler);
+      keyboardElement.removeEventListener("mousedown", mousedownHandler);
+      document.removeEventListener("keyup", keyupHandler);
+      keyboardCodeList.value.splice(0, keyboardCodeList.value.length);
+    }
   }
-});
+);
 
 let lastPosX = 0;
 let lastPosY = 0;
@@ -103,10 +107,13 @@ function dragHandler(downEvent: MouseEvent) {
 </script>
 
 <template>
-  <div v-show="showKeyInfoFlag" class="key-info" @contextmenu.prevent>
+  <div v-show="keyboardStore.showKeyInfoFlag" class="key-info" @contextmenu.prevent>
     <div class="key-info-header" @mousedown="dragHandler">
       Key Info
-      <div class="key-info-close" @click="showKeyInfoFlag = false">
+      <div
+        class="key-info-close"
+        @click="keyboardStore.showKeyInfoFlag = false"
+      >
         <NIcon><CloseCircle></CloseCircle></NIcon>
       </div>
     </div>

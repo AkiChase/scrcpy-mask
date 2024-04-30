@@ -10,7 +10,7 @@ import { Store } from "@tauri-apps/plugin-store";
 
 const localStore = new Store("store.bin");
 
-export const useGlobalStore = defineStore("counter", () => {
+export const useGlobalStore = defineStore("global", () => {
   const showLoadingRef = ref(false);
   function showLoading() {
     showLoadingRef.value = true;

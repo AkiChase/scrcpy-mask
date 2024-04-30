@@ -4,29 +4,20 @@ import { useGlobalStore } from "../../store/global";
 import { KeySteeringWheel } from "../../keyMappingConfig";
 import { NButton, NFormItem, NH4, NIcon, NInput, NInputNumber } from "naive-ui";
 import { CloseCircle, Move, Settings } from "@vicons/ionicons5";
-
-const emit = defineEmits<{
-  edit: [];
-}>();
+import { useKeyboardStore } from "../../store/keyboard";
 
 const props = defineProps<{
   index: number;
 }>();
 
-const activeSteeringWheelButtonKeyIndex = defineModel(
-  "activeSteeringWheelButtonKeyIndex",
-  { required: true }
-);
-
-const activeIndex = defineModel("activeIndex", { required: true });
-const showButtonSettingFlag = defineModel("showButtonSettingFlag", {
-  required: true,
-});
+const keyboardStore = useKeyboardStore();
 
 const store = useGlobalStore();
 const elementRef = ref<HTMLElement | null>(null);
 
-const isActive = computed(() => props.index === activeIndex.value);
+const isActive = computed(
+  () => props.index === keyboardStore.activeButtonIndex
+);
 const keyMapping = computed(
   () => store.editKeyMappingList[props.index] as KeySteeringWheel
 );
@@ -45,8 +36,8 @@ const offset = computed(() => {
 });
 
 function dragHandler(downEvent: MouseEvent) {
-  activeIndex.value = props.index;
-  showButtonSettingFlag.value = false;
+  keyboardStore.activeButtonIndex = props.index;
+  keyboardStore.showButtonSettingFlag = false;
   const oldX = keyMapping.value.posX;
   const oldY = keyMapping.value.posY;
   const element = elementRef.value;
@@ -72,7 +63,7 @@ function dragHandler(downEvent: MouseEvent) {
       window.removeEventListener("mousemove", moveHandler);
       window.removeEventListener("mouseup", upHandler);
       if (oldX !== keyMapping.value.posX || oldY !== keyMapping.value.posY) {
-        emit("edit");
+        keyboardStore.edited = true;
       }
     };
     window.addEventListener("mouseup", upHandler);
@@ -80,8 +71,8 @@ function dragHandler(downEvent: MouseEvent) {
 }
 
 function delCurKeyMapping() {
-  emit("edit");
-  activeIndex.value = -1;
+  keyboardStore.edited = true;
+  keyboardStore.activeButtonIndex = -1;
   store.editKeyMappingList.splice(props.index, 1);
 }
 
@@ -99,7 +90,7 @@ function showSetting() {
     maxWidth
   );
   settingPosY.value = Math.min(keyMapping.value.posY - offset.value, maxHeight);
-  showButtonSettingFlag.value = true;
+  keyboardStore.showButtonSettingFlag = true;
 }
 </script>
 
@@ -118,17 +109,19 @@ function showSetting() {
   >
     <i />
     <span
-      @mousedown="activeSteeringWheelButtonKeyIndex = 0"
+      @mousedown="keyboardStore.activeSteeringWheelButtonKeyIndex = 0"
       :class="{
-        'active-wheel': isActive && activeSteeringWheelButtonKeyIndex == 0,
+        'active-wheel':
+          isActive && keyboardStore.activeSteeringWheelButtonKeyIndex == 0,
       }"
       >{{ keyMapping.key.up }}</span
     >
     <i />
     <span
-      @mousedown="activeSteeringWheelButtonKeyIndex = 2"
+      @mousedown="keyboardStore.activeSteeringWheelButtonKeyIndex = 2"
       :class="{
-        'active-wheel': isActive && activeSteeringWheelButtonKeyIndex == 2,
+        'active-wheel':
+          isActive && keyboardStore.activeSteeringWheelButtonKeyIndex == 2,
       }"
       >{{ keyMapping.key.left }}</span
     >
@@ -136,17 +129,19 @@ function showSetting() {
       <Move />
     </NIcon>
     <span
-      @mousedown="activeSteeringWheelButtonKeyIndex = 3"
+      @mousedown="keyboardStore.activeSteeringWheelButtonKeyIndex = 3"
       :class="{
-        'active-wheel': isActive && activeSteeringWheelButtonKeyIndex == 3,
+        'active-wheel':
+          isActive && keyboardStore.activeSteeringWheelButtonKeyIndex == 3,
       }"
       >{{ keyMapping.key.right }}</span
     >
     <i />
     <span
-      @mousedown="activeSteeringWheelButtonKeyIndex = 1"
+      @mousedown="keyboardStore.activeSteeringWheelButtonKeyIndex = 1"
       :class="{
-        'active-wheel': isActive && activeSteeringWheelButtonKeyIndex == 1,
+        'active-wheel':
+          isActive && keyboardStore.activeSteeringWheelButtonKeyIndex == 1,
       }"
       >{{ keyMapping.key.down }}</span
     >
@@ -186,7 +181,7 @@ function showSetting() {
   </div>
   <div
     class="key-setting"
-    v-if="isActive && showButtonSettingFlag"
+    v-if="isActive && keyboardStore.showButtonSettingFlag"
     :style="{
       left: `${settingPosX}px`,
       top: `${settingPosY}px`,
@@ -197,14 +192,14 @@ function showSetting() {
       <NInputNumber
         v-model:value="keyMapping.offset"
         :min="1"
-        @update:value="emit('edit')"
+        @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
     <NFormItem label="备注">
       <NInput
         v-model:value="keyMapping.note"
         placeholder="请输入备注"
-        @update:value="emit('edit')"
+        @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
   </div>

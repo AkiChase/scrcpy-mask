@@ -4,31 +4,27 @@ import { useGlobalStore } from "../../store/global";
 import { NIcon, NButton, NFormItem, NInput, NH4, NInputNumber } from "naive-ui";
 import { Eye, CloseCircle, Settings } from "@vicons/ionicons5";
 import { KeyObservation } from "../../keyMappingConfig";
-
-const emit = defineEmits<{
-  edit: [];
-}>();
+import { useKeyboardStore } from "../../store/keyboard";
 
 const props = defineProps<{
   index: number;
 }>();
 
-const activeIndex = defineModel("activeIndex", { required: true });
-const showButtonSettingFlag = defineModel("showButtonSettingFlag", {
-  required: true,
-});
+const keyboardStore = useKeyboardStore();
 
 const store = useGlobalStore();
 const elementRef = ref<HTMLElement | null>(null);
 
-const isActive = computed(() => props.index === activeIndex.value);
+const isActive = computed(
+  () => props.index === keyboardStore.activeButtonIndex
+);
 const keyMapping = computed(
   () => store.editKeyMappingList[props.index] as KeyObservation
 );
 
 function dragHandler(downEvent: MouseEvent) {
-  activeIndex.value = props.index;
-  showButtonSettingFlag.value = false;
+  keyboardStore.activeButtonIndex = props.index;
+  keyboardStore.showButtonSettingFlag = false;
   const oldX = keyMapping.value.posX;
   const oldY = keyMapping.value.posY;
   const element = elementRef.value;
@@ -54,7 +50,7 @@ function dragHandler(downEvent: MouseEvent) {
       window.removeEventListener("mousemove", moveHandler);
       window.removeEventListener("mouseup", upHandler);
       if (oldX !== keyMapping.value.posX || oldY !== keyMapping.value.posY) {
-        emit("edit");
+        keyboardStore.edited = true;
       }
     };
     window.addEventListener("mouseup", upHandler);
@@ -62,8 +58,8 @@ function dragHandler(downEvent: MouseEvent) {
 }
 
 function delCurKeyMapping() {
-  emit("edit");
-  activeIndex.value = -1;
+  keyboardStore.edited = true;
+  keyboardStore.activeButtonIndex = -1;
   store.editKeyMappingList.splice(props.index, 1);
 }
 
@@ -78,7 +74,7 @@ function showSetting() {
 
   settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
   settingPosY.value = Math.min(keyMapping.value.posY - 30, maxHeight);
-  showButtonSettingFlag.value = true;
+  keyboardStore.showButtonSettingFlag = true;
 }
 </script>
 
@@ -122,7 +118,7 @@ function showSetting() {
   </div>
   <div
     class="key-setting"
-    v-if="isActive && showButtonSettingFlag"
+    v-if="isActive && keyboardStore.showButtonSettingFlag"
     :style="{
       left: `${settingPosX}px`,
       top: `${settingPosY}px`,
@@ -134,14 +130,14 @@ function showSetting() {
         v-model:value="keyMapping.scale"
         placeholder="请输入灵敏度"
         :step="0.1"
-        @update:value="emit('edit')"
+        @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
     <NFormItem label="备注">
       <NInput
         v-model:value="keyMapping.note"
         placeholder="请输入备注"
-        @update:value="emit('edit')"
+        @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
   </div>

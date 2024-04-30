@@ -16,28 +16,25 @@ import {
   KeyDirectionalSkill,
   KeyTriggerWhenPressedSkill,
 } from "../../keyMappingConfig";
-const emit = defineEmits<{
-  edit: [];
-}>();
+import { useKeyboardStore } from "../../store/keyboard";
 
 const props = defineProps<{
   index: number;
 }>();
 
-const activeIndex = defineModel("activeIndex", { required: true });
-const showButtonSettingFlag = defineModel("showButtonSettingFlag", {
-  required: true,
-});
+const keyboardStore = useKeyboardStore();
 
 const store = useGlobalStore();
 const elementRef = ref<HTMLElement | null>(null);
 
-const isActive = computed(() => props.index === activeIndex.value);
+const isActive = computed(
+  () => props.index === keyboardStore.activeButtonIndex
+);
 const keyMapping = computed(() => store.editKeyMappingList[props.index]);
 
 function dragHandler(downEvent: MouseEvent) {
-  activeIndex.value = props.index;
-  showButtonSettingFlag.value = false;
+  keyboardStore.activeButtonIndex = props.index;
+  keyboardStore.showButtonSettingFlag = false;
   const oldX = keyMapping.value.posX;
   const oldY = keyMapping.value.posY;
   const element = elementRef.value;
@@ -63,7 +60,7 @@ function dragHandler(downEvent: MouseEvent) {
       window.removeEventListener("mousemove", moveHandler);
       window.removeEventListener("mouseup", upHandler);
       if (oldX !== keyMapping.value.posX || oldY !== keyMapping.value.posY) {
-        emit("edit");
+        keyboardStore.edited = true;
       }
     };
     window.addEventListener("mouseup", upHandler);
@@ -71,8 +68,9 @@ function dragHandler(downEvent: MouseEvent) {
 }
 
 function delCurKeyMapping() {
-  emit("edit");
-  activeIndex.value = -1;
+  keyboardStore.edited = true;
+
+  keyboardStore.activeButtonIndex = -1;
   store.editKeyMappingList.splice(props.index, 1);
 }
 
@@ -91,7 +89,7 @@ function changeSkillType(flag: string) {
   // the design of skill keymapping type is not good
   const t = keyMapping.value.type;
   if (flag === "direction") {
-    emit("edit");
+    keyboardStore.edited = true;
     if (t === "DirectionalSkill") {
       delete (keyMapping.value as any).range;
       keyMapping.value.type = "DirectionlessSkill";
@@ -104,7 +102,7 @@ function changeSkillType(flag: string) {
       k.rangeOrTime = k.directional ? 0 : 80;
     }
   } else if (flag === "trigger") {
-    emit("edit");
+    keyboardStore.edited = true;
     if (t === "DirectionalSkill") {
       const k = keyMapping.value as any;
       k.directional = true;
@@ -144,7 +142,7 @@ function showSetting() {
   settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
   settingPosY.value = Math.min(keyMapping.value.posY - 30, maxHeight);
   updateRangeIndicator(keyboardElement);
-  showButtonSettingFlag.value = true;
+  keyboardStore.showButtonSettingFlag = true;
 }
 
 const rangeIndicatorTop = ref(0);
@@ -209,7 +207,7 @@ function updateRangeIndicator(element?: HTMLElement) {
   </div>
   <div
     class="key-setting"
-    v-if="isActive && showButtonSettingFlag"
+    v-if="isActive && keyboardStore.showButtonSettingFlag"
     :style="{
       left: `${settingPosX}px`,
       top: `${settingPosY}px`,
@@ -238,7 +236,7 @@ function updateRangeIndicator(element?: HTMLElement) {
         :min="0"
         :max="100"
         @update:value="
-          emit('edit');
+          keyboardStore.edited = true;
           updateRangeIndicator();
         "
       />
@@ -249,7 +247,7 @@ function updateRangeIndicator(element?: HTMLElement) {
         :min="0"
         :max="100"
         @update:value="
-          emit('edit');
+          keyboardStore.edited = true;
           updateRangeIndicator();
         "
       />
@@ -262,19 +260,19 @@ function updateRangeIndicator(element?: HTMLElement) {
         v-model:value="(keyMapping as KeyTriggerWhenPressedSkill).rangeOrTime"
         :min="0"
         placeholder="请输入触摸时长(ms)"
-        @update:value="emit('edit')"
+        @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
     <NFormItem label="备注">
       <NInput
         v-model:value="keyMapping.note"
         placeholder="请输入备注"
-        @update:value="emit('edit')"
+        @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
   </div>
   <div
-    v-if="isActive && showButtonSettingFlag"
+    v-if="isActive && keyboardStore.showButtonSettingFlag"
     class="range-indicator"
     :style="{
       top: `${rangeIndicatorTop}px`,

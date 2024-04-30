@@ -18,18 +18,16 @@ import { Store } from "@tauri-apps/plugin-store";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { loadDefaultKeyconfig } from "../../invoke";
 import { KeyMappingConfig } from "../../keyMappingConfig";
+import { useKeyboardStore } from "../../store/keyboard";
 
 const emit = defineEmits<{
   resetEditKeyMappingList: [];
 }>();
 
 const store = useGlobalStore();
+const keyboardStore = useKeyboardStore();
 const localStore = new Store("store.bin");
 const message = useMessage();
-
-const showKeyInfoFlag = defineModel("showKeyInfoFlag", { required: true });
-const showSettingFlag = defineModel("showSettingFlag", { required: true });
-const edited = defineModel("edited", { required: true });
 
 const showImportModal = ref(false);
 const showRenameModal = ref(false);
@@ -126,7 +124,7 @@ function dragHandler(downEvent: MouseEvent) {
       localStore.set("keySettingPos", keySettingPos.value);
     } else {
       // click up
-      showSettingFlag.value = !showSettingFlag.value;
+      keyboardStore.showSettingFlag = !keyboardStore.showSettingFlag;
     }
   };
   window.addEventListener("mouseup", upHandler);
@@ -240,7 +238,7 @@ function exportKeyMappingConfig() {
 
 function saveKeyMappingConfig() {
   if (store.applyEditKeyMappingList()) {
-    edited.value = false;
+    keyboardStore.edited = false;
   } else {
     message.error("存在重复按键，无法保存");
   }
@@ -322,8 +320,12 @@ function migrateKeyMappingConfig() {
       <NIcon><Settings /></NIcon>
     </template>
   </NButton>
-  <div class="key-setting" v-show="showSettingFlag">
-    <NButton text class="key-setting-close" @click="showSettingFlag = false">
+  <div class="key-setting" v-show="keyboardStore.showSettingFlag">
+    <NButton
+      text
+      class="key-setting-close"
+      @click="keyboardStore.showSettingFlag = false"
+    >
       <NIcon><CloseCircle></CloseCircle></NIcon>
     </NButton>
     <NH4 prefix="bar">按键方案</NH4>
@@ -334,7 +336,7 @@ function migrateKeyMappingConfig() {
     />
     <NP> Relative Size:{{ curRelativeSize.w }}x{{ curRelativeSize.h }} </NP>
     <NFlex style="margin-top: 20px">
-      <template v-if="edited">
+      <template v-if="keyboardStore.edited">
         <NButton type="success" @click="saveKeyMappingConfig">保存方案</NButton>
         <NButton type="error" @click="emit('resetEditKeyMappingList')"
           >还原方案</NButton
@@ -364,7 +366,10 @@ function migrateKeyMappingConfig() {
       >
       <NButton @click="exportKeyMappingConfig">导出方案</NButton>
       <NButton @click="importDefaultKeyMappingConfig">导入默认</NButton>
-      <NButton @click="showKeyInfoFlag = !showKeyInfoFlag">按键信息</NButton>
+      <NButton
+        @click="keyboardStore.showKeyInfoFlag = !keyboardStore.showKeyInfoFlag"
+        >按键信息</NButton
+      >
     </NFlex>
   </div>
   <NModal v-model:show="showImportModal">
