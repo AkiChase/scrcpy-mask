@@ -45,16 +45,16 @@ function dragHandler(downEvent: MouseEvent) {
     const keyboardElement = document.getElementById(
       "keyboardElement"
     ) as HTMLElement;
-    const maxX = keyboardElement.clientWidth - 60;
-    const maxY = keyboardElement.clientHeight - 60;
+    const maxX = keyboardElement.clientWidth - 30;
+    const maxY = keyboardElement.clientHeight - 30;
 
     const x = downEvent.clientX;
     const y = downEvent.clientY;
     const moveHandler = (moveEvent: MouseEvent) => {
       let newX = oldX + moveEvent.clientX - x;
       let newY = oldY + moveEvent.clientY - y;
-      newX = Math.max(0, Math.min(newX, maxX));
-      newY = Math.max(0, Math.min(newY, maxY));
+      newX = Math.max(30, Math.min(newX, maxX));
+      newY = Math.max(30, Math.min(newY, maxY));
       keyMapping.value.posX = newX;
       keyMapping.value.posY = newY;
     };
@@ -290,7 +290,7 @@ function updateRangeIndicator(element?: HTMLElement) {
   left: 0;
   right: 0;
   margin: auto;
-
+  border-radius: 50%;
   background-color: var(--blue-color);
   clip-path: polygon(0 0, 100% 0, 50% 25%);
 }
@@ -314,6 +314,7 @@ function updateRangeIndicator(element?: HTMLElement) {
   height: 60px;
   width: 60px;
   border-radius: 50%;
+  box-sizing: border-box;
   border: 2px solid var(--blue-color);
   display: flex;
   flex-direction: column;

@@ -118,6 +118,8 @@ function toStartServer() {
   border-right: 1px solid var(--bg-color);
   border-bottom: 1px solid var(--bg-color);
   border-radius: 0 0 5px 0;
+  user-select: none;
+  -webkit-user-select: none;
 
   & > .mask-button {
     position: absolute;
