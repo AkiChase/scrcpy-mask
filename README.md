@@ -6,7 +6,7 @@ Due to the delay and blurred image quality of the mirror screen. This project fo
 
 ## Features
 
-- [ ] Wired and wireless connections to Android devices
+- [x] Wired and wireless connections to Android devices
 - [x] Start scrcpy-server and connect to it
 - [x] Implement scrcpy client control protocol
 - [x] Mouse and keyboard mapping

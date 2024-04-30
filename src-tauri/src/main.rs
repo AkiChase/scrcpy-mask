@@ -109,6 +109,7 @@ fn start_scrcpy_server(
 }
 
 #[tauri::command]
+/// get device screen size
 fn get_device_screen_size(id: String, app: tauri::AppHandle) -> Result<(u32, u32), String> {
     let dir = app.path().resource_dir().unwrap().join("resource");
     match ScrcpyClient::get_device_screen_size(&dir, &id) {
@@ -118,6 +119,17 @@ fn get_device_screen_size(id: String, app: tauri::AppHandle) -> Result<(u32, u32
 }
 
 #[tauri::command]
+/// connect to wireless device
+fn adb_connect(address: String, app: tauri::AppHandle) -> Result<String, String> {
+    let dir = app.path().resource_dir().unwrap().join("resource");
+    match Adb::cmd_connect(&dir, &address) {
+        Ok(res) => Ok(res),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+/// load default key mapping config file
 fn load_default_keyconfig(app: tauri::AppHandle) -> Result<String, String> {
     let dir = app.path().resource_dir().unwrap().join("resource");
     let file = ResHelper::get_file_path(&dir, ResourceName::DefaultKeyConfig);
@@ -205,6 +217,7 @@ async fn main() {
             push_server_file,
             start_scrcpy_server,
             get_device_screen_size,
+            adb_connect,
             load_default_keyconfig
         ])
         .run(tauri::generate_context!())

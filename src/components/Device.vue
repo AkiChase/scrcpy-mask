@@ -16,10 +16,12 @@ import {
   forwardServerPort,
   startScrcpyServer,
   getDeviceScreenSize,
+  adbConnect,
 } from "../invoke";
 import {
   NH4,
   NP,
+  NInput,
   NInputNumber,
   NButton,
   NDataTable,
@@ -35,6 +37,7 @@ import {
   DropdownOption,
   useDialog,
   useMessage,
+  NInputGroup,
 } from "naive-ui";
 import { CloseCircle, InformationCircle } from "@vicons/ionicons5";
 import { Refresh } from "@vicons/ionicons5";
@@ -48,6 +51,7 @@ const store = useGlobalStore();
 const message = useMessage();
 
 const port = ref(27183);
+const address = ref("");
 
 const localStore = new Store("store.bin");
 
@@ -257,6 +261,18 @@ async function refreshDevices() {
   devices.value = await adbDevices();
   store.hideLoading();
 }
+
+async function connectDevice() {
+  if (!address.value) {
+    message.error("请输入无线调试地址");
+    return;
+  }
+
+  store.showLoading();
+  const msg = await adbConnect(address.value);
+  store.hideLoading();
+  message.info(msg);
+}
 </script>
 
 <template>
@@ -269,8 +285,18 @@ async function refreshDevices() {
           :show-button="false"
           :min="16384"
           :max="49151"
+          placeholder="Scrcpy 本地端口"
           style="max-width: 300px"
         />
+        <NH4 prefix="bar">无线连接</NH4>
+        <NInputGroup style="max-width: 300px">
+          <NInput
+            v-model:value="address"
+            clearable
+            placeholder="无线调试地址"
+          />
+          <NButton type="primary" @click="connectDevice">连接</NButton>
+        </NInputGroup>
         <NH4 prefix="bar">设备尺寸</NH4>
         <NFlex justify="left" align="center">
           <NFormItem label="宽度">

@@ -166,4 +166,22 @@ impl Adb {
             .context("Failed to execute 'adb start-server'")?;
         Ok(())
     }
+
+    pub fn cmd_connect(res_dir: &PathBuf, address: &str) -> Result<String> {
+        let mut adb_command = Adb::cmd_base(res_dir);
+        let output = adb_command
+            .args(&["connect", address])
+            .output()
+            .context(format!("Failed to execute 'adb connect {}'", address))?;
+
+        let res = String::from_utf8(output.stdout)?;
+        Ok(res)
+    }
+}
+
+#[test]
+fn t() {
+    let res_dir = PathBuf::from("/Users/akichase/Projects/github/scrcpy-mask/src-tauri/resource/");
+    let res = Adb::cmd_connect(&res_dir, "127.0.0.1:1234").unwrap();
+    println!("{}", res)
 }

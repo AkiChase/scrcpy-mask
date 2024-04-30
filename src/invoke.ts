@@ -35,6 +35,10 @@ export async function getDeviceScreenSize(
   return await invoke("get_device_screen_size", { id });
 }
 
+export async function adbConnect(address: string): Promise<string> {
+  return await invoke("adb_connect", { address });
+}
+
 export async function loadDefaultKeyconfig(): Promise<string> {
   return await invoke("load_default_keyconfig");
 }
