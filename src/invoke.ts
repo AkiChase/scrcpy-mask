@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from "@tauri-apps/api/core";
 
 interface Device {
   id: string;
@@ -27,6 +27,12 @@ export async function startScrcpyServer(
   address: string
 ): Promise<void> {
   return await invoke("start_scrcpy_server", { id, scid, address });
+}
+
+export async function getDeviceScreenSize(
+  id: string
+): Promise<[number, number]> {
+  return await invoke("get_device_screen_size", { id });
 }
 
 export async function loadDefaultKeyconfig(): Promise<string> {

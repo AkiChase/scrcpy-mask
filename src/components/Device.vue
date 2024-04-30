@@ -15,6 +15,7 @@ import {
   pushServerFile,
   forwardServerPort,
   startScrcpyServer,
+  getDeviceScreenSize,
 } from "../invoke";
 import {
   NH4,
@@ -160,10 +161,81 @@ const menuOptions: DropdownOption[] = [
     label: () => h("span", "控制此设备"),
     key: "control",
   },
+  {
+    label: () => h("span", "获取屏幕尺寸"),
+    key: "screen",
+  },
 ];
 
 function onMenuClickoutside() {
   showMenu.value = false;
+}
+
+async function deviceControl() {
+  if (!port.value) {
+    port.value = 27183;
+  }
+
+  if (!(store.screenSizeW > 0) || !(store.screenSizeH > 0)) {
+    message.error("请正确输入当前控制设备的屏幕尺寸");
+    store.screenSizeW = 0;
+    store.screenSizeH = 0;
+    store.hideLoading();
+    return;
+  }
+
+  if (store.controledDevice) {
+    message.error("请先关闭当前控制设备");
+    store.hideLoading();
+    return;
+  }
+
+  localStore.set("screenSize", {
+    sizeW: store.screenSizeW,
+    sizeH: store.screenSizeH,
+  });
+  message.info("屏幕尺寸已保存，正在启动控制服务，请保持设备亮屏");
+
+  const device = devices.value[rowIndex];
+
+  let scid = (
+    "00000000" + Math.floor(Math.random() * 100000).toString(16)
+  ).slice(-8);
+
+  await pushServerFile(device.id);
+  await forwardServerPort(device.id, scid, port.value);
+  await startScrcpyServer(device.id, scid, `127.0.0.1:${port.value}`);
+
+  // connection timeout check
+  let id = setTimeout(async () => {
+    if (deviceWaitForMetadataTask) {
+      await shutdown();
+      store.controledDevice = null;
+      store.hideLoading();
+      message.error("设备连接超时");
+    }
+  }, 6000);
+
+  // add cb for metadata
+  deviceWaitForMetadataTask = (deviceName: string) => {
+    store.controledDevice = {
+      scid,
+      deviceName,
+      device,
+    };
+    nextTick(() => {
+      deviceWaitForMetadataTask = null;
+      clearTimeout(id);
+      store.hideLoading();
+    });
+  };
+}
+
+async function deviceGetScreenSize() {
+  let id = devices.value[rowIndex].id;
+  const size = await getDeviceScreenSize(id);
+  store.hideLoading();
+  message.success(`设备屏幕尺寸为: ${size[0]} x ${size[1]}`);
 }
 
 async function onMenuSelect(key: string) {
@@ -171,63 +243,10 @@ async function onMenuSelect(key: string) {
   store.showLoading();
   switch (key) {
     case "control":
-      if (!port.value) {
-        port.value = 27183;
-      }
-
-      if (!(store.screenSizeW > 0) || !(store.screenSizeH > 0)) {
-        message.error("请正确输入当前控制设备的屏幕尺寸");
-        store.screenSizeW = 0;
-        store.screenSizeH = 0;
-        store.hideLoading();
-        return;
-      }
-
-      if (store.controledDevice) {
-        message.error("请先关闭当前控制设备");
-        store.hideLoading();
-        return;
-      }
-
-      localStore.set("screenSize", {
-        sizeW: store.screenSizeW,
-        sizeH: store.screenSizeH,
-      });
-      message.info("屏幕尺寸已保存，正在启动控制服务，请保持设备亮屏");
-
-      let device = devices.value[rowIndex];
-
-      let scid = (
-        "00000000" + Math.floor(Math.random() * 100000).toString(16)
-      ).slice(-8);
-
-      await pushServerFile(device.id);
-      await forwardServerPort(device.id, scid, port.value);
-      await startScrcpyServer(device.id, scid, `127.0.0.1:${port.value}`);
-
-      // connection timeout check
-      let id = setTimeout(async () => {
-        if (deviceWaitForMetadataTask) {
-          await shutdown();
-          store.controledDevice = null;
-          store.hideLoading();
-          message.error("设备连接超时");
-        }
-      }, 6000);
-
-      // add cb for metadata
-      deviceWaitForMetadataTask = (deviceName: string) => {
-        store.controledDevice = {
-          scid,
-          deviceName,
-          device,
-        };
-        nextTick(() => {
-          deviceWaitForMetadataTask = null;
-          clearTimeout(id);
-          store.hideLoading();
-        });
-      };
+      await deviceControl();
+      break;
+    case "screen":
+      await deviceGetScreenSize();
       break;
   }
 }
@@ -297,7 +316,7 @@ async function refreshDevices() {
                   </NButton>
                 </template>
                 scid: {{ store.controledDevice.scid }} <br />status:
-                {{ store.controledDevice.device.status }} <br />screen:
+                {{ store.controledDevice.device.status }}
               </NTooltip>
               <NButton quaternary circle type="error" @click="shutdownSC()">
                 <template #icon>

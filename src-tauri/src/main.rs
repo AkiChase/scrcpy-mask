@@ -109,6 +109,15 @@ fn start_scrcpy_server(
 }
 
 #[tauri::command]
+fn get_device_screen_size(id: String, app: tauri::AppHandle) -> Result<(u32, u32), String> {
+    let dir = app.path().resource_dir().unwrap().join("resource");
+    match ScrcpyClient::get_device_screen_size(&dir, &id) {
+        Ok(size) => Ok(size),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
 fn load_default_keyconfig(app: tauri::AppHandle) -> Result<String, String> {
     let dir = app.path().resource_dir().unwrap().join("resource");
     let file = ResHelper::get_file_path(&dir, ResourceName::DefaultKeyConfig);
@@ -194,6 +203,7 @@ async fn main() {
             forward_server_port,
             push_server_file,
             start_scrcpy_server,
+            get_device_screen_size,
             load_default_keyconfig
         ])
         .run(tauri::generate_context!())
