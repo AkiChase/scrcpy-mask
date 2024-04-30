@@ -381,7 +381,9 @@ function resetKeyMappingConfig() {
       @update:value="selectKeyMappingConfig"
       :options="keyMappingNameOptions"
     />
-    <NP> Relative Size:{{ curRelativeSize.w }}x{{ curRelativeSize.h }} </NP>
+    <NP style="margin-top: 20px">
+      Relative Size:{{ curRelativeSize.w }}x{{ curRelativeSize.h }}
+    </NP>
     <NFlex style="margin-top: 20px">
       <template v-if="keyboardStore.edited">
         <NButton type="success" @click="saveKeyMappingConfig">保存方案</NButton>
@@ -416,6 +418,7 @@ function resetKeyMappingConfig() {
         >按键信息</NButton
       >
     </NFlex>
+    <NP style="margin-top: 40px">提示：右键空白区域可添加按键</NP>
   </div>
   <NModal v-model:show="showImportModal">
     <NCard style="width: 40%; height: 50%" title="导入按键方案">

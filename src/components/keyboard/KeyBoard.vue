@@ -1,26 +1,105 @@
 <script setup lang="ts">
-import { onActivated } from "vue";
+import { nextTick, onActivated, ref } from "vue";
 import KeyInfo from "./KeyInfo.vue";
 import KeySetting from "./KeySetting.vue";
 import KeyCommon from "./KeyCommon.vue";
 import KeySteeringWheel from "./KeySteeringWheel.vue";
 import KeySkill from "./KeySkill.vue";
-import { KeySteeringWheel as KeyMappingSteeringWheel } from "../../keyMappingConfig";
-import { useGlobalStore } from "../../store/global";
-import { useDialog, useMessage } from "naive-ui";
-import { onBeforeRouteLeave } from "vue-router";
 import KeyObservation from "./KeyObservation.vue";
+import {
+  KeyDirectionalSkill,
+  KeySteeringWheel as KeyMappingSteeringWheel,
+  KeyObservation as KeyMappingObservation,
+  KeyTap,
+  KeyMacro,
+} from "../../keyMappingConfig";
+import { useGlobalStore } from "../../store/global";
+import { DropdownOption, NDropdown, useDialog, useMessage } from "naive-ui";
+import { onBeforeRouteLeave } from "vue-router";
 import { useKeyboardStore } from "../../store/keyboard";
 
-// TODO 右键空白区域添加按键
+// TODO 缺少pointer_id的编辑，注意所有按键包括技能取消都有这个内容
 // TODO 设置界面添加本地数据编辑器（类似utools）
 // TODO 添加开发者工具打开按钮
 // TODO 添加息屏按键
+// TODO 添加无线调试（rust加一条指令connet即可）
 
 const store = useGlobalStore();
 const keyboardStore = useKeyboardStore();
 const dialog = useDialog();
 const message = useMessage();
+
+const addButtonPos = ref({ x: 0, y: 0 });
+const addButtonOptions: DropdownOption[] = [
+  {
+    label: "普通点击",
+    key: "Tap",
+  },
+  {
+    label: "键盘行走",
+    key: "SteeringWheel",
+  },
+  {
+    label: "技能",
+    key: "DirectionalSkill",
+  },
+  {
+    label: "技能取消",
+    key: "CancelSkill",
+  },
+  {
+    label: "观察视角",
+    key: "Observation",
+  },
+  {
+    label: "宏",
+    key: "Macro",
+  },
+];
+
+function onAddButtonSelect(
+  type:
+    | "Tap"
+    | "SteeringWheel"
+    | "DirectionalSkill"
+    | "CancelSkill"
+    | "Observation"
+    | "Macro"
+) {
+  keyboardStore.showButtonAddFlag = false;
+  const keyMapping = {
+    type,
+    key: "NONE",
+    note: "",
+    posX: addButtonPos.value.x - 70,
+    posY: addButtonPos.value.y - 30,
+    pointerId: 2, // default skill pointerId
+  };
+  if (type === "Tap") {
+    (keyMapping as KeyTap).time = 80;
+  } else if (type === "SteeringWheel") {
+    (keyMapping as unknown as KeyMappingSteeringWheel).key = {
+      left: "NONE",
+      right: "NONE",
+      up: "NONE",
+      down: "NONE",
+    };
+  } else if (type === "DirectionalSkill") {
+    (keyMapping as unknown as KeyDirectionalSkill).range = 30;
+  } else if (type === "CancelSkill") {
+    keyMapping.note = "取消技能";
+  } else if (type === "Observation") {
+    (keyMapping as unknown as KeyMappingObservation).scale = 0.6;
+  } else if (type === "Macro") {
+    (keyMapping as unknown as KeyMacro).macro = {
+      down: null,
+      loop: null,
+      up: null,
+    };
+  } else return;
+  keyboardStore.edited = true;
+  store.editKeyMappingList.push(keyMapping);
+}
 
 function isKeyUnique(curKey: string): boolean {
   const set = new Set<string>();
@@ -112,8 +191,14 @@ function handleClick(event: MouseEvent) {
       keyboardStore.showSettingFlag = false;
       keyboardStore.activeButtonIndex = -1;
       keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
+      keyboardStore.showButtonAddFlag = true;
 
-      console.log("弹出新增");
+      keyboardStore.showButtonAddFlag = false;
+      nextTick().then(() => {
+        keyboardStore.showButtonAddFlag = true;
+        addButtonPos.value.x = event.clientX;
+        addButtonPos.value.y = event.clientY;
+      });
     } else {
       setCurButtonKey(`M${event.button}`);
     }
@@ -185,6 +270,16 @@ onBeforeRouteLeave(() => {
   >
     <KeySetting />
     <KeyInfo />
+    <NDropdown
+      :options="addButtonOptions"
+      :show="keyboardStore.showButtonAddFlag"
+      placement="bottom-start"
+      trigger="manual"
+      :x="addButtonPos.x"
+      :y="addButtonPos.y"
+      @clickoutside="keyboardStore.showButtonAddFlag = false"
+      @select="onAddButtonSelect"
+    />
     <template v-for="(_, index) in store.editKeyMappingList">
       <KeySteeringWheel
         v-if="store.editKeyMappingList[index].type === 'SteeringWheel'"

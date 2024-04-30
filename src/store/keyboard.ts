@@ -5,6 +5,7 @@ export const useKeyboardStore = defineStore("keyboard", () => {
   const showKeyInfoFlag = ref(false);
   const showSettingFlag = ref(false);
   const showButtonSettingFlag = ref(false);
+  const showButtonAddFlag = ref(false);
   const activeButtonIndex = ref(-1);
   const activeSteeringWheelButtonKeyIndex = ref(-1);
   const edited = ref(false);
@@ -13,6 +14,7 @@ export const useKeyboardStore = defineStore("keyboard", () => {
     showKeyInfoFlag,
     showSettingFlag,
     showButtonSettingFlag,
+    showButtonAddFlag,
     activeButtonIndex,
     activeSteeringWheelButtonKeyIndex,
     edited,
