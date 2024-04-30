@@ -14,7 +14,7 @@ import {
   NCard,
   NIcon,
 } from "naive-ui";
-
+import { relaunch } from "@tauri-apps/plugin-process";
 import { onMounted, ref } from "vue";
 
 const localStore = new Store("store.bin");
@@ -63,7 +63,8 @@ function delLocalStore(key?: string) {
       positiveText: "删除",
       negativeText: "取消",
       onPositiveClick: () => {
-        localStore.clear();
+        // localStore.clear();
+        relaunch();
       },
     });
   }

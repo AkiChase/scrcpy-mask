@@ -76,7 +76,7 @@ impl Device {
                     return Ok((width, height));
                 }
             }
-        };
+        }
         Err(anyhow::anyhow!("Failed to get screen size"))
     }
 }
