@@ -5,8 +5,6 @@ on:
     # 匹配特定标签 (refs/tags)
     tags:
       - 'v*' # 推送事件匹配 v*, 例如 v1.0，v20.15.10 等来触发工作流
-    branches:
-      - master
 
 # This workflow will trigger on each push to the `release` branch to create or update a GitHub release, build your app, and upload the artifacts to the release.
 
@@ -63,6 +61,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           releaseName: 'Scrcpy Mask ${{ github.ref_name }}'
+          releaseBody: 'Add release notes here.'
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
