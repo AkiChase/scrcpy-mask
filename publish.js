@@ -32,5 +32,5 @@ process.stdin.on("data", function (data) {
   console.log("git commit and tag");
   console.log(execSync(`git add . && git commit -m "Scrcpy Mask v${version}" && git tag v${version}`).toString());
 
-  console.log("Pleash push commit and tag to github manually");
+  console.log("Pleash push commit and tag to github manually:\ngit push && git push --tags");
 });
