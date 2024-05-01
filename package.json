@@ -1,13 +1,14 @@
 {
   "name": "scrcpy-mask",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "publish": "node publish.js"
   },
   "dependencies": {
     "@tauri-apps/api": ">=2.0.0-beta.8",
