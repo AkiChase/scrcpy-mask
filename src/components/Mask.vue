@@ -66,6 +66,8 @@ function toStartServer() {
   <template v-if="store.keyMappingConfigList.length">
     <div @contextmenu.prevent class="mask" id="maskElement"></div>
     <div class="button-layer">
+      <!-- <div style="position: absolute;height: 100%;width: 1px;background-color: red;left: 50%;"></div>
+      <div style="position: absolute;width: 100%;height: 1px;background-color: red;top: 56.6%;"></div> -->
       <template
         v-for="button in store.keyMappingConfigList[store.curKeyMappingIndex]
           .list"

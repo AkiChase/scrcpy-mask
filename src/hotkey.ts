@@ -46,8 +46,13 @@ function clientPosToSkillOffset(
 ): { offsetX: number; offsetY: number } {
   const maxLength = (100 / maskSizeH) * screenSizeH;
   const centerX = maskSizeW * 0.5;
-  const centerY = maskSizeH * 0.55;
-  const cOffsetX = clientPos.x - 70 - centerX;
+  const centerY = maskSizeH * 0.5;
+
+  // The center of the game display is higher than the center of the mask
+  clientPos.y -= maskSizeH * 0.066;
+
+// w450 : h315 = 100 : 70, so the true offsetX is 0.7 * cOffsetX
+  const cOffsetX = (clientPos.x - 70 - centerX)*0.7;
   const cOffsetY = clientPos.y - 30 - centerY;
   const offsetD = Math.sqrt(cOffsetX ** 2 + cOffsetY ** 2);
   if (offsetD == 0) {
@@ -78,6 +83,7 @@ async function sleep(ms: number) {
 }
 
 function calculateMacroPosX(
+  // pos relative to the mask
   posX: [string, number] | number,
   relativeSizeW: number
 ): number {
@@ -99,6 +105,7 @@ function calculateMacroPosX(
 }
 
 function calculateMacroPosY(
+  // pos relative to the mask
   posY: [string, number] | number,
   relativeSizeH: number
 ): number {
@@ -130,8 +137,6 @@ function calculateMacroPosList(
     };
   });
 }
-
-// TODO ? 技能界面实际上是有投影变换的，需要一定的算法，不能仅仅相对坐标 （640,400）
 
 // add shortcuts for observation
 function addObservationShortcuts(

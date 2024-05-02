@@ -101,9 +101,12 @@ function parseMacro(macroRaw: string): KeyMacroList {
   return macro;
 }
 
-let editedFlag = false;
+let macroEditedFlag = false;
 function editMacro() {
-  editedFlag = false;
+  macroEditedFlag = false;
+  keyboardStore.activeButtonIndex = -1;
+  keyboardStore.showButtonSettingFlag = false;
+
   const macro = (keyMapping.value as KeyMacro).macro;
   editedMacroRaw.value = {
     down: macro.down === null ? "" : JSON.stringify(macro.down, null, 2),
@@ -114,7 +117,7 @@ function editMacro() {
 }
 
 function saveMacro() {
-  if (!editedFlag) return;
+  if (!macroEditedFlag) return;
   try {
     const macro: {
       down: KeyMacroList;
@@ -234,47 +237,47 @@ function showSetting() {
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NModal
-      v-if="keyMapping.type === 'Macro'"
-      v-model:show="showMacroModal"
-      @before-leave="saveMacro"
-    >
-      <NCard style="width: 50%; height: 80%" title="宏编辑">
-        <NFlex vertical style="height: 100%">
-          <div>按下按键执行</div>
-          <NInput
-            type="textarea"
-            style="flex-grow: 1"
-            placeholder="JSON宏代码, 可为空"
-            v-model:value="editedMacroRaw.down"
-            @update:value="editedFlag = true"
-            round
-            clearable
-          />
-          <div>按住执行</div>
-          <NInput
-            type="textarea"
-            style="flex-grow: 1"
-            placeholder="JSON宏代码, 可为空"
-            v-model:value="editedMacroRaw.loop"
-            @update:value="editedFlag = true"
-            round
-            clearable
-          />
-          <div>抬起执行</div>
-          <NInput
-            type="textarea"
-            style="flex-grow: 1"
-            placeholder="JSON宏代码, 可为空"
-            v-model:value="editedMacroRaw.up"
-            @update:value="editedFlag = true"
-            round
-            clearable
-          />
-        </NFlex>
-      </NCard>
-    </NModal>
   </div>
+  <NModal
+    v-if="keyMapping.type === 'Macro'"
+    v-model:show="showMacroModal"
+    @before-leave="saveMacro"
+  >
+    <NCard style="width: 50%; height: 80%" title="宏编辑">
+      <NFlex vertical style="height: 100%">
+        <div>按下按键执行</div>
+        <NInput
+          type="textarea"
+          style="flex-grow: 1"
+          placeholder="JSON宏代码, 可为空"
+          v-model:value="editedMacroRaw.down"
+          @update:value="macroEditedFlag = true"
+          round
+          clearable
+        />
+        <div>按住执行</div>
+        <NInput
+          type="textarea"
+          style="flex-grow: 1"
+          placeholder="JSON宏代码, 可为空"
+          v-model:value="editedMacroRaw.loop"
+          @update:value="macroEditedFlag = true"
+          round
+          clearable
+        />
+        <div>抬起执行</div>
+        <NInput
+          type="textarea"
+          style="flex-grow: 1"
+          placeholder="JSON宏代码, 可为空"
+          v-model:value="editedMacroRaw.up"
+          @update:value="macroEditedFlag = true"
+          round
+          clearable
+        />
+      </NFlex>
+    </NCard>
+  </NModal>
 </template>
 
 <style scoped lang="scss">
