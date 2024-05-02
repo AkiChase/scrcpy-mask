@@ -40,16 +40,19 @@ function clientyToPosOffsety(clienty: number, posy: number, scale = 1) {
   return Math.round(offsetY * scale);
 }
 
-// TODO ? 技能指示器的指向实际上是有投影变换的（可见王者技能范围不是圆而是椭圆），需要一定的算法，不能仅仅相对（x:50%, y:55%)的位置
-
 function clientPosToSkillOffset(
   clientPos: { x: number; y: number },
   range: number
 ): { offsetX: number; offsetY: number } {
   const maxLength = (100 / maskSizeH) * screenSizeH;
   const centerX = maskSizeW * 0.5;
-  const centerY = maskSizeH * 0.55;
-  const cOffsetX = clientPos.x - 70 - centerX;
+  const centerY = maskSizeH * 0.5;
+
+  // The center of the game display is higher than the center of the mask
+  clientPos.y -= maskSizeH * 0.066;
+
+// w450 : h315 = 100 : 70, so the true offsetX is 0.7 * cOffsetX
+  const cOffsetX = (clientPos.x - 70 - centerX)*0.7;
   const cOffsetY = clientPos.y - 30 - centerY;
   const offsetD = Math.sqrt(cOffsetX ** 2 + cOffsetY ** 2);
   if (offsetD == 0) {
