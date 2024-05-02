@@ -122,8 +122,8 @@ function isKeyUnique(curKey: string): boolean {
 function setCurButtonKey(curKey: string) {
   if (
     keyboardStore.activeButtonIndex === -1 ||
-    keyboardStore.activeButtonIndex >= store.editKeyMappingList.length||
-    keyboardStore.showButtonSettingFlag||
+    keyboardStore.activeButtonIndex >= store.editKeyMappingList.length ||
+    keyboardStore.showButtonSettingFlag ||
     keyboardStore.showButtonAddFlag
   )
     return;
@@ -233,26 +233,31 @@ onActivated(() => {
 });
 
 onBeforeRouteLeave(() => {
-  document.removeEventListener("keyup", handleKeyUp);
-  document.removeEventListener("wheel", handleMouseWheel);
-  if (keyboardStore.edited) {
-    dialog.warning({
-      title: "Warning",
-      content: "当前方案尚未保存，是否保存？",
-      positiveText: "保存",
-      negativeText: "取消",
-      onPositiveClick: () => {
-        if (store.applyEditKeyMappingList()) {
-          keyboardStore.edited = false;
-        } else {
-          message.error("存在重复按键，无法保存");
-        }
-      },
-      onNegativeClick: () => {
-        resetKeyMappingConfig();
-      },
-    });
-  }
+  return new Promise((resolve, _) => {
+    document.removeEventListener("keyup", handleKeyUp);
+    document.removeEventListener("wheel", handleMouseWheel);
+    if (keyboardStore.edited) {
+      dialog.warning({
+        title: "Warning",
+        content: "当前方案尚未保存，是否保存？",
+        positiveText: "保存",
+        negativeText: "取消",
+        onPositiveClick: () => {
+          if (store.applyEditKeyMappingList()) {
+            keyboardStore.edited = false;
+            resolve(true);
+          } else {
+            message.error("存在重复按键，无法保存");
+            resolve(false);
+          }
+        },
+        onNegativeClick: () => {
+          resetKeyMappingConfig();
+          resolve(true);
+        },
+      });
+    }
+  });
 });
 </script>
 
