@@ -60,6 +60,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tagName: "v__VERSION__"
           releaseName: "Scrcpy Mask v__VERSION__"
           releaseBody: "Add release notes here."
           releaseDraft: true
