@@ -122,7 +122,9 @@ function isKeyUnique(curKey: string): boolean {
 function setCurButtonKey(curKey: string) {
   if (
     keyboardStore.activeButtonIndex === -1 ||
-    keyboardStore.activeButtonIndex >= store.editKeyMappingList.length
+    keyboardStore.activeButtonIndex >= store.editKeyMappingList.length||
+    keyboardStore.showButtonSettingFlag||
+    keyboardStore.showButtonAddFlag
   )
     return;
 

@@ -40,6 +40,8 @@ function clientyToPosOffsety(clienty: number, posy: number, scale = 1) {
   return Math.round(offsetY * scale);
 }
 
+// TODO ? 技能指示器的指向实际上是有投影变换的（可见王者技能范围不是圆而是椭圆），需要一定的算法，不能仅仅相对（x:50%, y:55%)的位置
+
 function clientPosToSkillOffset(
   clientPos: { x: number; y: number },
   range: number
@@ -78,6 +80,7 @@ async function sleep(ms: number) {
 }
 
 function calculateMacroPosX(
+  // pos relative to the mask
   posX: [string, number] | number,
   relativeSizeW: number
 ): number {
@@ -99,6 +102,7 @@ function calculateMacroPosX(
 }
 
 function calculateMacroPosY(
+  // pos relative to the mask
   posY: [string, number] | number,
   relativeSizeH: number
 ): number {
@@ -130,8 +134,6 @@ function calculateMacroPosList(
     };
   });
 }
-
-// TODO ? 技能界面实际上是有投影变换的，需要一定的算法，不能仅仅相对坐标 （640,400）
 
 // add shortcuts for observation
 function addObservationShortcuts(
