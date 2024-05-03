@@ -258,8 +258,7 @@ onBeforeRouteLeave(() => {
           resolve(true);
         },
       });
-    }
-    resolve(true);
+    } else resolve(true);
   });
 });
 </script>
