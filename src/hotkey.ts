@@ -51,8 +51,8 @@ function clientPosToSkillOffset(
   // The center of the game display is higher than the center of the mask
   clientPos.y -= maskSizeH * 0.066;
 
-// w450 : h315 = 100 : 70, so the true offsetX is 0.7 * cOffsetX
-  const cOffsetX = (clientPos.x - 70 - centerX)*0.7;
+  // w450 : h315 = 100 : 70, so the true offsetX is 0.7 * cOffsetX
+  const cOffsetX = (clientPos.x - 70 - centerX) * 0.7;
   const cOffsetY = clientPos.y - 30 - centerY;
   const offsetD = Math.sqrt(cOffsetX ** 2 + cOffsetY ** 2);
   if (offsetD == 0) {
@@ -731,11 +731,27 @@ function handleMouseWheel(event: WheelEvent) {
   if (event.deltaY > 0 && event.timeStamp - lastWheelDownTime > 50) {
     lastWheelDownTime = event.timeStamp;
     // WheelDown
-    downKeyCBMap.get("WheelDown")?.();
+    if (downKeyMap.has("WheelDown")) {
+      if (!downKeyMap.get("WheelDown")) {
+        downKeyMap.set("WheelDown", true);
+        downKeyCBMap.get("WheelDown")?.();
+      } else {
+        downKeyMap.set("WheelDown", false);
+        upKeyCBMap.get("WheelDown")?.();
+      }
+    }
   } else if (event.deltaY < 0 && event.timeStamp - lastWheelUpTime > 50) {
     lastWheelUpTime = event.timeStamp;
     // WheelUp
-    downKeyCBMap.get("WheelUp")?.();
+    if (downKeyMap.has("WheelUp")) {
+      if (!downKeyMap.get("WheelUp")) {
+        downKeyMap.set("WheelUp", true);
+        downKeyCBMap.get("WheelUp")?.();
+      } else {
+        downKeyMap.set("WheelUp", false);
+        upKeyCBMap.get("WheelUp")?.();
+      }
+    }
   }
 }
 
