@@ -124,6 +124,8 @@ function setCurButtonKey(curKey: string) {
     keyboardStore.activeButtonIndex === -1 ||
     keyboardStore.activeButtonIndex >= store.editKeyMappingList.length ||
     keyboardStore.showButtonSettingFlag ||
+    keyboardStore.activeButtonIndex >= store.editKeyMappingList.length ||
+    keyboardStore.showButtonSettingFlag ||
     keyboardStore.showButtonAddFlag
   )
     return;
