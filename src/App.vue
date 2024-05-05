@@ -71,6 +71,20 @@ onMounted(async () => {
     localStore.set("curKeyMappingIndex", curKeyMappingIndex);
   }
   store.curKeyMappingIndex = curKeyMappingIndex;
+
+  // loading maskButton from local store
+  let maskButton = await localStore.get<{
+    show: boolean;
+    transparency: number;
+  }>("maskButton");
+  if (maskButton === null) {
+    maskButton = {
+      show: true,
+      transparency: 0.5,
+    };
+    await localStore.set("maskButton", maskButton);
+  }
+  store.maskButton = maskButton;
 });
 </script>
 
