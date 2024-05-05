@@ -44,7 +44,7 @@ function clientPosToSkillOffset(
   clientPos: { x: number; y: number },
   range: number
 ): { offsetX: number; offsetY: number } {
-  const maxLength = (100 / maskSizeH) * screenSizeH;
+  const maxLength = (120 / maskSizeH) * screenSizeH;
   const centerX = maskSizeW * 0.5;
   const centerY = maskSizeH * 0.5;
 
