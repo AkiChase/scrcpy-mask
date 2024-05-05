@@ -20,3 +20,4 @@ tokio = { version = "1.36.0", features = ["rt-multi-thread", "net", "macros", "i
 tauri-plugin-clipboard-manager = "2.1.0-beta.1"
 tauri-plugin-process = "2.0.0-beta.3"
 tauri-plugin-shell = "2.0.0-beta.4"
+tauri-plugin-http = "2.0.0-beta.7"
