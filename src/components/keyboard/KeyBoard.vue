@@ -78,6 +78,7 @@ function onAddButtonSelect(
       up: "NONE",
       down: "NONE",
     };
+    (keyMapping as unknown as KeyMappingSteeringWheel).offset = 100;
   } else if (type === "DirectionalSkill") {
     (keyMapping as unknown as KeyDirectionalSkill).range = 30;
   } else if (type === "CancelSkill") {
