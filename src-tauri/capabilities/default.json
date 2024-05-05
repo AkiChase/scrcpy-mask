@@ -27,6 +27,8 @@
     "process:default",
     "process:allow-restart",
     "webview:default",
-    "webview:allow-internal-toggle-devtools"
+    "webview:allow-internal-toggle-devtools",
+    "shell:default",
+    "shell:allow-open"
   ]
 }

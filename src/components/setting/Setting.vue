@@ -2,6 +2,7 @@
 import Basic from "./Basic.vue";
 import Script from "./Script.vue";
 import Mask from "./Mask.vue";
+import About from "./About.vue";
 import { NTabs, NTabPane, NScrollbar } from "naive-ui";
 </script>
 
@@ -21,6 +22,11 @@ import { NTabs, NTabPane, NScrollbar } from "naive-ui";
       <NTabPane tab="脚本设置" name="script">
         <NScrollbar>
           <Script />
+        </NScrollbar>
+      </NTabPane>
+      <NTabPane tab="关于" name="about">
+        <NScrollbar>
+          <About />
         </NScrollbar>
       </NTabPane>
     </NTabs>
