@@ -17,6 +17,12 @@ Due to the delay and blurred image quality of the mirror screen. This project fo
 - [ ] Better macro support
 - [ ] Provide external interface through websocket
 
-## contribution.
+## Screenshot
+
+![Device](https://pic.superbed.cc/item/6637190cf989f2fb975b6162.png)
+![Key mapping](https://pic.superbed.cc/item/66371911f989f2fb975b62a3.png)
+![Mask](https://pic.superbed.cc/item/66371a03f989f2fb975c07f3.png)
+
+## Contribution.
 
 If you are interested in this project, you are welcome to submit pull request or issue. But my time and energy is limited, so I may not be able to deal with it all.
