@@ -19,9 +19,17 @@ Due to the delay and blurred image quality of the mirror screen. This project fo
 
 ## Screenshot
 
-![Device](https://pic.superbed.cc/item/6637190cf989f2fb975b6162.png)
-![Key mapping](https://pic.superbed.cc/item/66371911f989f2fb975b62a3.png)
-![Mask](https://pic.superbed.cc/item/66371a03f989f2fb975c07f3.png)
+- Device control
+
+![](https://pic.superbed.cc/item/6637190cf989f2fb975b6162.png)
+
+- Key mapping setting
+
+![](https://pic.superbed.cc/item/66371911f989f2fb975b62a3.png)
+
+- Mask above game
+
+![](https://pic.superbed.cc/item/66373c8cf989f2fb97679dfd.png)
 
 ## Contribution.
 
