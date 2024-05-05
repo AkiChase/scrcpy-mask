@@ -14,6 +14,7 @@ import {
 } from "naive-ui";
 import {
   KeyDirectionalSkill,
+  KeyTriggerWhenDoublePressedSkill,
   KeyTriggerWhenPressedSkill,
 } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
@@ -276,12 +277,9 @@ function updateRangeIndicator(element?: HTMLElement) {
     </NFormItem>
     <NFormItem v-if="!isDirectionless" label="范围">
       <NInputNumber
-        v-if="
-          keyMapping.type === 'DirectionalSkill' ||
-          'TriggerWhenDoublePressedSkill'
-        "
+        v-if="keyMapping.type === 'DirectionalSkill'"
         v-model:value="(keyMapping as KeyDirectionalSkill).range"
-        placeholder="请输入技能范围"
+        placeholder="range"
         :min="0"
         :max="100"
         @update:value="
@@ -290,9 +288,20 @@ function updateRangeIndicator(element?: HTMLElement) {
         "
       />
       <NInputNumber
-        v-else
+        v-else-if="keyMapping.type === 'TriggerWhenPressedSkill'"
         v-model:value="(keyMapping as KeyTriggerWhenPressedSkill).rangeOrTime"
-        placeholder="请输入技能范围"
+        placeholder="rangeOrTime"
+        :min="0"
+        :max="100"
+        @update:value="
+          keyboardStore.edited = true;
+          updateRangeIndicator();
+        "
+      />
+      <NInputNumber
+        v-else-if="keyMapping.type === 'TriggerWhenDoublePressedSkill'"
+        v-model:value="(keyMapping as KeyTriggerWhenDoublePressedSkill).range"
+        placeholder="range"
         :min="0"
         :max="100"
         @update:value="
