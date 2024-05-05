@@ -85,21 +85,32 @@ const isTriggerWhenPressed = computed(
   () => keyMapping.value.type === "TriggerWhenPressedSkill"
 );
 
+const isTriggerWhenDoublePressed = computed(
+  () => keyMapping.value.type === "TriggerWhenDoublePressedSkill"
+);
+
 function changeSkillType(flag: string) {
   // the design of skill keymapping type is not good
   const t = keyMapping.value.type;
   if (flag === "direction") {
     keyboardStore.edited = true;
     if (t === "DirectionalSkill") {
+      // to DirectionlessSkill
       delete (keyMapping.value as any).range;
       keyMapping.value.type = "DirectionlessSkill";
     } else if (t === "DirectionlessSkill") {
+      // to DirectionalSkill
       (keyMapping.value as any).range = 0;
       keyMapping.value.type = "DirectionalSkill";
-    } else {
+    } else if (t === "TriggerWhenPressedSkill") {
+      // change directional flag
       const k = keyMapping.value as KeyTriggerWhenPressedSkill;
       k.directional = !k.directional;
       k.rangeOrTime = k.directional ? 0 : 80;
+    } else if (t === "TriggerWhenDoublePressedSkill") {
+      // to DirectionlessSkill
+      delete (keyMapping.value as any).range;
+      keyMapping.value.type = "DirectionlessSkill";
     }
   } else if (flag === "trigger") {
     keyboardStore.edited = true;
@@ -114,7 +125,8 @@ function changeSkillType(flag: string) {
       k.directional = false;
       k.rangeOrTime = 80; // touch time
       k.type = "TriggerWhenPressedSkill";
-    } else {
+    } else if (t === "TriggerWhenPressedSkill") {
+      // to DirectionalSkill or DirectionlessSkill
       const k = keyMapping.value as any;
       if (k.directional) {
         k.range = k.rangeOrTime;
@@ -125,6 +137,35 @@ function changeSkillType(flag: string) {
         k.type = "DirectionlessSkill";
       }
       delete k.directional;
+    } else if (t === "TriggerWhenDoublePressedSkill") {
+      // to TriggerWhenPressedSkill && directional
+      const k = keyMapping.value as any;
+      k.directional = true;
+      k.rangeOrTime = k.range;
+      delete k.range;
+      k.type = "TriggerWhenPressedSkill";
+    }
+  } else if (flag === "trigger-double") {
+    keyboardStore.edited = true;
+    if (t === "DirectionalSkill") {
+      // to TriggerWhenDoublePressedSkill
+      const k = keyMapping.value as any;
+      k.type = "TriggerWhenDoublePressedSkill";
+    } else if (t === "DirectionlessSkill") {
+      // to TriggerWhenDoublePressedSkill
+      const k = keyMapping.value as any;
+      k.range = 0;
+      k.type = "TriggerWhenDoublePressedSkill";
+    } else if (t === "TriggerWhenPressedSkill") {
+      // to TriggerWhenDoublePressedSkill
+      const k = keyMapping.value as any;
+      k.range = k.directional ? k.rangeOrTime : 0;
+      delete k.rangeOrTime;
+      k.type = "TriggerWhenDoublePressedSkill";
+    } else if (t === "TriggerWhenDoublePressedSkill") {
+      // to DirectionalSkill
+      const k = keyMapping.value as any;
+      k.type = "DirectionalSkill";
     }
   }
 }
@@ -217,6 +258,11 @@ function updateRangeIndicator(element?: HTMLElement) {
     <NFormItem label="选项">
       <NFlex vertical>
         <NCheckbox
+          @click="changeSkillType('trigger-double')"
+          :checked="isTriggerWhenDoublePressed"
+          >双击施放</NCheckbox
+        >
+        <NCheckbox
           @click="changeSkillType('direction')"
           :checked="isDirectionless"
           >无方向技能</NCheckbox
@@ -230,7 +276,10 @@ function updateRangeIndicator(element?: HTMLElement) {
     </NFormItem>
     <NFormItem v-if="!isDirectionless" label="范围">
       <NInputNumber
-        v-if="keyMapping.type === 'DirectionalSkill'"
+        v-if="
+          keyMapping.type === 'DirectionalSkill' ||
+          'TriggerWhenDoublePressedSkill'
+        "
         v-model:value="(keyMapping as KeyDirectionalSkill).range"
         placeholder="请输入技能范围"
         :min="0"

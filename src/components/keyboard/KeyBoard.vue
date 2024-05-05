@@ -292,7 +292,9 @@ onBeforeRouteLeave(() => {
         v-else-if="
           store.editKeyMappingList[index].type === 'DirectionalSkill' ||
           store.editKeyMappingList[index].type === 'DirectionlessSkill' ||
-          store.editKeyMappingList[index].type === 'TriggerWhenPressedSkill'
+          store.editKeyMappingList[index].type === 'TriggerWhenPressedSkill' ||
+          store.editKeyMappingList[index].type ===
+            'TriggerWhenDoublePressedSkill'
         "
         :index="index"
       />

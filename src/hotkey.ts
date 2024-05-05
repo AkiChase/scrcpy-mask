@@ -15,6 +15,7 @@ import {
   KeyObservation,
   KeySteeringWheel,
   KeyTap,
+  KeyTriggerWhenDoublePressedSkill,
   KeyTriggerWhenPressedSkill,
 } from "./keyMappingConfig";
 
@@ -334,6 +335,94 @@ function addTriggerWhenPressedSkillShortcuts(
   } else {
     addTapShortcuts(key, relativeSize, rangeOrTime, posX, posY, pointerId);
   }
+}
+
+function addTriggerWhenDoublePressedSkillShortcuts(
+  key: string,
+  relativeSize: { w: number; h: number },
+  // pos relative to the device
+  posX: number,
+  posY: number,
+  range: number,
+  pointerId: number
+) {
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
+  let curKeyDownFlag = false;
+  addShortcut(
+    key,
+    // down
+    async () => {
+      if (curKeyDownFlag === false) {
+        // first press: touch down
+        const skillOffset = clientPosToSkillOffset(
+          { x: mouseX, y: mouseY },
+          range
+        );
+        await swipe({
+          action: SwipeAction.NoUp,
+          pointerId,
+          screen: {
+            w: screenSizeW,
+            h: screenSizeH,
+          },
+          pos: [
+            { x: posX, y: posY },
+            {
+              x: posX + skillOffset.offsetX,
+              y: posY + skillOffset.offsetY,
+            },
+          ],
+          intervalBetweenPos: 0,
+        });
+        // set the flag to true
+        curKeyDownFlag = true;
+        // add loop CB
+        loopDownKeyCBMap.set(key, async () => {
+          const loopSkillOffset = clientPosToSkillOffset(
+            { x: mouseX, y: mouseY },
+            range
+          );
+          await touch({
+            action: TouchAction.Move,
+            pointerId,
+            screen: {
+              w: screenSizeW,
+              h: screenSizeH,
+            },
+            pos: {
+              x: posX + loopSkillOffset.offsetX,
+              y: posY + loopSkillOffset.offsetY,
+            },
+          });
+        });
+      } else {
+        // second press: touch up
+        // delete the loop CB
+        loopDownKeyCBMap.delete(key);
+        const skillOffset = clientPosToSkillOffset(
+          { x: mouseX, y: mouseY },
+          range
+        );
+        await touch({
+          action: TouchAction.Up,
+          pointerId,
+          screen: {
+            w: screenSizeW,
+            h: screenSizeH,
+          },
+          pos: {
+            x: posX + skillOffset.offsetX,
+            y: posY + skillOffset.offsetY,
+          },
+        });
+        // set the flag to false
+        curKeyDownFlag = false;
+      }
+    },
+    undefined,
+    undefined
+  );
 }
 
 // add shortcuts for directionless skill (cancelable)
@@ -1015,6 +1104,17 @@ function applyKeyMappingConfigShortcuts(
             item.posY,
             item.directional,
             item.rangeOrTime,
+            item.pointerId
+          );
+          break;
+        case "TriggerWhenDoublePressedSkill":
+          asType<KeyTriggerWhenDoublePressedSkill>(item);
+          addTriggerWhenDoublePressedSkillShortcuts(
+            item.key,
+            relativeSize,
+            item.posX,
+            item.posY,
+            item.range,
             item.pointerId
           );
           break;

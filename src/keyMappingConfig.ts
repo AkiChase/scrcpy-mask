@@ -6,6 +6,7 @@ interface Key {
     | "CancelSkill"
     | "Tap"
     | "TriggerWhenPressedSkill"
+    | "TriggerWhenDoublePressedSkill"
     | "Observation"
     | "Macro";
   note: string;
@@ -43,6 +44,11 @@ interface KeyTriggerWhenPressedSkill extends Key {
   rangeOrTime: number;
 }
 
+interface KeyTriggerWhenDoublePressedSkill extends Key {
+  key: string;
+  range: number;
+}
+
 interface KeyObservation extends Key {
   key: string;
   scale: number;
@@ -74,6 +80,7 @@ type KeyMapping =
   | KeyDirectionalSkill
   | KeyDirectionlessSkill
   | KeyTriggerWhenPressedSkill
+  | KeyTriggerWhenDoublePressedSkill
   | KeyObservation
   | KeyMacro
   | KeyCancelSkill
@@ -93,6 +100,7 @@ export type {
   KeyCancelSkill,
   KeyTap,
   KeyTriggerWhenPressedSkill,
+  KeyTriggerWhenDoublePressedSkill,
   KeyObservation,
   KeyMacro,
   KeyMapping,
