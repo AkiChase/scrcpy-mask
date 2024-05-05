@@ -15,7 +15,6 @@ import {
 import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useGlobalStore } from "../../store/global";
 import { Store } from "@tauri-apps/plugin-store";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { loadDefaultKeyconfig } from "../../invoke";
 import { KeyMappingConfig } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
@@ -241,7 +240,8 @@ function renameKeyMappingConfig() {
 function exportKeyMappingConfig() {
   const config = store.keyMappingConfigList[store.curKeyMappingIndex];
   const data = JSON.stringify(config, null, 2);
-  writeText(data)
+  navigator.clipboard
+    .writeText(data)
     .then(() => {
       message.success("当前按键方案已导出到剪切板");
     })
