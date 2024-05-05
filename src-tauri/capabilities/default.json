@@ -22,8 +22,6 @@
     "store:allow-clear",
     "store:allow-entries",
     "store:allow-delete",
-    "clipboard-manager:default",
-    "clipboard-manager:allow-write-text",
     "process:default",
     "process:allow-restart",
     "webview:default",
