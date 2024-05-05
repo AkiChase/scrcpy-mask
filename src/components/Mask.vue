@@ -65,7 +65,11 @@ function toStartServer() {
   </div>
   <template v-if="store.keyMappingConfigList.length">
     <div @contextmenu.prevent class="mask" id="maskElement"></div>
-    <div class="button-layer">
+    <div
+      v-if="store.maskButton.show"
+      :style="'--transparency: ' + store.maskButton.transparency"
+      class="button-layer"
+    >
       <!-- <div style="position: absolute;height: 100%;width: 1px;background-color: red;left: 50%;"></div>
       <div style="position: absolute;width: 100%;height: 1px;background-color: red;top: 56.6%;"></div> -->
       <template
@@ -133,18 +137,20 @@ function toStartServer() {
   z-index: 1;
 
   & > .mask-button {
+    opacity: var(--transparency);
     position: absolute;
-    background-color: rgba(0, 0, 0, 0.2);
-    color: rgba(255, 255, 255, 0.6);
+    background-color: black;
+    color: white;
     border-radius: 5px;
     padding: 5px;
     font-size: 12px;
   }
 
   & > .mask-steering-wheel {
+    opacity: var(--transparency);
     position: absolute;
-    background-color: rgba(0, 0, 0, 0.2);
-    color: rgba(255, 255, 255, 0.6);
+    background-color: black;
+    color: white;
     border-radius: 50%;
     width: 150px;
     height: 150px;

@@ -34,6 +34,11 @@ export const useGlobalStore = defineStore("global", () => {
   const curKeyMappingIndex = ref(0);
   const editKeyMappingList: Ref<KeyMapping[]> = ref([]);
 
+  const maskButton = ref({
+    transparency: 0.5,
+    show: true,
+  });
+
   function applyEditKeyMappingList(): boolean {
     const set = new Set<string>();
     for (const keyMapping of editKeyMappingList.value) {
@@ -82,6 +87,7 @@ export const useGlobalStore = defineStore("global", () => {
     keyMappingConfigList,
     curKeyMappingIndex,
     editKeyMappingList,
+    maskButton,
     applyEditKeyMappingList,
     resetEditKeyMappingList,
     setKeyMappingIndex,

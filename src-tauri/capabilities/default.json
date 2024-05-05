@@ -27,6 +27,18 @@
     "process:default",
     "process:allow-restart",
     "webview:default",
-    "webview:allow-internal-toggle-devtools"
+    "webview:allow-internal-toggle-devtools",
+    "shell:default",
+    "shell:allow-open",
+    "http:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api.github.com/repos/AkiChase/scrcpy-mask/*" }
+      ]
+    },
+    "http:allow-fetch",
+    "app:default",
+    "app:allow-version"
   ]
 }

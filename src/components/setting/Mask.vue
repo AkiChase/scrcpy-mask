@@ -13,6 +13,9 @@ import {
   NIcon,
   FormInst,
   useMessage,
+  NSlider,
+  NFormItem,
+  NCheckbox,
 } from "naive-ui";
 import {
   LogicalPosition,
@@ -24,12 +27,14 @@ import {
 import { Store } from "@tauri-apps/plugin-store";
 import { SettingsOutline } from "@vicons/ionicons5";
 import { UnlistenFn } from "@tauri-apps/api/event";
+import { useGlobalStore } from "../../store/global";
 
 let unlistenResize: UnlistenFn = () => {};
 let unlistenMove: UnlistenFn = () => {};
 let factor = 1;
 
 const localStore = new Store("store.bin");
+const store = useGlobalStore();
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
 
@@ -158,20 +163,23 @@ onUnmounted(() => {
 
 <template>
   <div class="setting-page">
-    <NFlex justify="space-between" align="center">
-      <NH4 prefix="bar">蒙版调整</NH4>
-      <NButton
-        tertiary
-        circle
-        type="primary"
-        @click="handleAdjustClick"
-        style="margin-right: 20px"
-      >
-        <template #icon>
-          <NIcon><SettingsOutline /></NIcon>
-        </template>
-      </NButton>
-    </NFlex>
+    <NH4 prefix="bar">按键提示</NH4>
+    <NFormItem label="是否显示" label-placement="left">
+      <NCheckbox
+        v-model:checked="store.maskButton.show"
+        @update:checked="localStore.set('maskButton', store.maskButton)"
+      />
+    </NFormItem>
+    <NFormItem label="不透明度" label-placement="left">
+      <NSlider
+        v-model:value="store.maskButton.transparency"
+        @update:checked="localStore.set('maskButton', store.maskButton)"
+        :min="0"
+        :max="1"
+        :step="0.01"
+        style="max-width: 300px"
+      ></NSlider>
+    </NFormItem>
 
     <NForm
       ref="formRef"
@@ -181,6 +189,20 @@ onUnmounted(() => {
       label-width="auto"
       require-mark-placement="right-hanging"
     >
+      <NFlex justify="space-between" align="center">
+        <NH4 prefix="bar">蒙版调整</NH4>
+        <NButton
+          tertiary
+          circle
+          type="primary"
+          @click="handleAdjustClick"
+          style="margin-right: 20px"
+        >
+          <template #icon>
+            <NIcon><SettingsOutline /></NIcon>
+          </template>
+        </NButton>
+      </NFlex>
       <NGrid :cols="2" :x-gap="24">
         <NFormItemGi label="X" path="posX">
           <NInputNumber
