@@ -122,6 +122,12 @@ function dragHandler(downEvent: MouseEvent) {
       keyboardStore.activeButtonIndex = -1;
       keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
       keyboardStore.showSettingFlag = !keyboardStore.showSettingFlag;
+      if (
+        keyboardStore.showSettingFlag &&
+        store.keyMappingConfigList.length === 1
+      ) {
+        message.info("当前仅有一个按键方案，点击导入默认，可导入预设方案");
+      }
     }
   };
   window.addEventListener("mouseup", upHandler);
