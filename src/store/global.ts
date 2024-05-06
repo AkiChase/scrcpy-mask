@@ -39,6 +39,8 @@ export const useGlobalStore = defineStore("global", () => {
     show: true,
   });
 
+  let checkUpdate: () => Promise<void> = async () => {};
+
   function applyEditKeyMappingList(): boolean {
     const set = new Set<string>();
     for (const keyMapping of editKeyMappingList.value) {
@@ -91,5 +93,6 @@ export const useGlobalStore = defineStore("global", () => {
     applyEditKeyMappingList,
     resetEditKeyMappingList,
     setKeyMappingIndex,
+    checkUpdate,
   };
 });

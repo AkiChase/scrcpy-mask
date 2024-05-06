@@ -123,4 +123,10 @@ onMounted(async () => {
 .n-scrollbar-content {
   height: 100%;
 }
+
+.n-spin-content,
+.n-spin-container {
+  width: 100%;
+  height: 100%;
+}
 </style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onActivated } from "vue";
-import { NDialog, useMessage } from "naive-ui";
+import { h, onActivated, onMounted } from "vue";
+import { NDialog, useDialog, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
 import {
@@ -11,10 +11,14 @@ import {
   updateScreenSizeAndMaskArea,
 } from "../hotkey";
 import { KeySteeringWheel } from "../keyMappingConfig";
+import { getVersion } from "@tauri-apps/api/app";
+import { fetch } from "@tauri-apps/plugin-http";
+import { open } from "@tauri-apps/plugin-shell";
 
 const store = useGlobalStore();
 const router = useRouter();
 const message = useMessage();
+const dialog = useDialog();
 
 onBeforeRouteLeave(() => {
   if (store.controledDevice) {
@@ -45,8 +49,53 @@ onActivated(async () => {
   }
 });
 
+onMounted(() => {
+  store.checkUpdate = checkUpdate;
+  checkUpdate();
+});
+
 function toStartServer() {
   router.replace({ name: "device" });
+}
+
+function renderUpdateInfo(content: string) {
+  const pList = content.split("\r\n").map((line: string) => h("p", line));
+  return h("div", { style: "margin: 20px 0" }, pList);
+}
+
+async function checkUpdate() {
+  try {
+    const curVersion = await getVersion();
+    const res = await fetch(
+      "https://api.github.com/repos/AkiChase/scrcpy-mask/releases/latest",
+      {
+        connectTimeout: 5000,
+      }
+    );
+    if (res.status !== 200) {
+      message.error("检查更新失败");
+    } else {
+      const data = await res.json();
+      const latestVersion = (data.tag_name as string).slice(1);
+      if (latestVersion <= curVersion) {
+        message.success(`最新版本: ${latestVersion}，当前已是最新版本`);
+        return;
+      }
+      const body = data.body as string;
+      dialog.info({
+        title: `最新版本：${data.tag_name}`,
+        content: () => renderUpdateInfo(body),
+        positiveText: "前往发布页",
+        negativeText: "取消",
+        onPositiveClick: () => {
+          open(data.html_url);
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
+    message.error("检查更新失败");
+  }
 }
 </script>
 
@@ -184,3 +233,4 @@ function toStartServer() {
   }
 }
 </style>
+h, import { getVersion } from "@tauri-apps/api/app";

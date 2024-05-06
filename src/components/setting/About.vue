@@ -1,22 +1,11 @@
 <script setup lang="ts">
-import {
-  NFlex,
-  NH4,
-  NButton,
-  NIcon,
-  NP,
-  useMessage,
-  useDialog,
-} from "naive-ui";
+import { NFlex, NH4, NButton, NIcon, NP } from "naive-ui";
 import { LogoGithub, Planet } from "@vicons/ionicons5";
 import { open } from "@tauri-apps/plugin-shell";
-import { fetch } from "@tauri-apps/plugin-http";
 import { getVersion } from "@tauri-apps/api/app";
-import { h, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
 
-const message = useMessage();
-const dialog = useDialog();
 const store = useGlobalStore();
 
 const appVersion = ref("");
@@ -28,46 +17,10 @@ function opendWebsite(url: string) {
   open(url);
 }
 
-function renderUpdateInfo(content: string) {
-  const pList = content.split("\r\n").map((line: string) => h("p", line));
-  return h("div", { style: "margin: 20px 0" }, pList);
-}
-
 async function checkUpdate() {
   store.showLoading();
-  try {
-    const res = await fetch(
-      "https://api.github.com/repos/AkiChase/scrcpy-mask/releases/latest",
-      {
-        connectTimeout: 5000,
-      }
-    );
-    store.hideLoading();
-    if (res.status !== 200) {
-      message.error("检查更新失败");
-    } else {
-      const data = await res.json();
-      const latestVersion = (data.tag_name as string).slice(1);
-      if (latestVersion <= appVersion.value) {
-        message.success(`最新版本: ${latestVersion}，当前已是最新版本`);
-        return;
-      }
-      const body = data.body as string;
-      dialog.info({
-        title: `最新版本：${data.tag_name}`,
-        content: () => renderUpdateInfo(body),
-        positiveText: "前往发布页",
-        negativeText: "取消",
-        onPositiveClick: () => {
-          opendWebsite(data.html_url);
-        },
-      });
-    }
-  } catch (e) {
-    store.hideLoading();
-    console.error(e);
-    message.error("检查更新失败");
-  }
+  await store.checkUpdate();
+  store.hideLoading();
 }
 </script>
 
