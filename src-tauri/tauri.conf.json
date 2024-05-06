@@ -1,6 +1,6 @@
 {
   "productName": "scrcpy-mask",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "identifier": "com.akichase.mask",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -31,6 +31,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["resource/*"]
+    "resources": [
+      "resource/default-key-config.json",
+      "resource/scrcpy-server-v2.4",
+      "resource/adb"
+    ]
   }
 }

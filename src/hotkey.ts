@@ -846,27 +846,13 @@ function handleMouseWheel(event: WheelEvent) {
   if (event.deltaY > 0 && event.timeStamp - lastWheelDownTime > 50) {
     lastWheelDownTime = event.timeStamp;
     // WheelDown
-    if (downKeyMap.has("WheelDown")) {
-      if (!downKeyMap.get("WheelDown")) {
-        downKeyMap.set("WheelDown", true);
-        downKeyCBMap.get("WheelDown")?.();
-      } else {
-        downKeyMap.set("WheelDown", false);
-        upKeyCBMap.get("WheelDown")?.();
-      }
-    }
+    downKeyCBMap.get("WheelDown")?.();
+    upKeyCBMap.get("WheelDown")?.();
   } else if (event.deltaY < 0 && event.timeStamp - lastWheelUpTime > 50) {
     lastWheelUpTime = event.timeStamp;
     // WheelUp
-    if (downKeyMap.has("WheelUp")) {
-      if (!downKeyMap.get("WheelUp")) {
-        downKeyMap.set("WheelUp", true);
-        downKeyCBMap.get("WheelUp")?.();
-      } else {
-        downKeyMap.set("WheelUp", false);
-        upKeyCBMap.get("WheelUp")?.();
-      }
-    }
+    downKeyCBMap.get("WheelUp")?.();
+    upKeyCBMap.get("WheelUp")?.();
   }
 }
 
