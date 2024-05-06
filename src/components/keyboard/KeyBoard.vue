@@ -212,6 +212,11 @@ function handleKeyUp(event: KeyboardEvent) {
   setCurButtonKey(event.code);
 }
 
+function handleKeyDown(event: KeyboardEvent) {
+  // prevent F1-F12
+  if (/^F(1[0-2]|[1-9])$/.test(event.code)) event.preventDefault();
+}
+
 function handleMouseWheel(event: WheelEvent) {
   if (event.deltaY > 0) {
     // WheelDown
@@ -231,12 +236,14 @@ function resetKeyMappingConfig() {
 }
 
 onActivated(() => {
+  document.addEventListener("keydown", handleKeyDown);
   document.addEventListener("keyup", handleKeyUp);
   document.addEventListener("wheel", handleMouseWheel);
 });
 
 onBeforeRouteLeave(() => {
   return new Promise((resolve, _) => {
+    document.removeEventListener("keydown", handleKeyDown);
     document.removeEventListener("keyup", handleKeyUp);
     document.removeEventListener("wheel", handleMouseWheel);
     if (keyboardStore.edited) {
