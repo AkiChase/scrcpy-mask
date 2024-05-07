@@ -70,6 +70,12 @@ async function cleanAfterimage() {
   await appWindow.setSize(oSize);
 }
 
+function handleInputBoxClick(event: MouseEvent) {
+  if (event.target === document.getElementById("input-box")) {
+    showInputBox(false);
+  }
+}
+
 function handleInputKeyUp(event: KeyboardEvent) {
   if (event.key === "Enter") {
     pasteText();
@@ -167,7 +173,12 @@ async function checkUpdate() {
   </div>
   <template v-if="store.keyMappingConfigList.length">
     <div @contextmenu.prevent class="mask" id="maskElement"></div>
-    <div v-show="showInputBoxRef" class="input-box">
+    <div
+      v-show="showInputBoxRef"
+      class="input-box"
+      id="input-box"
+      @click="handleInputBoxClick"
+    >
       <NInput
         ref="inputInstRef"
         v-model:value="inputBoxVal"
