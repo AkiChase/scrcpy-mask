@@ -12,6 +12,7 @@ import {
   KeyObservation as KeyMappingObservation,
   KeyTap,
   KeyMacro,
+  KeyMapping,
 } from "../../keyMappingConfig";
 import { useGlobalStore } from "../../store/global";
 import { DropdownOption, NDropdown, useDialog, useMessage } from "naive-ui";
@@ -91,9 +92,10 @@ function onAddButtonSelect(
       loop: null,
       up: null,
     };
+    delete (keyMapping as any).pointerId;
   } else return;
   keyboardStore.edited = true;
-  store.editKeyMappingList.push(keyMapping);
+  store.editKeyMappingList.push(keyMapping as KeyMapping);
 }
 
 function isKeyUnique(curKey: string): boolean {
