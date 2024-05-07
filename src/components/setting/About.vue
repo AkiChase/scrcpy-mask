@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { NFlex, NH4, NButton, NIcon, NP } from "naive-ui";
+import { NFlex, NH4, NButton, NIcon, NP, NCheckbox } from "naive-ui";
 import { LogoGithub, Planet } from "@vicons/ionicons5";
 import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
 import { onMounted, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
+import { Store } from "@tauri-apps/plugin-store";
 
 const store = useGlobalStore();
+const localStore = new Store("store.bin");
 
 const appVersion = ref("");
 onMounted(async () => {
@@ -71,6 +73,13 @@ async function checkUpdate() {
       </NButton>
     </NFlex>
     <NH4 prefix="bar">更新</NH4>
+    <NCheckbox
+      v-model:checked="store.checkUpdateAtStart"
+      @update:checked="
+        localStore.set('checkUpdateAtStart', store.checkUpdateAtStart)
+      "
+      >启动时检查软件更新</NCheckbox
+    >
     <NP>当前版本：{{ appVersion }}</NP>
     <NButton @click="checkUpdate">检查更新</NButton>
   </div>

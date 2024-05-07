@@ -25,19 +25,8 @@ export const useGlobalStore = defineStore("global", () => {
     device: Device;
   }
 
-  const screenSizeW: Ref<number> = ref(0);
-  const screenSizeH: Ref<number> = ref(0);
-
   const controledDevice: Ref<ControledDevice | null> = ref(null);
-
-  const keyMappingConfigList: Ref<KeyMappingConfig[]> = ref([]);
-  const curKeyMappingIndex = ref(0);
   const editKeyMappingList: Ref<KeyMapping[]> = ref([]);
-
-  const maskButton = ref({
-    transparency: 0.5,
-    show: true,
-  });
 
   const showInputBox: (_: boolean) => void = (_: boolean) => {};
 
@@ -81,17 +70,31 @@ export const useGlobalStore = defineStore("global", () => {
     localStore.set("curKeyMappingIndex", index);
   }
 
+  // persistent storage
+  const screenSizeW: Ref<number> = ref(0);
+  const screenSizeH: Ref<number> = ref(0);
+  const keyMappingConfigList: Ref<KeyMappingConfig[]> = ref([]);
+  const curKeyMappingIndex = ref(0);
+  const maskButton = ref({
+    transparency: 0.5,
+    show: true,
+  });
+  const checkUpdateAtStart = ref(true);
+
   return {
-    showLoading,
-    hideLoading,
-    showLoadingRef,
-    controledDevice,
+    // persistent storage
     screenSizeW,
     screenSizeH,
     keyMappingConfigList,
     curKeyMappingIndex,
-    editKeyMappingList,
     maskButton,
+    checkUpdateAtStart,
+    // in-memory storage
+    showLoading,
+    hideLoading,
+    showLoadingRef,
+    controledDevice,
+    editKeyMappingList,
     showInputBox,
     applyEditKeyMappingList,
     resetEditKeyMappingList,
