@@ -222,7 +222,7 @@ function showSetting() {
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NFormItem label="触点ID">
+    <NFormItem v-if="keyMapping.type !== 'Macro'" label="触点ID">
       <NInputNumber
         v-model:value="keyMapping.pointerId"
         :min="0"

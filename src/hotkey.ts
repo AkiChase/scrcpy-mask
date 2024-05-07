@@ -1179,7 +1179,7 @@ function applyKeyMappingConfigShortcuts(
           );
           break;
         default:
-          console.error("Invalid item type: ", item.type);
+          console.error("Invalid item type: ", item);
           break;
       }
     }

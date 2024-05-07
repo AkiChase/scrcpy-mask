@@ -66,8 +66,13 @@ type KeyMacroList = Array<{
   type: KeyMacroType;
   args: KeyMacroArgs;
 }> | null;
-interface KeyMacro extends Key {
+
+interface KeyMacro {
+  type: "Macro";
   key: string;
+  note: string;
+  posX: number;
+  posY: number;
   macro: {
     down: KeyMacroList;
     loop: KeyMacroList;
