@@ -13,8 +13,8 @@ Due to the delay and blurred image quality of the mirror screen. This project fo
 - [x] Visually setting the mapping
 - [x] Key mapping config import and export
 - [x] Update check
+- [x] Switch between key mapping and input-text box
 - [ ] Internationalization (i18n)
-- [ ] Switch between key mapping and raw input
 - [ ] Gamepad key mapping
 - [ ] Better macro support
 - [ ] Provide external interface through websocket

@@ -14,9 +14,16 @@ import { KeySteeringWheel } from "../keyMappingConfig";
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
 import { open } from "@tauri-apps/plugin-shell";
-import { sendSetClipboard } from "../frontcommand/controlMsg";
-import { getCurrent } from "@tauri-apps/api/webview";
-import { PhysicalSize } from "@tauri-apps/api/dpi";
+import {
+  sendInjectKeycode,
+  sendSetClipboard,
+} from "../frontcommand/controlMsg";
+import { getCurrent, PhysicalSize } from "@tauri-apps/api/window";
+import {
+  AndroidKeyEventAction,
+  AndroidKeycode,
+  AndroidMetastate,
+} from "../frontcommand/android";
 
 const store = useGlobalStore();
 const router = useRouter();
@@ -65,9 +72,10 @@ onMounted(() => {
 
 async function cleanAfterimage() {
   const appWindow = getCurrent();
-  const oSize = await appWindow.size();
-  await appWindow.setSize(new PhysicalSize(oSize.width, oSize.height - 1));
-  await appWindow.setSize(oSize);
+  const oldSize = await appWindow.outerSize();
+  const newSize = new PhysicalSize(oldSize.width, oldSize.height + 1);
+  await appWindow.setSize(newSize);
+  await appWindow.setSize(oldSize);
 }
 
 function handleInputBoxClick(event: MouseEvent) {
@@ -95,6 +103,7 @@ function showInputBox(flag: boolean) {
     });
   } else {
     document.removeEventListener("keyup", handleInputKeyUp);
+    inputInstRef.value?.blur();
     showInputBoxRef.value = false;
     listenToEvent();
     nextTick(() => {
@@ -103,13 +112,36 @@ function showInputBox(flag: boolean) {
   }
 }
 
-function pasteText() {
+function sleep(time: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, time);
+  });
+}
+
+async function pasteText() {
   showInputBox(false);
   if (!inputBoxVal.value) return;
   sendSetClipboard({
     sequence: new Date().getTime() % 100000,
     text: inputBoxVal.value,
     paste: true,
+  });
+  await sleep(300);
+  // send enter
+  await sendInjectKeycode({
+    action: AndroidKeyEventAction.AKEY_EVENT_ACTION_DOWN,
+    keycode: AndroidKeycode.AKEYCODE_ENTER,
+    repeat: 0,
+    metastate: AndroidMetastate.AMETA_NONE,
+  });
+  await sleep(50);
+  await sendInjectKeycode({
+    action: AndroidKeyEventAction.AKEY_EVENT_ACTION_UP,
+    keycode: AndroidKeycode.AKEYCODE_ENTER,
+    repeat: 0,
+    metastate: AndroidMetastate.AMETA_NONE,
   });
 }
 
