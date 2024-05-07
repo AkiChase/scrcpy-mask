@@ -68,10 +68,10 @@ onMounted(async () => {
           deviceWaitForMetadataTask?.(payload.deviceName);
           break;
         case "ClipboardChanged":
-          console.log("剪切板变动", payload.clipboard);
+          console.log("ClipboardChanged", payload.clipboard);
           break;
         case "ClipboardSetAck":
-          console.log("剪切板设置成功", payload.sequence);
+          console.log("ClipboardSetAck", payload.sequence);
           break;
         default:
           console.log("Unknown reply", payload);

@@ -1,29 +1,48 @@
 <script setup lang="ts">
-import { onActivated } from "vue";
-import { NDialog, useMessage } from "naive-ui";
+import { h, nextTick, onActivated, onMounted, ref } from "vue";
+import { NDialog, NInput, useDialog, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
 import {
   applyShortcuts,
   clearShortcuts,
-  listenToKeyEvent,
-  unlistenToKeyEvent,
+  listenToEvent,
+  unlistenToEvent,
   updateScreenSizeAndMaskArea,
 } from "../hotkey";
 import { KeySteeringWheel } from "../keyMappingConfig";
+import { getVersion } from "@tauri-apps/api/app";
+import { fetch } from "@tauri-apps/plugin-http";
+import { open } from "@tauri-apps/plugin-shell";
+import {
+  sendInjectKeycode,
+  sendSetClipboard,
+} from "../frontcommand/controlMsg";
+import { getCurrent, PhysicalSize } from "@tauri-apps/api/window";
+import {
+  AndroidKeyEventAction,
+  AndroidKeycode,
+  AndroidMetastate,
+} from "../frontcommand/android";
 
 const store = useGlobalStore();
 const router = useRouter();
 const message = useMessage();
+const dialog = useDialog();
+
+const showInputBoxRef = ref(false);
+const inputBoxVal = ref("");
+const inputInstRef = ref<HTMLInputElement | null>(null);
 
 onBeforeRouteLeave(() => {
   if (store.controledDevice) {
-    unlistenToKeyEvent();
+    unlistenToEvent();
     clearShortcuts();
   }
 });
 
 onActivated(async () => {
+  cleanAfterimage();
   const maskElement = document.getElementById("maskElement") as HTMLElement;
 
   if (store.controledDevice) {
@@ -38,15 +57,136 @@ onActivated(async () => {
         store.keyMappingConfigList[store.curKeyMappingIndex]
       )
     ) {
-      listenToKeyEvent();
+      listenToEvent();
     } else {
       message.error("按键方案异常，请删除此方案");
     }
   }
 });
 
+onMounted(() => {
+  store.checkUpdate = checkUpdate;
+  checkUpdate();
+  store.showInputBox = showInputBox;
+});
+
+async function cleanAfterimage() {
+  const appWindow = getCurrent();
+  const oldSize = await appWindow.outerSize();
+  const newSize = new PhysicalSize(oldSize.width, oldSize.height + 1);
+  await appWindow.setSize(newSize);
+  await appWindow.setSize(oldSize);
+}
+
+function handleInputBoxClick(event: MouseEvent) {
+  if (event.target === document.getElementById("input-box")) {
+    showInputBox(false);
+  }
+}
+
+function handleInputKeyUp(event: KeyboardEvent) {
+  if (event.key === "Enter") {
+    pasteText();
+  } else if (event.key === "Escape") {
+    showInputBox(false);
+  }
+}
+
+function showInputBox(flag: boolean) {
+  if (flag) {
+    unlistenToEvent();
+    inputBoxVal.value = "";
+    showInputBoxRef.value = true;
+    document.addEventListener("keyup", handleInputKeyUp);
+    nextTick(() => {
+      inputInstRef.value?.focus();
+    });
+  } else {
+    document.removeEventListener("keyup", handleInputKeyUp);
+    inputInstRef.value?.blur();
+    showInputBoxRef.value = false;
+    listenToEvent();
+    nextTick(() => {
+      cleanAfterimage();
+    });
+  }
+}
+
+function sleep(time: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, time);
+  });
+}
+
+async function pasteText() {
+  showInputBox(false);
+  if (!inputBoxVal.value) return;
+  sendSetClipboard({
+    sequence: new Date().getTime() % 100000,
+    text: inputBoxVal.value,
+    paste: true,
+  });
+  await sleep(300);
+  // send enter
+  await sendInjectKeycode({
+    action: AndroidKeyEventAction.AKEY_EVENT_ACTION_DOWN,
+    keycode: AndroidKeycode.AKEYCODE_ENTER,
+    repeat: 0,
+    metastate: AndroidMetastate.AMETA_NONE,
+  });
+  await sleep(50);
+  await sendInjectKeycode({
+    action: AndroidKeyEventAction.AKEY_EVENT_ACTION_UP,
+    keycode: AndroidKeycode.AKEYCODE_ENTER,
+    repeat: 0,
+    metastate: AndroidMetastate.AMETA_NONE,
+  });
+}
+
 function toStartServer() {
   router.replace({ name: "device" });
+}
+
+function renderUpdateInfo(content: string) {
+  const pList = content.split("\r\n").map((line: string) => h("p", line));
+  return h("div", { style: "margin: 20px 0" }, pList);
+}
+
+async function checkUpdate() {
+  try {
+    const curVersion = await getVersion();
+    const res = await fetch(
+      "https://api.github.com/repos/AkiChase/scrcpy-mask/releases/latest",
+      {
+        connectTimeout: 5000,
+      }
+    );
+    if (res.status !== 200) {
+      message.error("检查更新失败");
+    } else {
+      const data = await res.json();
+      const latestVersion = (data.tag_name as string).slice(1);
+      if (latestVersion <= curVersion) {
+        message.success(`最新版本: ${latestVersion}，当前已是最新版本`);
+        return;
+      }
+      const body = data.body as string;
+      dialog.info({
+        title: `最新版本：${data.tag_name}`,
+        content: () => renderUpdateInfo(body),
+        positiveText: "前往发布页",
+        negativeText: "取消",
+        onPositiveClick: () => {
+          open(data.html_url);
+        },
+      });
+    }
+  } catch (e) {
+    console.error(e);
+    message.error("检查更新失败");
+  }
 }
 </script>
 
@@ -65,6 +205,19 @@ function toStartServer() {
   </div>
   <template v-if="store.keyMappingConfigList.length">
     <div @contextmenu.prevent class="mask" id="maskElement"></div>
+    <div
+      v-show="showInputBoxRef"
+      class="input-box"
+      id="input-box"
+      @click="handleInputBoxClick"
+    >
+      <NInput
+        ref="inputInstRef"
+        v-model:value="inputBoxVal"
+        type="text"
+        placeholder="Input text and then press enter/esc"
+      />
+    </div>
     <div
       v-if="store.maskButton.show"
       :style="'--transparency: ' + store.maskButton.transparency"
@@ -125,6 +278,26 @@ function toStartServer() {
   z-index: 2;
 }
 
+.input-box {
+  z-index: 4;
+  position: absolute;
+  left: 70px;
+  top: 30px;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+
+  .n-input {
+    width: 50%;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 15%;
+    margin: auto;
+    background-color: var(--content-bg-color);
+  }
+}
+
 .button-layer {
   position: absolute;
   left: 70px;
@@ -171,7 +344,6 @@ function toStartServer() {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1;
   position: absolute;
   left: 70px;
   top: 30px;
@@ -184,3 +356,4 @@ function toStartServer() {
   }
 }
 </style>
+h, import { getVersion } from "@tauri-apps/api/app";

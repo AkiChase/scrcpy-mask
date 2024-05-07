@@ -1,21 +1,12 @@
-interface Key {
-  type:
-    | "SteeringWheel"
-    | "DirectionalSkill"
-    | "DirectionlessSkill"
-    | "CancelSkill"
-    | "Tap"
-    | "TriggerWhenPressedSkill"
-    | "TriggerWhenDoublePressedSkill"
-    | "Observation"
-    | "Macro";
+interface KeyBase {
   note: string;
   posX: number;
   posY: number;
-  pointerId: number;
 }
 
-interface KeySteeringWheel extends Key {
+export interface KeySteeringWheel extends KeyBase {
+  type: "SteeringWheel";
+  pointerId: number;
   key: {
     left: string;
     right: string;
@@ -25,48 +16,61 @@ interface KeySteeringWheel extends Key {
   offset: number;
 }
 
-interface KeyDirectionalSkill extends Key {
+export interface KeyDirectionalSkill extends KeyBase {
+  type: "DirectionalSkill";
+  pointerId: number;
   key: string;
   range: number;
 }
 
-interface KeyDirectionlessSkill extends Key {
+export interface KeyDirectionlessSkill extends KeyBase {
+  type: "DirectionlessSkill";
+  pointerId: number;
   key: string;
 }
 
-interface KeyCancelSkill extends Key {
+export interface KeyCancelSkill extends KeyBase {
+  type: "CancelSkill";
+  pointerId: number;
   key: string;
 }
 
-interface KeyTriggerWhenPressedSkill extends Key {
+export interface KeyTriggerWhenPressedSkill extends KeyBase {
+  type: "TriggerWhenPressedSkill";
+  pointerId: number;
   key: string;
   directional: boolean;
   rangeOrTime: number;
 }
 
-interface KeyTriggerWhenDoublePressedSkill extends Key {
+export interface KeyTriggerWhenDoublePressedSkill extends KeyBase {
+  type: "TriggerWhenDoublePressedSkill";
+  pointerId: number;
   key: string;
   range: number;
 }
 
-interface KeyObservation extends Key {
+export interface KeyObservation extends KeyBase {
+  type: "Observation";
+  pointerId: number;
   key: string;
   scale: number;
 }
 
-interface KeyTap extends Key {
+export interface KeyTap extends KeyBase {
+  type: "Tap";
+  pointerId: number;
   key: string;
   time: number;
 }
 
-type KeyMacroType = "touch" | "sleep" | "swipe";
-type KeyMacroArgs = any[];
-
-type KeyMacroList = Array<{
-  type: KeyMacroType;
-  args: KeyMacroArgs;
+export type KeyMacroList = Array<{
+  type: "touch" | "sleep" | "swipe" | "input-text";
+  args: any[];
 }> | null;
-interface KeyMacro extends Key {
+
+export interface KeyMacro extends KeyBase {
+  type: "Macro";
   key: string;
   macro: {
     down: KeyMacroList;
@@ -75,7 +79,7 @@ interface KeyMacro extends Key {
   };
 }
 
-type KeyMapping =
+export type KeyMapping =
   | KeySteeringWheel
   | KeyDirectionalSkill
   | KeyDirectionlessSkill
@@ -86,23 +90,16 @@ type KeyMapping =
   | KeyCancelSkill
   | KeyTap;
 
-interface KeyMappingConfig {
+export type KeyCommon = KeyMacro | KeyCancelSkill | KeyTap;
+
+export type KeySkill =
+  | KeyDirectionalSkill
+  | KeyDirectionlessSkill
+  | KeyTriggerWhenPressedSkill
+  | KeyTriggerWhenDoublePressedSkill;
+
+export interface KeyMappingConfig {
   relativeSize: { w: number; h: number };
   title: string;
   list: KeyMapping[];
 }
-
-export type {
-  KeyMacroList,
-  KeySteeringWheel,
-  KeyDirectionalSkill,
-  KeyDirectionlessSkill,
-  KeyCancelSkill,
-  KeyTap,
-  KeyTriggerWhenPressedSkill,
-  KeyTriggerWhenDoublePressedSkill,
-  KeyObservation,
-  KeyMacro,
-  KeyMapping,
-  KeyMappingConfig,
-};

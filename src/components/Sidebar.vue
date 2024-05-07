@@ -64,6 +64,15 @@ async function sendKeyCodeToDevice(code: AndroidKeycode) {
     message.error("未连接设备");
   }
 }
+
+async function changeScreenPowerMode() {
+  if (store.controledDevice) {
+    sendSetScreenPowerMode({ mode: nextScreenPowerMode.value });
+    nextScreenPowerMode.value = nextScreenPowerMode.value ? 0 : 2;
+  } else {
+    message.error("未连接设备");
+  }
+}
 </script>
 
 <template>
@@ -96,12 +105,7 @@ async function sendKeyCodeToDevice(code: AndroidKeycode) {
     </div>
 
     <div class="nav">
-      <div
-        @click="
-          sendSetScreenPowerMode({ mode: nextScreenPowerMode });
-          nextScreenPowerMode = nextScreenPowerMode ? 0 : 2;
-        "
-      >
+      <div @click="changeScreenPowerMode">
         <NIcon>
           <Bulb v-if="nextScreenPowerMode" />
           <BulbOutline v-else />

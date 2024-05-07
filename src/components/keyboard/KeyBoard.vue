@@ -12,6 +12,7 @@ import {
   KeyObservation as KeyMappingObservation,
   KeyTap,
   KeyMacro,
+  KeyMapping,
 } from "../../keyMappingConfig";
 import { useGlobalStore } from "../../store/global";
 import { DropdownOption, NDropdown, useDialog, useMessage } from "naive-ui";
@@ -73,10 +74,10 @@ function onAddButtonSelect(
     (keyMapping as KeyTap).time = 80;
   } else if (type === "SteeringWheel") {
     (keyMapping as unknown as KeyMappingSteeringWheel).key = {
-      left: "NONE",
-      right: "NONE",
-      up: "NONE",
-      down: "NONE",
+      left: "NONE1",
+      right: "NONE2",
+      up: "NONE3",
+      down: "NONE4",
     };
     (keyMapping as unknown as KeyMappingSteeringWheel).offset = 100;
   } else if (type === "DirectionalSkill") {
@@ -91,9 +92,10 @@ function onAddButtonSelect(
       loop: null,
       up: null,
     };
+    delete (keyMapping as any).pointerId;
   } else return;
   keyboardStore.edited = true;
-  store.editKeyMappingList.push(keyMapping);
+  store.editKeyMappingList.push(keyMapping as KeyMapping);
 }
 
 function isKeyUnique(curKey: string): boolean {

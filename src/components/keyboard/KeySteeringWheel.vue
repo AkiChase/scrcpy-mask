@@ -28,11 +28,8 @@ const offset = computed(() => {
     const clientWidth = keyboardElement.clientWidth;
     const screenSizeW =
       store.screenSizeW === 0 ? clientWidth : store.screenSizeW;
-    return (
-      ((keyMapping.value as KeySteeringWheel).offset * clientWidth) /
-      screenSizeW
-    );
-  } else return (keyMapping.value as KeySteeringWheel).offset;
+    return (keyMapping.value.offset * clientWidth) / screenSizeW;
+  } else return keyMapping.value.offset;
 });
 
 function dragHandler(downEvent: MouseEvent) {

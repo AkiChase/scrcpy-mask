@@ -14,7 +14,7 @@ import {
   NInputNumber,
 } from "naive-ui";
 import { CloseCircle, Settings } from "@vicons/ionicons5";
-import { KeyMacro, KeyMacroList, KeyTap } from "../../keyMappingConfig";
+import { KeyCommon, KeyMacro, KeyMacroList } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 
 const props = defineProps<{
@@ -30,7 +30,9 @@ const elementRef = ref<HTMLElement | null>(null);
 const isActive = computed(
   () => props.index === keyboardStore.activeButtonIndex
 );
-const keyMapping = computed(() => store.editKeyMappingList[props.index]);
+const keyMapping = computed(
+  () => store.editKeyMappingList[props.index] as KeyCommon
+);
 
 const showMacroModal = ref(false);
 const editedMacroRaw = ref({
@@ -216,13 +218,13 @@ function showSetting() {
     </NFormItem>
     <NFormItem v-if="keyMapping.type === 'Tap'" label="触摸时长">
       <NInputNumber
-        v-model:value="(keyMapping as KeyTap).time"
+        v-model:value="keyMapping.time"
         :min="0"
         placeholder="请输入触摸时长(ms)"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NFormItem label="触点ID">
+    <NFormItem v-if="keyMapping.type !== 'Macro'" label="触点ID">
       <NInputNumber
         v-model:value="keyMapping.pointerId"
         :min="0"

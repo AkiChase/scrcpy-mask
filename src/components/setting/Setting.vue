@@ -3,33 +3,38 @@ import Basic from "./Basic.vue";
 import Script from "./Script.vue";
 import Mask from "./Mask.vue";
 import About from "./About.vue";
-import { NTabs, NTabPane, NScrollbar } from "naive-ui";
+import { NTabs, NTabPane, NScrollbar, NSpin } from "naive-ui";
+import { useGlobalStore } from "../../store/global";
+
+const store = useGlobalStore();
 </script>
 
 <template>
   <div class="setting">
-    <NTabs type="line" animated placement="left" default-value="basic">
-      <NTabPane tab="基本设置" name="basic">
-        <NScrollbar>
-          <Basic />
-        </NScrollbar>
-      </NTabPane>
-      <NTabPane tab="蒙版设置" name="mask">
-        <NScrollbar>
-          <Mask />
-        </NScrollbar>
-      </NTabPane>
-      <NTabPane tab="脚本设置" name="script">
-        <NScrollbar>
-          <Script />
-        </NScrollbar>
-      </NTabPane>
-      <NTabPane tab="关于" name="about">
-        <NScrollbar>
-          <About />
-        </NScrollbar>
-      </NTabPane>
-    </NTabs>
+    <NSpin :show="store.showLoadingRef">
+      <NTabs type="line" animated placement="left" default-value="basic">
+        <NTabPane tab="基本设置" name="basic">
+          <NScrollbar>
+            <Basic />
+          </NScrollbar>
+        </NTabPane>
+        <NTabPane tab="蒙版设置" name="mask">
+          <NScrollbar>
+            <Mask />
+          </NScrollbar>
+        </NTabPane>
+        <NTabPane tab="脚本设置" name="script">
+          <NScrollbar>
+            <Script />
+          </NScrollbar>
+        </NTabPane>
+        <NTabPane tab="关于" name="about">
+          <NScrollbar>
+            <About />
+          </NScrollbar>
+        </NTabPane>
+      </NTabs>
+    </NSpin>
   </div>
 </template>
 
@@ -40,6 +45,10 @@ import { NTabs, NTabPane, NScrollbar } from "naive-ui";
   height: 100%;
   overflow-y: auto;
   display: flex;
+
+  .n-tabs{
+    height: 100%;
+  }
 
   .n-tab-pane {
     padding: 0;

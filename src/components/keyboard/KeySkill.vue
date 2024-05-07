@@ -14,7 +14,7 @@ import {
 } from "naive-ui";
 import {
   KeyDirectionalSkill,
-  KeyTriggerWhenDoublePressedSkill,
+  KeySkill,
   KeyTriggerWhenPressedSkill,
 } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
@@ -31,7 +31,9 @@ const elementRef = ref<HTMLElement | null>(null);
 const isActive = computed(
   () => props.index === keyboardStore.activeButtonIndex
 );
-const keyMapping = computed(() => store.editKeyMappingList[props.index]);
+const keyMapping = computed(
+  () => store.editKeyMappingList[props.index] as KeySkill
+);
 
 function dragHandler(downEvent: MouseEvent) {
   keyboardStore.activeButtonIndex = props.index;
@@ -97,12 +99,14 @@ function changeSkillType(flag: string) {
     keyboardStore.edited = true;
     if (t === "DirectionalSkill") {
       // to DirectionlessSkill
-      delete (keyMapping.value as any).range;
-      keyMapping.value.type = "DirectionlessSkill";
+      const k = keyMapping.value as any;
+      delete k.range;
+      k.type = "DirectionlessSkill";
     } else if (t === "DirectionlessSkill") {
       // to DirectionalSkill
-      (keyMapping.value as any).range = 0;
-      keyMapping.value.type = "DirectionalSkill";
+      const k = keyMapping.value as any;
+      k.range = 0;
+      k.type = "DirectionalSkill";
     } else if (t === "TriggerWhenPressedSkill") {
       // change directional flag
       const k = keyMapping.value as KeyTriggerWhenPressedSkill;
@@ -110,8 +114,9 @@ function changeSkillType(flag: string) {
       k.rangeOrTime = k.directional ? 0 : 80;
     } else if (t === "TriggerWhenDoublePressedSkill") {
       // to DirectionlessSkill
-      delete (keyMapping.value as any).range;
-      keyMapping.value.type = "DirectionlessSkill";
+      const k = keyMapping.value as any;
+      delete k.range;
+      k.type = "DirectionlessSkill";
     }
   } else if (flag === "trigger") {
     keyboardStore.edited = true;
@@ -278,7 +283,7 @@ function updateRangeIndicator(element?: HTMLElement) {
     <NFormItem v-if="!isDirectionless" label="范围">
       <NInputNumber
         v-if="keyMapping.type === 'DirectionalSkill'"
-        v-model:value="(keyMapping as KeyDirectionalSkill).range"
+        v-model:value="keyMapping.range"
         placeholder="range"
         :min="0"
         :max="100"
@@ -289,7 +294,7 @@ function updateRangeIndicator(element?: HTMLElement) {
       />
       <NInputNumber
         v-else-if="keyMapping.type === 'TriggerWhenPressedSkill'"
-        v-model:value="(keyMapping as KeyTriggerWhenPressedSkill).rangeOrTime"
+        v-model:value="keyMapping.rangeOrTime"
         placeholder="rangeOrTime"
         :min="0"
         :max="100"
@@ -300,7 +305,7 @@ function updateRangeIndicator(element?: HTMLElement) {
       />
       <NInputNumber
         v-else-if="keyMapping.type === 'TriggerWhenDoublePressedSkill'"
-        v-model:value="(keyMapping as KeyTriggerWhenDoublePressedSkill).range"
+        v-model:value="keyMapping.range"
         placeholder="range"
         :min="0"
         :max="100"
@@ -315,7 +320,7 @@ function updateRangeIndicator(element?: HTMLElement) {
       label="触摸时长"
     >
       <NInputNumber
-        v-model:value="(keyMapping as KeyTriggerWhenPressedSkill).rangeOrTime"
+        v-model:value="keyMapping.rangeOrTime"
         :min="0"
         placeholder="请输入触摸时长(ms)"
         @update:value="keyboardStore.edited = true"

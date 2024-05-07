@@ -39,6 +39,10 @@ export const useGlobalStore = defineStore("global", () => {
     show: true,
   });
 
+  const showInputBox: (_: boolean) => void = (_: boolean) => {};
+
+  let checkUpdate: () => Promise<void> = async () => {};
+
   function applyEditKeyMappingList(): boolean {
     const set = new Set<string>();
     for (const keyMapping of editKeyMappingList.value) {
@@ -88,8 +92,10 @@ export const useGlobalStore = defineStore("global", () => {
     curKeyMappingIndex,
     editKeyMappingList,
     maskButton,
+    showInputBox,
     applyEditKeyMappingList,
     resetEditKeyMappingList,
     setKeyMappingIndex,
+    checkUpdate,
   };
 });
