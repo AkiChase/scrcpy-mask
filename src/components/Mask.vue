@@ -1,33 +1,41 @@
 <script setup lang="ts">
-import { h, onActivated, onMounted } from "vue";
-import { NDialog, useDialog, useMessage } from "naive-ui";
+import { h, nextTick, onActivated, onMounted, ref } from "vue";
+import { NDialog, NInput, useDialog, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
 import {
   applyShortcuts,
   clearShortcuts,
-  listenToKeyEvent,
-  unlistenToKeyEvent,
+  listenToEvent,
+  unlistenToEvent,
   updateScreenSizeAndMaskArea,
 } from "../hotkey";
 import { KeySteeringWheel } from "../keyMappingConfig";
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
 import { open } from "@tauri-apps/plugin-shell";
+import { sendSetClipboard } from "../frontcommand/controlMsg";
+import { getCurrent } from "@tauri-apps/api/webview";
+import { PhysicalSize } from "@tauri-apps/api/dpi";
 
 const store = useGlobalStore();
 const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
 
+const showInputBoxRef = ref(false);
+const inputBoxVal = ref("");
+const inputInstRef = ref<HTMLInputElement | null>(null);
+
 onBeforeRouteLeave(() => {
   if (store.controledDevice) {
-    unlistenToKeyEvent();
+    unlistenToEvent();
     clearShortcuts();
   }
 });
 
 onActivated(async () => {
+  cleanAfterimage();
   const maskElement = document.getElementById("maskElement") as HTMLElement;
 
   if (store.controledDevice) {
@@ -42,7 +50,7 @@ onActivated(async () => {
         store.keyMappingConfigList[store.curKeyMappingIndex]
       )
     ) {
-      listenToKeyEvent();
+      listenToEvent();
     } else {
       message.error("按键方案异常，请删除此方案");
     }
@@ -52,7 +60,52 @@ onActivated(async () => {
 onMounted(() => {
   store.checkUpdate = checkUpdate;
   checkUpdate();
+  store.showInputBox = showInputBox;
 });
+
+async function cleanAfterimage() {
+  const appWindow = getCurrent();
+  const oSize = await appWindow.size();
+  await appWindow.setSize(new PhysicalSize(oSize.width, oSize.height - 1));
+  await appWindow.setSize(oSize);
+}
+
+function handleInputKeyUp(event: KeyboardEvent) {
+  if (event.key === "Enter") {
+    pasteText();
+  } else if (event.key === "Escape") {
+    showInputBox(false);
+  }
+}
+
+function showInputBox(flag: boolean) {
+  if (flag) {
+    unlistenToEvent();
+    inputBoxVal.value = "";
+    showInputBoxRef.value = true;
+    document.addEventListener("keyup", handleInputKeyUp);
+    nextTick(() => {
+      inputInstRef.value?.focus();
+    });
+  } else {
+    document.removeEventListener("keyup", handleInputKeyUp);
+    showInputBoxRef.value = false;
+    listenToEvent();
+    nextTick(() => {
+      cleanAfterimage();
+    });
+  }
+}
+
+function pasteText() {
+  showInputBox(false);
+  if (!inputBoxVal.value) return;
+  sendSetClipboard({
+    sequence: new Date().getTime() % 100000,
+    text: inputBoxVal.value,
+    paste: true,
+  });
+}
 
 function toStartServer() {
   router.replace({ name: "device" });
@@ -114,6 +167,14 @@ async function checkUpdate() {
   </div>
   <template v-if="store.keyMappingConfigList.length">
     <div @contextmenu.prevent class="mask" id="maskElement"></div>
+    <div v-show="showInputBoxRef" class="input-box">
+      <NInput
+        ref="inputInstRef"
+        v-model:value="inputBoxVal"
+        type="text"
+        placeholder="Input text and then press enter/esc"
+      />
+    </div>
     <div
       v-if="store.maskButton.show"
       :style="'--transparency: ' + store.maskButton.transparency"
@@ -174,6 +235,26 @@ async function checkUpdate() {
   z-index: 2;
 }
 
+.input-box {
+  z-index: 4;
+  position: absolute;
+  left: 70px;
+  top: 30px;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+
+  .n-input {
+    width: 50%;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 15%;
+    margin: auto;
+    background-color: var(--content-bg-color);
+  }
+}
+
 .button-layer {
   position: absolute;
   left: 70px;
@@ -220,7 +301,6 @@ async function checkUpdate() {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1;
   position: absolute;
   left: 70px;
   top: 30px;

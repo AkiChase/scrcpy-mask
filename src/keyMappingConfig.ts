@@ -59,7 +59,7 @@ interface KeyTap extends Key {
   time: number;
 }
 
-type KeyMacroType = "touch" | "sleep" | "swipe";
+type KeyMacroType = "touch" | "sleep" | "swipe" | "input-text";
 type KeyMacroArgs = any[];
 
 type KeyMacroList = Array<{

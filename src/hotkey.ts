@@ -18,6 +18,7 @@ import {
   KeyTriggerWhenDoublePressedSkill,
   KeyTriggerWhenPressedSkill,
 } from "./keyMappingConfig";
+import { useGlobalStore } from "./store/global";
 
 function clientxToPosx(clientx: number) {
   return clientx < 70
@@ -948,6 +949,12 @@ function addShortcut(
  *     1000,
  *   ],
  *  },
+ *  // input-text
+ *  {
+ *    type: "input-text",
+ *    // 1:on, 2:off
+ *    args: [1]
+ *  }
  * ]);
  */
 async function execMacro(
@@ -1024,6 +1031,15 @@ async function execMacro(
             pos: calculateMacroPosList(cmd.args[2], relativeSize),
             intervalBetweenPos: cmd.args[3],
           });
+          break;
+        case "input-text":
+          if (cmd.args[0] === 1) {
+            // on
+            useGlobalStore().showInputBox(true);
+          } else {
+            // off
+            useGlobalStore().showInputBox(false);
+          }
           break;
         default:
           console.error("Invalid command: ", cmd);
@@ -1175,25 +1191,29 @@ function applyKeyMappingConfigShortcuts(
   }
 }
 
-export function listenToKeyEvent() {
+export function listenToEvent() {
   window.addEventListener("keydown", keydownHandler);
   window.addEventListener("keyup", keyupHandler);
+  window.addEventListener("mousedown", handleMouseDown);
+  window.addEventListener("mousemove", handleMouseMove);
+  window.addEventListener("mouseup", handleMouseUp);
+  window.addEventListener("wheel", handleMouseWheel);
   loopFlag = true;
   execLoopCB();
 }
 
-export function unlistenToKeyEvent() {
+export function unlistenToEvent() {
   window.removeEventListener("keydown", keydownHandler);
   window.removeEventListener("keyup", keyupHandler);
-  loopFlag = false;
-}
-
-export function clearShortcuts() {
   window.removeEventListener("mousedown", handleMouseDown);
   window.removeEventListener("mousemove", handleMouseMove);
   window.removeEventListener("mouseup", handleMouseUp);
   window.removeEventListener("wheel", handleMouseWheel);
 
+  loopFlag = false;
+}
+
+export function clearShortcuts() {
   downKeyMap.clear();
   downKeyCBMap.clear();
   loopDownKeyCBMap.clear();
@@ -1216,11 +1236,6 @@ export function applyShortcuts(
   keyMappingConfig: KeyMappingConfig
 ) {
   maskElement = element;
-  window.addEventListener("mousedown", handleMouseDown);
-  window.addEventListener("mousemove", handleMouseMove);
-  window.addEventListener("mouseup", handleMouseUp);
-  window.addEventListener("wheel", handleMouseWheel);
-
   addClickShortcuts("M0", 0);
   return applyKeyMappingConfigShortcuts(keyMappingConfig);
 }
