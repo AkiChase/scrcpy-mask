@@ -13,9 +13,12 @@ import {
   useDialog,
   NCard,
   NIcon,
+  NFormItem,
+  NSelect,
 } from "naive-ui";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { onMounted, ref } from "vue";
+import i18n from "../../i18n";
 
 const localStore = new Store("store.bin");
 const dialog = useDialog();
@@ -25,8 +28,16 @@ const showDataModal = ref(false);
 const dataModalInputVal = ref("");
 let curDataIndex = -1;
 
-onMounted(() => {
+const languageOptions = [
+  { label: "简体中文", value: "zh-CN" },
+  { label: "English", value: "en-US" },
+];
+
+const curLanguage = ref("en-US");
+
+onMounted(async () => {
   refreshLocalData();
+  curLanguage.value = (await localStore.get<string>("language")) ?? "en-US";
 });
 
 async function refreshLocalData() {
@@ -69,10 +80,25 @@ function delLocalStore(key?: string) {
     });
   }
 }
+
+function changeLanguage(language: "zh-CN" | "en-US") {
+  if (language === curLanguage.value) return;
+  curLanguage.value = language;
+  localStore.set("language", language);
+  i18n.global.locale = language;
+}
 </script>
 
 <template>
   <div class="setting-page">
+    <NH4 prefix="bar">语言</NH4>
+    <NFormItem>
+      <NSelect
+        :value="curLanguage"
+        @update:value="changeLanguage"
+        :options="languageOptions"
+      />
+    </NFormItem>
     <NFlex justify="space-between">
       <NH4 prefix="bar">本地数据</NH4>
       <NFlex>
