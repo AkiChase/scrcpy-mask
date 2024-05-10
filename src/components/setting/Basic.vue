@@ -13,7 +13,6 @@ import {
   useDialog,
   NCard,
   NIcon,
-  NFormItem,
   NSelect,
 } from "naive-ui";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -92,13 +91,12 @@ function changeLanguage(language: "zh-CN" | "en-US") {
 <template>
   <div class="setting-page">
     <NH4 prefix="bar">语言</NH4>
-    <NFormItem>
-      <NSelect
-        :value="curLanguage"
-        @update:value="changeLanguage"
-        :options="languageOptions"
-      />
-    </NFormItem>
+    <NSelect
+      :value="curLanguage"
+      @update:value="changeLanguage"
+      :options="languageOptions"
+      style="max-width: 300px; margin: 20px 0"
+    />
     <NFlex justify="space-between">
       <NH4 prefix="bar">本地数据</NH4>
       <NFlex>

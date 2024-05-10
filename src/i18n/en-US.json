@@ -36,6 +36,25 @@
       "controledDevice": "Controlled device",
       "availableDevice": "Available devices",
       "noControledDevice": "No Controled Device"
+    },
+    "Mask": {
+      "inputBoxPlaceholder": "Input text and then press enter/esc",
+      "keyconfigException": "The key mapping config is abnormal, please delete this config",
+      "blankConfig": "Blank config",
+      "checkUpdate": {
+        "failed": "Check for updates failed",
+        "isLatest": "Latest version: {0}, currently the latest version",
+        "notLatest": {
+          "title": "Latest version: {0}",
+          "positiveText": "Release page",
+          "negativeText": "Cancel"
+        }
+      },
+      "noControledDevice": {
+        "title": "Controlled device not found",
+        "content": "Please go to the device page to control any device",
+        "positiveText": "To control"
+      }
     }
   }
 }

@@ -25,7 +25,9 @@ import {
   AndroidMetastate,
 } from "../frontcommand/android";
 import { Store } from "@tauri-apps/plugin-store";
+import { useI18n } from "vue-i18n";
 
+const { t } = useI18n();
 const store = useGlobalStore();
 const router = useRouter();
 const message = useMessage();
@@ -60,7 +62,7 @@ onActivated(async () => {
     ) {
       listenToEvent();
     } else {
-      message.error("按键方案异常，请删除此方案");
+      message.error(t("pages.Mask.keyconfigException"));
     }
   }
 });
@@ -107,7 +109,7 @@ async function loadLocalStore() {
     keyMappingConfigList = [
       {
         relativeSize,
-        title: "空白方案",
+        title: t("pages.Mask.blankConfig"),
         list: [],
       },
     ];
@@ -235,20 +237,20 @@ async function checkUpdate() {
       }
     );
     if (res.status !== 200) {
-      message.error("检查更新失败");
+      message.error(t("pages.Mask.checkUpdate.failed"));
     } else {
       const data = await res.json();
       const latestVersion = (data.tag_name as string).slice(1);
       if (latestVersion <= curVersion) {
-        message.success(`最新版本: ${latestVersion}，当前已是最新版本`);
+        message.success(t("pages.Mask.checkUpdate.isLatest", [latestVersion]));
         return;
       }
       const body = data.body as string;
       dialog.info({
-        title: `最新版本：${data.tag_name}`,
+        title: t("pages.Mask.checkUpdate.notLatest.title", [latestVersion]),
         content: () => renderUpdateInfo(body),
-        positiveText: "前往发布页",
-        negativeText: "取消",
+        positiveText: t("pages.Mask.checkUpdate.notLatest.positiveText"),
+        negativeText: t("pages.Mask.checkUpdate.notLatest.negativeText"),
         onPositiveClick: () => {
           open(data.html_url);
         },
@@ -256,7 +258,7 @@ async function checkUpdate() {
     }
   } catch (e) {
     console.error(e);
-    message.error("检查更新失败");
+    message.error(t("pages.Mask.checkUpdate.failed"));
   }
 }
 </script>
@@ -266,9 +268,9 @@ async function checkUpdate() {
     <div class="content">
       <NDialog
         :closable="false"
-        title="未找到受控设备"
-        content="请启动服务端并控制任意设备"
-        positive-text="去启动"
+        :title="$t('pages.Mask.noControledDevice.title')"
+        :content="$t('pages.Mask.noControledDevice.content')"
+        :positive-text="$t('pages.Mask.noControledDevice.positiveText')"
         type="warning"
         @positive-click="toStartServer"
       />
@@ -286,7 +288,7 @@ async function checkUpdate() {
         ref="inputInstRef"
         v-model:value="inputBoxVal"
         type="text"
-        placeholder="Input text and then press enter/esc"
+        :placeholder="$t('pages.Mask.inputBoxPlaceholder')"
       />
     </div>
     <div

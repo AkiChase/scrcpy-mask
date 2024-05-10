@@ -36,6 +36,25 @@
       "controledDevice": "受控设备",
       "noControledDevice": "无受控设备",
       "availableDevice": "可用设备"
+    },
+    "Mask": {
+      "keyconfigException": "按键方案异常，请删除此方案",
+      "blankConfig": "空白方案",
+      "checkUpdate": {
+        "failed": "检查更新失败",
+        "isLatest": "最新版本: {0}，当前已是最新版本",
+        "notLatest": {
+          "title": "最新版本：{0}",
+          "positiveText": "前往发布页",
+          "negativeText": "取消"
+        }
+      },
+      "noControledDevice": {
+        "title": "未找到受控设备",
+        "content": "请前往设备页面，控制任意设备",
+        "positiveText": "去控制"
+      },
+      "inputBoxPlaceholder": "输入文本后按Enter/Esc"
     }
   }
 }
