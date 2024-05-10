@@ -1,0 +1,41 @@
+{
+  "pages": {
+    "Device": {
+      "localPort": "Local Port",
+      "status": "Status",
+      "shutdown": {
+        "title": "Warning",
+        "content": "Are you sure to turn off the Scrcpy control service?",
+        "positiveText": "Confirm",
+        "negativeText": "Cancel"
+      },
+      "menu": {
+        "control": "Control this device",
+        "screen": "Get screen size"
+      },
+      "deviceControl": {
+        "inputScreenSize": "Please enter the screen size of the current control device correctly",
+        "closeCurDevice": "Please close the current control device first",
+        "controlInfo": "The screen size has been saved and the control service is starting. Please keep the device screen on.",
+        "connectTimeout": "Device connection timeout"
+      },
+      "deviceGetScreenSize": "Device screen size: ",
+      "inputWirelessAddress": "Please enter the wireless debugging address",
+      "localPortPlaceholder": "Scrcpy local port",
+      "wireless": "Wireless connection",
+      "wirelessPlaceholder": "Wireless connection address",
+      "connect": "Connect",
+      "deviceSize": {
+        "title": "Device screen size",
+        "width": "Width",
+        "widthPlaceholder": "Screen width",
+        "height": "Height",
+        "heightPlaceholder": "Screen height",
+        "tip": "Tip: Please enter the screen size of the current control device correctly. This is a necessary parameter to successfully send touch events."
+      },
+      "controledDevice": "Controlled device",
+      "availableDevice": "Available devices",
+      "noControledDevice": "No Controled Device"
+    }
+  }
+}
