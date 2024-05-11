@@ -1,5 +1,7 @@
 # Scrcpy-mask
 
+[中文介绍](./README-zh.md)
+
 To achieve computer control of Android devices, I developed a cross-platform desktop client using Tarui + Vue 3 + Rust. This client provides visual mouse and keyboard mapping configuration, enabling multi-touch operations similar to Android emulators through key mapping, with millisecond-level response time. This tool can be widely used for controlling Android devices from computers to play mobile games, providing a smooth touch experience.
 
 This project only implements the Scrcpy control protocol and **does not provide Screen mirroring**. Because screen mirroring may involve latency and blurriness issues, this project takes a different approach by directly abandoning screen mirroring and instead using a transparent mask to display the content behind the window (which can be AVD, low-latency screen mirroring provided by your phone manufacturers, etc.), Completely eliminates the problem of poor screen casting experience inherent in Scrcpy.
