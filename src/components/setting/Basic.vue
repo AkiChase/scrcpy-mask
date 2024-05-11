@@ -18,7 +18,9 @@ import {
 import { relaunch } from "@tauri-apps/plugin-process";
 import { onMounted, ref } from "vue";
 import i18n from "../../i18n";
+import { useI18n } from "vue-i18n";
 
+const { t } = useI18n();
 const localStore = new Store("store.bin");
 const dialog = useDialog();
 
@@ -56,10 +58,10 @@ function showLocalStore(index: number) {
 function delLocalStore(key?: string) {
   if (key) {
     dialog.warning({
-      title: "Warning",
-      content: `即将删除数据"${key}"，删除操作不可撤回，是否继续？`,
-      positiveText: "删除",
-      negativeText: "取消",
+      title: t("pages.Setting.Basic.delLocalStore.dialog.title"),
+      content: t("pages.Setting.Basic.delLocalStore.dialog.delKey", [key]),
+      positiveText: t("pages.Setting.Basic.delLocalStore.dialog.positiveText"),
+      negativeText: t("pages.Setting.Basic.delLocalStore.dialog.negativeText"),
       onPositiveClick: () => {
         localStore.delete(key);
         localStoreEntries.value.splice(curDataIndex, 1);
@@ -68,12 +70,12 @@ function delLocalStore(key?: string) {
     });
   } else {
     dialog.warning({
-      title: "Warning",
-      content: "即将清空数据，操作不可撤回，且清空后将重启软件，是否继续？",
-      positiveText: "删除",
-      negativeText: "取消",
+      title: t("pages.Setting.Basic.delLocalStore.dialog.title"),
+      content: t("pages.Setting.Basic.delLocalStore.dialog.delAll"),
+      positiveText: t("pages.Setting.Basic.delLocalStore.dialog.positiveText"),
+      negativeText: t("pages.Setting.Basic.delLocalStore.dialog.negativeText"),
       onPositiveClick: () => {
-        // localStore.clear();
+        localStore.clear();
         relaunch();
       },
     });
@@ -90,7 +92,7 @@ function changeLanguage(language: "zh-CN" | "en-US") {
 
 <template>
   <div class="setting-page">
-    <NH4 prefix="bar">语言</NH4>
+    <NH4 prefix="bar">{{ $t("pages.Setting.Basic.language") }}</NH4>
     <NSelect
       :value="curLanguage"
       @update:value="changeLanguage"
@@ -98,7 +100,7 @@ function changeLanguage(language: "zh-CN" | "en-US") {
       style="max-width: 300px; margin: 20px 0"
     />
     <NFlex justify="space-between">
-      <NH4 prefix="bar">本地数据</NH4>
+      <NH4 prefix="bar">{{ $t("pages.Setting.Basic.localStore") }}</NH4>
       <NFlex>
         <NButton
           tertiary
@@ -124,9 +126,7 @@ function changeLanguage(language: "zh-CN" | "en-US") {
         </NButton>
       </NFlex>
     </NFlex>
-    <NP
-      >删除数据可能导致无法预料的后果，请慎重操作。若出现异常请尝试清空数据并重启软件。</NP
-    >
+    <NP>{{ $t("pages.Setting.Basic.delLocalStore.warning") }}</NP>
     <NList class="data-list" hoverable clickable>
       <NListItem v-for="(entrie, index) in localStoreEntries">
         <div @click="showLocalStore(index)">
@@ -136,7 +136,10 @@ function changeLanguage(language: "zh-CN" | "en-US") {
     </NList>
   </div>
   <NModal v-model:show="showDataModal">
-    <NCard style="width: 50%; height: 80%" title="卡片">
+    <NCard
+      style="width: 50%; height: 80%"
+      :title="localStoreEntries[curDataIndex][0]"
+    >
       <NFlex vertical style="height: 100%">
         <NInput
           type="textarea"
@@ -149,7 +152,7 @@ function changeLanguage(language: "zh-CN" | "en-US") {
           type="success"
           round
           @click="delLocalStore(localStoreEntries[curDataIndex][0])"
-          >删除当前数据</NButton
+          >{{ $t("pages.Setting.Basic.delCurData") }}</NButton
         >
       </NFlex>
     </NCard>

@@ -28,11 +28,13 @@ import { Store } from "@tauri-apps/plugin-store";
 import { SettingsOutline } from "@vicons/ionicons5";
 import { UnlistenFn } from "@tauri-apps/api/event";
 import { useGlobalStore } from "../../store/global";
+import { useI18n } from "vue-i18n";
 
 let unlistenResize: UnlistenFn = () => {};
 let unlistenMove: UnlistenFn = () => {};
 let factor = 1;
 
+const { t } = useI18n();
 const localStore = new Store("store.bin");
 const store = useGlobalStore();
 const message = useMessage();
@@ -57,25 +59,25 @@ const areaFormRules: FormRules = {
     type: "number",
     required: true,
     trigger: ["blur", "input"],
-    message: "请输入左上角X坐标",
+    message: () => t("pages.Setting.Mask.areaFormMissing.x"),
   },
   posY: {
     type: "number",
     required: true,
     trigger: ["blur", "input"],
-    message: "请输入左上角Y坐标",
+    message: () => t("pages.Setting.Mask.areaFormMissing.y"),
   },
   sizeW: {
     type: "number",
     required: true,
     trigger: ["blur", "input"],
-    message: "请输入蒙版宽度",
+    message: () => t("pages.Setting.Mask.areaFormMissing.w"),
   },
   sizeH: {
     type: "number",
     required: true,
     trigger: ["blur", "input"],
-    message: "请输入蒙版高度",
+    message: () => t("pages.Setting.Mask.areaFormMissing.h"),
   },
 };
 
@@ -104,10 +106,10 @@ function handleAdjustClick(e: MouseEvent) {
     if (!errors) {
       adjustMaskArea().then(() => {
         localStore.set("maskArea", areaModel.value);
-        message.success("蒙版区域已保存");
+        message.success(t("pages.Setting.Mask.areaSaved"));
       });
     } else {
-      message.error("请正确输入蒙版的坐标和尺寸");
+      message.error(t("pages.Setting.Mask.incorrectArea"));
     }
   });
 }
@@ -163,14 +165,17 @@ onUnmounted(() => {
 
 <template>
   <div class="setting-page">
-    <NH4 prefix="bar">按键提示</NH4>
-    <NFormItem label="是否显示" label-placement="left">
+    <NH4 prefix="bar">{{ $t("pages.Setting.Mask.buttonPrompts") }}</NH4>
+    <NFormItem
+      :label="$t('pages.Setting.Mask.ifButtonPrompts')"
+      label-placement="left"
+    >
       <NCheckbox
         v-model:checked="store.maskButton.show"
         @update:checked="localStore.set('maskButton', store.maskButton)"
       />
     </NFormItem>
-    <NFormItem label="不透明度" label-placement="left">
+    <NFormItem :label="$t('pages.Setting.Mask.opacity')" label-placement="left">
       <NSlider
         v-model:value="store.maskButton.transparency"
         @update:checked="localStore.set('maskButton', store.maskButton)"
@@ -190,7 +195,7 @@ onUnmounted(() => {
       require-mark-placement="right-hanging"
     >
       <NFlex justify="space-between" align="center">
-        <NH4 prefix="bar">蒙版调整</NH4>
+        <NH4 prefix="bar">{{ $t("pages.Setting.Mask.areaAdjust") }}</NH4>
         <NButton
           tertiary
           circle
@@ -207,29 +212,29 @@ onUnmounted(() => {
         <NFormItemGi label="X" path="posX">
           <NInputNumber
             v-model:value="areaModel.posX"
-            placeholder="左上角X坐标"
+            :placeholder="$t('pages.Setting.Mask.areaPlaceholder.x')"
           />
         </NFormItemGi>
         <NFormItemGi label="Y" path="posY">
           <NInputNumber
             v-model:value="areaModel.posY"
-            placeholder="左上角Y坐标"
+            :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.y')"
           />
         </NFormItemGi>
         <NFormItemGi label="W" path="sizeW">
           <NInputNumber
             v-model:value="areaModel.sizeW"
-            placeholder="蒙版宽度"
+            :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.w')"
           />
         </NFormItemGi>
         <NFormItemGi label="H" path="sizeH">
           <NInputNumber
             v-model:value="areaModel.sizeH"
-            placeholder="蒙版高度"
+            :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.h')"
           />
         </NFormItemGi>
       </NGrid>
-      <NP>提示：蒙版尺寸与设备尺寸将用于坐标转换，请保证尺寸的准确性</NP>
+      <NP>{{ $t("pages.Setting.Mask.areaTip") }}</NP>
     </NForm>
   </div>
 </template>

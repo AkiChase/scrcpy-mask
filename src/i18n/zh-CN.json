@@ -55,6 +55,64 @@
         "positiveText": "去控制"
       },
       "inputBoxPlaceholder": "输入文本后按Enter/Esc"
+    },
+    "Setting": {
+      "tabs": {
+        "basic": "基本设置",
+        "mask": "蒙版设置",
+        "about": "关于"
+      },
+      "Mask": {
+        "incorrectArea": "请正确输入蒙版的坐标和尺寸",
+        "areaSaved": "蒙版区域已保存",
+        "buttonPrompts": "按键提示",
+        "ifButtonPrompts": "是否显示",
+        "opacity": "不透明度",
+        "areaAdjust": "蒙版调整",
+        "areaPlaceholder": {
+          "x": "左上角X坐标"
+        },
+        "areaFormPlaceholder": {
+          "y": "左上角Y坐标",
+          "w": "蒙版宽度",
+          "h": "蒙版高度"
+        },
+        "areaTip": "提示：蒙版尺寸与设备尺寸将用于坐标转换，请保证尺寸的准确性",
+        "areaFormMissing": {
+          "x": "请输入蒙版左上角X坐标",
+          "y": "请输入蒙版左上角Y坐标",
+          "w": "请输入蒙版宽度",
+          "h": "请输入蒙版高度"
+        }
+      },
+      "Basic": {
+        "delLocalStore": {
+          "dialog": {
+            "title": "警告",
+            "positiveText": "删除",
+            "negativeText": "取消",
+            "delKey": "即将删除数据\"{0}\"，删除操作不可撤回，是否继续？",
+            "delAll": "即将清空数据，操作不可撤回，且清空后将重启软件，是否继续？"
+          },
+          "warning": "删除数据可能导致无法预料的后果，请慎重操作。若出现异常请尝试清空数据并重启软件。"
+        },
+        "language": "语言",
+        "localStore": "本地数据",
+        "delCurData": "删除当前数据"
+      },
+      "About": {
+        "about": "关于",
+        "introduction": "一个基于 Rust & Tarui 的 Scrcpy 客户端，旨在提供鼠标键盘按键映射来控制安卓设备。",
+        "github": "Github 仓库",
+        "blog": "AkiChase 博客",
+        "update": "更新",
+        "curVersion": "当前版本：{0}",
+        "checkUpdate": "检查更新",
+        "checkUpdateOnStartup": "启动时检查软件更新"
+      }
     }
+  },
+  "sidebar": {
+    "noControledDevice": "未控制任何设备"
   }
 }

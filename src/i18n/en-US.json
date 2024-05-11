@@ -1,7 +1,7 @@
 {
   "pages": {
     "Device": {
-      "localPort": "Local Port",
+      "localPort": "Local port",
       "status": "Status",
       "shutdown": {
         "title": "Warning",
@@ -55,6 +55,64 @@
         "content": "Please go to the device page to control any device",
         "positiveText": "To control"
       }
+    },
+    "Setting": {
+      "tabs": {
+        "basic": "Basic settings",
+        "mask": "Mask setting",
+        "about": "About"
+      },
+      "Mask": {
+        "areaFormMissing": {
+          "x": "Enter the X coordinate of the mask upper left corner",
+          "y": "Enter the Y coordinate of the mask upper left corner",
+          "w": "Enter mask width",
+          "h": "Enter the mask height"
+        },
+        "areaSaved": "Mask area saved",
+        "incorrectArea": "Please enter the coordinates and size of the mask correctly",
+        "buttonPrompts": "Button prompts",
+        "ifButtonPrompts": "Whether to display",
+        "opacity": "Opacity",
+        "areaAdjust": "Mask adjustment",
+        "areaPlaceholder": {
+          "x": "X coordinate of upper left corner"
+        },
+        "areaFormPlaceholder": {
+          "y": "Y coordinate of upper left corner",
+          "w": "Mask width",
+          "h": "Mask height"
+        },
+        "areaTip": "Tip: The mask size and device size will be used for coordinate conversion, please ensure the accuracy of the size"
+      },
+      "Basic": {
+        "delLocalStore": {
+          "dialog": {
+            "title": "Warning",
+            "delKey": "Data \"{0}\" is about to be deleted. The deletion operation is irreversible. Do you want to continue?",
+            "positiveText": "Delete",
+            "negativeText": "Cancel",
+            "delAll": "The data is about to be cleared. The operation is irreversible and the software will be restarted after clearing. Do you want to continue?"
+          },
+          "warning": "Deleting data may lead to unpredictable consequences, so please operate with caution. \nIf an exception occurs, please try clearing the data and restarting the software."
+        },
+        "language": "Language",
+        "localStore": "Local data",
+        "delCurData": "Delete current data"
+      },
+      "About": {
+        "introduction": "A Scrcpy client in Rust & Tarui aimed at providing mouse and key mapping to control Android device.",
+        "github": "Github repo",
+        "blog": "AkiChase's Blog",
+        "about": "About",
+        "update": "Update",
+        "checkUpdateOnStartup": "Check for software updates on startup",
+        "curVersion": "Current version: {0}",
+        "checkUpdate": "Check for updates"
+      }
     }
+  },
+  "sidebar": {
+    "noControledDevice": "No devices are controlled"
   }
 }
