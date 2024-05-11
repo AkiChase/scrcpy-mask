@@ -161,7 +161,7 @@ async fn main() {
                         let size_h = value["sizeH"].as_i64().unwrap_or(600);
                         let main_window: tauri::WebviewWindow =
                             app.get_webview_window("main").unwrap();
-                        main_window.set_zoom(1.).unwrap();
+                        main_window.set_zoom(1.).unwrap_or(());
                         main_window
                             .set_position(tauri::Position::Logical(tauri::LogicalPosition {
                                 x: (pos_x - 70) as f64,

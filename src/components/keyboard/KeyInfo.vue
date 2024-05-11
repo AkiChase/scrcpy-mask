@@ -109,7 +109,7 @@ function dragHandler(downEvent: MouseEvent) {
 <template>
   <div v-show="keyboardStore.showKeyInfoFlag" class="key-info" @contextmenu.prevent>
     <div class="key-info-header" @mousedown="dragHandler">
-      Key Info
+      {{ $t('pages.KeyBoard.KeyInfo.title') }}
       <div
         class="key-info-close"
         @click="keyboardStore.showKeyInfoFlag = false"
@@ -121,7 +121,7 @@ function dragHandler(downEvent: MouseEvent) {
       <div style="border-bottom: 1px solid var(--light-color)">
         {{ mouseX }}, {{ mouseY }}
       </div>
-      <div v-if="keyboardCodeList.length === 0">Press any key</div>
+      <div v-if="keyboardCodeList.length === 0">{{ $t('pages.KeyBoard.KeyInfo.note') }}</div>
       <div v-for="code in keyboardCodeList">
         {{ code }}
       </div>

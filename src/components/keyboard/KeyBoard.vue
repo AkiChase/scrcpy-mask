@@ -18,7 +18,9 @@ import { useGlobalStore } from "../../store/global";
 import { DropdownOption, NDropdown, useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 import { useKeyboardStore } from "../../store/keyboard";
+import { useI18n } from "vue-i18n";
 
+const { t } = useI18n();
 const store = useGlobalStore();
 const keyboardStore = useKeyboardStore();
 const dialog = useDialog();
@@ -27,27 +29,27 @@ const message = useMessage();
 const addButtonPos = ref({ x: 0, y: 0 });
 const addButtonOptions: DropdownOption[] = [
   {
-    label: "普通点击",
+    label: () => t("pages.KeyBoard.addButton.Tap"),
     key: "Tap",
   },
   {
-    label: "键盘行走",
+    label: () => t("pages.KeyBoard.addButton.SteeringWheel"),
     key: "SteeringWheel",
   },
   {
-    label: "技能",
+    label: () => t("pages.KeyBoard.addButton.Skill"),
     key: "DirectionalSkill",
   },
   {
-    label: "技能取消",
+    label: () => t("pages.KeyBoard.addButton.CancelSkill"),
     key: "CancelSkill",
   },
   {
-    label: "观察视角",
+    label: () => t("pages.KeyBoard.addButton.Observation"),
     key: "Observation",
   },
   {
-    label: "宏",
+    label: () => t("pages.KeyBoard.addButton.Macro"),
     key: "Macro",
   },
 ];
@@ -83,7 +85,7 @@ function onAddButtonSelect(
   } else if (type === "DirectionalSkill") {
     (keyMapping as unknown as KeyDirectionalSkill).range = 30;
   } else if (type === "CancelSkill") {
-    keyMapping.note = "取消技能";
+    keyMapping.note = t("pages.KeyBoard.addButton.CancelSkill");
   } else if (type === "Observation") {
     (keyMapping as unknown as KeyMappingObservation).scale = 0.6;
   } else if (type === "Macro") {
@@ -141,7 +143,7 @@ function setCurButtonKey(curKey: string) {
     return;
 
   if (!isKeyUnique(curKey)) {
-    message.error("按键重复：" + curKey);
+    message.error(t("pages.KeyBoard.buttonKeyRepeat", [curKey]));
     return;
   }
 
@@ -250,16 +252,16 @@ onBeforeRouteLeave(() => {
     document.removeEventListener("wheel", handleMouseWheel);
     if (keyboardStore.edited) {
       dialog.warning({
-        title: "Warning",
-        content: "当前方案尚未保存，是否保存？",
-        positiveText: "保存",
-        negativeText: "取消",
+        title: t("pages.KeyBoard.noSaveDialog.title"),
+        content: t("pages.KeyBoard.noSaveDialog.content"),
+        positiveText: t("pages.KeyBoard.noSaveDialog.positiveText"),
+        negativeText: t("pages.KeyBoard.noSaveDialog.negativeText"),
         onPositiveClick: () => {
           if (store.applyEditKeyMappingList()) {
             keyboardStore.edited = false;
             resolve(true);
           } else {
-            message.error("存在重复按键，无法保存");
+            message.error(t("pages.KeyBoard.noSaveDialog.keyRepeat"));
             resolve(false);
           }
         },

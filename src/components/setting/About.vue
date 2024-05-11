@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { NFlex, NH4, NButton, NIcon, NP } from "naive-ui";
+import { NFlex, NH4, NButton, NIcon, NP, NCheckbox } from "naive-ui";
 import { LogoGithub, Planet } from "@vicons/ionicons5";
 import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
 import { onMounted, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
+import { Store } from "@tauri-apps/plugin-store";
 
 const store = useGlobalStore();
+const localStore = new Store("store.bin");
 
 const appVersion = ref("");
 onMounted(async () => {
@@ -26,11 +28,8 @@ async function checkUpdate() {
 
 <template>
   <div class="setting-page">
-    <NH4 prefix="bar">关于</NH4>
-    <NP
-      >A Scrcpy client in Rust & Tarui aimed at providing mouse and key mapping
-      to control Android device.</NP
-    >
+    <NH4 prefix="bar">{{ $t("pages.Setting.About.about") }}</NH4>
+    <NP>{{ $t("pages.Setting.About.introduction") }}</NP>
     <NFlex class="website">
       <NButton
         text
@@ -39,7 +38,7 @@ async function checkUpdate() {
         <template #icon>
           <NIcon><LogoGithub /> </NIcon>
         </template>
-        Github repo
+        {{ $t("pages.Setting.About.github") }}
       </NButton>
       <NButton
         text
@@ -67,12 +66,21 @@ async function checkUpdate() {
         <template #icon>
           <NIcon><Planet /> </NIcon>
         </template>
-        AkiChase's Blog
+        {{ $t("pages.Setting.About.blog") }}
       </NButton>
     </NFlex>
-    <NH4 prefix="bar">更新</NH4>
-    <NP>当前版本：{{ appVersion }}</NP>
-    <NButton @click="checkUpdate">检查更新</NButton>
+    <NH4 prefix="bar">{{ $t("pages.Setting.About.update") }}</NH4>
+    <NCheckbox
+      v-model:checked="store.checkUpdateAtStart"
+      @update:checked="
+        localStore.set('checkUpdateAtStart', store.checkUpdateAtStart)
+      "
+      >{{ $t("pages.Setting.About.checkUpdateOnStartup") }}</NCheckbox
+    >
+    <NP>{{ $t("pages.Setting.About.curVersion", [appVersion]) }}</NP>
+    <NButton @click="checkUpdate">{{
+      $t("pages.Setting.About.checkUpdate")
+    }}</NButton>
   </div>
 </template>
 

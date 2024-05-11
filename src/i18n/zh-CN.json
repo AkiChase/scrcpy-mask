@@ -1,0 +1,220 @@
+{
+  "pages": {
+    "Device": {
+      "status": "状态",
+      "shutdown": {
+        "title": "警告",
+        "content": "确定关闭Scrcpy控制服务?",
+        "positiveText": "确定",
+        "negativeText": "取消"
+      },
+      "menu": {
+        "control": "控制此设备",
+        "screen": "获取屏幕尺寸"
+      },
+      "deviceControl": {
+        "inputScreenSize": "请正确输入当前控制设备的屏幕尺寸",
+        "closeCurDevice": "请先关闭当前控制设备",
+        "controlInfo": "屏幕尺寸已保存，正在启动控制服务，请保持设备亮屏",
+        "connectTimeout": "设备连接超时"
+      },
+      "deviceGetScreenSize": "设备屏幕尺寸为:",
+      "inputWirelessAddress": "请输入无线调试地址",
+      "localPort": "本地端口",
+      "localPortPlaceholder": "Scrcpy 本地端口",
+      "wireless": "无线连接",
+      "wirelessPlaceholder": "无线连接地址",
+      "connect": "连接",
+      "deviceSize": {
+        "title": "设备屏幕尺寸",
+        "width": "宽度",
+        "widthPlaceholder": "屏幕宽度",
+        "heightPlaceholder": "屏幕高度",
+        "height": "高度",
+        "tip": "提示：请正确输入当前控制设备的屏幕尺寸，这是成功发送触摸事件的必要参数"
+      },
+      "controledDevice": "受控设备",
+      "noControledDevice": "无受控设备",
+      "availableDevice": "可用设备"
+    },
+    "Mask": {
+      "keyconfigException": "按键方案异常，请删除此方案",
+      "blankConfig": "空白方案",
+      "checkUpdate": {
+        "failed": "检查更新失败",
+        "isLatest": "最新版本: {0}，当前已是最新版本",
+        "notLatest": {
+          "title": "最新版本：{0}",
+          "positiveText": "前往发布页",
+          "negativeText": "取消"
+        }
+      },
+      "noControledDevice": {
+        "title": "未找到受控设备",
+        "content": "请前往设备页面，控制任意设备",
+        "positiveText": "去控制"
+      },
+      "inputBoxPlaceholder": "输入文本后按Enter/Esc"
+    },
+    "Setting": {
+      "tabs": {
+        "basic": "基本设置",
+        "mask": "蒙版设置",
+        "about": "关于"
+      },
+      "Mask": {
+        "incorrectArea": "请正确输入蒙版的坐标和尺寸",
+        "areaSaved": "蒙版区域已保存",
+        "buttonPrompts": "按键提示",
+        "ifButtonPrompts": "是否显示",
+        "opacity": "不透明度",
+        "areaAdjust": "蒙版调整",
+        "areaPlaceholder": {
+          "x": "左上角X坐标"
+        },
+        "areaFormPlaceholder": {
+          "y": "左上角Y坐标",
+          "w": "蒙版宽度",
+          "h": "蒙版高度"
+        },
+        "areaTip": "提示：蒙版尺寸与设备尺寸将用于坐标转换，请保证尺寸的准确性",
+        "areaFormMissing": {
+          "x": "请输入蒙版左上角X坐标",
+          "y": "请输入蒙版左上角Y坐标",
+          "w": "请输入蒙版宽度",
+          "h": "请输入蒙版高度"
+        }
+      },
+      "Basic": {
+        "delLocalStore": {
+          "dialog": {
+            "title": "警告",
+            "positiveText": "删除",
+            "negativeText": "取消",
+            "delKey": "即将删除数据\"{0}\"，删除操作不可撤回，是否继续？",
+            "delAll": "即将清空数据，操作不可撤回，且清空后将重启软件，是否继续？"
+          },
+          "warning": "删除数据可能导致无法预料的后果，请慎重操作。若出现异常请尝试清空数据并重启软件。"
+        },
+        "language": "语言",
+        "localStore": "本地数据",
+        "delCurData": "删除当前数据"
+      },
+      "About": {
+        "about": "关于",
+        "introduction": "一个基于 Rust & Tarui 的 Scrcpy 客户端，旨在提供鼠标键盘按键映射来控制安卓设备。",
+        "github": "Github 仓库",
+        "blog": "AkiChase 博客",
+        "update": "更新",
+        "curVersion": "当前版本：{0}",
+        "checkUpdate": "检查更新",
+        "checkUpdateOnStartup": "启动时检查软件更新"
+      }
+    },
+    "KeyBoard": {
+      "addButton": {
+        "Tap": "普通点击",
+        "SteeringWheel": "键盘行走",
+        "Skill": "技能",
+        "CancelSkill": "技能取消",
+        "Observation": "观察视角",
+        "Macro": "宏"
+      },
+      "buttonKeyRepeat": "按键重复: {0}",
+      "noSaveDialog": {
+        "title": "警告",
+        "content": "当前方案尚未保存，是否保存？",
+        "positiveText": "保存",
+        "negativeText": "取消",
+        "keyRepeat": "存在重复按键，无法保存"
+      },
+      "KeyCommon": {
+        "macroParseSuccess": "宏代码解析成功，但不保证代码正确性，请自行测试",
+        "macroParseFailed": "宏代码保存失败，请检查代码格式是否正确",
+        "macro": "宏代码",
+        "editMacro": "编辑宏代码",
+        "macroModal": {
+          "title": "宏编辑",
+          "down": "按下按键执行的宏",
+          "loop": "按住执行的宏",
+          "placeholder": "JSON宏代码, 可为空",
+          "up": "抬起执行的宏"
+        }
+      },
+      "setting": {
+        "touchTime": "触摸时长",
+        "touchTimePlaceholder": "请输入触摸时长(ms)",
+        "pointerID": "触点ID",
+        "pointerIDPlaceholder": "请输入触点ID",
+        "note": "备注",
+        "notePlaceholder": "请输入备注"
+      },
+      "KeyInfo": {
+        "title": "Key Info",
+        "note": "Press any key"
+      },
+      "Observation": {
+        "observation": "观察视角",
+        "scale": "灵敏度",
+        "scalePlaceholder": "请输入灵敏度"
+      },
+      "KeySetting": {
+        "onlyOneConfig": "当前仅有一个按键方案，点击导入默认，可导入预设方案",
+        "importFailed": "导入失败",
+        "importSuccess": "按键方案已导入",
+        "importDefaultFailed": "默认按键方案导入失败",
+        "importDefaultSuccess": "已导入{0}个默认方案",
+        "configEdited": "请先保存或还原当前方案",
+        "newConfig": "新方案",
+        "newConfigSuccess": "新方案已创建",
+        "copyConfigTitle": "{0}-副本",
+        "copyConfigSuccess": "方案已复制为：{0}",
+        "exportSuccess": "当前按键方案已导出到剪切板",
+        "exportFailed": "按键方案导出失败",
+        "checkConfigSizeWarning": "请注意当前按键方案\"{0}\"与蒙版尺寸不一致，若有需要可进行迁移",
+        "migrateConfigTitle": "{0}-迁移",
+        "migrateConfigSuccess": "已迁移到新方案：{0}",
+        "migrateConfigNeedless": "当前方案符合蒙版尺寸，无需迁移",
+        "buttonDrag": "长按可拖动",
+        "config": "按键映射方案",
+        "configRelativeSize": "相对蒙版尺寸: {0}x{1}",
+        "saveConfig": "保存方案",
+        "resetConfig": "还原方案",
+        "createConfig": "新建方案",
+        "copyConfig": "复制方案",
+        "migrateConfig": "迁移方案",
+        "delConfig": "删除方案",
+        "renameConfig": "重命名",
+        "others": "其他",
+        "importConfig": "导入方案",
+        "exportConfig": "导出方案",
+        "importDefaultConfig": "导入默认",
+        "keyInfo": "按键信息",
+        "addButtonTip": "提示：右键空白区域可添加按键",
+        "importPlaceholder": "粘贴单个按键方案的JSON文本 (此处无法对按键方案的合法性进行判断, 请确保JSON内容正确)",
+        "import": "导入",
+        "renameTitle": "重命名按键方案",
+        "delConfigLeast": "至少保留一个方案",
+        "delSuccess": "方案已删除：{0}",
+        "renameSuccess": "方案已重命名为：{0}",
+        "renameEmpty": "方案名不能为空",
+        "saveKeyRepeat": "存在重复按键，无法保存"
+      },
+      "KeySkill": {
+        "skill": "技能",
+        "options": "选项",
+        "double": "双击施放",
+        "directionless": "无方向技能",
+        "triggerWhenPressed": "按下时触发",
+        "range": "范围"
+      },
+      "SteeringWheel": {
+        "steeringWheel": "键盘行走",
+        "offset": "偏移"
+      }
+    }
+  },
+  "sidebar": {
+    "noControledDevice": "未控制任何设备"
+  }
+}

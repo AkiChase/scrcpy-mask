@@ -25,7 +25,9 @@ import {
   AndroidMetastate,
 } from "../frontcommand/android";
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 
+const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const store = useGlobalStore();
@@ -61,7 +63,7 @@ async function sendKeyCodeToDevice(code: AndroidKeycode) {
       metastate: AndroidMetastate.AMETA_NONE,
     });
   } else {
-    message.error("未连接设备");
+    message.error(t("sidebar.noControledDevice"));
   }
 }
 
@@ -70,7 +72,7 @@ async function changeScreenPowerMode() {
     sendSetScreenPowerMode({ mode: nextScreenPowerMode.value });
     nextScreenPowerMode.value = nextScreenPowerMode.value ? 0 : 2;
   } else {
-    message.error("未连接设备");
+    message.error(t("sidebar.noControledDevice"));
   }
 }
 </script>

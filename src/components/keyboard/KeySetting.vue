@@ -18,7 +18,9 @@ import { Store } from "@tauri-apps/plugin-store";
 import { loadDefaultKeyconfig } from "../../invoke";
 import { KeyMappingConfig } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
+import { useI18n } from "vue-i18n";
 
+const { t } = useI18n();
 const store = useGlobalStore();
 const keyboardStore = useKeyboardStore();
 const localStore = new Store("store.bin");
@@ -126,7 +128,7 @@ function dragHandler(downEvent: MouseEvent) {
         keyboardStore.showSettingFlag &&
         store.keyMappingConfigList.length === 1
       ) {
-        message.info("当前仅有一个按键方案，点击导入默认，可导入预设方案");
+        message.info(t("pages.KeyBoard.KeySetting.onlyOneConfig"));
       }
     }
   };
@@ -139,14 +141,14 @@ function importKeyMappingConfig() {
     keyMappingConfig = JSON.parse(importModalInputValue.value);
   } catch (e) {
     console.error(e);
-    message.error("导入失败");
+    message.error(t("pages.KeyBoard.KeySetting.importFailed"));
     return;
   }
   store.keyMappingConfigList.push(keyMappingConfig);
   store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
   showImportModal.value = false;
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
-  message.success("按键方案已导入");
+  message.success(t("pages.KeyBoard.KeySetting.importSuccess"));
 }
 
 async function importDefaultKeyMappingConfig() {
@@ -161,17 +163,17 @@ async function importDefaultKeyMappingConfig() {
     }
   } catch (e) {
     console.error(e);
-    message.error("默认按键方案导入失败");
+    message.error(t("pages.KeyBoard.KeySetting.importDefaultFailed"));
     return;
   }
 
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
-  message.success(`已导入${count}个默认方案`);
+  message.success(t("pages.KeyBoard.KeySetting.importDefaultSuccess", [count]));
 }
 
 function createKeyMappingConfig() {
   if (keyboardStore.edited) {
-    message.error("请先保存或还原当前方案");
+    message.error(t("pages.KeyBoard.KeySetting.configEdited"));
     return;
   }
 
@@ -179,7 +181,7 @@ function createKeyMappingConfig() {
     "keyboardElement"
   ) as HTMLElement;
   const newConfig: KeyMappingConfig = {
-    title: "新方案",
+    title: t("pages.KeyBoard.KeySetting.newConfig"),
     relativeSize: {
       w: keyboardElement.clientWidth,
       h: keyboardElement.clientHeight,
@@ -189,18 +191,21 @@ function createKeyMappingConfig() {
   store.keyMappingConfigList.push(newConfig);
   store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
-  message.success("新方案已创建");
+  message.success(t("pages.KeyBoard.KeySetting.newConfigSuccess"));
 }
 
 function copyCurKeyMappingConfig() {
   if (keyboardStore.edited) {
-    message.error("请先保存或还原当前方案");
+    message.error(t("pages.KeyBoard.KeySetting.configEdited"));
     return;
   }
 
   const curConfig = store.keyMappingConfigList[store.curKeyMappingIndex];
+  const newTitle = t("pages.KeyBoard.KeySetting.copyConfigTitle", [
+    curConfig.title,
+  ]);
   const newConfig: KeyMappingConfig = {
-    title: curConfig.title + "-副本",
+    title: newTitle,
     relativeSize: curConfig.relativeSize,
     list: curConfig.list,
   };
@@ -209,12 +214,12 @@ function copyCurKeyMappingConfig() {
   keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
   store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
-  message.success("方案已复制为：" + curConfig.title + "-副本");
+  message.success(t("pages.KeyBoard.KeySetting.copyConfigSuccess", [newTitle]));
 }
 
 function delCurKeyMappingConfig() {
   if (store.keyMappingConfigList.length <= 1) {
-    message.error("至少保留一个方案");
+    message.error(t("pages.KeyBoard.KeySetting.delConfigLeast"));
     return;
   }
   const title = store.keyMappingConfigList[store.curKeyMappingIndex].title;
@@ -228,7 +233,7 @@ function delCurKeyMappingConfig() {
     store.curKeyMappingIndex > 0 ? store.curKeyMappingIndex - 1 : 0
   );
   localStore.set("keyMappingConfigList", store.keyMappingConfigList);
-  message.success("方案已删除：" + title);
+  message.success(t("pages.KeyBoard.KeySetting.delSuccess", [title]));
 }
 
 function renameKeyMappingConfig() {
@@ -237,9 +242,9 @@ function renameKeyMappingConfig() {
   if (newTitle !== "") {
     store.keyMappingConfigList[store.curKeyMappingIndex].title = newTitle;
     localStore.set("keyMappingConfigList", store.keyMappingConfigList);
-    message.success("方案已重命名为：" + newTitle);
+    message.success(t("pages.KeyBoard.KeySetting.renameSuccess", [newTitle]));
   } else {
-    message.error("方案名不能为空");
+    message.error(t("pages.KeyBoard.KeySetting.renameEmpty"));
   }
 }
 
@@ -249,11 +254,11 @@ function exportKeyMappingConfig() {
   navigator.clipboard
     .writeText(data)
     .then(() => {
-      message.success("当前按键方案已导出到剪切板");
+      message.success(t("pages.KeyBoard.KeySetting.exportSuccess"));
     })
     .catch((e) => {
       console.error(e);
-      message.error("按键方案导出失败");
+      message.error(t("pages.KeyBoard.KeySetting.exportFailed"));
     });
 }
 
@@ -261,7 +266,7 @@ function saveKeyMappingConfig() {
   if (store.applyEditKeyMappingList()) {
     keyboardStore.edited = false;
   } else {
-    message.error("存在重复按键，无法保存");
+    message.error(t("pages.KeyBoard.KeySetting.saveKeyRepeat"));
   }
 }
 
@@ -278,14 +283,16 @@ function checkConfigSize() {
     keyboardElement.clientHeight !== relativeSize.h
   ) {
     message.warning(
-      `请注意当前按键方案"${curKeyMappingConfig.title}"与蒙版尺寸不一致，若有需要可进行迁移`
+      t("pages.KeyBoard.KeySetting.checkConfigSizeWarning", [
+        curKeyMappingConfig.title,
+      ])
     );
   }
 }
 
 function migrateKeyMappingConfig() {
   if (keyboardStore.edited) {
-    message.error("请先保存或还原当前按键方案");
+    message.error(t("pages.KeyBoard.KeySetting.configEdited"));
     return;
   }
 
@@ -313,25 +320,29 @@ function migrateKeyMappingConfig() {
       keyMapping.posY = Math.round((keyMapping.posY / relativeSize.h) * sizeH);
     }
     // migrate title
-    newConfig.title += "-迁移";
+    newConfig.title = t("pages.KeyBoard.KeySetting.migrateConfigTitle", [
+      newConfig.title,
+    ]);
 
     store.keyMappingConfigList.splice(
       store.curKeyMappingIndex + 1,
       0,
       newConfig
     );
-    message.success("已迁移到新方案：" + newConfig.title);
+    message.success(
+      t("pages.KeyBoard.KeySetting.migrateConfigSuccess", [newConfig.title])
+    );
     keyboardStore.activeButtonIndex = -1;
     keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
     store.setKeyMappingIndex(store.curKeyMappingIndex + 1);
   } else {
-    message.info("当前方案符合蒙版尺寸，无需迁移");
+    message.info(t("pages.KeyBoard.KeySetting.migrateConfigNeedless"));
   }
 }
 
 function selectKeyMappingConfig(index: number) {
   if (keyboardStore.edited) {
-    message.error("请先保存或还原当前按键方案");
+    message.error(t("pages.KeyBoard.KeySetting.configEdited"));
     return;
   }
 
@@ -355,7 +366,7 @@ function resetKeyMappingConfig() {
     size="large"
     class="key-setting-btn"
     id="keySettingBtn"
-    title="长按可拖动"
+    :title="$t('pages.KeyBoard.KeySetting.buttonDrag')"
     @mousedown="dragHandler"
     :style="{
       left: keySettingPos.x + 'px',
@@ -381,50 +392,73 @@ function resetKeyMappingConfig() {
     >
       <NIcon><CloseCircle></CloseCircle></NIcon>
     </NButton>
-    <NH4 prefix="bar">按键方案</NH4>
+    <NH4 prefix="bar">{{ $t("pages.KeyBoard.KeySetting.config") }}</NH4>
     <NSelect
       :value="store.curKeyMappingIndex"
       @update:value="selectKeyMappingConfig"
       :options="keyMappingNameOptions"
     />
     <NP style="margin-top: 20px">
-      Relative Size:{{ curRelativeSize.w }}x{{ curRelativeSize.h }}
+      {{
+        $t("pages.KeyBoard.KeySetting.configRelativeSize", [
+          curRelativeSize.w,
+          curRelativeSize.h,
+        ])
+      }}
     </NP>
     <NFlex style="margin-top: 20px">
       <template v-if="keyboardStore.edited">
-        <NButton type="success" @click="saveKeyMappingConfig">保存方案</NButton>
-        <NButton type="error" @click="resetKeyMappingConfig">还原方案</NButton>
+        <NButton type="success" @click="saveKeyMappingConfig">{{
+          $t("pages.KeyBoard.KeySetting.saveConfig")
+        }}</NButton>
+        <NButton type="error" @click="resetKeyMappingConfig">{{
+          $t("pages.KeyBoard.KeySetting.resetConfig")
+        }}</NButton>
       </template>
-      <NButton @click="createKeyMappingConfig">新建方案</NButton>
-      <NButton @click="copyCurKeyMappingConfig">复制方案</NButton>
-      <NButton @click="migrateKeyMappingConfig">迁移方案</NButton>
-      <NButton @click="delCurKeyMappingConfig">删除方案</NButton>
+      <NButton @click="createKeyMappingConfig">{{
+        $t("pages.KeyBoard.KeySetting.createConfig")
+      }}</NButton>
+      <NButton @click="copyCurKeyMappingConfig">{{
+        $t("pages.KeyBoard.KeySetting.copyConfig")
+      }}</NButton>
+      <NButton @click="migrateKeyMappingConfig">{{
+        $t("pages.KeyBoard.KeySetting.migrateConfig")
+      }}</NButton>
+      <NButton @click="delCurKeyMappingConfig">{{
+        $t("pages.KeyBoard.KeySetting.delConfig")
+      }}</NButton>
       <NButton
         @click="
           showRenameModal = true;
           renameModalInputValue =
             store.keyMappingConfigList[store.curKeyMappingIndex].title;
         "
-        >重命名</NButton
+        >{{ $t("pages.KeyBoard.KeySetting.renameConfig") }}</NButton
       >
     </NFlex>
-    <NH4 prefix="bar">其他</NH4>
+    <NH4 prefix="bar">{{ $t("pages.KeyBoard.KeySetting.others") }}</NH4>
     <NFlex>
       <NButton
         @click="
           showImportModal = true;
           importModalInputValue = '';
         "
-        >导入方案</NButton
+        >{{ $t("pages.KeyBoard.KeySetting.importConfig") }}</NButton
       >
-      <NButton @click="exportKeyMappingConfig">导出方案</NButton>
-      <NButton @click="importDefaultKeyMappingConfig">导入默认</NButton>
+      <NButton @click="exportKeyMappingConfig">{{
+        $t("pages.KeyBoard.KeySetting.exportConfig")
+      }}</NButton>
+      <NButton @click="importDefaultKeyMappingConfig">{{
+        $t("pages.KeyBoard.KeySetting.importDefaultConfig")
+      }}</NButton>
       <NButton
         @click="keyboardStore.showKeyInfoFlag = !keyboardStore.showKeyInfoFlag"
-        >按键信息</NButton
+        >{{ $t("pages.KeyBoard.KeySetting.keyInfo") }}</NButton
       >
     </NFlex>
-    <NP style="margin-top: 40px">提示：右键空白区域可添加按键</NP>
+    <NP style="margin-top: 40px">{{
+      $t("pages.KeyBoard.KeySetting.addButtonTip")
+    }}</NP>
   </div>
   <NModal v-model:show="showImportModal">
     <NCard style="width: 40%; height: 50%">
@@ -432,24 +466,27 @@ function resetKeyMappingConfig() {
         <NInput
           type="textarea"
           style="flex-grow: 1"
-          placeholder="粘贴单个按键方案的JSON文本 (此处无法对按键方案的合法性进行判断, 请确保JSON内容正确)"
+          :placeholder="$t('pages.KeyBoard.KeySetting.importPlaceholder')"
           v-model:value="importModalInputValue"
           round
           clearable
         />
-        <NButton type="success" round @click="importKeyMappingConfig"
-          >导入</NButton
-        >
+        <NButton type="success" round @click="importKeyMappingConfig">{{
+          $t("pages.KeyBoard.KeySetting.import")
+        }}</NButton>
       </NFlex>
     </NCard>
   </NModal>
   <NModal v-model:show="showRenameModal">
-    <NCard style="width: 40%" title="重命名按键方案">
+    <NCard
+      style="width: 40%"
+      :title="$t('pages.KeyBoard.KeySetting.renameTitle')"
+    >
       <NFlex vertical>
         <NInput v-model:value="renameModalInputValue" clearable />
-        <NButton type="success" round @click="renameKeyMappingConfig"
-          >重命名</NButton
-        >
+        <NButton type="success" round @click="renameKeyMappingConfig">{{
+          $t("pages.KeyBoard.KeySetting.renameConfig")
+        }}</NButton>
       </NFlex>
     </NCard>
   </NModal>

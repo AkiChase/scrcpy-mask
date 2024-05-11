@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import Basic from "./Basic.vue";
-import Script from "./Script.vue";
 import Mask from "./Mask.vue";
 import About from "./About.vue";
 import { NTabs, NTabPane, NScrollbar, NSpin } from "naive-ui";
@@ -13,22 +12,17 @@ const store = useGlobalStore();
   <div class="setting">
     <NSpin :show="store.showLoadingRef">
       <NTabs type="line" animated placement="left" default-value="basic">
-        <NTabPane tab="基本设置" name="basic">
+        <NTabPane :tab="$t('pages.Setting.tabs.basic')" name="basic">
           <NScrollbar>
             <Basic />
           </NScrollbar>
         </NTabPane>
-        <NTabPane tab="蒙版设置" name="mask">
+        <NTabPane :tab="$t('pages.Setting.tabs.mask')" name="mask">
           <NScrollbar>
             <Mask />
           </NScrollbar>
         </NTabPane>
-        <NTabPane tab="脚本设置" name="script">
-          <NScrollbar>
-            <Script />
-          </NScrollbar>
-        </NTabPane>
-        <NTabPane tab="关于" name="about">
+        <NTabPane :tab="$t('pages.Setting.tabs.about')" name="about">
           <NScrollbar>
             <About />
           </NScrollbar>
@@ -46,7 +40,7 @@ const store = useGlobalStore();
   overflow-y: auto;
   display: flex;
 
-  .n-tabs{
+  .n-tabs {
     height: 100%;
   }
 

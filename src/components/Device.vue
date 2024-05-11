@@ -45,7 +45,9 @@ import { UnlistenFn, listen } from "@tauri-apps/api/event";
 import { Store } from "@tauri-apps/plugin-store";
 import { shutdown } from "../frontcommand/scrcpyMaskCmd";
 import { useGlobalStore } from "../store/global";
+import { useI18n } from "vue-i18n";
 
+const { t } = useI18n();
 const dialog = useDialog();
 const store = useGlobalStore();
 const message = useMessage();
@@ -105,7 +107,7 @@ const tableCols: DataTableColumns = [
     key: "id",
   },
   {
-    title: "Status",
+    title: t("pages.Device.status"),
     key: "status",
   },
 ];
@@ -144,10 +146,10 @@ const tableRowProps = (_: any, index: number) => {
 
 async function shutdownSC() {
   dialog.warning({
-    title: "Warning",
-    content: "确定关闭Scrcpy控制服务?",
-    positiveText: "确定",
-    negativeText: "取消",
+    title: t("pages.Device.shutdown.title"),
+    content: t("pages.Device.shutdown.content"),
+    positiveText: t("pages.Device.shutdown.positiveText"),
+    negativeText: t("pages.Device.shutdown.negativeText"),
     onPositiveClick: async () => {
       await shutdown();
       store.controledDevice = null;
@@ -162,11 +164,11 @@ const menuY = ref(0);
 const showMenu = ref(false);
 const menuOptions: DropdownOption[] = [
   {
-    label: () => h("span", "控制此设备"),
+    label: () => h("span", t("pages.Device.menu.control")),
     key: "control",
   },
   {
-    label: () => h("span", "获取屏幕尺寸"),
+    label: () => h("span", t("pages.Device.menu.screen")),
     key: "screen",
   },
 ];
@@ -181,7 +183,7 @@ async function deviceControl() {
   }
 
   if (!(store.screenSizeW > 0) || !(store.screenSizeH > 0)) {
-    message.error("请正确输入当前控制设备的屏幕尺寸");
+    message.error(t("pages.Device.deviceControl.inputScreenSize"));
     store.screenSizeW = 0;
     store.screenSizeH = 0;
     store.hideLoading();
@@ -189,7 +191,7 @@ async function deviceControl() {
   }
 
   if (store.controledDevice) {
-    message.error("请先关闭当前控制设备");
+    message.error(t("pages.Device.deviceControl.closeCurDevice"));
     store.hideLoading();
     return;
   }
@@ -198,7 +200,7 @@ async function deviceControl() {
     sizeW: store.screenSizeW,
     sizeH: store.screenSizeH,
   });
-  message.info("屏幕尺寸已保存，正在启动控制服务，请保持设备亮屏");
+  message.info(t("pages.Device.deviceControl.controlInfo"));
 
   const device = devices.value[rowIndex];
 
@@ -216,7 +218,7 @@ async function deviceControl() {
       await shutdown();
       store.controledDevice = null;
       store.hideLoading();
-      message.error("设备连接超时");
+      message.error(t("pages.Device.deviceControl.connectTimeout"));
     }
   }, 6000);
 
@@ -239,7 +241,9 @@ async function deviceGetScreenSize() {
   let id = devices.value[rowIndex].id;
   const size = await getDeviceScreenSize(id);
   store.hideLoading();
-  message.success(`设备屏幕尺寸为: ${size[0]} x ${size[1]}`);
+  message.success(
+    t("pages.Device.deviceGetScreenSize") + `${size[0]} x ${size[1]}`
+  );
 }
 
 async function onMenuSelect(key: string) {
@@ -264,7 +268,7 @@ async function refreshDevices() {
 
 async function connectDevice() {
   if (!address.value) {
-    message.error("请输入无线调试地址");
+    message.error(t("pages.Device.inputWirelessAddress"));
     return;
   }
 
@@ -278,51 +282,51 @@ async function connectDevice() {
   <NScrollbar>
     <div class="device">
       <NSpin :show="store.showLoadingRef">
-        <NH4 prefix="bar">本地端口</NH4>
+        <NH4 prefix="bar">{{ $t("pages.Device.localPort") }}</NH4>
         <NInputNumber
           v-model:value="port"
           :show-button="false"
           :min="16384"
           :max="49151"
-          placeholder="Scrcpy 本地端口"
+          :placeholder="$t('pages.Device.localPortPlaceholder')"
           style="max-width: 300px"
         />
-        <NH4 prefix="bar">无线连接</NH4>
+        <NH4 prefix="bar">{{ $t("pages.Device.wireless") }}</NH4>
         <NInputGroup style="max-width: 300px">
           <NInput
             v-model:value="address"
             clearable
-            placeholder="无线调试地址"
+            :placeholder="$t('pages.Device.wirelessPlaceholder')"
           />
-          <NButton type="primary" @click="connectDevice">连接</NButton>
+          <NButton type="primary" @click="connectDevice">{{
+            $t("pages.Device.connect")
+          }}</NButton>
         </NInputGroup>
-        <NH4 prefix="bar">设备尺寸</NH4>
+        <NH4 prefix="bar">{{ $t("pages.Device.deviceSize.title") }}</NH4>
         <NFlex justify="left" align="center">
-          <NFormItem label="宽度">
+          <NFormItem :label="$t('pages.Device.deviceSize.width')">
             <NInputNumber
               v-model:value="store.screenSizeW"
-              placeholder="屏幕宽度"
+              :placeholder="$t('pages.Device.deviceSize.widthPlaceholder')"
               :min="0"
               :disabled="store.controledDevice !== null"
             />
           </NFormItem>
-          <NFormItem label="高度">
+          <NFormItem :label="$t('pages.Device.deviceSize.height')">
             <NInputNumber
               v-model:value="store.screenSizeH"
-              placeholder="屏幕高度"
+              :placeholder="$t('pages.Device.deviceSize.heightPlaceholder')"
               :min="0"
               :disabled="store.controledDevice !== null"
             />
           </NFormItem>
         </NFlex>
-        <NP
-          >提示：请正确输入当前控制设备的屏幕尺寸，这是成功发送触摸事件的必要参数</NP
-        >
-        <NH4 prefix="bar">受控设备</NH4>
+        <NP>{{ $t("pages.Device.deviceSize.tip") }}</NP>
+        <NH4 prefix="bar">{{ $t("pages.Device.controledDevice") }}</NH4>
         <div class="controled-device-list">
           <NEmpty
             size="small"
-            description="No Controled Device"
+            :description="$t('pages.Device.noControledDevice')"
             v-if="!store.controledDevice"
           />
           <div class="controled-device" v-if="store.controledDevice">
@@ -352,7 +356,9 @@ async function connectDevice() {
           </div>
         </div>
         <NFlex justify="space-between" align="center">
-          <NH4 style="margin: 20px 0" prefix="bar">可用设备</NH4>
+          <NH4 style="margin: 20px 0" prefix="bar">{{
+            $t("pages.Device.availableDevice")
+          }}</NH4>
           <NButton
             tertiary
             circle

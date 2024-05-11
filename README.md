@@ -1,8 +1,8 @@
 # Scrcpy-mask
 
-A Scrcpy client in Rust & Tarui aimed at providing mouse and key mapping to control Android device.
+To achieve computer control of Android devices, I developed a cross-platform desktop client using Tarui + Vue 3 + Rust. This client provides visual mouse and keyboard mapping configuration, enabling multi-touch operations similar to Android emulators through key mapping, with millisecond-level response time. This tool can be widely used for controlling Android devices from computers to play mobile games, providing a smooth touch experience.
 
-Due to the delay and blurred image quality of the mirror screen. This project found another way, directly abandoned the mirror screen, and instead used a transparent mask to display the screen content behind the window, which fundamentally put an end to the delay in casting the screen.
+This project only implements the Scrcpy control protocol and **does not provide Screen mirroring**. Because screen mirroring may involve latency and blurriness issues, this project takes a different approach by directly abandoning screen mirroring and instead using a transparent mask to display the content behind the window (which can be AVD, low-latency screen mirroring provided by your phone manufacturers, etc.), Completely eliminates the problem of poor screen casting experience inherent in Scrcpy.
 
 ## Features
 
@@ -14,7 +14,7 @@ Due to the delay and blurred image quality of the mirror screen. This project fo
 - [x] Key mapping config import and export
 - [x] Update check
 - [x] Switch between key mapping and input-text box
-- [ ] Internationalization (i18n)
+- [x] Internationalization (i18n)
 - [ ] Gamepad key mapping
 - [ ] Better macro support
 - [ ] Provide external interface through websocket
@@ -45,14 +45,14 @@ Due to the delay and blurred image quality of the mirror screen. This project fo
 
 1. Install software suitable for your system platform from [releases](https://github.com/AkiChase/scrcpy-mask/releases)
 2. Identify your Android device type
-	1. For physical devices like phones or tablets
-		1. You need to solve the problem of screen casting on your own. Recommend using the official screen mirror method of your device brand to achieve the minimum delay
-		2. Enable ADB debugging on your device via USB or wirelessly, then connect it to your computer.
-	2. For emulator, you don't need screen mirror, and emulator generally default to enabling ADB wired debugging. So this is the best way for game, I think.
+   1. For physical devices like phones or tablets
+      1. You need to solve the problem of screen casting on your own. Recommend using the official screen mirror method of your device brand to achieve the minimum delay
+      2. Enable ADB debugging on your device via USB or wirelessly, then connect it to your computer.
+   2. For emulator, you don't need screen mirror, and emulator generally default to enabling ADB wired debugging. So this is the best way for game, I think.
 3. Launch the software and navigate to the Device page.
-	1. Find your device among the available devices (if not found, please search for how to enable ADB debugging for your device).
-	2. Right-click on your device and choose "Get Screen Size". Use the obtained screen size as a reference and enter the device's width and height correctly. Note: If the width or height is incorrect (for example, they are reversed in portrait and landscape modes), all touch operations will be ignored, but no error message will appear.
-	3. Right-click on your device again and choose "Control this device".
+   1. Find your device among the available devices (if not found, please search for how to enable ADB debugging for your device).
+   2. Right-click on your device and choose "Get Screen Size". Use the obtained screen size as a reference and enter the device's width and height correctly. Note: If the width or height is incorrect (for example, they are reversed in portrait and landscape modes), all touch operations will be ignored, but no error message will appear.
+   3. Right-click on your device again and choose "Control this device".
 4. Navigate to the Settings page -> Mask Settings, and set the width and height of the mask to a certain multiple of the device's size to ensure the mask size is appropriate.
 5. Navigate to the Mask page where you can see a transparent mask. Next, adjust and move your emulator window or screen mirroring window to align the displayed content area with the transparent mask area.
 6. Navigate to the Key mapping page and switch or edit the key mapping configs.

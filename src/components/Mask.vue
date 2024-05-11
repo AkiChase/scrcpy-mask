@@ -10,7 +10,7 @@ import {
   unlistenToEvent,
   updateScreenSizeAndMaskArea,
 } from "../hotkey";
-import { KeySteeringWheel } from "../keyMappingConfig";
+import { KeyMappingConfig, KeySteeringWheel } from "../keyMappingConfig";
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
 import { open } from "@tauri-apps/plugin-shell";
@@ -24,7 +24,10 @@ import {
   AndroidKeycode,
   AndroidMetastate,
 } from "../frontcommand/android";
+import { Store } from "@tauri-apps/plugin-store";
+import { useI18n } from "vue-i18n";
 
+const { t } = useI18n();
 const store = useGlobalStore();
 const router = useRouter();
 const message = useMessage();
@@ -59,16 +62,86 @@ onActivated(async () => {
     ) {
       listenToEvent();
     } else {
-      message.error("按键方案异常，请删除此方案");
+      message.error(t("pages.Mask.keyconfigException"));
     }
   }
 });
 
-onMounted(() => {
+onMounted(async () => {
+  await loadLocalStore();
   store.checkUpdate = checkUpdate;
-  checkUpdate();
   store.showInputBox = showInputBox;
+  if (store.checkUpdateAtStart) checkUpdate();
 });
+
+async function loadLocalStore() {
+  const localStore = new Store("store.bin");
+  // loading screenSize from local store
+  const screenSize = await localStore.get<{ sizeW: number; sizeH: number }>(
+    "screenSize"
+  );
+  if (screenSize !== null) {
+    store.screenSizeW = screenSize.sizeW;
+    store.screenSizeH = screenSize.sizeH;
+  }
+
+  // loading keyMappingConfigList from local store
+  let keyMappingConfigList = await localStore.get<KeyMappingConfig[]>(
+    "keyMappingConfigList"
+  );
+  if (keyMappingConfigList === null || keyMappingConfigList.length === 0) {
+    // add empty key mapping config
+    // unable to get mask element when app is not ready
+    // so we use the stored mask area to get relative size
+    const maskArea = await localStore.get<{
+      posX: number;
+      posY: number;
+      sizeW: number;
+      sizeH: number;
+    }>("maskArea");
+    let relativeSize = { w: 800, h: 600 };
+    if (maskArea !== null) {
+      relativeSize = {
+        w: maskArea.sizeW,
+        h: maskArea.sizeH,
+      };
+    }
+    keyMappingConfigList = [
+      {
+        relativeSize,
+        title: t("pages.Mask.blankConfig"),
+        list: [],
+      },
+    ];
+    await localStore.set("keyMappingConfigList", keyMappingConfigList);
+  }
+  store.keyMappingConfigList = keyMappingConfigList;
+
+  // loading curKeyMappingIndex from local store
+  let curKeyMappingIndex = await localStore.get<number>("curKeyMappingIndex");
+  if (
+    curKeyMappingIndex === null ||
+    curKeyMappingIndex >= keyMappingConfigList.length
+  ) {
+    curKeyMappingIndex = 0;
+    localStore.set("curKeyMappingIndex", curKeyMappingIndex);
+  }
+  store.curKeyMappingIndex = curKeyMappingIndex;
+
+  // loading maskButton from local store
+  let maskButton = await localStore.get<{
+    show: boolean;
+    transparency: number;
+  }>("maskButton");
+  store.maskButton = maskButton ?? {
+    show: true,
+    transparency: 0.5,
+  };
+
+  // loading checkUpdateAtStart from local store
+  let checkUpdateAtStart = await localStore.get<boolean>("checkUpdateAtStart");
+  store.checkUpdateAtStart = checkUpdateAtStart ?? true;
+}
 
 async function cleanAfterimage() {
   const appWindow = getCurrent();
@@ -164,20 +237,20 @@ async function checkUpdate() {
       }
     );
     if (res.status !== 200) {
-      message.error("检查更新失败");
+      message.error(t("pages.Mask.checkUpdate.failed"));
     } else {
       const data = await res.json();
       const latestVersion = (data.tag_name as string).slice(1);
       if (latestVersion <= curVersion) {
-        message.success(`最新版本: ${latestVersion}，当前已是最新版本`);
+        message.success(t("pages.Mask.checkUpdate.isLatest", [latestVersion]));
         return;
       }
       const body = data.body as string;
       dialog.info({
-        title: `最新版本：${data.tag_name}`,
+        title: t("pages.Mask.checkUpdate.notLatest.title", [latestVersion]),
         content: () => renderUpdateInfo(body),
-        positiveText: "前往发布页",
-        negativeText: "取消",
+        positiveText: t("pages.Mask.checkUpdate.notLatest.positiveText"),
+        negativeText: t("pages.Mask.checkUpdate.notLatest.negativeText"),
         onPositiveClick: () => {
           open(data.html_url);
         },
@@ -185,7 +258,7 @@ async function checkUpdate() {
     }
   } catch (e) {
     console.error(e);
-    message.error("检查更新失败");
+    message.error(t("pages.Mask.checkUpdate.failed"));
   }
 }
 </script>
@@ -195,9 +268,9 @@ async function checkUpdate() {
     <div class="content">
       <NDialog
         :closable="false"
-        title="未找到受控设备"
-        content="请启动服务端并控制任意设备"
-        positive-text="去启动"
+        :title="$t('pages.Mask.noControledDevice.title')"
+        :content="$t('pages.Mask.noControledDevice.content')"
+        :positive-text="$t('pages.Mask.noControledDevice.positiveText')"
         type="warning"
         @positive-click="toStartServer"
       />
@@ -215,7 +288,7 @@ async function checkUpdate() {
         ref="inputInstRef"
         v-model:value="inputBoxVal"
         type="text"
-        placeholder="Input text and then press enter/esc"
+        :placeholder="$t('pages.Mask.inputBoxPlaceholder')"
       />
     </div>
     <div

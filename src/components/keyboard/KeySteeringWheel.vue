@@ -184,26 +184,28 @@ function showSetting() {
       top: `${settingPosY}px`,
     }"
   >
-    <NH4 prefix="bar">键盘行走</NH4>
-    <NFormItem label="偏移">
+    <NH4 prefix="bar">{{
+      $t("pages.KeyBoard.SteeringWheel.steeringWheel")
+    }}</NH4>
+    <NFormItem :label="$t('pages.KeyBoard.SteeringWheel.offset')">
       <NInputNumber
         v-model:value="keyMapping.offset"
         :min="1"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NFormItem label="触点ID">
+    <NFormItem :label="$t('pages.KeyBoard.setting.pointerID')">
       <NInputNumber
         v-model:value="keyMapping.pointerId"
         :min="0"
-        placeholder="请输入触点ID"
+        :placeholder="$t('pages.KeyBoard.setting.pointerIDPlaceholder')"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NFormItem label="备注">
+    <NFormItem :label="$t('pages.KeyBoard.setting.note')">
       <NInput
         v-model:value="keyMapping.note"
-        placeholder="请输入备注"
+        :placeholder="$t('pages.KeyBoard.setting.notePlaceholder')"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
