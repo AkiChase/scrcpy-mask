@@ -260,27 +260,30 @@ function updateRangeIndicator(element?: HTMLElement) {
       top: `${settingPosY}px`,
     }"
   >
-    <NH4 prefix="bar">技能</NH4>
-    <NFormItem label="选项">
+    <NH4 prefix="bar">{{ $t("pages.KeyBoard.KeySkill.skill") }}</NH4>
+    <NFormItem :label="$t('pages.KeyBoard.KeySkill.options')">
       <NFlex vertical>
         <NCheckbox
           @click="changeSkillType('trigger-double')"
           :checked="isTriggerWhenDoublePressed"
-          >双击施放</NCheckbox
+          >{{ $t("pages.KeyBoard.KeySkill.double") }}</NCheckbox
         >
         <NCheckbox
           @click="changeSkillType('direction')"
           :checked="isDirectionless"
-          >无方向技能</NCheckbox
+          >{{ $t("pages.KeyBoard.KeySkill.directionless") }}</NCheckbox
         >
         <NCheckbox
           @click="changeSkillType('trigger')"
           :checked="isTriggerWhenPressed"
-          >按下时触发</NCheckbox
+          >{{ $t("pages.KeyBoard.KeySkill.triggerWhenPressed") }}</NCheckbox
         >
       </NFlex>
     </NFormItem>
-    <NFormItem v-if="!isDirectionless" label="范围">
+    <NFormItem
+      v-if="!isDirectionless"
+      :label="$t('pages.KeyBoard.KeySkill.range')"
+    >
       <NInputNumber
         v-if="keyMapping.type === 'DirectionalSkill'"
         v-model:value="keyMapping.range"
@@ -317,27 +320,27 @@ function updateRangeIndicator(element?: HTMLElement) {
     </NFormItem>
     <NFormItem
       v-if="(keyMapping.type==='TriggerWhenPressedSkill'&&!(keyMapping as KeyTriggerWhenPressedSkill).directional)"
-      label="触摸时长"
+      :label="$t('pages.KeyBoard.setting.touchTime')"
     >
       <NInputNumber
         v-model:value="keyMapping.rangeOrTime"
         :min="0"
-        placeholder="请输入触摸时长(ms)"
+        :placeholder="$t('pages.KeyBoard.setting.touchTimePlaceholder')"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NFormItem label="触点ID">
+    <NFormItem :label="$t('pages.KeyBoard.setting.pointerID')">
       <NInputNumber
         v-model:value="keyMapping.pointerId"
         :min="0"
-        placeholder="请输入触点ID"
+        :placeholder="$t('pages.KeyBoard.setting.pointerIDPlaceholder')"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NFormItem label="备注">
+    <NFormItem :label="$t('pages.KeyBoard.setting.note')">
       <NInput
         v-model:value="keyMapping.note"
-        placeholder="请输入备注"
+        :placeholder="$t('pages.KeyBoard.setting.notePlaceholder')"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>

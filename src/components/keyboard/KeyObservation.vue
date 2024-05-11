@@ -124,27 +124,27 @@ function showSetting() {
       top: `${settingPosY}px`,
     }"
   >
-    <NH4 prefix="bar">观察视角</NH4>
-    <NFormItem label="灵敏度">
+    <NH4 prefix="bar">{{ $t("pages.KeyBoard.Observation.observation") }}</NH4>
+    <NFormItem :label="$t('pages.KeyBoard.Observation.scale')">
       <NInputNumber
         v-model:value="keyMapping.scale"
-        placeholder="请输入灵敏度"
+        :placeholder="$t('pages.KeyBoard.Observation.scalePlaceholder')"
         :step="0.1"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NFormItem label="触点ID">
+    <NFormItem :label="$t('pages.KeyBoard.setting.pointerID')">
       <NInputNumber
         v-model:value="keyMapping.pointerId"
         :min="0"
-        placeholder="请输入触点ID"
+        :placeholder="$t('pages.KeyBoard.setting.pointerIDPlaceholder')"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NFormItem label="备注">
+    <NFormItem :label="$t('pages.KeyBoard.setting.note')">
       <NInput
         v-model:value="keyMapping.note"
-        placeholder="请输入备注"
+        :placeholder="$t('pages.KeyBoard.setting.notePlaceholder')"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>

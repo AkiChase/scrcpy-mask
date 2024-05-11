@@ -110,6 +110,108 @@
         "curVersion": "Current version: {0}",
         "checkUpdate": "Check for updates"
       }
+    },
+    "KeyBoard": {
+      "noSaveDialog": {
+        "title": "Warning",
+        "content": "The current plan has not been saved. Do you want to save it?",
+        "positiveText": "Save",
+        "negativeText": "Cancel",
+        "keyRepeat": "There are duplicate keystrokes and cannot be saved."
+      },
+      "addButton": {
+        "SteeringWheel": "SteeringWheel",
+        "Tap": "Tap",
+        "Skill": "Skill",
+        "CancelSkill": "CancelSkill",
+        "Observation": "Observation",
+        "Macro": "Macro"
+      },
+      "buttonKeyRepeat": "Key repeat: {0}",
+      "KeyCommon": {
+        "macroParseSuccess": "The macro code is parsed successfully, but the correctness of the code is not guaranteed. Please test by yourself.",
+        "macroParseFailed": "Macro code failed to save, please check whether the code format is correct.",
+        "macro": "Macro code",
+        "editMacro": "Edit macro",
+        "macroModal": {
+          "title": "Macro editor",
+          "down": "Macro executed on key press",
+          "placeholder": "JSON macro code, can be empty",
+          "loop": "Macro executed on key press and hold",
+          "up": "Macro executed on key up"
+        }
+      },
+      "setting": {
+        "touchTime": "Touch duration",
+        "touchTimePlaceholder": "Touch duration (ms)",
+        "pointerID": "Pointer ID",
+        "pointerIDPlaceholder": "Please enter Pointer ID",
+        "note": "Note",
+        "notePlaceholder": "Please enter note"
+      },
+      "KeyInfo": {
+        "title": "按键信息",
+        "note": "按下任意键"
+      },
+      "Observation": {
+        "observation": "Observation",
+        "scale": "Sensitivity",
+        "scalePlaceholder": "Please enter sensitivity"
+      },
+      "KeySetting": {
+        "onlyOneConfig": "There is currently only one config. Click Import Default to import the preset configs.",
+        "importFailed": "Import failed",
+        "importSuccess": "Key config has been imported",
+        "importDefaultFailed": "Import of default key config failed",
+        "importDefaultSuccess": "{0} default configs have been imported",
+        "configEdited": "Please save or reset the current config first",
+        "newConfig": "New Config",
+        "newConfigSuccess": "New config has been created",
+        "copyConfigTitle": "{0}-Copy",
+        "copyConfigSuccess": "The config has been copied as: {0}",
+        "delConfigLeast": "Keep at least one config",
+        "delSuccess": "Config deleted: {0}",
+        "renameSuccess": "Config has been renamed: {0}",
+        "renameEmpty": "Config name cannot be empty",
+        "exportSuccess": "The current key config has been exported to the clipboard",
+        "exportFailed": "Key config export failed",
+        "saveKeyRepeat": "There are duplicate key and cannot be saved.",
+        "checkConfigSizeWarning": "Please note that the current key config \"{0}\" is inconsistent with the mask size. You can migrate it if necessary.",
+        "migrateConfigTitle": "{0}-Migrate",
+        "migrateConfigSuccess": "Migrated to new config: {0}",
+        "migrateConfigNeedless": "The current config conforms to the mask size and does not need to be migrated",
+        "buttonDrag": "Long press to drag",
+        "config": "Key mapping config",
+        "configRelativeSize": "Relative Mask Size: {0}x{1}",
+        "saveConfig": "Save config",
+        "resetConfig": "Reset config",
+        "renameConfig": "Rename",
+        "renameTitle": "Rename key config",
+        "import": "import",
+        "importPlaceholder": "Paste the JSON text of a key mapping config (the legality of the key mapping config cannot be judged here, please ensure that the JSON content is correct)",
+        "addButtonTip": "Tip: Right-click on the blank area to add buttons",
+        "keyInfo": "Key Info",
+        "importDefaultConfig": "Import default",
+        "exportConfig": "Export config",
+        "importConfig": "Import config",
+        "others": "Others",
+        "delConfig": "Delete config",
+        "migrateConfig": "Migration config",
+        "copyConfig": "Copy config",
+        "createConfig": "Create config"
+      },
+      "KeySkill": {
+        "skill": "Skill",
+        "options": "Options",
+        "double": "Double click to cast",
+        "directionless": "Directionless skills",
+        "triggerWhenPressed": "Trigger when pressed",
+        "range": "Range"
+      },
+      "SteeringWheel": {
+        "steeringWheel": "SteeringWheel",
+        "offset": "Offset"
+      }
     }
   },
   "sidebar": {

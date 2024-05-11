@@ -16,6 +16,7 @@ import {
 import { CloseCircle, Settings } from "@vicons/ionicons5";
 import { KeyCommon, KeyMacro, KeyMacroList } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
+import { useI18n } from "vue-i18n";
 
 const props = defineProps<{
   index: number;
@@ -23,6 +24,7 @@ const props = defineProps<{
 
 const keyboardStore = useKeyboardStore();
 
+const { t } = useI18n();
 const store = useGlobalStore();
 const message = useMessage();
 const elementRef = ref<HTMLElement | null>(null);
@@ -139,10 +141,10 @@ function saveMacro() {
     (keyMapping.value as KeyMacro).macro = macro;
     showMacroModal.value = false;
     keyboardStore.edited = true;
-    message.success("宏代码解析成功，但不保证代码正确性，请自行测试");
+    message.success(t("pages.KeyBoard.KeyCommon.macroParseSuccess"));
   } catch (e) {
     console.error(e);
-    message.error("宏代码保存失败，请检查代码格式是否正确");
+    message.error(t("pages.KeyBoard.KeyCommon.macroParseFailed"));
   }
 }
 
@@ -213,29 +215,40 @@ function showSetting() {
         ? "普通点击"
         : "宏"
     }}</NH4>
-    <NFormItem v-if="keyMapping.type === 'Macro'" label="宏代码">
-      <NButton type="success" @click="editMacro"> 编辑代码 </NButton>
+    <NFormItem
+      v-if="keyMapping.type === 'Macro'"
+      :label="$t('pages.KeyBoard.KeyCommon.macro')"
+    >
+      <NButton type="success" @click="editMacro">
+        {{ $t("pages.KeyBoard.KeyCommon.editMacro") }}
+      </NButton>
     </NFormItem>
-    <NFormItem v-if="keyMapping.type === 'Tap'" label="触摸时长">
+    <NFormItem
+      v-if="keyMapping.type === 'Tap'"
+      :label="$t('pages.KeyBoard.setting.touchTime')"
+    >
       <NInputNumber
         v-model:value="keyMapping.time"
         :min="0"
-        placeholder="请输入触摸时长(ms)"
+        :placeholder="$t('pages.KeyBoard.setting.touchTimePlaceholder')"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NFormItem v-if="keyMapping.type !== 'Macro'" label="触点ID">
+    <NFormItem
+      v-if="keyMapping.type !== 'Macro'"
+      :label="$t('pages.KeyBoard.setting.pointerID')"
+    >
       <NInputNumber
         v-model:value="keyMapping.pointerId"
         :min="0"
-        placeholder="请输入触点ID"
+        :placeholder="$t('pages.KeyBoard.setting.pointerIDPlaceholder')"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
-    <NFormItem label="备注">
+    <NFormItem :label="$t('pages.KeyBoard.setting.note')">
       <NInput
         v-model:value="keyMapping.note"
-        placeholder="请输入备注"
+        :placeholder="$t('pages.KeyBoard.setting.notePlaceholder')"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
@@ -245,33 +258,36 @@ function showSetting() {
     v-model:show="showMacroModal"
     @before-leave="saveMacro"
   >
-    <NCard style="width: 50%; height: 80%" title="宏编辑">
+    <NCard
+      style="width: 50%; height: 80%"
+      :title="$t('pages.KeyBoard.KeyCommon.macroModal.title')"
+    >
       <NFlex vertical style="height: 100%">
-        <div>按下按键执行</div>
+        <div>{{ $t("pages.KeyBoard.KeyCommon.macroModal.down") }}</div>
         <NInput
           type="textarea"
           style="flex-grow: 1"
-          placeholder="JSON宏代码, 可为空"
+          placeholder="$t('pages.KeyBoard.KeyCommon.macroModal.placeholder')"
           v-model:value="editedMacroRaw.down"
           @update:value="macroEditedFlag = true"
           round
           clearable
         />
-        <div>按住执行</div>
+        <div>{{ $t("pages.KeyBoard.KeyCommon.macroModal.loop") }}</div>
         <NInput
           type="textarea"
           style="flex-grow: 1"
-          placeholder="JSON宏代码, 可为空"
+          :placeholder="$t('pages.KeyBoard.KeyCommon.macroModal.placeholder')"
           v-model:value="editedMacroRaw.loop"
           @update:value="macroEditedFlag = true"
           round
           clearable
         />
-        <div>抬起执行</div>
+        <div>{{ $t("pages.KeyBoard.KeyCommon.macroModal.up") }}</div>
         <NInput
           type="textarea"
           style="flex-grow: 1"
-          placeholder="JSON宏代码, 可为空"
+          :placeholder="$t('pages.KeyBoard.KeyCommon.macroModal.placeholder')"
           v-model:value="editedMacroRaw.up"
           @update:value="macroEditedFlag = true"
           round
