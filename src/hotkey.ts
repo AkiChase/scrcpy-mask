@@ -308,19 +308,15 @@ function addTriggerWhenPressedSkillShortcuts(
   rangeOrTime: number,
   pointerId: number
 ) {
+  posX = Math.round((posX / relativeSize.w) * screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * screenSizeH);
   if (directional) {
-    posX = Math.round((posX / relativeSize.w) * screenSizeW);
-    posY = Math.round((posY / relativeSize.h) * screenSizeH);
     addShortcut(
       key,
       // down
       async () => {
         // up doublepress skill
-        for (const [key, val] of doublePressedDownKey) {
-          if (val) {
-            downKeyCBMap.get(key)?.();
-          }
-        }
+        await upDoublePressedKey();
         const skillOffset = clientPosToSkillOffset(
           { x: mouseX, y: mouseY },
           rangeOrTime
@@ -346,7 +342,27 @@ function addTriggerWhenPressedSkillShortcuts(
       undefined
     );
   } else {
-    addTapShortcuts(key, relativeSize, rangeOrTime, posX, posY, pointerId);
+    addShortcut(
+      key,
+      async () => {
+        await upDoublePressedKey();
+        await touch({
+          action: TouchAction.Default,
+          pointerId,
+          screen: {
+            w: screenSizeW,
+            h: screenSizeH,
+          },
+          pos: {
+            x: posX,
+            y: posY,
+          },
+          time: rangeOrTime,
+        });
+      },
+      undefined,
+      undefined
+    );
   }
 }
 
@@ -456,11 +472,7 @@ function addDirectionlessSkillShortcuts(
     // down
     async () => {
       // up doublepress skill
-      for (const [key, val] of doublePressedDownKey) {
-        if (val) {
-          downKeyCBMap.get(key)?.();
-        }
-      }
+      await upDoublePressedKey();
       await touch({
         action: TouchAction.Down,
         pointerId,
@@ -495,6 +507,15 @@ function addDirectionlessSkillShortcuts(
   );
 }
 
+// up all double pressed key
+async function upDoublePressedKey() {
+  for (const [key, val] of doublePressedDownKey) {
+    if (val) {
+      await downKeyCBMap.get(key)?.();
+    }
+  }
+}
+
 // add shortcuts for directional skill (cancelable)
 function addDirectionalSkillShortcuts(
   key: string,
@@ -512,11 +533,7 @@ function addDirectionalSkillShortcuts(
     // down
     async () => {
       // up doublepress skill
-      for (const [key, val] of doublePressedDownKey) {
-        if (val) {
-          downKeyCBMap.get(key)?.();
-        }
-      }
+      await upDoublePressedKey();
       const skillOffset = clientPosToSkillOffset(
         { x: mouseX, y: mouseY },
         range
@@ -787,8 +804,8 @@ const upKeyCBMap: Map<string, () => Promise<void>> = new Map();
 const cancelAbleKeyList: string[] = [];
 
 function keydownHandler(event: KeyboardEvent) {
-  if (event.repeat) return;
   event.preventDefault();
+  if (event.repeat) return;
   if (downKeyMap.has(event.code)) {
     downKeyMap.set(event.code, true);
     // execute the down callback (if there is) asyncily
