@@ -28,9 +28,11 @@ impl ResHelper {
     pub fn get_file_path(dir: &PathBuf, file_name: ResourceName) -> PathBuf {
         match file_name {
             #[cfg(target_os = "windows")]
-            ResourceName::Adb => dir.join("adb.exe"),
-            #[cfg(not(target_os = "windows"))]
-            ResourceName::Adb => dir.join("adb"),
+            ResourceName::Adb => dir.join("adb-win.exe"),
+            #[cfg(target_os = "linux")]
+            ResourceName::Adb => dir.join("adb-linux"),
+            #[cfg(target_os = "macos")]
+            ResourceName::Adb => dir.join("adb-mac"),
 
             ResourceName::ScrcpyServer => dir.join("scrcpy-server-v2.4"),
             ResourceName::DefaultKeyConfig => dir.join("default-key-config.json"),
