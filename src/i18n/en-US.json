@@ -35,7 +35,9 @@
       },
       "controledDevice": "Controlled device",
       "availableDevice": "Available devices",
-      "noControledDevice": "No Controled Device"
+      "noControledDevice": "No Controled Device",
+      "alreadyControled": "Controlled device already exists",
+      "alreadyDisconnected": "Controlled device connection has been disconnected"
     },
     "Mask": {
       "inputBoxPlaceholder": "Input text and then press enter/esc",

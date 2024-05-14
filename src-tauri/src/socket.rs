@@ -13,6 +13,7 @@ use tokio::{
 use crate::{
     control_msg::{self, ControlMsgType},
     scrcpy_mask_cmd::{self, ScrcpyMaskCmdType},
+    share,
 };
 
 pub async fn connect_socket(
@@ -26,7 +27,7 @@ pub async fn connect_socket(
         .await
         .context("Socket connect failed")?;
 
-    println!("成功连接scrcpy-server:{:?}", client.local_addr());
+    println!("connect to scrcpy-server:{:?}", client.local_addr());
 
     let (read_half, write_half) = client.into_split();
 
@@ -71,6 +72,9 @@ async fn read_socket(
                 end -= 1;
             }
             let device_name = std::str::from_utf8(&buf[..end]).unwrap();
+            // update device name for share
+            share::CLIENT_INFO.lock().unwrap().as_mut().unwrap().device_name = device_name.to_string();
+
             let msg = json!({
                 "type": "MetaData",
                 "deviceName": device_name,

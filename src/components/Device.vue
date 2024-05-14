@@ -17,6 +17,7 @@ import {
   startScrcpyServer,
   getDeviceScreenSize,
   adbConnect,
+  getCurClientInfo,
 } from "../invoke";
 import {
   NH4,
@@ -86,6 +87,26 @@ onMounted(async () => {
 });
 
 onActivated(async () => {
+  let curClientInfo = await getCurClientInfo();
+  if (store.controledDevice) {
+    // update controledDevice if client not exists
+    if (!curClientInfo) {
+      await shutdown();
+      store.controledDevice = null;
+      message.warning(t("pages.Device.alreadyDisconnected"));
+    }
+  } else {
+    // restore controledDevice if client exists
+    if (curClientInfo) {
+      message.warning(t("pages.Device.alreadyControled"));
+      store.controledDevice = {
+        scid: curClientInfo.scid,
+        deviceName: curClientInfo.device_name,
+        deviceID: curClientInfo.device_id,
+      };
+    }
+  }
+
   await refreshDevices();
 });
 
@@ -178,6 +199,18 @@ function onMenuClickoutside() {
 }
 
 async function deviceControl() {
+  let curClientInfo = await getCurClientInfo();
+  if (curClientInfo) {
+    message.warning(t("pages.Device.alreadyControled"));
+    store.controledDevice = {
+      scid: curClientInfo.scid,
+      deviceName: curClientInfo.device_name,
+      deviceID: curClientInfo.device_id,
+    };
+    store.hideLoading();
+    return;
+  }
+
   if (!port.value) {
     port.value = 27183;
   }

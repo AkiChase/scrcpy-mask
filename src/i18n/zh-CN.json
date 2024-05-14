@@ -35,7 +35,9 @@
       },
       "controledDevice": "受控设备",
       "noControledDevice": "无受控设备",
-      "availableDevice": "可用设备"
+      "availableDevice": "可用设备",
+      "alreadyControled": "已存在受控设备",
+      "alreadyDisconnected": "受控设备连接已断开"
     },
     "Mask": {
       "keyconfigException": "按键方案异常，请删除此方案",
