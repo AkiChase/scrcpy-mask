@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
 import { Ref, ref } from "vue";
-import { Device } from "../invoke";
 import {
   KeyMapping,
   KeyMappingConfig,
@@ -22,7 +21,7 @@ export const useGlobalStore = defineStore("global", () => {
   interface ControledDevice {
     scid: string;
     deviceName: string;
-    device: Device;
+    deviceID: string;
   }
 
   const controledDevice: Ref<ControledDevice | null> = ref(null);

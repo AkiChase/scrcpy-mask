@@ -98,7 +98,7 @@ onUnmounted(() => {
 const devices: Ref<Device[]> = ref([]);
 const availableDevice = computed(() => {
   return devices.value.filter((d) => {
-    return store.controledDevice?.device.id !== d.id;
+    return store.controledDevice?.deviceID !== d.id;
   });
 });
 const tableCols: DataTableColumns = [
@@ -227,7 +227,7 @@ async function deviceControl() {
     store.controledDevice = {
       scid,
       deviceName,
-      device,
+      deviceID: device.id,
     };
     nextTick(() => {
       deviceWaitForMetadataTask = null;
@@ -332,7 +332,7 @@ async function connectDevice() {
           <div class="controled-device" v-if="store.controledDevice">
             <div>
               {{ store.controledDevice.deviceName }} ({{
-                store.controledDevice.device.id
+                store.controledDevice.deviceID
               }})
             </div>
             <div class="device-op">
@@ -344,8 +344,7 @@ async function connectDevice() {
                     </template>
                   </NButton>
                 </template>
-                scid: {{ store.controledDevice.scid }} <br />status:
-                {{ store.controledDevice.device.status }}
+                scid: {{ store.controledDevice.scid }}
               </NTooltip>
               <NButton quaternary circle type="error" @click="shutdownSC()">
                 <template #icon>
