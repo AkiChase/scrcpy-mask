@@ -42,7 +42,7 @@
       "blankConfig": "空白方案",
       "checkUpdate": {
         "failed": "检查更新失败",
-        "isLatest": "最新版本: {0}，当前已是最新版本",
+        "isLatest": "最新版本: {0}，当前已是最新版本: {1}",
         "notLatest": {
           "title": "最新版本：{0}",
           "positiveText": "前往发布页",
