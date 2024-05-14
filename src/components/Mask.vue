@@ -227,6 +227,23 @@ function renderUpdateInfo(content: string) {
   return h("div", { style: "margin: 20px 0" }, pList);
 }
 
+function compareVersion(v1: string, v2: string) {
+  const [x1, y1, z1] = v1.split(".");
+  const [x2, y2, z2] = v2.split(".");
+
+  if (x1 !== x2) {
+    return parseInt(x1) > parseInt(x2) ? 1 : -1;
+  }
+  if (y1 !== y2) {
+    return parseInt(y1) > parseInt(y2) ? 1 : -1;
+  }
+  if (z1 !== z2) {
+    return parseInt(z1) > parseInt(z2) ? 1 : -1;
+  }
+
+  return 0;
+}
+
 async function checkUpdate() {
   try {
     const curVersion = await getVersion();
@@ -241,8 +258,10 @@ async function checkUpdate() {
     } else {
       const data = await res.json();
       const latestVersion = (data.tag_name as string).slice(1);
-      if (latestVersion <= curVersion) {
-        message.success(t("pages.Mask.checkUpdate.isLatest", [latestVersion]));
+      if (compareVersion(curVersion, latestVersion) >= 0) {
+        message.success(
+          t("pages.Mask.checkUpdate.isLatest", [latestVersion, curVersion])
+        );
         return;
       }
       const body = data.body as string;

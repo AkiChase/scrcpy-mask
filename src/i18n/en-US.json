@@ -43,7 +43,7 @@
       "blankConfig": "Blank config",
       "checkUpdate": {
         "failed": "Check for updates failed",
-        "isLatest": "Latest version: {0}, currently the latest version",
+        "isLatest": "Latest version: {0}, currently the latest version: {1}",
         "notLatest": {
           "title": "Latest version: {0}",
           "positiveText": "Release page",
