@@ -3,7 +3,7 @@
     "resources": [
       "resource/default-key-config.json",
       "resource/scrcpy-server-v2.4",
-      "resource/adb.exe",
+      "resource/adb-win.exe",
       "resource/AdbWinApi.dll",
       "resource/AdbWinUsbApi.dll"
     ]
