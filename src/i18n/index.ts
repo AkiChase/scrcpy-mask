@@ -8,6 +8,7 @@ const localStore = new Store("store.bin");
 
 const i18n = createI18n({
   allowComposition: true,
+  legacy: false,
   messages: {
     "en-US": enUS,
     "zh-CN": zhCN,
@@ -15,7 +16,7 @@ const i18n = createI18n({
 });
 
 localStore.get<"en-US" | "zh-CN">("language").then((language) => {
-  i18n.global.locale = language ?? "en-US";
+  i18n.global.locale.value = language ?? "en-US";
 });
 
 export default i18n;

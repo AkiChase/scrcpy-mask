@@ -37,7 +37,12 @@
       "noControledDevice": "无受控设备",
       "availableDevice": "可用设备",
       "alreadyControled": "已存在受控设备",
-      "alreadyDisconnected": "受控设备连接已断开"
+      "alreadyDisconnected": "受控设备连接已断开",
+      "inputWsAddress": "请输入 Websocket 地址",
+      "externalControl": "外部控制",
+      "wsAddress": "Websocket 地址",
+      "wsClose": "断开",
+      "wsConnect": "控制"
     },
     "Mask": {
       "keyconfigException": "按键方案异常，请删除此方案",
@@ -218,5 +223,10 @@
   },
   "sidebar": {
     "noControledDevice": "未控制任何设备"
+  },
+  "websocket": {
+    "open": "已连接到外部控制服务端",
+    "close": "外部控制连接断开",
+    "error": "未知错误，外部控制连接断开"
   }
 }

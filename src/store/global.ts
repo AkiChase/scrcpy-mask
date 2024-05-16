@@ -69,6 +69,8 @@ export const useGlobalStore = defineStore("global", () => {
     localStore.set("curKeyMappingIndex", index);
   }
 
+  const externalControlled = ref(false);
+
   // persistent storage
   const screenSizeW: Ref<number> = ref(0);
   const screenSizeH: Ref<number> = ref(0);
@@ -88,6 +90,7 @@ export const useGlobalStore = defineStore("global", () => {
     curKeyMappingIndex,
     maskButton,
     checkUpdateAtStart,
+    externalControlled,
     // in-memory storage
     showLoading,
     hideLoading,
