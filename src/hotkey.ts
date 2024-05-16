@@ -803,7 +803,7 @@ const loopDownKeyCBMap: Map<string, () => Promise<void>> = new Map();
 const upKeyCBMap: Map<string, () => Promise<void>> = new Map();
 const cancelAbleKeyList: string[] = [];
 
-function keydownHandler(event: KeyboardEvent) {
+function handleKeydown(event: KeyboardEvent) {
   event.preventDefault();
   if (event.repeat) return;
   if (downKeyMap.has(event.code)) {
@@ -814,7 +814,7 @@ function keydownHandler(event: KeyboardEvent) {
   }
 }
 
-function keyupHandler(event: KeyboardEvent) {
+function handleKeyup(event: KeyboardEvent) {
   event.preventDefault();
   if (downKeyMap.has(event.code)) {
     downKeyMap.set(event.code, false);
@@ -1209,8 +1209,8 @@ function applyKeyMappingConfigShortcuts(
 }
 
 export function listenToEvent() {
-  window.addEventListener("keydown", keydownHandler);
-  window.addEventListener("keyup", keyupHandler);
+  window.addEventListener("keydown", handleKeydown);
+  window.addEventListener("keyup", handleKeyup);
   window.addEventListener("mousedown", handleMouseDown);
   window.addEventListener("mousemove", handleMouseMove);
   window.addEventListener("mouseup", handleMouseUp);
@@ -1220,8 +1220,8 @@ export function listenToEvent() {
 }
 
 export function unlistenToEvent() {
-  window.removeEventListener("keydown", keydownHandler);
-  window.removeEventListener("keyup", keyupHandler);
+  window.removeEventListener("keydown", handleKeydown);
+  window.removeEventListener("keyup", handleKeyup);
   window.removeEventListener("mousedown", handleMouseDown);
   window.removeEventListener("mousemove", handleMouseMove);
   window.removeEventListener("mouseup", handleMouseUp);

@@ -86,7 +86,7 @@ function changeLanguage(language: "zh-CN" | "en-US") {
   if (language === curLanguage.value) return;
   curLanguage.value = language;
   localStore.set("language", language);
-  i18n.global.locale = language;
+  i18n.global.locale.value = language;
 }
 </script>
 
