@@ -35,7 +35,7 @@ pub async fn handle_sm_cmd(
                     // up
                     let buf = gen_inject_key_ctrl_msg(
                         ctrl_msg_type,
-                        0, // AKEY_EVENT_ACTION_DOWN
+                        1, // AKEY_EVENT_ACTION_UP
                         keycode,
                         0,
                         metastate,

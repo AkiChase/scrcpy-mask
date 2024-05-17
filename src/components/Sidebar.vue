@@ -15,17 +15,11 @@ import {
 import { Keyboard24Regular } from "@vicons/fluent";
 import { NIcon, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
-import {
-  sendInjectKeycode,
-  sendSetScreenPowerMode,
-} from "../frontcommand/controlMsg";
-import {
-  AndroidKeyEventAction,
-  AndroidKeycode,
-  AndroidMetastate,
-} from "../frontcommand/android";
+import { sendSetScreenPowerMode } from "../frontcommand/controlMsg";
+import { AndroidKeycode } from "../frontcommand/android";
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { SendKeyAction, sendKey } from "../frontcommand/scrcpyMaskCmd";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -39,28 +33,11 @@ function nav(name: string) {
   router.replace({ name });
 }
 
-function sleep(time: number) {
-  return new Promise<void>((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, time);
-  });
-}
-
 async function sendKeyCodeToDevice(code: AndroidKeycode) {
   if (store.controledDevice) {
-    await sendInjectKeycode({
-      action: AndroidKeyEventAction.AKEY_EVENT_ACTION_DOWN,
+    await sendKey({
+      action: SendKeyAction.Default,
       keycode: code,
-      repeat: 0,
-      metastate: AndroidMetastate.AMETA_NONE,
-    });
-    await sleep(50);
-    await sendInjectKeycode({
-      action: AndroidKeyEventAction.AKEY_EVENT_ACTION_UP,
-      keycode: code,
-      repeat: 0,
-      metastate: AndroidMetastate.AMETA_NONE,
     });
   } else {
     message.error(t("sidebar.noControledDevice"));

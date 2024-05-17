@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
 import { Ref, ref } from "vue";
-import { Device } from "../invoke";
 import {
   KeyMapping,
   KeyMappingConfig,
@@ -22,7 +21,7 @@ export const useGlobalStore = defineStore("global", () => {
   interface ControledDevice {
     scid: string;
     deviceName: string;
-    device: Device;
+    deviceID: string;
   }
 
   const controledDevice: Ref<ControledDevice | null> = ref(null);
@@ -70,6 +69,8 @@ export const useGlobalStore = defineStore("global", () => {
     localStore.set("curKeyMappingIndex", index);
   }
 
+  const externalControlled = ref(false);
+
   // persistent storage
   const screenSizeW: Ref<number> = ref(0);
   const screenSizeH: Ref<number> = ref(0);
@@ -89,6 +90,7 @@ export const useGlobalStore = defineStore("global", () => {
     curKeyMappingIndex,
     maskButton,
     checkUpdateAtStart,
+    externalControlled,
     // in-memory storage
     showLoading,
     hideLoading,

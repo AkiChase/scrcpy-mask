@@ -17,6 +17,7 @@ import {
   startScrcpyServer,
   getDeviceScreenSize,
   adbConnect,
+  getCurClientInfo,
 } from "../invoke";
 import {
   NH4,
@@ -39,13 +40,13 @@ import {
   useMessage,
   NInputGroup,
 } from "naive-ui";
-import { CloseCircle, InformationCircle } from "@vicons/ionicons5";
-import { Refresh } from "@vicons/ionicons5";
+import { CloseCircle, InformationCircle, Refresh } from "@vicons/ionicons5";
 import { UnlistenFn, listen } from "@tauri-apps/api/event";
 import { Store } from "@tauri-apps/plugin-store";
 import { shutdown } from "../frontcommand/scrcpyMaskCmd";
 import { useGlobalStore } from "../store/global";
 import { useI18n } from "vue-i18n";
+import { closeExternalControl, connectExternalControl } from "../websocket";
 
 const { t } = useI18n();
 const dialog = useDialog();
@@ -53,7 +54,8 @@ const store = useGlobalStore();
 const message = useMessage();
 
 const port = ref(27183);
-const address = ref("");
+const wireless_address = ref("");
+const ws_address = ref("");
 
 const localStore = new Store("store.bin");
 
@@ -86,6 +88,26 @@ onMounted(async () => {
 });
 
 onActivated(async () => {
+  let curClientInfo = await getCurClientInfo();
+  if (store.controledDevice) {
+    // update controledDevice if client not exists
+    if (!curClientInfo) {
+      await shutdown();
+      store.controledDevice = null;
+      message.warning(t("pages.Device.alreadyDisconnected"));
+    }
+  } else {
+    // restore controledDevice if client exists
+    if (curClientInfo) {
+      message.warning(t("pages.Device.alreadyControled"));
+      store.controledDevice = {
+        scid: curClientInfo.scid,
+        deviceName: curClientInfo.device_name,
+        deviceID: curClientInfo.device_id,
+      };
+    }
+  }
+
   await refreshDevices();
 });
 
@@ -98,7 +120,7 @@ onUnmounted(() => {
 const devices: Ref<Device[]> = ref([]);
 const availableDevice = computed(() => {
   return devices.value.filter((d) => {
-    return store.controledDevice?.device.id !== d.id;
+    return store.controledDevice?.deviceID !== d.id;
   });
 });
 const tableCols: DataTableColumns = [
@@ -178,6 +200,18 @@ function onMenuClickoutside() {
 }
 
 async function deviceControl() {
+  let curClientInfo = await getCurClientInfo();
+  if (curClientInfo) {
+    message.warning(t("pages.Device.alreadyControled"));
+    store.controledDevice = {
+      scid: curClientInfo.scid,
+      deviceName: curClientInfo.device_name,
+      deviceID: curClientInfo.device_id,
+    };
+    store.hideLoading();
+    return;
+  }
+
   if (!port.value) {
     port.value = 27183;
   }
@@ -227,7 +261,7 @@ async function deviceControl() {
     store.controledDevice = {
       scid,
       deviceName,
-      device,
+      deviceID: device.id,
     };
     nextTick(() => {
       deviceWaitForMetadataTask = null;
@@ -267,14 +301,28 @@ async function refreshDevices() {
 }
 
 async function connectDevice() {
-  if (!address.value) {
+  if (!wireless_address.value) {
     message.error(t("pages.Device.inputWirelessAddress"));
     return;
   }
 
   store.showLoading();
-  message.info(await adbConnect(address.value));
+  message.info(await adbConnect(wireless_address.value));
   await refreshDevices();
+}
+
+function connectWS() {
+  if (!ws_address.value) {
+    message.error(t("pages.Device.inputWsAddress"));
+    return;
+  }
+
+  store.showLoading();
+  connectExternalControl(ws_address.value, message, store, t);
+}
+
+function closeWS() {
+  closeExternalControl();
 }
 </script>
 
@@ -294,12 +342,30 @@ async function connectDevice() {
         <NH4 prefix="bar">{{ $t("pages.Device.wireless") }}</NH4>
         <NInputGroup style="max-width: 300px">
           <NInput
-            v-model:value="address"
+            v-model:value="wireless_address"
             clearable
             :placeholder="$t('pages.Device.wirelessPlaceholder')"
           />
           <NButton type="primary" @click="connectDevice">{{
             $t("pages.Device.connect")
+          }}</NButton>
+        </NInputGroup>
+        <NH4 prefix="bar">{{ $t("pages.Device.externalControl") }}</NH4>
+        <NInputGroup style="max-width: 300px">
+          <NInput
+            v-model:value="ws_address"
+            clearable
+            :placeholder="$t('pages.Device.wsAddress')"
+            :disabled="store.externalControlled"
+          />
+          <NButton
+            v-if="store.externalControlled"
+            type="error"
+            @click="closeWS"
+            >{{ $t("pages.Device.wsClose") }}</NButton
+          >
+          <NButton v-else type="primary" @click="connectWS">{{
+            $t("pages.Device.wsConnect")
           }}</NButton>
         </NInputGroup>
         <NH4 prefix="bar">{{ $t("pages.Device.deviceSize.title") }}</NH4>
@@ -332,7 +398,7 @@ async function connectDevice() {
           <div class="controled-device" v-if="store.controledDevice">
             <div>
               {{ store.controledDevice.deviceName }} ({{
-                store.controledDevice.device.id
+                store.controledDevice.deviceID
               }})
             </div>
             <div class="device-op">
@@ -344,8 +410,7 @@ async function connectDevice() {
                     </template>
                   </NButton>
                 </template>
-                scid: {{ store.controledDevice.scid }} <br />status:
-                {{ store.controledDevice.device.status }}
+                scid: {{ store.controledDevice.scid }}
               </NTooltip>
               <NButton quaternary circle type="error" @click="shutdownSC()">
                 <template #icon>

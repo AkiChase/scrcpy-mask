@@ -35,7 +35,7 @@ export enum ScrcpyMaskCmdType {
 
 type ScrcpyMaskCmdData = CmdDataSendKey | CmdDataTouch | CmdDataSwipe | String;
 
-enum SendKeyAction {
+export enum SendKeyAction {
   Default = 0,
   Down = 1,
   Up = 2,

@@ -35,7 +35,14 @@
       },
       "controledDevice": "Controlled device",
       "availableDevice": "Available devices",
-      "noControledDevice": "No Controled Device"
+      "noControledDevice": "No Controled Device",
+      "alreadyControled": "Controlled device already exists",
+      "alreadyDisconnected": "Controlled device connection has been disconnected",
+      "externalControl": "External control",
+      "wsAddress": "Websocket address",
+      "inputWsAddress": "Please enter the Websocket address",
+      "wsClose": "Close",
+      "wsConnect": "Control"
     },
     "Mask": {
       "inputBoxPlaceholder": "Input text and then press enter/esc",
@@ -216,5 +223,10 @@
   },
   "sidebar": {
     "noControledDevice": "No devices are controlled"
+  },
+  "websocket": {
+    "open": "Connected to external control server",
+    "close": "External control connection disconnected",
+    "error": "Something was wrong, the exter connection is closed"
   }
 }

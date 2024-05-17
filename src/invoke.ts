@@ -29,6 +29,14 @@ export async function startScrcpyServer(
   return await invoke("start_scrcpy_server", { id, scid, address });
 }
 
+export async function getCurClientInfo(): Promise<{
+  device_name: string;
+  device_id: string;
+  scid: string;
+} | null> {
+  return await invoke("get_cur_client_info");
+}
+
 export async function getDeviceScreenSize(
   id: string
 ): Promise<[number, number]> {

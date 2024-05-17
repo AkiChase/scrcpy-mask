@@ -5,6 +5,7 @@ use scrcpy_mask::{
     adb::{Adb, Device},
     client::ScrcpyClient,
     resource::{ResHelper, ResourceName},
+    share,
     socket::connect_socket,
 };
 use std::{fs::read_to_string, sync::Arc};
@@ -54,6 +55,17 @@ fn start_scrcpy_server(
     address: String,
     app: tauri::AppHandle,
 ) -> Result<(), String> {
+    let mut client_info = share::CLIENT_INFO.lock().unwrap();
+    if let Some(_) = &*client_info {
+        return Err("client already exists".to_string());
+    }
+
+    *client_info = Some(share::ClientInfo::new(
+        "unknow".to_string(),
+        id.clone(),
+        scid.clone(),
+    ));
+
     let dir = app.path().resource_dir().unwrap().join("resource");
     let version = ScrcpyClient::get_scrcpy_version();
 
@@ -106,6 +118,15 @@ fn start_scrcpy_server(
     });
 
     Ok(())
+}
+
+#[tauri::command]
+fn get_cur_client_info() -> Result<Option<share::ClientInfo>, String> {
+    let client_info = share::CLIENT_INFO.lock().unwrap();
+    match &*client_info {
+        Some(client) => Ok(Some(client.clone())),
+        None => Ok(None),
+    }
 }
 
 #[tauri::command]
@@ -217,6 +238,7 @@ async fn main() {
             forward_server_port,
             push_server_file,
             start_scrcpy_server,
+            get_cur_client_info,
             get_device_screen_size,
             adb_connect,
             load_default_keyconfig

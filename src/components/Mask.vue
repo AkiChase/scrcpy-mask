@@ -14,18 +14,12 @@ import { KeyMappingConfig, KeySteeringWheel } from "../keyMappingConfig";
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
 import { open } from "@tauri-apps/plugin-shell";
-import {
-  sendInjectKeycode,
-  sendSetClipboard,
-} from "../frontcommand/controlMsg";
+import { sendSetClipboard } from "../frontcommand/controlMsg";
 import { getCurrent, PhysicalSize } from "@tauri-apps/api/window";
-import {
-  AndroidKeyEventAction,
-  AndroidKeycode,
-  AndroidMetastate,
-} from "../frontcommand/android";
+import { AndroidKeycode } from "../frontcommand/android";
 import { Store } from "@tauri-apps/plugin-store";
 import { useI18n } from "vue-i18n";
+import { SendKeyAction, sendKey } from "../frontcommand/scrcpyMaskCmd";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -203,18 +197,9 @@ async function pasteText() {
   });
   await sleep(300);
   // send enter
-  await sendInjectKeycode({
-    action: AndroidKeyEventAction.AKEY_EVENT_ACTION_DOWN,
+  await sendKey({
+    action: SendKeyAction.Default,
     keycode: AndroidKeycode.AKEYCODE_ENTER,
-    repeat: 0,
-    metastate: AndroidMetastate.AMETA_NONE,
-  });
-  await sleep(50);
-  await sendInjectKeycode({
-    action: AndroidKeyEventAction.AKEY_EVENT_ACTION_UP,
-    keycode: AndroidKeycode.AKEYCODE_ENTER,
-    repeat: 0,
-    metastate: AndroidMetastate.AMETA_NONE,
   });
 }
 

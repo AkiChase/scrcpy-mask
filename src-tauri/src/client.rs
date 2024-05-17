@@ -3,7 +3,7 @@ use std::{io::BufRead, path::PathBuf};
 
 use crate::{
     adb::{Adb, Device},
-    resource::{ResHelper, ResourceName},
+    resource::{ResHelper, ResourceName}, share,
 };
 
 /**
@@ -119,6 +119,8 @@ impl ScrcpyClient {
             // clear string to store new line only
             s.clear();
         }
+        
+        *share::CLIENT_INFO.lock().unwrap() = None;
         println!("Scrcpy server closed");
         Ok(())
     }
