@@ -14,6 +14,8 @@
     "window:allow-is-maximizable",
     "window:allow-start-dragging",
     "window:allow-unmaximize",
+    "window:allow-set-cursor-position",
+    "window:allow-set-cursor-visible",
     "store:default",
     "store:allow-get",
     "store:allow-set",

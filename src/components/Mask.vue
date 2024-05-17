@@ -51,7 +51,8 @@ onActivated(async () => {
     if (
       applyShortcuts(
         maskElement,
-        store.keyMappingConfigList[store.curKeyMappingIndex]
+        store.keyMappingConfigList[store.curKeyMappingIndex],
+        message
       )
     ) {
       listenToEvent();
