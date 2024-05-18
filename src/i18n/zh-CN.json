@@ -61,7 +61,8 @@
         "content": "请前往设备页面，控制任意设备",
         "positiveText": "去控制"
       },
-      "inputBoxPlaceholder": "输入文本后按Enter/Esc"
+      "inputBoxPlaceholder": "输入文本后按Enter/Esc",
+      "sightMode": "鼠标已锁定, 按 {0} 键解锁"
     },
     "Setting": {
       "tabs": {
@@ -218,6 +219,19 @@
       "SteeringWheel": {
         "steeringWheel": "键盘行走",
         "offset": "偏移"
+      },
+      "KeySight": {
+        "sight": "准星",
+        "scaleX": "水平灵敏度",
+        "scaleY": "垂直灵敏度",
+        "scalePlaceholder": "请输入灵敏度"
+      },
+      "KeyFire": {
+        "fire": "开火",
+        "drag": "拖动施法",
+        "scaleX": "水平灵敏度",
+        "scaleY": "垂直灵敏度",
+        "scalePlaceholder": "请输入灵敏度"
       }
     }
   },

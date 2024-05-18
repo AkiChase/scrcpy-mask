@@ -23,6 +23,7 @@ import {
 } from "./keyMappingConfig";
 import { useGlobalStore } from "./store/global";
 import { LogicalPosition, getCurrent } from "@tauri-apps/api/window";
+import { useI18n } from "vue-i18n";
 
 function clientxToPosx(clientx: number) {
   return clientx < 70
@@ -649,7 +650,7 @@ function addSightShortcuts(
   sightKeyMapping: KeySight,
   fireKeyMapping?: KeyFire
 ) {
-  // TODO 2. i18n 3. 单独函数，同时配合可视化组件 4. 组件配置中唯一
+  // TODO 3. 可视化组件 4. 组件配置中唯一
   const appWindow = getCurrent();
 
   let mouseLock = false;
@@ -803,7 +804,7 @@ function addSightShortcuts(
       await appWindow.setCursorVisible(false);
       maskElement.addEventListener("mouseleave", moveLeaveHandler);
       mouseLock = true;
-      msgReactive = message.info(`鼠标已锁定, 按 ${key} 键解锁`, {
+      msgReactive = message.info(t("pages.Mask.sightMode", [key]), {
         duration: 0,
       });
 
@@ -911,6 +912,7 @@ let mouseX = 0;
 let mouseY = 0;
 let maskElement: HTMLElement;
 let message: ReturnType<typeof useMessage>;
+let t: ReturnType<typeof useI18n>["t"];
 
 const downKeyMap: Map<string, boolean> = new Map();
 const downKeyCBMap: Map<string, () => Promise<void>> = new Map();
@@ -1304,6 +1306,19 @@ function applyKeyMappingConfigShortcuts(
                 }
           );
           break;
+        case "Sight":
+          asType<KeySight>(item);
+          let fireKeyMapping;
+          for (const keyMapping of keyMappingConfig.list) {
+            if (keyMapping.type === "Fire") {
+              fireKeyMapping = keyMapping;
+              break;
+            }
+          }
+          addSightShortcuts(relativeSize, item, fireKeyMapping);
+          break;
+        case "Fire":
+          break;
         default:
           console.error("Invalid item type: ", item);
           break;
@@ -1382,35 +1397,13 @@ export function updateScreenSizeAndMaskArea(
 export function applyShortcuts(
   element: HTMLElement,
   keyMappingConfig: KeyMappingConfig,
-  messageAPI: ReturnType<typeof useMessage>
+  messageAPI: ReturnType<typeof useMessage>,
+  i18nT: ReturnType<typeof useI18n>["t"]
 ) {
   maskElement = element;
   message = messageAPI;
+  t = i18nT;
   addClickShortcuts("M0", 0);
-
-  const relativeSize = { w: 1280, h: 720 };
-  const sightKeyMapping = {
-    type: "Sight" as "Sight",
-    key: "KeyH",
-    pointerId: 0,
-    note: "准星键",
-    posX: 640,
-    posY: 360,
-    scaleX: 1,
-    scaleY: 1,
-  };
-
-  const fireKeyMapping = {
-    type: "Fire" as "Fire",
-    pointerId: 2,
-    note: "开火键",
-    posX: 300,
-    posY: 300,
-    drag: true,
-    scaleX: 0.5,
-    scaleY: 0.2,
-  };
-  addSightShortcuts(relativeSize, sightKeyMapping, fireKeyMapping);
 
   return applyKeyMappingConfigShortcuts(keyMappingConfig);
 }

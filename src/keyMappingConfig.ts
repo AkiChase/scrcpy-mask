@@ -105,7 +105,9 @@ export type KeyMapping =
   | KeyObservation
   | KeyMacro
   | KeyCancelSkill
-  | KeyTap;
+  | KeyTap
+  | KeySight
+  | KeyFire;
 
 export type KeyCommon = KeyMacro | KeyCancelSkill | KeyTap;
 

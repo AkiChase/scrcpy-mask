@@ -6,6 +6,8 @@ import KeyCommon from "./KeyCommon.vue";
 import KeySteeringWheel from "./KeySteeringWheel.vue";
 import KeySkill from "./KeySkill.vue";
 import KeyObservation from "./KeyObservation.vue";
+import KeySight from "./KeySight.vue";
+import KeyFire from "./KeyFire.vue";
 import {
   KeyDirectionalSkill,
   KeySteeringWheel as KeyMappingSteeringWheel,
@@ -115,7 +117,7 @@ function isKeyUnique(curKey: string): boolean {
           return false;
         set.add((keyMapping as KeyMappingSteeringWheel).key[name]);
       }
-    } else {
+    } else if (keyMapping.type !== "Fire") {
       if (set.has(keyMapping.key as string)) return false;
       set.add(keyMapping.key as string);
     }
@@ -169,10 +171,11 @@ function setCurButtonKey(curKey: string) {
       const curName = nameList[activeSteeringWheelButtonKeyIndex];
       keyObject[curName] = curKey;
     }
-  } else {
+    keyboardStore.edited = true;
+  } else if (keyMapping.type !== "Fire") {
     keyMapping.key = curKey;
+    keyboardStore.edited = true;
   }
-  keyboardStore.edited = true;
 }
 
 function handleClick(event: MouseEvent) {
@@ -312,6 +315,14 @@ onBeforeRouteLeave(() => {
       />
       <KeyObservation
         v-else-if="store.editKeyMappingList[index].type === 'Observation'"
+        :index="index"
+      />
+      <KeySight
+        v-else-if="store.editKeyMappingList[index].type === 'Sight'"
+        :index="index"
+      />
+      <KeyFire
+        v-else-if="store.editKeyMappingList[index].type === 'Fire'"
         :index="index"
       />
       <KeyCommon v-else :index="index" />

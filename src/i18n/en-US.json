@@ -61,7 +61,8 @@
         "title": "Controlled device not found",
         "content": "Please go to the device page to control any device",
         "positiveText": "To control"
-      }
+      },
+      "sightMode": "Mouse is locked, press {0} to unlock"
     },
     "Setting": {
       "tabs": {
@@ -218,6 +219,19 @@
       "SteeringWheel": {
         "steeringWheel": "SteeringWheel",
         "offset": "Offset"
+      },
+      "KeySight": {
+        "sight": "Front sight",
+        "scaleX": "Horizontal sensitivity",
+        "scalePlaceholder": "Please enter sensitivity",
+        "scaleY": "Vertical sensitivity"
+      },
+      "KeyFire": {
+        "fire": "Fire",
+        "drag": "Drag to cast",
+        "scaleX": "Horizontal sensitivity",
+        "scalePlaceholder": "Please enter sensitivity",
+        "scaleY": "Vertical sensitivity"
       }
     }
   },

@@ -185,7 +185,7 @@ function showSetting() {
   ) as HTMLElement;
   // setting
   const maxWidth = keyboardElement.clientWidth - 200;
-  const maxHeight = keyboardElement.clientHeight - 420;
+  const maxHeight = keyboardElement.clientHeight - 430;
   settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
   settingPosY.value = Math.min(keyMapping.value.posY - 30, maxHeight);
   updateRangeIndicator(keyboardElement);
@@ -374,7 +374,7 @@ function updateRangeIndicator(element?: HTMLElement) {
   padding: 10px 20px;
   box-sizing: border-box;
   width: 200px;
-  height: 420px;
+  height: 430px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);
