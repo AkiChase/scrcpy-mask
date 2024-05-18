@@ -1,5 +1,6 @@
 interface KeyBase {
   note: string;
+  // pos relative to the mask
   posX: number;
   posY: number;
 }
@@ -77,6 +78,22 @@ export interface KeyMacro extends KeyBase {
     loop: KeyMacroList;
     up: KeyMacroList;
   };
+}
+
+export interface KeySight extends KeyBase {
+  type: "Sight";
+  key: string;
+  pointerId: number;
+  scaleX: number;
+  scaleY: number;
+}
+
+export interface KeyFire extends KeyBase {
+  type: "Fire";
+  drag: boolean;
+  pointerId: number;
+  scaleX: number;
+  scaleY: number;
 }
 
 export type KeyMapping =
