@@ -767,7 +767,6 @@ function addSightShortcuts(
       } else {
         await touchRelateToSight(TouchAction.Up);
       }
-      await sleep(150);
       // move mouse
       await appWindow.setCursorPosition(
         new LogicalPosition(sightClientX, sightClientY)
