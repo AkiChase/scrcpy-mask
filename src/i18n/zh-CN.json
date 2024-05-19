@@ -143,7 +143,6 @@
       "KeyCommon": {
         "macroParseSuccess": "宏代码解析成功，但不保证代码正确性，请自行测试",
         "macroParseFailed": "宏代码保存失败，请检查代码格式是否正确",
-        "macro": "宏代码",
         "editMacro": "编辑宏代码",
         "macroModal": {
           "title": "宏编辑",
@@ -151,7 +150,11 @@
           "loop": "按住执行的宏",
           "placeholder": "JSON宏代码, 可为空",
           "up": "抬起执行的宏"
-        }
+        },
+        "cancelSkill": "技能取消",
+        "tap": "普通点击",
+        "macroCode": "宏代码",
+        "macro": "宏"
       },
       "setting": {
         "touchTime": "触摸时长",

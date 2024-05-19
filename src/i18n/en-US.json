@@ -143,7 +143,6 @@
       "KeyCommon": {
         "macroParseSuccess": "The macro code is parsed successfully, but the correctness of the code is not guaranteed. Please test by yourself.",
         "macroParseFailed": "Macro code failed to save, please check whether the code format is correct.",
-        "macro": "Macro code",
         "editMacro": "Edit macro",
         "macroModal": {
           "title": "Macro editor",
@@ -151,7 +150,11 @@
           "placeholder": "JSON macro code, can be empty",
           "loop": "Macro executed on key press and hold",
           "up": "Macro executed on key up"
-        }
+        },
+        "macroCode": "Macro code",
+        "cancelSkill": "CancelSkill",
+        "tap": "Tap",
+        "macro": "Macro"
       },
       "setting": {
         "touchTime": "Touch duration",

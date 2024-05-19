@@ -650,7 +650,6 @@ function addSightShortcuts(
   sightKeyMapping: KeySight,
   fireKeyMapping?: KeyFire
 ) {
-  // TODO 5. 调整所有按键设置宽度，英文的存在换行问题
   const appWindow = getCurrent();
 
   let mouseLock = false;

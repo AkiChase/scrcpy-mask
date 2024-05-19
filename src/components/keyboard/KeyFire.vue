@@ -77,11 +77,11 @@ function showSetting() {
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
-  const maxWidth = keyboardElement.clientWidth - 150;
-  const maxHeight = keyboardElement.clientHeight - 420;
+  const maxWidth = keyboardElement.clientWidth - 200;
+  const maxHeight = keyboardElement.clientHeight - 430;
 
   settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
-  settingPosY.value = Math.min(keyMapping.value.posY - 30, maxHeight);
+  settingPosY.value = Math.min(keyMapping.value.posY - 40, maxHeight);
   keyboardStore.showButtonSettingFlag = true;
 }
 </script>
@@ -189,8 +189,8 @@ function showSetting() {
   flex-direction: column;
   padding: 10px 20px;
   box-sizing: border-box;
-  width: 150px;
-  height: 420px;
+  width: 200px;
+  height: 430px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);

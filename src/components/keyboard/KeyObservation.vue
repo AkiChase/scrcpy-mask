@@ -73,7 +73,7 @@ function showSetting() {
   const maxHeight = keyboardElement.clientHeight - 300;
 
   settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
-  settingPosY.value = Math.min(keyMapping.value.posY - 30, maxHeight);
+  settingPosY.value = Math.min(keyMapping.value.posY - 40, maxHeight);
   keyboardStore.showButtonSettingFlag = true;
 }
 </script>

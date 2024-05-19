@@ -79,7 +79,7 @@ function showSetting() {
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
-  const maxWidth = keyboardElement.clientWidth - 150;
+  const maxWidth = keyboardElement.clientWidth - 179;
   const maxHeight = keyboardElement.clientHeight - 300;
 
   settingPosX.value = Math.min(
@@ -219,7 +219,7 @@ function showSetting() {
   flex-direction: column;
   padding: 10px 20px;
   box-sizing: border-box;
-  width: 150px;
+  width: 170px;
   height: 300px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
