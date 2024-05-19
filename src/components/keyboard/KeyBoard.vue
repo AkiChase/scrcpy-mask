@@ -6,6 +6,9 @@ import KeyCommon from "./KeyCommon.vue";
 import KeySteeringWheel from "./KeySteeringWheel.vue";
 import KeySkill from "./KeySkill.vue";
 import KeyObservation from "./KeyObservation.vue";
+import KeySight from "./KeySight.vue";
+import KeyFire from "./KeyFire.vue";
+
 import {
   KeyDirectionalSkill,
   KeySteeringWheel as KeyMappingSteeringWheel,
@@ -13,6 +16,8 @@ import {
   KeyTap,
   KeyMacro,
   KeyMapping,
+  KeySight as KeyMappingKeySight,
+  KeyFire as KeyMappingKeyFire,
 } from "../../keyMappingConfig";
 import { useGlobalStore } from "../../store/global";
 import { DropdownOption, NDropdown, useDialog, useMessage } from "naive-ui";
@@ -52,6 +57,14 @@ const addButtonOptions: DropdownOption[] = [
     label: () => t("pages.KeyBoard.addButton.Macro"),
     key: "Macro",
   },
+  {
+    label: () => t("pages.KeyBoard.addButton.Sight"),
+    key: "Sight",
+  },
+  {
+    label: () => t("pages.KeyBoard.addButton.Fire"),
+    key: "Fire",
+  },
 ];
 
 function onAddButtonSelect(
@@ -62,6 +75,8 @@ function onAddButtonSelect(
     | "CancelSkill"
     | "Observation"
     | "Macro"
+    | "Sight"
+    | "Fire"
 ) {
   keyboardStore.showButtonAddFlag = false;
   const keyMapping = {
@@ -70,11 +85,13 @@ function onAddButtonSelect(
     note: "",
     posX: addButtonPos.value.x - 70,
     posY: addButtonPos.value.y - 30,
-    pointerId: 2, // default skill pointerId
+    pointerId: 2, // default skill and fire pointerId
   };
   if (type === "Tap") {
+    keyMapping.pointerId = 3;
     (keyMapping as KeyTap).time = 80;
   } else if (type === "SteeringWheel") {
+    keyMapping.pointerId = 1;
     (keyMapping as unknown as KeyMappingSteeringWheel).key = {
       left: "NONE1",
       right: "NONE2",
@@ -87,14 +104,36 @@ function onAddButtonSelect(
   } else if (type === "CancelSkill") {
     keyMapping.note = t("pages.KeyBoard.addButton.CancelSkill");
   } else if (type === "Observation") {
+    keyMapping.pointerId = 4;
     (keyMapping as unknown as KeyMappingObservation).scale = 0.6;
   } else if (type === "Macro") {
+    delete (keyMapping as any).pointerId;
     (keyMapping as unknown as KeyMacro).macro = {
       down: null,
       loop: null,
       up: null,
     };
-    delete (keyMapping as any).pointerId;
+  } else if (type === "Sight") {
+    for (const mapping of store.editKeyMappingList) {
+      if (mapping.type === "Sight") {
+        message.error(t("pages.KeyBoard.addButton.existSight"));
+        return;
+      }
+    }
+    keyMapping.pointerId = 0;
+    (keyMapping as unknown as KeyMappingKeySight).scaleX = 0.5;
+    (keyMapping as unknown as KeyMappingKeySight).scaleY = 0.5;
+  } else if (type === "Fire") {
+    for (const mapping of store.editKeyMappingList) {
+      if (mapping.type === "Fire") {
+        message.error(t("pages.KeyBoard.addButton.existFire"));
+        return;
+      }
+    }
+    delete (keyMapping as any).key;
+    (keyMapping as unknown as KeyMappingKeyFire).scaleX = 0.5;
+    (keyMapping as unknown as KeyMappingKeyFire).scaleY = 0.5;
+    (keyMapping as unknown as KeyMappingKeyFire).drag = false;
   } else return;
   keyboardStore.edited = true;
   store.editKeyMappingList.push(keyMapping as KeyMapping);
@@ -115,7 +154,7 @@ function isKeyUnique(curKey: string): boolean {
           return false;
         set.add((keyMapping as KeyMappingSteeringWheel).key[name]);
       }
-    } else {
+    } else if (keyMapping.type !== "Fire") {
       if (set.has(keyMapping.key as string)) return false;
       set.add(keyMapping.key as string);
     }
@@ -169,10 +208,11 @@ function setCurButtonKey(curKey: string) {
       const curName = nameList[activeSteeringWheelButtonKeyIndex];
       keyObject[curName] = curKey;
     }
-  } else {
+    keyboardStore.edited = true;
+  } else if (keyMapping.type !== "Fire") {
     keyMapping.key = curKey;
+    keyboardStore.edited = true;
   }
-  keyboardStore.edited = true;
 }
 
 function handleClick(event: MouseEvent) {
@@ -312,6 +352,14 @@ onBeforeRouteLeave(() => {
       />
       <KeyObservation
         v-else-if="store.editKeyMappingList[index].type === 'Observation'"
+        :index="index"
+      />
+      <KeySight
+        v-else-if="store.editKeyMappingList[index].type === 'Sight'"
+        :index="index"
+      />
+      <KeyFire
+        v-else-if="store.editKeyMappingList[index].type === 'Fire'"
         :index="index"
       />
       <KeyCommon v-else :index="index" />

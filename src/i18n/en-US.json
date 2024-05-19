@@ -61,7 +61,8 @@
         "title": "Controlled device not found",
         "content": "Please go to the device page to control any device",
         "positiveText": "To control"
-      }
+      },
+      "sightMode": "Mouse is locked, press {0} to unlock"
     },
     "Setting": {
       "tabs": {
@@ -132,13 +133,16 @@
         "Skill": "Skill",
         "CancelSkill": "CancelSkill",
         "Observation": "Observation",
-        "Macro": "Macro"
+        "Macro": "Macro",
+        "Sight": "Front sight",
+        "Fire": "Fire",
+        "existFire": "Fire button already exists",
+        "existSight": "Front sight button already exists"
       },
       "buttonKeyRepeat": "Key repeat: {0}",
       "KeyCommon": {
         "macroParseSuccess": "The macro code is parsed successfully, but the correctness of the code is not guaranteed. Please test by yourself.",
         "macroParseFailed": "Macro code failed to save, please check whether the code format is correct.",
-        "macro": "Macro code",
         "editMacro": "Edit macro",
         "macroModal": {
           "title": "Macro editor",
@@ -146,7 +150,11 @@
           "placeholder": "JSON macro code, can be empty",
           "loop": "Macro executed on key press and hold",
           "up": "Macro executed on key up"
-        }
+        },
+        "macroCode": "Macro code",
+        "cancelSkill": "CancelSkill",
+        "tap": "Tap",
+        "macro": "Macro"
       },
       "setting": {
         "touchTime": "Touch duration",
@@ -218,6 +226,19 @@
       "SteeringWheel": {
         "steeringWheel": "SteeringWheel",
         "offset": "Offset"
+      },
+      "KeySight": {
+        "sight": "Front sight",
+        "scaleX": "Horizontal sensitivity",
+        "scalePlaceholder": "Please enter sensitivity",
+        "scaleY": "Vertical sensitivity"
+      },
+      "KeyFire": {
+        "fire": "Fire",
+        "drag": "Drag to cast",
+        "scaleX": "Horizontal sensitivity",
+        "scalePlaceholder": "Please enter sensitivity",
+        "scaleY": "Vertical sensitivity"
       }
     }
   },

@@ -210,14 +210,14 @@ function showSetting() {
   >
     <NH4 prefix="bar">{{
       keyMapping.type === "CancelSkill"
-        ? "技能取消"
+        ? t("pages.KeyBoard.KeyCommon.cancelSkill")
         : keyMapping.type === "Tap"
-        ? "普通点击"
-        : "宏"
+        ? t("pages.KeyBoard.KeyCommon.tap")
+        : t("pages.KeyBoard.KeyCommon.macro")
     }}</NH4>
     <NFormItem
       v-if="keyMapping.type === 'Macro'"
-      :label="$t('pages.KeyBoard.KeyCommon.macro')"
+      :label="$t('pages.KeyBoard.KeyCommon.macroCode')"
     >
       <NButton type="success" @click="editMacro">
         {{ $t("pages.KeyBoard.KeyCommon.editMacro") }}
@@ -267,7 +267,7 @@ function showSetting() {
         <NInput
           type="textarea"
           style="flex-grow: 1"
-          placeholder="$t('pages.KeyBoard.KeyCommon.macroModal.placeholder')"
+          :placeholder="$t('pages.KeyBoard.KeyCommon.macroModal.placeholder')"
           v-model:value="editedMacroRaw.down"
           @update:value="macroEditedFlag = true"
           round

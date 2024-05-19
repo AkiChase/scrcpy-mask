@@ -1,5 +1,6 @@
 interface KeyBase {
   note: string;
+  // pos relative to the mask
   posX: number;
   posY: number;
 }
@@ -79,6 +80,22 @@ export interface KeyMacro extends KeyBase {
   };
 }
 
+export interface KeySight extends KeyBase {
+  type: "Sight";
+  key: string;
+  pointerId: number;
+  scaleX: number;
+  scaleY: number;
+}
+
+export interface KeyFire extends KeyBase {
+  type: "Fire";
+  drag: boolean;
+  pointerId: number;
+  scaleX: number;
+  scaleY: number;
+}
+
 export type KeyMapping =
   | KeySteeringWheel
   | KeyDirectionalSkill
@@ -88,7 +105,9 @@ export type KeyMapping =
   | KeyObservation
   | KeyMacro
   | KeyCancelSkill
-  | KeyTap;
+  | KeyTap
+  | KeySight
+  | KeyFire;
 
 export type KeyCommon = KeyMacro | KeyCancelSkill | KeyTap;
 

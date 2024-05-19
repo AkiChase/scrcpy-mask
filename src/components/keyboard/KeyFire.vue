@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
-import { KeySteeringWheel } from "../../keyMappingConfig";
-import { NButton, NFormItem, NH4, NIcon, NInput, NInputNumber } from "naive-ui";
-import { CloseCircle, Move, Settings } from "@vicons/ionicons5";
+import {
+  NIcon,
+  NButton,
+  NFormItem,
+  NInput,
+  NH4,
+  NInputNumber,
+  NCheckbox,
+} from "naive-ui";
+import { CloseCircle, Settings } from "@vicons/ionicons5";
+import { KeyFire } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 
 const props = defineProps<{
@@ -19,18 +27,8 @@ const isActive = computed(
   () => props.index === keyboardStore.activeButtonIndex
 );
 const keyMapping = computed(
-  () => store.editKeyMappingList[props.index] as KeySteeringWheel
+  () => store.editKeyMappingList[props.index] as KeyFire
 );
-
-const offset = computed(() => {
-  const keyboardElement = document.getElementById("keyboardElement");
-  if (keyboardElement) {
-    const clientWidth = keyboardElement.clientWidth;
-    const screenSizeW =
-      store.screenSizeW === 0 ? clientWidth : store.screenSizeW;
-    return (keyMapping.value.offset * clientWidth) / screenSizeW;
-  } else return keyMapping.value.offset;
-});
 
 function dragHandler(downEvent: MouseEvent) {
   keyboardStore.activeButtonIndex = props.index;
@@ -42,16 +40,16 @@ function dragHandler(downEvent: MouseEvent) {
     const keyboardElement = document.getElementById(
       "keyboardElement"
     ) as HTMLElement;
-    const maxX = keyboardElement.clientWidth - offset.value;
-    const maxY = keyboardElement.clientHeight - offset.value;
+    const maxX = keyboardElement.clientWidth - 30;
+    const maxY = keyboardElement.clientHeight - 30;
 
     const x = downEvent.clientX;
     const y = downEvent.clientY;
     const moveHandler = (moveEvent: MouseEvent) => {
       let newX = oldX + moveEvent.clientX - x;
       let newY = oldY + moveEvent.clientY - y;
-      newX = Math.max(offset.value, Math.min(newX, maxX));
-      newY = Math.max(offset.value, Math.min(newY, maxY));
+      newX = Math.max(30, Math.min(newX, maxX));
+      newY = Math.max(30, Math.min(newY, maxY));
       keyMapping.value.posX = newX;
       keyMapping.value.posY = newY;
     };
@@ -79,15 +77,17 @@ function showSetting() {
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
-  const maxWidth = keyboardElement.clientWidth - 179;
-  const maxHeight = keyboardElement.clientHeight - 300;
+  const maxWidth = keyboardElement.clientWidth - 200;
+  const maxHeight = keyboardElement.clientHeight - 430;
 
-  settingPosX.value = Math.min(
-    keyMapping.value.posX + offset.value + 10,
-    maxWidth
-  );
-  settingPosY.value = Math.min(keyMapping.value.posY - offset.value, maxHeight);
+  settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
+  settingPosY.value = Math.min(keyMapping.value.posY - 40, maxHeight);
   keyboardStore.showButtonSettingFlag = true;
+}
+
+function changeDragSetting() {
+  keyMapping.value.drag = !keyMapping.value.drag;
+  keyboardStore.edited = true;
 }
 </script>
 
@@ -95,63 +95,29 @@ function showSetting() {
   <div
     :class="{ active: isActive }"
     :style="{
-      left: `${keyMapping.posX - offset}px`,
-      top: `${keyMapping.posY - offset}px`,
-      width: `${offset * 2}px`,
-      height: `${offset * 2}px`,
+      left: `${keyMapping.posX - 30}px`,
+      top: `${keyMapping.posY - 30}px`,
     }"
     @mousedown="dragHandler"
-    class="key-steering-wheel"
+    class="key-fire"
     ref="elementRef"
   >
-    <i />
-    <span
-      @mousedown="keyboardStore.activeSteeringWheelButtonKeyIndex = 0"
-      :class="{
-        'active-wheel':
-          isActive && keyboardStore.activeSteeringWheelButtonKeyIndex == 0,
-      }"
-      >{{ keyMapping.key.up }}</span
-    >
-    <i />
-    <span
-      @mousedown="keyboardStore.activeSteeringWheelButtonKeyIndex = 2"
-      :class="{
-        'active-wheel':
-          isActive && keyboardStore.activeSteeringWheelButtonKeyIndex == 2,
-      }"
-      >{{ keyMapping.key.left }}</span
-    >
-    <NIcon size="20">
-      <Move />
+    <NIcon size="25">
+      <svg
+        viewBox="0 0 1024 1024"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M562.333538 310.665846a43.716923 43.716923 0 0 0-59.746461-1.181538l-301.528615 276.440615a39.424 39.424 0 0 0-1.181539 57.265231l190.070154 190.227692a39.345231 39.345231 0 0 0 57.225846-1.339077l276.558769-301.528615a43.598769 43.598769 0 0 0-1.260307-59.707077l-160.137847-160.177231zM149.385846 663.236923a41.550769 41.550769 0 0 0-58.564923 0 41.550769 41.550769 0 0 0 0 58.525539l222.641231 222.601846a41.432615 41.432615 0 0 0 58.525538-58.564923L149.385846 663.236923zM879.143385 118.350769c-63.015385-1.851077-195.465846 8.073846-281.796923 109.331693-1.457231 2.953846-15.596308 31.586462 6.222769 53.563076l150.173538 151.000616c5.710769 5.435077 24.339692 19.298462 53.326769 2.953846 40.093538-38.4 109.686154-127.606154 108.819693-282.269538-0.787692-28.750769-26.190769-33.831385-36.745846-34.579693z"
+        ></path>
+      </svg>
     </NIcon>
-    <span
-      @mousedown="keyboardStore.activeSteeringWheelButtonKeyIndex = 3"
-      :class="{
-        'active-wheel':
-          isActive && keyboardStore.activeSteeringWheelButtonKeyIndex == 3,
-      }"
-      >{{ keyMapping.key.right }}</span
-    >
-    <i />
-    <span
-      @mousedown="keyboardStore.activeSteeringWheelButtonKeyIndex = 1"
-      :class="{
-        'active-wheel':
-          isActive && keyboardStore.activeSteeringWheelButtonKeyIndex == 1,
-      }"
-      >{{ keyMapping.key.down }}</span
-    >
-    <i />
     <NButton
       class="key-close-btn"
       text
       @click="delCurKeyMapping"
       :type="isActive ? 'primary' : 'info'"
-      :style="{
-        left: `${offset * 2 + 10}px`,
-        bottom: `${offset * 2 - 20}px`,
-      }"
     >
       <template #icon>
         <NIcon size="15">
@@ -164,10 +130,6 @@ function showSetting() {
       text
       @click="showSetting"
       :type="isActive ? 'primary' : 'info'"
-      :style="{
-        left: `${offset * 2 + 10}px`,
-        top: `${offset * 2 - 20}px`,
-      }"
     >
       <template #icon>
         <NIcon size="15">
@@ -184,13 +146,26 @@ function showSetting() {
       top: `${settingPosY}px`,
     }"
   >
-    <NH4 prefix="bar">{{
-      $t("pages.KeyBoard.SteeringWheel.steeringWheel")
-    }}</NH4>
-    <NFormItem :label="$t('pages.KeyBoard.SteeringWheel.offset')">
+    <NH4 prefix="bar">{{ $t("pages.KeyBoard.KeyFire.fire") }}</NH4>
+    <NCheckbox
+      @click="changeDragSetting"
+      :checked="keyMapping.drag"
+      style="margin-bottom: 20px"
+      >{{ $t("pages.KeyBoard.KeyFire.drag") }}</NCheckbox
+    >
+    <NFormItem :label="$t('pages.KeyBoard.KeyFire.scaleX')">
       <NInputNumber
-        v-model:value="keyMapping.offset"
-        :min="1"
+        v-model:value="keyMapping.scaleX"
+        :placeholder="$t('pages.KeyBoard.KeyFire.scalePlaceholder')"
+        :show-button="false"
+        @update:value="keyboardStore.edited = true"
+      />
+    </NFormItem>
+    <NFormItem :label="$t('pages.KeyBoard.KeyFire.scaleY')">
+      <NInputNumber
+        v-model:value="keyMapping.scaleY"
+        :placeholder="$t('pages.KeyBoard.KeyFire.scalePlaceholder')"
+        :show-button="false"
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
@@ -219,30 +194,32 @@ function showSetting() {
   flex-direction: column;
   padding: 10px 20px;
   box-sizing: border-box;
-  width: 170px;
-  height: 300px;
+  width: 200px;
+  height: 430px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);
   z-index: 3;
 }
 
-.key-steering-wheel {
+.key-fire {
   position: absolute;
-  border-radius: 50%;
+  height: 60px;
+  width: 60px;
   box-sizing: border-box;
+  border-radius: 50%;
   border: 2px solid var(--blue-color);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   font-size: 10px;
   font-weight: bold;
+  cursor: pointer;
 
-  display: grid;
-  grid-template-columns: repeat(3, 33%);
-  grid-template-rows: repeat(3, 33%);
-  justify-items: center;
-  align-items: center;
+  .n-icon {
+    color: var(--blue-color);
+  }
 
   &:not(.active):hover {
     border: 2px solid var(--light-color);
@@ -253,29 +230,26 @@ function showSetting() {
     }
   }
 
-  span {
-    cursor: pointer;
-    &:hover {
-      color: var(--primary-hover-color);
-    }
-  }
-
-  .key-setting-btn,
   .key-close-btn {
     position: absolute;
+    left: 65px;
+    bottom: 45px;
+  }
+
+  .key-setting-btn {
+    position: absolute;
+    left: 65px;
+    top: 45px;
   }
 }
 
 .active {
   border: 2px solid var(--primary-color);
+  color: var(--primary-color);
   z-index: 2;
 
   .n-icon {
     color: var(--primary-color);
   }
-}
-
-.active-wheel {
-  color: var(--primary-color);
 }
 </style>

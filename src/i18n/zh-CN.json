@@ -61,7 +61,8 @@
         "content": "请前往设备页面，控制任意设备",
         "positiveText": "去控制"
       },
-      "inputBoxPlaceholder": "输入文本后按Enter/Esc"
+      "inputBoxPlaceholder": "输入文本后按Enter/Esc",
+      "sightMode": "鼠标已锁定, 按 {0} 键解锁"
     },
     "Setting": {
       "tabs": {
@@ -125,7 +126,11 @@
         "Skill": "技能",
         "CancelSkill": "技能取消",
         "Observation": "观察视角",
-        "Macro": "宏"
+        "Macro": "宏",
+        "Sight": "准星",
+        "Fire": "开火",
+        "existSight": "已存在准星按钮",
+        "existFire": "已存在开火按钮"
       },
       "buttonKeyRepeat": "按键重复: {0}",
       "noSaveDialog": {
@@ -138,7 +143,6 @@
       "KeyCommon": {
         "macroParseSuccess": "宏代码解析成功，但不保证代码正确性，请自行测试",
         "macroParseFailed": "宏代码保存失败，请检查代码格式是否正确",
-        "macro": "宏代码",
         "editMacro": "编辑宏代码",
         "macroModal": {
           "title": "宏编辑",
@@ -146,7 +150,11 @@
           "loop": "按住执行的宏",
           "placeholder": "JSON宏代码, 可为空",
           "up": "抬起执行的宏"
-        }
+        },
+        "cancelSkill": "技能取消",
+        "tap": "普通点击",
+        "macroCode": "宏代码",
+        "macro": "宏"
       },
       "setting": {
         "touchTime": "触摸时长",
@@ -218,6 +226,19 @@
       "SteeringWheel": {
         "steeringWheel": "键盘行走",
         "offset": "偏移"
+      },
+      "KeySight": {
+        "sight": "准星",
+        "scaleX": "水平灵敏度",
+        "scaleY": "垂直灵敏度",
+        "scalePlaceholder": "请输入灵敏度"
+      },
+      "KeyFire": {
+        "fire": "开火",
+        "drag": "拖动施法",
+        "scaleX": "水平灵敏度",
+        "scaleY": "垂直灵敏度",
+        "scalePlaceholder": "请输入灵敏度"
       }
     }
   },
