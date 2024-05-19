@@ -45,7 +45,7 @@ export const useGlobalStore = defineStore("global", () => {
           if (set.has((keyMapping as KeySteeringWheel).key[name])) return false;
           set.add((keyMapping as KeySteeringWheel).key[name]);
         }
-      } else {
+      } else if (keyMapping.type !== "Fire") {
         if (set.has(keyMapping.key as string)) return false;
         set.add(keyMapping.key as string);
       }
