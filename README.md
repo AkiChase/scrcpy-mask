@@ -24,6 +24,7 @@ This project only implements the Scrcpy control protocol and **does not provide 
 
 ## Demonstration video
 
+- [如何用电脑玩FPS手游？这样的“安卓模拟器”，也不是不可以-哔哩哔哩](https://www.bilibili.com/video/BV1EU411Z7TC/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [M 系列 Mac 电脑玩王者，暃排位实录，使用 Android Stuido 模拟器和开源 Scrcpy Mask 按键映射工具-哔哩哔哩](https://b23.tv/q6iDW1w)
 - [自制跨平台开源项目 Scrcpy Mask ，像模拟器一样用键鼠控制任意安卓设备！以 M 系列芯片 MacBook 打王者为例-哔哩哔哩](https://b23.tv/gqmriXr)
 - [如何用 PC 控制安卓手机打王者？只要思想不滑坡，办法总比困难多！-哔哩哔哩](https://b23.tv/dmUOpff)
@@ -46,8 +47,10 @@ This project only implements the Scrcpy control protocol and **does not provide 
 ![](https://pic.superbed.cc/item/66371911f989f2fb975b62a3.png)
 
 - Mask above game
-
+ 
 ![](https://pic.superbed.cc/item/66373c8cf989f2fb97679dfd.png)
+
+![](https://pic.superbed.cc/item/6649cf0cfcada11d37c05b5e.jpg)
 
 ## Basic using
 
