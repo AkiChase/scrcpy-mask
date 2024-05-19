@@ -336,7 +336,7 @@ async function checkUpdate() {
             top: button.posY - 14 + 'px',
           }"
         >
-          {{ button.key }}
+          {{ button.type === "Fire" ? "Fire" : button.key }}
         </div>
       </template>
     </div>

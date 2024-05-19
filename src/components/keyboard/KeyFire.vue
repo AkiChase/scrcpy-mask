@@ -84,6 +84,11 @@ function showSetting() {
   settingPosY.value = Math.min(keyMapping.value.posY - 40, maxHeight);
   keyboardStore.showButtonSettingFlag = true;
 }
+
+function changeDragSetting() {
+  keyMapping.value.drag = !keyMapping.value.drag;
+  keyboardStore.edited = true;
+}
 </script>
 
 <template>
@@ -143,7 +148,7 @@ function showSetting() {
   >
     <NH4 prefix="bar">{{ $t("pages.KeyBoard.KeyFire.fire") }}</NH4>
     <NCheckbox
-      @click="keyMapping.drag = !keyMapping.drag"
+      @click="changeDragSetting"
       :checked="keyMapping.drag"
       style="margin-bottom: 20px"
       >{{ $t("pages.KeyBoard.KeyFire.drag") }}</NCheckbox

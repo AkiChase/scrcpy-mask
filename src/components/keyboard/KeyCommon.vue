@@ -267,7 +267,7 @@ function showSetting() {
         <NInput
           type="textarea"
           style="flex-grow: 1"
-          placeholder="$t('pages.KeyBoard.KeyCommon.macroModal.placeholder')"
+          :placeholder="$t('pages.KeyBoard.KeyCommon.macroModal.placeholder')"
           v-model:value="editedMacroRaw.down"
           @update:value="macroEditedFlag = true"
           round
