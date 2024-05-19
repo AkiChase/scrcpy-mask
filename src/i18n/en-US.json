@@ -133,7 +133,11 @@
         "Skill": "Skill",
         "CancelSkill": "CancelSkill",
         "Observation": "Observation",
-        "Macro": "Macro"
+        "Macro": "Macro",
+        "Sight": "Front sight",
+        "Fire": "Fire",
+        "existFire": "Fire button already exists",
+        "existSight": "Front sight button already exists"
       },
       "buttonKeyRepeat": "Key repeat: {0}",
       "KeyCommon": {

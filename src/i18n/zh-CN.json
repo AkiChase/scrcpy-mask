@@ -126,7 +126,11 @@
         "Skill": "技能",
         "CancelSkill": "技能取消",
         "Observation": "观察视角",
-        "Macro": "宏"
+        "Macro": "宏",
+        "Sight": "准星",
+        "Fire": "开火",
+        "existSight": "已存在准星按钮",
+        "existFire": "已存在开火按钮"
       },
       "buttonKeyRepeat": "按键重复: {0}",
       "noSaveDialog": {
