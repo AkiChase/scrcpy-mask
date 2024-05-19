@@ -654,7 +654,6 @@ function addSightShortcuts(
 
   let mouseLock = false;
   let msgReactive: ReturnType<typeof message.info> | null = null;
-  const key = "KeyH";
   const sightClientX = 70 + sightKeyMapping.posX;
   const sightClientY = 30 + sightKeyMapping.posY;
   const sightDeviceX = Math.round(
@@ -663,6 +662,14 @@ function addSightShortcuts(
   const sightDeviceY = Math.round(
     (sightKeyMapping.posY / relativeSize.h) * screenSizeH
   );
+
+  const fireDeviceX = fireKeyMapping
+    ? Math.round((fireKeyMapping.posX / relativeSize.w) * screenSizeW)
+    : 0;
+
+  const fireDeviceY = fireKeyMapping
+    ? Math.round((fireKeyMapping.posY / relativeSize.h) * screenSizeH)
+    : 0;
 
   const removeShortcut = (key: string) => {
     loopDownKeyCBMap.delete(key);
@@ -705,10 +712,10 @@ function addSightShortcuts(
         await touchX(
           TouchAction.Move,
           fireKeyMapping.pointerId,
-          fireKeyMapping.posX +
+          fireDeviceX +
             accOffsetX +
             clientxToPosOffsetx(mouseX, sightDeviceX, fireKeyMapping.scaleX),
-          fireKeyMapping.posX +
+            fireDeviceY +
             accOffsetY +
             clientyToPosOffsety(mouseY, sightDeviceY, fireKeyMapping.scaleY)
         );
@@ -721,7 +728,7 @@ function addSightShortcuts(
     if (fireKeyMapping && fireKeyMapping.drag && downKeyMap.get("M0")) {
       // fire drag mode
       // stop fireDragLoopCB
-      loopDownKeyCBMap.delete(key);
+      loopDownKeyCBMap.delete(sightKeyMapping.key);
       // cal accOffset
       accOffsetX += clientxToPosOffsetx(
         mouseX,
@@ -740,13 +747,13 @@ function addSightShortcuts(
       mouseX = sightClientX;
       mouseY = sightClientY;
       // start fireDragLoopCB
-      loopDownKeyCBMap.set(key, fireDragLoopCB!);
+      loopDownKeyCBMap.set(sightKeyMapping.key, fireDragLoopCB!);
     } else {
       // sight mode or fire without drag mode
       const fireFlag =
         fireKeyMapping && !fireKeyMapping.drag && downKeyMap.get("M0");
       // stop sightLoopCB or fireNoDragLoopCB
-      loopDownKeyCBMap.delete(key);
+      loopDownKeyCBMap.delete(sightKeyMapping.key);
       // touch up
       if (fireFlag) {
         await touchX(
@@ -775,18 +782,22 @@ function addSightShortcuts(
         sightDeviceY
       );
       // start sightLoopCB or fireNoDragLoopCB
-      loopDownKeyCBMap.set(key, fireFlag ? fireNoDragLoopCB! : sightLoopCB);
+      loopDownKeyCBMap.set(
+        sightKeyMapping.key,
+        fireFlag ? fireNoDragLoopCB! : sightLoopCB
+      );
     }
   };
 
   // add sight shortcut
-  addShortcut(key, async () => {
+  addShortcut(sightKeyMapping.key, async () => {
     if (mouseLock) {
       // stop sight mode
-      loopDownKeyCBMap.delete(key);
+      loopDownKeyCBMap.delete(sightKeyMapping.key);
       await touchRelateToSight(TouchAction.Up);
       await appWindow.setCursorVisible(true);
       maskElement.removeEventListener("mouseleave", moveLeaveHandler);
+      maskElement.style.cursor = "pointer";
       mouseLock = false;
       if (msgReactive) {
         msgReactive.destroy();
@@ -802,10 +813,14 @@ function addSightShortcuts(
       // start sight mode
       await appWindow.setCursorVisible(false);
       maskElement.addEventListener("mouseleave", moveLeaveHandler);
+      maskElement.style.cursor = "none";
       mouseLock = true;
-      msgReactive = message.info(t("pages.Mask.sightMode", [key]), {
-        duration: 0,
-      });
+      msgReactive = message.info(
+        t("pages.Mask.sightMode", [sightKeyMapping.key]),
+        {
+          duration: 0,
+        }
+      );
 
       await appWindow.setCursorPosition(
         new LogicalPosition(sightClientX, sightClientY)
@@ -818,7 +833,7 @@ function addSightShortcuts(
         sightDeviceX,
         sightDeviceY
       );
-      loopDownKeyCBMap.set(key, sightLoopCB);
+      loopDownKeyCBMap.set(sightKeyMapping.key, sightLoopCB);
       // remove click
       removeShortcut("M0");
       // add fire key
@@ -828,7 +843,7 @@ function addSightShortcuts(
           "M0",
           async () => {
             // stop sightLoopCB
-            loopDownKeyCBMap.delete(key);
+            loopDownKeyCBMap.delete(sightKeyMapping.key);
             // touch up sight
             await touchRelateToSight(TouchAction.Up);
             if (!fireKeyMapping.drag) {
@@ -854,31 +869,31 @@ function addSightShortcuts(
             await touchX(
               TouchAction.Down,
               fireKeyMapping.pointerId,
-              fireKeyMapping.posX,
-              fireKeyMapping.posY
+              fireDeviceX,
+              fireDeviceY
             );
 
             // start fireDragLoopCB or fireNoDragLoopCB
             loopDownKeyCBMap.set(
-              key,
+              sightKeyMapping.key,
               fireKeyMapping.drag ? fireDragLoopCB! : fireNoDragLoopCB!
             );
           },
           undefined,
           async () => {
             // stop fireDragLoopCB or fireNoDragLoopCB
-            loopDownKeyCBMap.delete(key);
+            loopDownKeyCBMap.delete(sightKeyMapping.key);
             // touch up fire
             await touchX(
               TouchAction.Up,
               fireKeyMapping.pointerId,
-              fireKeyMapping.posX +
+              fireDeviceX +
                 clientxToPosOffsetx(
                   mouseX,
                   sightDeviceX,
                   fireKeyMapping.scaleX
                 ),
-              fireKeyMapping.posY +
+                fireDeviceY +
                 clientyToPosOffsety(mouseY, sightDeviceY, fireKeyMapping.scaleY)
             );
             // touch down sight
@@ -895,7 +910,7 @@ function addSightShortcuts(
             mouseX = sightClientX;
             mouseY = sightClientY;
             // start sightLoopCB
-            loopDownKeyCBMap.set(key, sightLoopCB);
+            loopDownKeyCBMap.set(sightKeyMapping.key, sightLoopCB);
           }
         );
       }
