@@ -296,7 +296,12 @@ async function onMenuSelect(key: string) {
 
 async function refreshDevices() {
   store.showLoading();
-  devices.value = await adbDevices();
+  try {
+    devices.value = await adbDevices();
+  } catch (e) {
+    message.error(t("pages.Device.adbDeviceError"));
+    console.error(e);
+  }
   store.hideLoading();
 }
 

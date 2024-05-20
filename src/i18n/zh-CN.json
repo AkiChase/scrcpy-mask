@@ -42,7 +42,8 @@
       "externalControl": "外部控制",
       "wsAddress": "Websocket 地址",
       "wsClose": "断开",
-      "wsConnect": "控制"
+      "wsConnect": "控制",
+      "adbDeviceError": "无法获取可用设备"
     },
     "Mask": {
       "keyconfigException": "按键方案异常，请删除此方案",
@@ -62,7 +63,8 @@
         "positiveText": "去控制"
       },
       "inputBoxPlaceholder": "输入文本后按Enter/Esc",
-      "sightMode": "鼠标已锁定, 按 {0} 键解锁"
+      "sightMode": "鼠标已锁定, 按 {0} 键解锁",
+      "checkAdb": "adb不可用，软件无法正常运行，请确保系统已安装adb，并正确添加到了Path环境变量中: {0}"
     },
     "Setting": {
       "tabs": {

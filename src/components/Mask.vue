@@ -20,6 +20,7 @@ import { AndroidKeycode } from "../frontcommand/android";
 import { Store } from "@tauri-apps/plugin-store";
 import { useI18n } from "vue-i18n";
 import { SendKeyAction, sendKey } from "../frontcommand/scrcpyMaskCmd";
+import { checkAdbAvailable } from "../invoke";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -64,11 +65,22 @@ onActivated(async () => {
 });
 
 onMounted(async () => {
+  await checkAdb();
   await loadLocalStore();
   store.checkUpdate = checkUpdate;
   store.showInputBox = showInputBox;
   if (store.checkUpdateAtStart) checkUpdate();
 });
+
+async function checkAdb() {
+  try {
+    await checkAdbAvailable();
+  } catch (e) {
+    message.error(t("pages.Mask.checkAdb", [e]), {
+      duration: 0,
+    });
+  }
+}
 
 async function loadLocalStore() {
   const localStore = new Store("store.bin");
