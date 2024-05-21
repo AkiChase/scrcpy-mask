@@ -28,7 +28,7 @@ impl ResHelper {
     }
     pub fn get_file_path(dir: &PathBuf, file_name: ResourceName) -> PathBuf {
         match file_name {
-            ResourceName::ScrcpyServer => dir.join("scrcpy-server-v2.4"),
+            ResourceName::ScrcpyServer => dir.join("scrcpy-mask-server-v2.4"),
             ResourceName::DefaultKeyConfig => dir.join("default-key-config.json"),
         }
     }
