@@ -33,7 +33,7 @@
     ],
     "resources": [
       "resource/default-key-config.json",
-      "resource/scrcpy-server-v2.4"
+      "resource/scrcpy-mask-server-v2.4"
     ]
   }
 }

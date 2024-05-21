@@ -73,7 +73,12 @@ async fn read_socket(
             }
             let device_name = std::str::from_utf8(&buf[..end]).unwrap();
             // update device name for share
-            share::CLIENT_INFO.lock().unwrap().as_mut().unwrap().device_name = device_name.to_string();
+            share::CLIENT_INFO
+                .lock()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .device_name = device_name.to_string();
 
             let msg = json!({
                 "type": "MetaData",
@@ -149,6 +154,20 @@ async fn handle_device_message(
             let mut buf: Vec<u8> = vec![0; size as usize];
             reader.read_exact(&mut buf).await?;
         }
+        // 设备旋转
+        DeviceMsgType::DeviceMsgTypeRotation => {
+            let rotation = reader.read_u16().await?;
+            let width = reader.read_i32().await?;
+            let height = reader.read_i32().await?;
+            let msg = json!({
+                "type": "DeviceRotation",
+                "rotation": rotation,
+                "width": width,
+                "height": height
+            })
+            .to_string();
+            device_reply_sender.send(msg).await?;
+        }
     };
     anyhow::Ok(())
 }
@@ -181,6 +200,8 @@ async fn recv_front_msg(
                         // 处理Scrcpy Mask命令
                         if let Some(cmd_type) = ScrcpyMaskCmdType::from_i64(front_msg_type) {
                             if let ScrcpyMaskCmdType::Shutdown = cmd_type {
+                                *share::CLIENT_INFO.lock().unwrap() = None;
+
                                 drop(write_half);
                                 println!("Drop TcpStream writer");
                                 app.unlisten(listen_handler);
@@ -197,7 +218,7 @@ async fn recv_front_msg(
                         }
                     }
                 } else {
-                    eprintln!("fc-command非法");
+                    eprintln!("fc-command invalid!");
                     eprintln!("{:?}", payload);
                 }
             }
@@ -212,6 +233,7 @@ enum DeviceMsgType {
     DeviceMsgTypeClipboard,
     DeviceMsgTypeAckClipboard,
     DeviceMsgTypeUhidOutput,
+    DeviceMsgTypeRotation,
 }
 
 impl DeviceMsgType {
@@ -220,6 +242,7 @@ impl DeviceMsgType {
             0 => Some(Self::DeviceMsgTypeClipboard),
             1 => Some(Self::DeviceMsgTypeAckClipboard),
             2 => Some(Self::DeviceMsgTypeUhidOutput),
+            3 => Some(Self::DeviceMsgTypeRotation),
             _ => None,
         }
     }
