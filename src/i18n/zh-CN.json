@@ -13,9 +13,8 @@
         "screen": "获取屏幕尺寸"
       },
       "deviceControl": {
-        "inputScreenSize": "请正确输入当前控制设备的屏幕尺寸",
         "closeCurDevice": "请先关闭当前控制设备",
-        "controlInfo": "屏幕尺寸已保存，正在启动控制服务，请保持设备亮屏",
+        "controlInfo": "正在启动控制服务，请保持设备亮屏",
         "connectTimeout": "设备连接超时"
       },
       "deviceGetScreenSize": "设备屏幕尺寸为:",
@@ -25,14 +24,7 @@
       "wireless": "无线连接",
       "wirelessPlaceholder": "无线连接地址",
       "connect": "连接",
-      "deviceSize": {
-        "title": "设备屏幕尺寸",
-        "width": "宽度",
-        "widthPlaceholder": "屏幕宽度",
-        "heightPlaceholder": "屏幕高度",
-        "height": "高度",
-        "tip": "提示：请正确输入当前控制设备的屏幕尺寸，这是成功发送触摸事件的必要参数"
-      },
+      "deviceSize": {},
       "controledDevice": "受控设备",
       "noControledDevice": "无受控设备",
       "availableDevice": "可用设备",

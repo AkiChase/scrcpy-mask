@@ -21,7 +21,6 @@ import {
 } from "../invoke";
 import {
   NH4,
-  NP,
   NInput,
   NInputNumber,
   NButton,
@@ -30,7 +29,6 @@ import {
   NEmpty,
   NTooltip,
   NFlex,
-  NFormItem,
   NIcon,
   NSpin,
   NScrollbar,
@@ -42,7 +40,6 @@ import {
 } from "naive-ui";
 import { CloseCircle, InformationCircle, Refresh } from "@vicons/ionicons5";
 import { UnlistenFn, listen } from "@tauri-apps/api/event";
-import { Store } from "@tauri-apps/plugin-store";
 import { shutdown } from "../frontcommand/scrcpyMaskCmd";
 import { useGlobalStore } from "../store/global";
 import { useI18n } from "vue-i18n";
@@ -57,10 +54,9 @@ const port = ref(27183);
 const wireless_address = ref("");
 const ws_address = ref("");
 
-const localStore = new Store("store.bin");
-
 //#region listener
 let deviceWaitForMetadataTask: ((deviceName: string) => void) | null = null;
+let deviceWaitForScreenSizeTask: ((w: number, h: number) => void) | null = null;
 
 let unlisten: UnlistenFn | undefined;
 onMounted(async () => {
@@ -76,6 +72,15 @@ onMounted(async () => {
           break;
         case "ClipboardSetAck":
           console.log("ClipboardSetAck", payload.sequence);
+          break;
+        case "DeviceRotation":
+          if (deviceWaitForScreenSizeTask) {
+            deviceWaitForScreenSizeTask(payload.width, payload.height);
+          } else {
+            store.screenSizeW = payload.width;
+            store.screenSizeH = payload.height;
+            message.info("设备旋转");
+          }
           break;
         default:
           console.log("Unknown reply", payload);
@@ -216,24 +221,12 @@ async function deviceControl() {
     port.value = 27183;
   }
 
-  if (!(store.screenSizeW > 0) || !(store.screenSizeH > 0)) {
-    message.error(t("pages.Device.deviceControl.inputScreenSize"));
-    store.screenSizeW = 0;
-    store.screenSizeH = 0;
-    store.hideLoading();
-    return;
-  }
-
   if (store.controledDevice) {
     message.error(t("pages.Device.deviceControl.closeCurDevice"));
     store.hideLoading();
     return;
   }
 
-  localStore.set("screenSize", {
-    sizeW: store.screenSizeW,
-    sizeH: store.screenSizeH,
-  });
   message.info(t("pages.Device.deviceControl.controlInfo"));
 
   const device = devices.value[rowIndex];
@@ -263,11 +256,26 @@ async function deviceControl() {
       deviceName,
       deviceID: device.id,
     };
-    nextTick(() => {
-      deviceWaitForMetadataTask = null;
-      clearTimeout(id);
-      store.hideLoading();
-    });
+    deviceWaitForMetadataTask = null;
+    if (!deviceWaitForScreenSizeTask) {
+      nextTick(() => {
+        clearTimeout(id);
+        store.hideLoading();
+      });
+    }
+  };
+
+  // add cb for screen size
+  deviceWaitForScreenSizeTask = (w: number, h: number) => {
+    store.screenSizeW = w;
+    store.screenSizeH = h;
+    deviceWaitForScreenSizeTask = null;
+    if (!deviceWaitForMetadataTask) {
+      nextTick(() => {
+        clearTimeout(id);
+        store.hideLoading();
+      });
+    }
   };
 }
 
@@ -373,26 +381,6 @@ function closeWS() {
             $t("pages.Device.wsConnect")
           }}</NButton>
         </NInputGroup>
-        <NH4 prefix="bar">{{ $t("pages.Device.deviceSize.title") }}</NH4>
-        <NFlex justify="left" align="center">
-          <NFormItem :label="$t('pages.Device.deviceSize.width')">
-            <NInputNumber
-              v-model:value="store.screenSizeW"
-              :placeholder="$t('pages.Device.deviceSize.widthPlaceholder')"
-              :min="0"
-              :disabled="store.controledDevice !== null"
-            />
-          </NFormItem>
-          <NFormItem :label="$t('pages.Device.deviceSize.height')">
-            <NInputNumber
-              v-model:value="store.screenSizeH"
-              :placeholder="$t('pages.Device.deviceSize.heightPlaceholder')"
-              :min="0"
-              :disabled="store.controledDevice !== null"
-            />
-          </NFormItem>
-        </NFlex>
-        <NP>{{ $t("pages.Device.deviceSize.tip") }}</NP>
         <NH4 prefix="bar">{{ $t("pages.Device.controledDevice") }}</NH4>
         <div class="controled-device-list">
           <NEmpty

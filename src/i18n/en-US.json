@@ -14,9 +14,8 @@
         "screen": "Get screen size"
       },
       "deviceControl": {
-        "inputScreenSize": "Please enter the screen size of the current control device correctly",
         "closeCurDevice": "Please close the current control device first",
-        "controlInfo": "The screen size has been saved and the control service is starting. Please keep the device screen on.",
+        "controlInfo": "The control service is starting. Please keep the device screen on.",
         "connectTimeout": "Device connection timeout"
       },
       "deviceGetScreenSize": "Device screen size: ",
@@ -25,14 +24,7 @@
       "wireless": "Wireless connection",
       "wirelessPlaceholder": "Wireless connection address",
       "connect": "Connect",
-      "deviceSize": {
-        "title": "Device screen size",
-        "width": "Width",
-        "widthPlaceholder": "Screen width",
-        "height": "Height",
-        "heightPlaceholder": "Screen height",
-        "tip": "Tip: Please enter the screen size of the current control device correctly. This is a necessary parameter to successfully send touch events."
-      },
+      "deviceSize": {},
       "controledDevice": "Controlled device",
       "availableDevice": "Available devices",
       "noControledDevice": "No Controled Device",
