@@ -24,17 +24,18 @@ import {
 import { useGlobalStore } from "./store/global";
 import { LogicalPosition, getCurrent } from "@tauri-apps/api/window";
 import { useI18n } from "vue-i18n";
+import { UnlistenFn } from "@tauri-apps/api/event";
 
 function clientxToPosx(clientx: number) {
   return clientx < 70
     ? 0
-    : Math.floor((clientx - 70) * (screenSizeW / maskSizeW));
+    : Math.floor((clientx - 70) * (store.screenSizeW / maskSizeW));
 }
 
 function clientyToPosy(clienty: number) {
   return clienty < 30
     ? 0
-    : Math.floor((clienty - 30) * (screenSizeH / maskSizeH));
+    : Math.floor((clienty - 30) * (store.screenSizeH / maskSizeH));
 }
 
 function clientxToPosOffsetx(clientx: number, posx: number, scale = 1) {
@@ -51,7 +52,7 @@ function clientPosToSkillOffset(
   clientPos: { x: number; y: number },
   range: number
 ): { offsetX: number; offsetY: number } {
-  const maxLength = (120 / maskSizeH) * screenSizeH;
+  const maxLength = (120 / maskSizeH) * store.screenSizeH;
   const centerX = maskSizeW * 0.5;
   const centerY = maskSizeH * 0.5;
 
@@ -95,7 +96,7 @@ function calculateMacroPosX(
   relativeSizeW: number
 ): number {
   if (typeof posX === "number") {
-    return Math.round(posX * (screenSizeW / relativeSizeW));
+    return Math.round(posX * (store.screenSizeW / relativeSizeW));
   }
   if (typeof posX === "string") {
     return clientxToPosx(mouseX);
@@ -103,7 +104,7 @@ function calculateMacroPosX(
     if (posX[0] === "mouse") {
       return (
         clientxToPosx(mouseX) +
-        Math.round(posX[1] * (screenSizeW / relativeSizeW))
+        Math.round(posX[1] * (store.screenSizeW / relativeSizeW))
       );
     } else {
       throw new Error("Invalid pos");
@@ -117,7 +118,7 @@ function calculateMacroPosY(
   relativeSizeH: number
 ): number {
   if (typeof posY === "number") {
-    return Math.round(posY * (screenSizeH / relativeSizeH));
+    return Math.round(posY * (store.screenSizeH / relativeSizeH));
   }
   if (typeof posY === "string") {
     return clientyToPosy(mouseY);
@@ -125,7 +126,7 @@ function calculateMacroPosY(
     if (posY[0] === "mouse") {
       return (
         clientyToPosy(mouseY) +
-        Math.round(posY[1] * (screenSizeH / relativeSizeH))
+        Math.round(posY[1] * (store.screenSizeH / relativeSizeH))
       );
     } else {
       throw new Error("Invalid pos");
@@ -157,8 +158,8 @@ function addObservationShortcuts(
 ) {
   let observationMouseX = 0;
   let observationMouseY = 0;
-  posX = Math.round((posX / relativeSize.w) * screenSizeW);
-  posY = Math.round((posY / relativeSize.h) * screenSizeH);
+  posX = Math.round((posX / relativeSize.w) * store.screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * store.screenSizeH);
   addShortcut(
     key,
     async () => {
@@ -195,8 +196,8 @@ function addTapShortcuts(
   posY: number,
   pointerId: number
 ) {
-  posX = Math.round((posX / relativeSize.w) * screenSizeW);
-  posY = Math.round((posY / relativeSize.h) * screenSizeH);
+  posX = Math.round((posX / relativeSize.w) * store.screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * store.screenSizeH);
   addShortcut(
     key,
     async () => {
@@ -216,8 +217,8 @@ function addCancelSkillShortcuts(
   posY: number,
   pointerId: number
 ) {
-  posX = Math.round((posX / relativeSize.w) * screenSizeW);
-  posY = Math.round((posY / relativeSize.h) * screenSizeH);
+  posX = Math.round((posX / relativeSize.w) * store.screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * store.screenSizeH);
   addShortcut(
     key,
     async () => {
@@ -259,8 +260,8 @@ function addTriggerWhenPressedSkillShortcuts(
   rangeOrTime: number,
   pointerId: number
 ) {
-  posX = Math.round((posX / relativeSize.w) * screenSizeW);
-  posY = Math.round((posY / relativeSize.h) * screenSizeH);
+  posX = Math.round((posX / relativeSize.w) * store.screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * store.screenSizeH);
   if (directional) {
     addShortcut(
       key,
@@ -276,8 +277,8 @@ function addTriggerWhenPressedSkillShortcuts(
           action: SwipeAction.Default,
           pointerId,
           screen: {
-            w: screenSizeW,
-            h: screenSizeH,
+            w: store.screenSizeW,
+            h: store.screenSizeH,
           },
           pos: [
             { x: posX, y: posY },
@@ -316,8 +317,8 @@ function addTriggerWhenDoublePressedSkillShortcuts(
   range: number,
   pointerId: number
 ) {
-  posX = Math.round((posX / relativeSize.w) * screenSizeW);
-  posY = Math.round((posY / relativeSize.h) * screenSizeH);
+  posX = Math.round((posX / relativeSize.w) * store.screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * store.screenSizeH);
   doublePressedDownKey.set(key, false);
   addShortcut(
     key,
@@ -333,8 +334,8 @@ function addTriggerWhenDoublePressedSkillShortcuts(
           action: SwipeAction.NoUp,
           pointerId,
           screen: {
-            w: screenSizeW,
-            h: screenSizeH,
+            w: store.screenSizeW,
+            h: store.screenSizeH,
           },
           pos: [
             { x: posX, y: posY },
@@ -392,8 +393,8 @@ function addDirectionlessSkillShortcuts(
   posY: number,
   pointerId: number
 ) {
-  posX = Math.round((posX / relativeSize.w) * screenSizeW);
-  posY = Math.round((posY / relativeSize.h) * screenSizeH);
+  posX = Math.round((posX / relativeSize.w) * store.screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * store.screenSizeH);
   addShortcut(
     key,
     // down
@@ -410,8 +411,8 @@ function addDirectionlessSkillShortcuts(
         action: TouchAction.Up,
         pointerId,
         screen: {
-          w: screenSizeW,
-          h: screenSizeH,
+          w: store.screenSizeW,
+          h: store.screenSizeH,
         },
         pos: {
           x: posX,
@@ -442,8 +443,8 @@ function addDirectionalSkillShortcuts(
   range: number,
   pointerId: number
 ) {
-  posX = Math.round((posX / relativeSize.w) * screenSizeW);
-  posY = Math.round((posY / relativeSize.h) * screenSizeH);
+  posX = Math.round((posX / relativeSize.w) * store.screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * store.screenSizeH);
   addShortcut(
     key,
     // down
@@ -458,8 +459,8 @@ function addDirectionalSkillShortcuts(
         action: SwipeAction.NoUp,
         pointerId,
         screen: {
-          w: screenSizeW,
-          h: screenSizeH,
+          w: store.screenSizeW,
+          h: store.screenSizeH,
         },
         pos: [
           { x: posX, y: posY },
@@ -514,8 +515,8 @@ function addSteeringWheelKeyboardShortcuts(
   let loopFlag = false;
   let curPosX = 0;
   let curPosY = 0;
-  posX = Math.round((posX / relativeSize.w) * screenSizeW);
-  posY = Math.round((posY / relativeSize.h) * screenSizeH);
+  posX = Math.round((posX / relativeSize.w) * store.screenSizeW);
+  posY = Math.round((posY / relativeSize.h) * store.screenSizeH);
 
   // calculate the end coordinates of the eight directions of the direction wheel
   let offsetHalf = Math.round(offset / 1.414);
@@ -657,18 +658,18 @@ function addSightShortcuts(
   const sightClientX = 70 + sightKeyMapping.posX;
   const sightClientY = 30 + sightKeyMapping.posY;
   const sightDeviceX = Math.round(
-    (sightKeyMapping.posX / relativeSize.w) * screenSizeW
+    (sightKeyMapping.posX / relativeSize.w) * store.screenSizeW
   );
   const sightDeviceY = Math.round(
-    (sightKeyMapping.posY / relativeSize.h) * screenSizeH
+    (sightKeyMapping.posY / relativeSize.h) * store.screenSizeH
   );
 
   const fireDeviceX = fireKeyMapping
-    ? Math.round((fireKeyMapping.posX / relativeSize.w) * screenSizeW)
+    ? Math.round((fireKeyMapping.posX / relativeSize.w) * store.screenSizeW)
     : 0;
 
   const fireDeviceY = fireKeyMapping
-    ? Math.round((fireKeyMapping.posY / relativeSize.h) * screenSizeH)
+    ? Math.round((fireKeyMapping.posY / relativeSize.h) * store.screenSizeH)
     : 0;
 
   const removeShortcut = (key: string) => {
@@ -715,7 +716,7 @@ function addSightShortcuts(
           fireDeviceX +
             accOffsetX +
             clientxToPosOffsetx(mouseX, sightDeviceX, fireKeyMapping.scaleX),
-            fireDeviceY +
+          fireDeviceY +
             accOffsetY +
             clientyToPosOffsety(mouseY, sightDeviceY, fireKeyMapping.scaleY)
         );
@@ -892,7 +893,7 @@ function addSightShortcuts(
                   sightDeviceX,
                   fireKeyMapping.scaleX
                 ),
-                fireDeviceY +
+              fireDeviceY +
                 clientyToPosOffsety(mouseY, sightDeviceY, fireKeyMapping.scaleY)
             );
             // touch down sight
@@ -916,22 +917,6 @@ function addSightShortcuts(
     }
   });
 }
-
-let screenSizeW: number;
-let screenSizeH: number;
-let maskSizeW: number;
-let maskSizeH: number;
-let mouseX = 0;
-let mouseY = 0;
-let maskElement: HTMLElement;
-let message: ReturnType<typeof useMessage>;
-let t: ReturnType<typeof useI18n>["t"];
-
-const downKeyMap: Map<string, boolean> = new Map();
-const downKeyCBMap: Map<string, () => Promise<void>> = new Map();
-const loopDownKeyCBMap: Map<string, () => Promise<void>> = new Map();
-const upKeyCBMap: Map<string, () => Promise<void>> = new Map();
-const cancelAbleKeyList: string[] = [];
 
 function handleKeydown(event: KeyboardEvent) {
   event.preventDefault();
@@ -1166,8 +1151,8 @@ async function execMacro(
             action: swipeAction,
             pointerId: cmd.args[1],
             screen: {
-              w: screenSizeW,
-              h: screenSizeH,
+              w: store.screenSizeW,
+              h: store.screenSizeH,
             },
             pos: calculateMacroPosList(cmd.args[2], relativeSize),
             intervalBetweenPos: cmd.args[3],
@@ -1356,8 +1341,8 @@ async function touchX(
     action,
     pointerId,
     screen: {
-      w: screenSizeW,
-      h: screenSizeH,
+      w: store.screenSizeW,
+      h: store.screenSizeH,
     },
     pos: {
       x: posX,
@@ -1395,28 +1380,51 @@ export function clearShortcuts() {
   loopDownKeyCBMap.clear();
   upKeyCBMap.clear();
   cancelAbleKeyList.length = 0;
-}
 
-export function updateScreenSizeAndMaskArea(
-  screenSize: [number, number],
-  maskArea: [number, number]
-) {
-  screenSizeW = screenSize[0];
-  screenSizeH = screenSize[1];
-  maskSizeW = maskArea[0];
-  maskSizeH = maskArea[1];
+  // unlisten to resize
+  unlistenResize();
 }
 
 export function applyShortcuts(
   element: HTMLElement,
   keyMappingConfig: KeyMappingConfig,
+  globalStore: ReturnType<typeof useGlobalStore>,
   messageAPI: ReturnType<typeof useMessage>,
   i18nT: ReturnType<typeof useI18n>["t"]
 ) {
+  store = globalStore;
   maskElement = element;
   message = messageAPI;
   t = i18nT;
+
+  maskSizeW = maskElement.clientWidth;
+  maskSizeH = maskElement.clientHeight;
+  // listen to resize to update mask size
+  getCurrent()
+    .onResized(() => {
+      maskSizeW = maskElement.clientWidth;
+      maskSizeH = maskElement.clientHeight;
+    })
+    .then((f) => (unlistenResize = f));
+
   addClickShortcuts("M0", 0);
 
   return applyKeyMappingConfigShortcuts(keyMappingConfig);
 }
+
+let maskSizeW: number;
+let maskSizeH: number;
+let mouseX = 0;
+let mouseY = 0;
+let store: ReturnType<typeof useGlobalStore>;
+let maskElement: HTMLElement;
+let message: ReturnType<typeof useMessage>;
+let t: ReturnType<typeof useI18n>["t"];
+
+let unlistenResize: UnlistenFn;
+
+const downKeyMap: Map<string, boolean> = new Map();
+const downKeyCBMap: Map<string, () => Promise<void>> = new Map();
+const loopDownKeyCBMap: Map<string, () => Promise<void>> = new Map();
+const upKeyCBMap: Map<string, () => Promise<void>> = new Map();
+const cancelAbleKeyList: string[] = [];
