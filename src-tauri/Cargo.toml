@@ -1,6 +1,6 @@
 [package]
 name = "scrcpy-mask"
-version = "0.3.2"
+version = "0.3.3"
 description = "A Tauri App"
 authors = ["AkiChase"]
 edition = "2021"
