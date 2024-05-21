@@ -27,17 +27,20 @@ jobs:
             apt-get upgrade -y
             apt-get autoremove -y
             apt-get install curl
+            # Install node
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+            nvm install 20
+            # Install pnpm
+            npm install -g pnpm
+            # Install rust
             curl https://sh.rustup.rs -sSf | sh -s -- -y
             . "$HOME/.cargo/env"
             curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash
-            # Install framework specific packages
-            apt-get install -y nodejs
-            npm install next@latest react@latest react-dom@latest eslint-config-next@latest
             # Install build tools and tauri-cli requirements
             apt-get install -y libwebkit2gtk-4.0-dev build-essential wget libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
             cargo install tauri-cli
             # Install frontend dependencies
-            npm install
+            pnpm install
             # Build the application
             cargo tauri build
       - name: Upload deb bundle
