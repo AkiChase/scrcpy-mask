@@ -8,7 +8,6 @@ import {
   clearShortcuts,
   listenToEvent,
   unlistenToEvent,
-  updateScreenSizeAndMaskArea,
 } from "../hotkey";
 import { KeyMappingConfig, KeySteeringWheel } from "../keyMappingConfig";
 import { getVersion } from "@tauri-apps/api/app";
@@ -44,15 +43,11 @@ onActivated(async () => {
   const maskElement = document.getElementById("maskElement") as HTMLElement;
 
   if (store.controledDevice) {
-    updateScreenSizeAndMaskArea(
-      [store.screenSizeW, store.screenSizeH],
-      [maskElement.clientWidth, maskElement.clientHeight]
-    );
-
     if (
       applyShortcuts(
         maskElement,
         store.keyMappingConfigList[store.curKeyMappingIndex],
+        store,
         message,
         t
       )
@@ -84,15 +79,6 @@ async function checkAdb() {
 
 async function loadLocalStore() {
   const localStore = new Store("store.bin");
-  // loading screenSize from local store
-  const screenSize = await localStore.get<{ sizeW: number; sizeH: number }>(
-    "screenSize"
-  );
-  if (screenSize !== null) {
-    store.screenSizeW = screenSize.sizeW;
-    store.screenSizeH = screenSize.sizeH;
-  }
-
   // loading keyMappingConfigList from local store
   let keyMappingConfigList = await localStore.get<KeyMappingConfig[]>(
     "keyMappingConfigList"

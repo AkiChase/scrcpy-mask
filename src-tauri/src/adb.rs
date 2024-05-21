@@ -89,7 +89,7 @@ impl Adb {
         {
             let mut cmd = Command::new("adb");
             cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-            cmd
+            return cmd;
         }
         Command::new("adb")
     }
