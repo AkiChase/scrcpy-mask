@@ -2,8 +2,8 @@ name: Raspberry Pi compile
 on:
   push:
     # 匹配特定标签 (refs/tags)
-    tags:
-      - "v*" # 推送事件匹配 v*, 例如 v1.0，v20.15.10 等来触发工作流
+    # tags:
+    #   - "v*" # 推送事件匹配 v*, 例如 v1.0，v20.15.10 等来触发工作流
 
 jobs:
   build:
@@ -29,7 +29,7 @@ jobs:
             apt-get install curl
             # Install node
             curl -fsSL https://fnm.vercel.app/install | bash
-            source /root/.bashrc
+            . /root/.bashrc
             fnm use --install-if-missing 22
             # Install pnpm
             npm install -g pnpm
