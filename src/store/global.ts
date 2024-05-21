@@ -71,9 +71,10 @@ export const useGlobalStore = defineStore("global", () => {
 
   const externalControlled = ref(false);
 
-  // persistent storage
   const screenSizeW: Ref<number> = ref(0);
   const screenSizeH: Ref<number> = ref(0);
+
+  // persistent storage
   const keyMappingConfigList: Ref<KeyMappingConfig[]> = ref([]);
   const curKeyMappingIndex = ref(0);
   const maskButton = ref({
@@ -84,14 +85,14 @@ export const useGlobalStore = defineStore("global", () => {
 
   return {
     // persistent storage
-    screenSizeW,
-    screenSizeH,
     keyMappingConfigList,
     curKeyMappingIndex,
     maskButton,
     checkUpdateAtStart,
     externalControlled,
     // in-memory storage
+    screenSizeW,
+    screenSizeH,
     showLoading,
     hideLoading,
     showLoadingRef,

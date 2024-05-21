@@ -2,7 +2,6 @@ use anyhow::{anyhow, Ok, Result};
 use std::path::PathBuf;
 
 pub enum ResourceName {
-    Adb,
     ScrcpyServer,
     DefaultKeyConfig,
 }
@@ -13,7 +12,9 @@ pub struct ResHelper {
 
 impl ResHelper {
     pub fn res_init(res_dir: &PathBuf) -> Result<()> {
-        for name in [ResourceName::Adb, ResourceName::ScrcpyServer] {
+        let res = [ResourceName::ScrcpyServer, ResourceName::DefaultKeyConfig];
+
+        for name in res {
             let file_path = ResHelper::get_file_path(res_dir, name);
             if !file_path.exists() {
                 return Err(anyhow!(format!(
@@ -27,14 +28,7 @@ impl ResHelper {
     }
     pub fn get_file_path(dir: &PathBuf, file_name: ResourceName) -> PathBuf {
         match file_name {
-            #[cfg(target_os = "windows")]
-            ResourceName::Adb => dir.join("adb-win.exe"),
-            #[cfg(target_os = "linux")]
-            ResourceName::Adb => dir.join("adb-linux"),
-            #[cfg(target_os = "macos")]
-            ResourceName::Adb => dir.join("adb-mac"),
-
-            ResourceName::ScrcpyServer => dir.join("scrcpy-server-v2.4"),
+            ResourceName::ScrcpyServer => dir.join("scrcpy-mask-server-v2.4"),
             ResourceName::DefaultKeyConfig => dir.join("default-key-config.json"),
         }
     }

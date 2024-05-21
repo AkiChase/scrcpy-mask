@@ -2,7 +2,13 @@
 
 为了实现电脑控制安卓设备，本人使用 Tarui + Vue 3 + Rust 开发了一款跨平台桌面客户端。该客户端能够提供可视化的鼠标和键盘按键映射配置。通过按键映射实现了实现类似安卓模拟器的多点触控操作，具有毫秒级响应速度。该工具可广泛用于电脑控制安卓设备玩手游等等，提供流畅的触控体验。
 
-本项目仅实现了 Scrcpy 控制协议，**不提供投屏功能**。因为投屏会存在延迟和模糊问题，本项目另辟蹊径，直接放弃投屏，而使用透明的蒙版显示窗口背后的内容（可以使用 AVD 、手机厂商提供的低延迟投屏等），从根本上杜绝了 Scrcpy 的投屏体验差的问题。
+本人对 Scrcpy 项目的开发者表示深深的敬意和感谢。Scrcpy 是一个强大而高效的开源工具，极大地方便了对 Android 设备的控制。本项目的实现基于 Scrcpy 的优秀架构，进行了鼠标键盘控制的优化和调整。
+
+**本项目不提供投屏功能，不提供投屏功能，不提供投屏功能！**本项目仅实现了 Scrcpy 的控制协议。
+
+原因是投屏会存在延迟和模糊问题，本项目另辟蹊径，直接放弃投屏，而使用透明的蒙版显示窗口背后的内容（可以使用 AVD 、手机厂商提供的低延迟投屏等），从根本上杜绝了 Scrcpy 的投屏体验差的问题。
+
+除此之外，为了更好的支持 Scrcpy Mask 与安卓设备交互，本人对 scrcpy-server 进行了一些修改，在此扩展出了一个分支项目 [scrcpy-mask-server](https://github.com/AkiChase/scrcpy-mask-server)
 
 ## 特性
 
@@ -22,7 +28,7 @@
 
 ## 视频演示
 
-- [如何用电脑玩FPS手游？这样的“安卓模拟器”，也不是不可以-哔哩哔哩](https://www.bilibili.com/video/BV1EU411Z7TC/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
+- [如何用电脑玩 FPS 手游？这样的“安卓模拟器”，也不是不可以-哔哩哔哩](https://www.bilibili.com/video/BV1EU411Z7TC/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [M 系列 Mac 电脑玩王者，暃排位实录，使用 Android Stuido 模拟器和开源 Scrcpy Mask 按键映射工具-哔哩哔哩](https://b23.tv/q6iDW1w)
 - [自制跨平台开源项目 Scrcpy Mask ，像模拟器一样用键鼠控制任意安卓设备！以 M 系列芯片 MacBook 打王者为例-哔哩哔哩](https://b23.tv/gqmriXr)
 - [如何用 PC 控制安卓手机打王者？只要思想不滑坡，办法总比困难多！-哔哩哔哩](https://b23.tv/dmUOpff)

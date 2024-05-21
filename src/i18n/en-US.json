@@ -14,9 +14,8 @@
         "screen": "Get screen size"
       },
       "deviceControl": {
-        "inputScreenSize": "Please enter the screen size of the current control device correctly",
         "closeCurDevice": "Please close the current control device first",
-        "controlInfo": "The screen size has been saved and the control service is starting. Please keep the device screen on.",
+        "controlInfo": "The control service is starting. Please keep the device screen on.",
         "connectTimeout": "Device connection timeout"
       },
       "deviceGetScreenSize": "Device screen size: ",
@@ -25,14 +24,7 @@
       "wireless": "Wireless connection",
       "wirelessPlaceholder": "Wireless connection address",
       "connect": "Connect",
-      "deviceSize": {
-        "title": "Device screen size",
-        "width": "Width",
-        "widthPlaceholder": "Screen width",
-        "height": "Height",
-        "heightPlaceholder": "Screen height",
-        "tip": "Tip: Please enter the screen size of the current control device correctly. This is a necessary parameter to successfully send touch events."
-      },
+      "deviceSize": {},
       "controledDevice": "Controlled device",
       "availableDevice": "Available devices",
       "noControledDevice": "No Controled Device",
@@ -42,7 +34,8 @@
       "wsAddress": "Websocket address",
       "inputWsAddress": "Please enter the Websocket address",
       "wsClose": "Close",
-      "wsConnect": "Control"
+      "wsConnect": "Control",
+      "adbDeviceError": "Unable to get available devices"
     },
     "Mask": {
       "inputBoxPlaceholder": "Input text and then press enter/esc",
@@ -62,7 +55,8 @@
         "content": "Please go to the device page to control any device",
         "positiveText": "To control"
       },
-      "sightMode": "Mouse is locked, press {0} to unlock"
+      "sightMode": "Mouse is locked, press {0} to unlock",
+      "checkAdb": "adb is not available and the software cannot run normally. Please ensure that adb is installed on the system and added to the Path environment variable correctly: {0}"
     },
     "Setting": {
       "tabs": {

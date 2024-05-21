@@ -13,9 +13,8 @@ use tauri::Manager;
 
 #[tauri::command]
 /// get devices info list
-fn adb_devices(app: tauri::AppHandle) -> Result<Vec<Device>, String> {
-    let dir = app.path().resource_dir().unwrap().join("resource");
-    match Adb::cmd_devices(&dir) {
+fn adb_devices() -> Result<Vec<Device>, String> {
+    match Adb::cmd_devices() {
         Ok(devices) => Ok(devices),
         Err(e) => Err(e.to_string()),
     }
@@ -23,15 +22,8 @@ fn adb_devices(app: tauri::AppHandle) -> Result<Vec<Device>, String> {
 
 #[tauri::command]
 /// forward local port to the device port
-fn forward_server_port(
-    app: tauri::AppHandle,
-    id: String,
-    scid: String,
-    port: u16,
-) -> Result<(), String> {
-    let dir = app.path().resource_dir().unwrap().join("resource");
-
-    match ScrcpyClient::forward_server_port(&dir, &id, &scid, port) {
+fn forward_server_port(id: String, scid: String, port: u16) -> Result<(), String> {
+    match ScrcpyClient::forward_server_port(&id, &scid, port) {
         Ok(_) => Ok(()),
         Err(e) => Err(e.to_string()),
     }
@@ -66,12 +58,11 @@ fn start_scrcpy_server(
         scid.clone(),
     ));
 
-    let dir = app.path().resource_dir().unwrap().join("resource");
     let version = ScrcpyClient::get_scrcpy_version();
 
     // start scrcpy server
     tokio::spawn(async move {
-        ScrcpyClient::shell_start_server(&dir, &id, &scid, &version).unwrap();
+        ScrcpyClient::shell_start_server(&id, &scid, &version).unwrap();
     });
 
     // connect to scrcpy server
@@ -131,9 +122,8 @@ fn get_cur_client_info() -> Result<Option<share::ClientInfo>, String> {
 
 #[tauri::command]
 /// get device screen size
-fn get_device_screen_size(id: String, app: tauri::AppHandle) -> Result<(u32, u32), String> {
-    let dir = app.path().resource_dir().unwrap().join("resource");
-    match ScrcpyClient::get_device_screen_size(&dir, &id) {
+fn get_device_screen_size(id: String) -> Result<(u32, u32), String> {
+    match ScrcpyClient::get_device_screen_size(&id) {
         Ok(size) => Ok(size),
         Err(e) => Err(e.to_string()),
     }
@@ -141,9 +131,8 @@ fn get_device_screen_size(id: String, app: tauri::AppHandle) -> Result<(u32, u32
 
 #[tauri::command]
 /// connect to wireless device
-fn adb_connect(address: String, app: tauri::AppHandle) -> Result<String, String> {
-    let dir = app.path().resource_dir().unwrap().join("resource");
-    match Adb::cmd_connect(&dir, &address) {
+fn adb_connect(address: String) -> Result<String, String> {
+    match Adb::cmd_connect(&address) {
         Ok(res) => Ok(res),
         Err(e) => Err(e.to_string()),
     }
@@ -156,6 +145,14 @@ fn load_default_keyconfig(app: tauri::AppHandle) -> Result<String, String> {
     let file = ResHelper::get_file_path(&dir, ResourceName::DefaultKeyConfig);
     match read_to_string(file) {
         Ok(content) => Ok(content),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn check_adb_available() -> Result<(), String> {
+    match Adb::cmd_base().output() {
+        Ok(_) => Ok(()),
         Err(e) => Err(e.to_string()),
     }
 }
@@ -241,7 +238,8 @@ async fn main() {
             get_cur_client_info,
             get_device_screen_size,
             adb_connect,
-            load_default_keyconfig
+            load_default_keyconfig,
+            check_adb_available
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

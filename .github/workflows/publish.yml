@@ -1,5 +1,4 @@
-name: "publish"
-
+name: "Multi platform compile"
 on:
   push:
     # 匹配特定标签 (refs/tags)
