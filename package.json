@@ -1,7 +1,7 @@
 {
   "name": "scrcpy-mask",
   "private": true,
-  "version": "0.4.0-rc2",
+  "version": "0.4.0-rc3",
   "type": "module",
   "scripts": {
     "dev": "vite",
