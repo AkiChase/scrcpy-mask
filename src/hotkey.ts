@@ -1,5 +1,5 @@
 // https://github.com/jamiebuilds/tinykeys/pull/193/commits/2598ecb3db6b3948c7acbf0e7bd8b0674961ad61
-import { useMessage } from "naive-ui";
+import { MessageReactive, useMessage } from "naive-ui";
 import {
   SwipeAction,
   TouchAction,
@@ -25,6 +25,13 @@ import { useGlobalStore } from "./store/global";
 import { LogicalPosition, getCurrent } from "@tauri-apps/api/window";
 import { useI18n } from "vue-i18n";
 import { UnlistenFn } from "@tauri-apps/api/event";
+import { KeyToCodeMap } from "./frontcommand/KeyToCodeMap";
+import {
+  AndroidKeyEventAction,
+  AndroidMetastate,
+} from "./frontcommand/android";
+import { UIEventsCode } from "./frontcommand/UIEventsCode";
+import { sendInjectKeycode } from "./frontcommand/controlMsg";
 
 function clientxToPosx(clientx: number) {
   return clientx < 70
@@ -646,6 +653,7 @@ function addClickShortcuts(key: string, pointerId: number) {
   );
 }
 
+// add shortcut for sight mode
 function addSightShortcuts(
   relativeSize: { w: number; h: number },
   sightKeyMapping: KeySight,
@@ -989,6 +997,86 @@ function handleMouseWheel(event: WheelEvent) {
   }
 }
 
+export class KeyInputHandler {
+  private static readonly repeatCounter: Map<number, number> = new Map();
+  private static msgReactive: MessageReactive | null = null;
+  private static handler(event: KeyboardEvent) {
+    const keycode = KeyToCodeMap.get(event.code as UIEventsCode);
+    if (!keycode) {
+      return;
+    }
+    let action: AndroidKeyEventAction;
+    let repeatCount = 0;
+    if (event.type === "keydown") {
+      action = AndroidKeyEventAction.AKEY_EVENT_ACTION_DOWN;
+      if (event.repeat) {
+        let count = KeyInputHandler.repeatCounter.get(keycode);
+        if (typeof count !== "number") {
+          count = 1;
+        } else {
+          count++;
+        }
+        repeatCount = count;
+        KeyInputHandler.repeatCounter.set(keycode, count);
+      }
+    } else if (event.type === "keyup") {
+      action = AndroidKeyEventAction.AKEY_EVENT_ACTION_UP;
+      KeyInputHandler.repeatCounter.delete(keycode);
+    } else {
+      return;
+    }
+    const metaState =
+      (event.getModifierState("Alt") ? AndroidMetastate.AMETA_ALT_ON : 0) |
+      (event.getModifierState("Shift") ? AndroidMetastate.AMETA_SHIFT_ON : 0) |
+      (event.getModifierState("Control") ? AndroidMetastate.AMETA_CTRL_ON : 0) |
+      (event.getModifierState("Meta") ? AndroidMetastate.AMETA_META_ON : 0) |
+      (event.getModifierState("CapsLock")
+        ? AndroidMetastate.AMETA_CAPS_LOCK_ON
+        : 0) |
+      (event.getModifierState("ScrollLock")
+        ? AndroidMetastate.AMETA_SCROLL_LOCK_ON
+        : 0) |
+      (event.getModifierState("NumLock")
+        ? AndroidMetastate.AMETA_NUM_LOCK_ON
+        : 0);
+
+    // const controlMessage = new KeyCodeControlMessage(
+    //   action,
+    //   keyCode,
+    //   repeatCount,
+    //   metaState
+    // );
+    sendInjectKeycode({
+      action,
+      keycode,
+      repeat: repeatCount,
+      metastate: metaState,
+    });
+    event.preventDefault();
+  }
+  public static addEventListener() {
+    KeyInputHandler.msgReactive = message.info(t("pages.Mask.keyInputMode"), {
+      duration: 0,
+      closable: true,
+      onClose: () => {
+        KeyInputHandler.removeEventListener();
+        listenToEvent(true);
+        store.keyInputFlag = false;
+      },
+    });
+    window.addEventListener("keydown", KeyInputHandler.handler);
+    window.addEventListener("keyup", KeyInputHandler.handler);
+  }
+  public static removeEventListener() {
+    if (KeyInputHandler.msgReactive) {
+      KeyInputHandler.msgReactive.destroy();
+      KeyInputHandler.msgReactive = null;
+    }
+    window.removeEventListener("keydown", KeyInputHandler.handler);
+    window.removeEventListener("keyup", KeyInputHandler.handler);
+  }
+}
+
 function addShortcut(
   key: string,
   downCB?: () => Promise<void>,
@@ -1047,23 +1135,23 @@ function addShortcut(
  *   {
  *    type: "touch",
  *    // op, pointerId, posX, posY
- *    args: ["down", 5, ["mouse", -10], 600],
+ *    args: ["down", 5, ["mouse", -10], 600]
  *  },
  *  // sleep 1000ms
  *  {
  *   type: "sleep",
  *  // time(ms)
- *   args: [1000],
+ *   args: [1000]
  *  },
  *  // touch up
  *  {
  *  type: "touch",
- *  args: ["up", 5, ["mouse", 10], 600],
+ *  args: ["up", 5, ["mouse", 10], 600]
  *  },
  *  // touch 1000ms
  *  {
  *  type: "touch",
- *  args: ["default", 5, ["mouse", 10], 600, 1000],
+ *  args: ["default", 5, ["mouse", 10], 600, 1000]
  *  },
  *  // swipe
  *  {
@@ -1074,18 +1162,17 @@ function addShortcut(
  *     [
  *       [
  *         ["mouse", 100],
- *         ["mouse", -100],
+ *         ["mouse", -100]
  *       ],
- *       ["mouse", "mouse"],
+ *       ["mouse", "mouse"]
  *     ],
- *     1000,
- *   ],
+ *     1000
+ *   ]
  *  },
- *  // input-text
+ *  // key-input-mode
  *  {
- *    type: "input-text",
- *    // 1:on, 2:off
- *    args: [1]
+ *    type: "key-input-mode",
+ *    args: []
  *  }
  * ]);
  */
@@ -1158,13 +1245,17 @@ async function execMacro(
             intervalBetweenPos: cmd.args[3],
           });
           break;
-        case "input-text":
-          if (cmd.args[0] === 1) {
+        case "key-input-mode":
+          if (!store.keyInputFlag) {
             // on
-            useGlobalStore().showInputBox(true);
+            unlistenToEvent(true);
+            KeyInputHandler.addEventListener();
+            store.keyInputFlag = true;
           } else {
             // off
-            useGlobalStore().showInputBox(false);
+            KeyInputHandler.removeEventListener();
+            listenToEvent(true);
+            store.keyInputFlag = false;
           }
           break;
         default:
@@ -1352,9 +1443,11 @@ async function touchX(
   });
 }
 
-export function listenToEvent() {
+export function listenToEvent(onlyKeyEvent = false) {
   window.addEventListener("keydown", handleKeydown);
   window.addEventListener("keyup", handleKeyup);
+  if (onlyKeyEvent) return;
+
   window.addEventListener("mousedown", handleMouseDown);
   window.addEventListener("mousemove", handleMouseMove);
   window.addEventListener("mouseup", handleMouseUp);
@@ -1363,9 +1456,11 @@ export function listenToEvent() {
   execLoopCB();
 }
 
-export function unlistenToEvent() {
+export function unlistenToEvent(onlyKeyEvent = false) {
   window.removeEventListener("keydown", handleKeydown);
   window.removeEventListener("keyup", handleKeyup);
+  if (onlyKeyEvent) return;
+
   window.removeEventListener("mousedown", handleMouseDown);
   window.removeEventListener("mousemove", handleMouseMove);
   window.removeEventListener("mouseup", handleMouseUp);

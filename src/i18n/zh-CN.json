@@ -58,7 +58,8 @@
       },
       "inputBoxPlaceholder": "输入文本后按Enter/Esc",
       "sightMode": "鼠标已锁定, 按 {0} 键解锁",
-      "checkAdb": "adb不可用，软件无法正常运行，请确保系统已安装adb，并正确添加到了Path环境变量中: {0}"
+      "checkAdb": "adb不可用，软件无法正常运行，请确保系统已安装adb，并正确添加到了Path环境变量中: {0}",
+      "keyInputMode": "已进入按键输入模式，关闭本消息可退出"
     },
     "Setting": {
       "tabs": {
