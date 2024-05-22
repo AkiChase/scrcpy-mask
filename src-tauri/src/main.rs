@@ -164,7 +164,10 @@ fn set_adb_path(adb_path: String, app: tauri::AppHandle) -> Result<(), String> {
     let path = std::path::PathBuf::from("store.bin");
     let store_res: Result<(), tauri_plugin_store::Error> =
         tauri_plugin_store::with_store(app, stores, path, |store| {
-            store.insert("adbPath".to_string(), serde_json::json!(adb_path))?;
+            store.insert(
+                "adbPath".to_string(),
+                serde_json::Value::String(adb_path.clone()),
+            )?;
             *share::ADB_PATH.lock().unwrap() = adb_path;
             Ok(())
         });
@@ -190,9 +193,14 @@ async fn main() {
             tauri_plugin_store::with_store(app.app_handle().clone(), stores, path, |store| {
                 // load adb path
                 match store.get("adbPath") {
-                    Some(value) => *share::ADB_PATH.lock().unwrap() = value.to_string(),
+                    Some(value) => {
+                        *share::ADB_PATH.lock().unwrap() = value.as_str().unwrap().to_string()
+                    }
                     None => store
-                        .insert("adbPath".to_string(), serde_json::json!("adb"))
+                        .insert(
+                            "adbPath".to_string(),
+                            serde_json::Value::String("adb".to_string()),
+                        )
                         .unwrap(),
                 };
 

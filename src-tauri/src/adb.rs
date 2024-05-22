@@ -88,6 +88,7 @@ pub struct Adb;
 impl Adb {
     pub fn cmd_base() -> Command {
         let adb_path = share::ADB_PATH.lock().unwrap().clone();
+        println!("{}", &adb_path);
         #[cfg(target_os = "windows")]
         {
             let mut cmd = Command::new(adb_path);
