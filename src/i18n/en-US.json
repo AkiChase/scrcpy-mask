@@ -35,7 +35,8 @@
       "inputWsAddress": "Please enter the Websocket address",
       "wsClose": "Close",
       "wsConnect": "Control",
-      "adbDeviceError": "Unable to get available devices"
+      "adbDeviceError": "Unable to get available devices",
+      "adbConnectError": "Wireless connection failed"
     },
     "Mask": {
       "inputBoxPlaceholder": "Input text and then press enter/esc",
@@ -100,7 +101,13 @@
         },
         "language": "Language",
         "localStore": "Local data",
-        "delCurData": "Delete current data"
+        "delCurData": "Delete current data",
+        "adbPath": {
+          "placeholder": "adb path",
+          "set": "Save",
+          "setSuccess": "adb path set successfully",
+          "title": "adb path"
+        }
       },
       "About": {
         "introduction": "A Scrcpy client in Rust & Tarui aimed at providing mouse and key mapping to control Android device.",

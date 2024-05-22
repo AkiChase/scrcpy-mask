@@ -320,8 +320,13 @@ async function connectDevice() {
   }
 
   store.showLoading();
-  message.info(await adbConnect(wireless_address.value));
-  await refreshDevices();
+  try {
+    message.info(await adbConnect(wireless_address.value));
+    await refreshDevices();
+  } catch (e) {
+    message.error("t('pages.Device.adbConnectError')");
+    console.error(e);
+  }
 }
 
 function connectWS() {

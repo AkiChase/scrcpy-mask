@@ -68,9 +68,8 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
    2. For emulator, you don't need screen mirror, and emulator generally default to enabling ADB wired debugging. So this is the best way for game, I think.
 3. Launch the software and navigate to the Device page.
    1. Find your device among the available devices (if not found, please search for how to enable ADB debugging for your device).
-   2. Right-click on your device and choose "Get Screen Size". Use the obtained screen size as a reference and enter the device's width and height correctly. Note: If the width or height is incorrect (for example, they are reversed in portrait and landscape modes), all touch operations will be ignored, but no error message will appear.
    3. Right-click on your device again and choose "Control this device".
-4. Navigate to the Settings page -> Mask Settings, and set the width and height of the mask to a certain multiple of the device's size to ensure the mask size is appropriate.
+4. Navigate to the Settings page -> Mask Settings, set the width and height of the mask to the same ratio of the device screen size and ensure that the mask size is appropriate.
 5. Navigate to the Mask page where you can see a transparent mask. Next, adjust and move your emulator window or screen mirroring window to align the displayed content area with the transparent mask area.
 6. Navigate to the Key mapping page and switch or edit the key mapping configs.
 7. Return to the Mask page and start enjoying.

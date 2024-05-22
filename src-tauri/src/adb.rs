@@ -8,6 +8,8 @@ use std::os::windows::process::CommandExt;
 
 use anyhow::{Context, Ok, Result};
 
+use crate::share;
+
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct Device {
     pub id: String,
@@ -85,13 +87,14 @@ pub struct Adb;
 /// But some output of command won't be output, like adb service startup information.
 impl Adb {
     pub fn cmd_base() -> Command {
+        let adb_path = share::ADB_PATH.lock().unwrap().clone();
         #[cfg(target_os = "windows")]
         {
-            let mut cmd = Command::new("adb");
+            let mut cmd = Command::new(adb_path);
             cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
             return cmd;
         }
-        Command::new("adb")
+        Command::new(adb_path)
     }
 
     /// execute "adb devices" and return devices list
