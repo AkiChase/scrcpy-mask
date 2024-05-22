@@ -66,12 +66,14 @@ onActivated(async () => {
 });
 
 onMounted(async () => {
-  store.checkAdb = checkAdb;
-  await checkAdb();
   await loadLocalStore();
   store.checkUpdate = checkUpdate;
   store.showInputBox = showInputBox;
   if (store.checkUpdateAtStart) checkUpdate();
+  store.checkAdb = checkAdb;
+  setTimeout(() => {
+    checkAdb();
+  }, 500);
 });
 
 let checkAdbMessage: MessageReactive | null = null;

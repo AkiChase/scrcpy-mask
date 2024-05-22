@@ -79,7 +79,7 @@ onMounted(async () => {
           } else {
             store.screenSizeW = payload.width;
             store.screenSizeH = payload.height;
-            message.info("设备旋转");
+            message.info(t("pages.Device.deviceRotation"));
           }
           break;
         default:

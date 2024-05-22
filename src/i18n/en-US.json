@@ -36,7 +36,8 @@
       "wsClose": "Close",
       "wsConnect": "Control",
       "adbDeviceError": "Unable to get available devices",
-      "adbConnectError": "Wireless connection failed"
+      "adbConnectError": "Wireless connection failed",
+      "deviceRotation": "Device rotation"
     },
     "Mask": {
       "inputBoxPlaceholder": "Input text and then press enter/esc",
