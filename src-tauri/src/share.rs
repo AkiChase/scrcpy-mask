@@ -21,3 +21,7 @@ impl ClientInfo {
 lazy_static! {
     pub static ref CLIENT_INFO: Mutex<Option<ClientInfo>> = Mutex::new(None);
 }
+
+lazy_static! {
+    pub static ref ADB_PATH: Mutex<String> = Mutex::new(String::from("adb"));
+}

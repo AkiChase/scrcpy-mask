@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { h, nextTick, onActivated, onMounted, ref } from "vue";
-import { NDialog, NInput, useDialog, useMessage } from "naive-ui";
+import {
+  MessageReactive,
+  NDialog,
+  NInput,
+  useDialog,
+  useMessage,
+} from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
 import {
@@ -60,6 +66,7 @@ onActivated(async () => {
 });
 
 onMounted(async () => {
+  store.checkAdb = checkAdb;
   await checkAdb();
   await loadLocalStore();
   store.checkUpdate = checkUpdate;
@@ -67,11 +74,16 @@ onMounted(async () => {
   if (store.checkUpdateAtStart) checkUpdate();
 });
 
+let checkAdbMessage: MessageReactive | null = null;
 async function checkAdb() {
   try {
+    if (checkAdbMessage) {
+      checkAdbMessage.destroy();
+      checkAdbMessage = null;
+    }
     await checkAdbAvailable();
   } catch (e) {
-    message.error(t("pages.Mask.checkAdb", [e]), {
+    checkAdbMessage = message.error(t("pages.Mask.checkAdb", [e]), {
       duration: 0,
     });
   }

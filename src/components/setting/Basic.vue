@@ -14,14 +14,20 @@ import {
   NCard,
   NIcon,
   NSelect,
+  NInputGroup,
+  useMessage,
 } from "naive-ui";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { onMounted, ref } from "vue";
 import i18n from "../../i18n";
 import { useI18n } from "vue-i18n";
+import { setAdbPath } from "../../invoke";
+import { useGlobalStore } from "../../store/global";
 
 const { t } = useI18n();
 const localStore = new Store("store.bin");
+const store = useGlobalStore();
+const message = useMessage();
 const dialog = useDialog();
 
 const localStoreEntries = ref<[string, unknown][]>([]);
@@ -36,9 +42,12 @@ const languageOptions = [
 
 const curLanguage = ref("en-US");
 
+const adbPath = ref("");
+
 onMounted(async () => {
   refreshLocalData();
   curLanguage.value = (await localStore.get<string>("language")) ?? "en-US";
+  adbPath.value = (await localStore.get<string>("adbPath")) ?? "";
 });
 
 async function refreshLocalData() {
@@ -88,6 +97,15 @@ function changeLanguage(language: "zh-CN" | "en-US") {
   localStore.set("language", language);
   i18n.global.locale.value = language;
 }
+
+async function adjustAdbPath() {
+  store.showLoading();
+  await setAdbPath(adbPath.value);
+  message.success(t("pages.Setting.Basic.adbPath.setSuccess"));
+  await store.checkAdb();
+  adbPath.value = (await localStore.get<string>("adbPath")) ?? "";
+  store.hideLoading();
+}
 </script>
 
 <template>
@@ -99,6 +117,17 @@ function changeLanguage(language: "zh-CN" | "en-US") {
       :options="languageOptions"
       style="max-width: 300px; margin: 20px 0"
     />
+    <NH4 prefix="bar">{{ $t("pages.Setting.Basic.adbPath.title") }}</NH4>
+    <NInputGroup style="max-width: 300px; margin-bottom: 20px">
+      <NInput
+        v-model:value="adbPath"
+        clearable
+        :placeholder="$t('pages.Setting.Basic.adbPath.placeholder')"
+      />
+      <NButton type="primary" @click="adjustAdbPath">{{
+        $t("pages.Setting.Basic.adbPath.set")
+      }}</NButton>
+    </NInputGroup>
     <NFlex justify="space-between">
       <NH4 prefix="bar">{{ $t("pages.Setting.Basic.localStore") }}</NH4>
       <NFlex>

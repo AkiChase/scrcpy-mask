@@ -157,6 +157,24 @@ fn check_adb_available() -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+fn set_adb_path(adb_path: String, app: tauri::AppHandle) -> Result<(), String> {
+    let app_h = app.app_handle().clone();
+    let stores = app_h.state::<tauri_plugin_store::StoreCollection<tauri::Wry>>();
+    let path = std::path::PathBuf::from("store.bin");
+    let store_res: Result<(), tauri_plugin_store::Error> =
+        tauri_plugin_store::with_store(app, stores, path, |store| {
+            store.insert("adbPath".to_string(), serde_json::json!(adb_path))?;
+            *share::ADB_PATH.lock().unwrap() = adb_path;
+            Ok(())
+        });
+
+    match store_res {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
@@ -168,8 +186,16 @@ async fn main() {
             let stores = app
                 .app_handle()
                 .state::<tauri_plugin_store::StoreCollection<tauri::Wry>>();
-            let path = std::path::PathBuf::from("store.bin");
+            let path: std::path::PathBuf = std::path::PathBuf::from("store.bin");
             tauri_plugin_store::with_store(app.app_handle().clone(), stores, path, |store| {
+                // load adb path
+                match store.get("adbPath") {
+                    Some(value) => *share::ADB_PATH.lock().unwrap() = value.to_string(),
+                    None => store
+                        .insert("adbPath".to_string(), serde_json::json!("adb"))
+                        .unwrap(),
+                };
+
                 // restore window position and size
                 match store.get("maskArea") {
                     Some(value) => {
@@ -239,7 +265,8 @@ async fn main() {
             get_device_screen_size,
             adb_connect,
             load_default_keyconfig,
-            check_adb_available
+            check_adb_available,
+            set_adb_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
