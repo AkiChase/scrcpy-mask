@@ -1,6 +1,6 @@
 {
   "productName": "scrcpy-mask",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "identifier": "com.akichase.mask",
   "build": {
     "beforeDevCommand": "pnpm dev",
