@@ -834,6 +834,9 @@ function addSightShortcuts(
       // create box element
       maskElement.style.cursor = "none";
       const mouseRangeBoxElement = createMouseRangeBox();
+      mouseRangeBoxElement.addEventListener("contextmenu", (e) =>
+        e.preventDefault()
+      );
       mouseRangeBoxElement.addEventListener("mouseleave", moveLeaveHandler);
       document.body.appendChild(mouseRangeBoxElement);
 
