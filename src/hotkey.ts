@@ -811,6 +811,7 @@ function addSightShortcuts(
         );
         mouseRangeBoxElement.remove();
       }
+      maskElement.style.cursor = "pointer";
 
       mouseLock = false;
       loopDownKeyCBMap.delete(sightKeyMapping.key);
@@ -831,6 +832,7 @@ function addSightShortcuts(
       // start sight mode
 
       // create box element
+      maskElement.style.cursor = "none";
       const mouseRangeBoxElement = createMouseRangeBox();
       mouseRangeBoxElement.addEventListener("mouseleave", moveLeaveHandler);
       document.body.appendChild(mouseRangeBoxElement);
@@ -950,6 +952,7 @@ function createMouseRangeBox(): HTMLElement {
   box.style.right = "100px";
   box.style.zIndex = "9999";
   box.style.backgroundColor = "transparent";
+  box.style.cursor = "none";
   return box;
 }
 
@@ -978,7 +981,7 @@ function handleMouseDown(event: MouseEvent) {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
   if (target.id !== "maskElement" && target.id !== "mouseRangeBox") return;
-  
+
   mouseX = event.clientX;
   mouseY = event.clientY;
   event.preventDefault();
