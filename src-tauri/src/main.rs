@@ -91,8 +91,8 @@ fn start_scrcpy_server(
             let sender = front_msg_sender.clone();
             // println!("收到front-command: {}", event.payload());
             tokio::spawn(async move {
-                if let Err(e) = sender.send(event.payload().into()).await {
-                    println!("front-command转发失败: {}", e);
+                if let Err(_) = sender.send(event.payload().into()).await {
+                    println!("front-command forwarding failure, please restart the program !");
                 };
             });
         });

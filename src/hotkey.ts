@@ -801,12 +801,22 @@ function addSightShortcuts(
   addShortcut(sightKeyMapping.key, async () => {
     if (mouseLock) {
       // stop sight mode
+
+      // remove box element
+      const mouseRangeBoxElement = document.getElementById("mouseRangeBox");
+      if (mouseRangeBoxElement) {
+        mouseRangeBoxElement.removeEventListener(
+          "mouseleave",
+          moveLeaveHandler
+        );
+        mouseRangeBoxElement.remove();
+      }
+
+      mouseLock = false;
       loopDownKeyCBMap.delete(sightKeyMapping.key);
       await touchRelateToSight(TouchAction.Up);
       await appWindow.setCursorVisible(true);
-      maskElement.removeEventListener("mouseleave", moveLeaveHandler);
-      maskElement.style.cursor = "pointer";
-      mouseLock = false;
+
       if (msgReactive) {
         msgReactive.destroy();
         msgReactive = null;
@@ -819,10 +829,14 @@ function addSightShortcuts(
       addClickShortcuts("M0", 0);
     } else {
       // start sight mode
-      await appWindow.setCursorVisible(false);
-      maskElement.addEventListener("mouseleave", moveLeaveHandler);
-      maskElement.style.cursor = "none";
+
+      // create box element
+      const mouseRangeBoxElement = createMouseRangeBox();
+      mouseRangeBoxElement.addEventListener("mouseleave", moveLeaveHandler);
+      document.body.appendChild(mouseRangeBoxElement);
+
       mouseLock = true;
+      await appWindow.setCursorVisible(false);
       msgReactive = message.info(
         t("pages.Mask.sightMode", [sightKeyMapping.key]),
         {
@@ -926,6 +940,19 @@ function addSightShortcuts(
   });
 }
 
+function createMouseRangeBox(): HTMLElement {
+  const box = document.createElement("div");
+  box.id = "mouseRangeBox";
+  box.style.position = "absolute";
+  box.style.top = "40px";
+  box.style.bottom = "40px";
+  box.style.left = "100px";
+  box.style.right = "100px";
+  box.style.zIndex = "9999";
+  box.style.backgroundColor = "transparent";
+  return box;
+}
+
 function handleKeydown(event: KeyboardEvent) {
   event.preventDefault();
   if (event.repeat) return;
@@ -948,7 +975,10 @@ function handleKeyup(event: KeyboardEvent) {
 }
 
 function handleMouseDown(event: MouseEvent) {
-  if (event.target !== maskElement) return;
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  if (target.id !== "maskElement" && target.id !== "mouseRangeBox") return;
+  
   mouseX = event.clientX;
   mouseY = event.clientY;
   event.preventDefault();
