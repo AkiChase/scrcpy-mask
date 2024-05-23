@@ -21,7 +21,7 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
 - [x] Visually setting the mapping
 - [x] Key mapping config import and export
 - [x] Update check
-- [x] Switch between key mapping and input-text box
+- [x] Toggle between key mapping and key input
 - [x] Internationalization (i18n)
 - [ ] Gamepad key mapping
 - [ ] Better macro support
@@ -30,7 +30,7 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
 
 ## Demonstration video
 
-- [如何用电脑玩FPS手游？这样的“安卓模拟器”，也不是不可以-哔哩哔哩](https://www.bilibili.com/video/BV1EU411Z7TC/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
+- [如何用电脑玩 FPS 手游？这样的“安卓模拟器”，也不是不可以-哔哩哔哩](https://www.bilibili.com/video/BV1EU411Z7TC/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [M 系列 Mac 电脑玩王者，暃排位实录，使用 Android Stuido 模拟器和开源 Scrcpy Mask 按键映射工具-哔哩哔哩](https://b23.tv/q6iDW1w)
 - [自制跨平台开源项目 Scrcpy Mask ，像模拟器一样用键鼠控制任意安卓设备！以 M 系列芯片 MacBook 打王者为例-哔哩哔哩](https://b23.tv/gqmriXr)
 - [如何用 PC 控制安卓手机打王者？只要思想不滑坡，办法总比困难多！-哔哩哔哩](https://b23.tv/dmUOpff)
@@ -53,7 +53,7 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
 ![](https://pic.superbed.cc/item/66371911f989f2fb975b62a3.png)
 
 - Mask above game
- 
+
 ![](https://pic.superbed.cc/item/66373c8cf989f2fb97679dfd.png)
 
 ![](https://pic.superbed.cc/item/6649cf0cfcada11d37c05b5e.jpg)
@@ -68,11 +68,34 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
    2. For emulator, you don't need screen mirror, and emulator generally default to enabling ADB wired debugging. So this is the best way for game, I think.
 3. Launch the software and navigate to the Device page.
    1. Find your device among the available devices (if not found, please search for how to enable ADB debugging for your device).
-   3. Right-click on your device again and choose "Control this device".
+   2. Right-click on your device again and choose "Control this device".
 4. Navigate to the Settings page -> Mask Settings, set the width and height of the mask to the same ratio of the device screen size and ensure that the mask size is appropriate.
 5. Navigate to the Mask page where you can see a transparent mask. Next, adjust and move your emulator window or screen mirroring window to align the displayed content area with the transparent mask area.
 6. Navigate to the Key mapping page and switch or edit the key mapping configs.
 7. Return to the Mask page and start enjoying.
+
+## About Macros
+
+Currently, the structure of macros is simply a JSON object with limited functionality, serving as a transitional solution. **Please refrain from investing too much time in writing macros, as the specifications for macro creation may change with version updates.**
+
+An example of macros can be found in the `async function execMacro` function in [hotkey.ts](https://github.com/AkiChase/scrcpy-mask/blob/master/src/hotkey.ts) file.
+
+For instance, the `key-input-mode` macro can switch from key mapping mode to key input mode, commonly used for text input. An example is as follows:
+
+```json
+[{ "args": [], "type": "key-input-mode" }]
+```
+
+## Error Report
+
+When asking a question, please provide as much detailed information as possible regarding the issue, including the operating system and software version. Specifically, if there is an error output, please be sure to include the relevant logs.
+
+There are two sources of logs that might help in identifying and solving the error. Generally, the error output can be found in the Web logs.
+
+1. Web Logs: Open Developer Tools by pressing `Ctrl+Shift+I` or `Cmd+Opt+I`, click on the console tab, and check the information output in the console.
+2. Rust Logs:
+   1. On macOS or Linux, navigate to the installation directory, use the **terminal** to run `scrcpy-mask`, and you can see the program's output in real-time in the terminal.
+   2. On Windows, you need to clone the project and run it yourself to view the Rust output.
 
 ## Contribution.
 

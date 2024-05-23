@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { h, nextTick, onActivated, onMounted, ref } from "vue";
-import {
-  MessageReactive,
-  NDialog,
-  NInput,
-  useDialog,
-  useMessage,
-} from "naive-ui";
+import { h, onActivated, onMounted } from "vue";
+import { MessageReactive, NDialog, useDialog, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
 import {
+  KeyInputHandler,
   applyShortcuts,
   clearShortcuts,
   listenToEvent,
@@ -19,12 +14,9 @@ import { KeyMappingConfig, KeySteeringWheel } from "../keyMappingConfig";
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
 import { open } from "@tauri-apps/plugin-shell";
-import { sendSetClipboard } from "../frontcommand/controlMsg";
 import { getCurrent, PhysicalSize } from "@tauri-apps/api/window";
-import { AndroidKeycode } from "../frontcommand/android";
 import { Store } from "@tauri-apps/plugin-store";
 import { useI18n } from "vue-i18n";
-import { SendKeyAction, sendKey } from "../frontcommand/scrcpyMaskCmd";
 import { checkAdbAvailable } from "../invoke";
 
 const { t } = useI18n();
@@ -33,14 +25,11 @@ const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
 
-const showInputBoxRef = ref(false);
-const inputBoxVal = ref("");
-const inputInstRef = ref<HTMLInputElement | null>(null);
-
 onBeforeRouteLeave(() => {
   if (store.controledDevice) {
     unlistenToEvent();
     clearShortcuts();
+    if (store.keyInputFlag) KeyInputHandler.removeEventListener();
   }
 });
 
@@ -68,7 +57,6 @@ onActivated(async () => {
 onMounted(async () => {
   await loadLocalStore();
   store.checkUpdate = checkUpdate;
-  store.showInputBox = showInputBox;
   if (store.checkUpdateAtStart) checkUpdate();
   store.checkAdb = checkAdb;
   setTimeout(() => {
@@ -159,64 +147,6 @@ async function cleanAfterimage() {
   await appWindow.setSize(oldSize);
 }
 
-function handleInputBoxClick(event: MouseEvent) {
-  if (event.target === document.getElementById("input-box")) {
-    showInputBox(false);
-  }
-}
-
-function handleInputKeyUp(event: KeyboardEvent) {
-  if (event.key === "Enter") {
-    pasteText();
-  } else if (event.key === "Escape") {
-    showInputBox(false);
-  }
-}
-
-function showInputBox(flag: boolean) {
-  if (flag) {
-    unlistenToEvent();
-    inputBoxVal.value = "";
-    showInputBoxRef.value = true;
-    document.addEventListener("keyup", handleInputKeyUp);
-    nextTick(() => {
-      inputInstRef.value?.focus();
-    });
-  } else {
-    document.removeEventListener("keyup", handleInputKeyUp);
-    inputInstRef.value?.blur();
-    showInputBoxRef.value = false;
-    listenToEvent();
-    nextTick(() => {
-      cleanAfterimage();
-    });
-  }
-}
-
-function sleep(time: number) {
-  return new Promise<void>((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, time);
-  });
-}
-
-async function pasteText() {
-  showInputBox(false);
-  if (!inputBoxVal.value) return;
-  sendSetClipboard({
-    sequence: new Date().getTime() % 100000,
-    text: inputBoxVal.value,
-    paste: true,
-  });
-  await sleep(300);
-  // send enter
-  await sendKey({
-    action: SendKeyAction.Default,
-    keycode: AndroidKeycode.AKEYCODE_ENTER,
-  });
-}
-
 function toStartServer() {
   router.replace({ name: "device" });
 }
@@ -297,19 +227,6 @@ async function checkUpdate() {
   <template v-if="store.keyMappingConfigList.length">
     <div @contextmenu.prevent class="mask" id="maskElement"></div>
     <div
-      v-show="showInputBoxRef"
-      class="input-box"
-      id="input-box"
-      @click="handleInputBoxClick"
-    >
-      <NInput
-        ref="inputInstRef"
-        v-model:value="inputBoxVal"
-        type="text"
-        :placeholder="$t('pages.Mask.inputBoxPlaceholder')"
-      />
-    </div>
-    <div
       v-if="store.maskButton.show"
       :style="'--transparency: ' + store.maskButton.transparency"
       class="button-layer"
@@ -367,26 +284,6 @@ async function checkUpdate() {
   user-select: none;
   -webkit-user-select: none;
   z-index: 2;
-}
-
-.input-box {
-  z-index: 4;
-  position: absolute;
-  left: 70px;
-  top: 30px;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-
-  .n-input {
-    width: 50%;
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 15%;
-    margin: auto;
-    background-color: var(--content-bg-color);
-  }
 }
 
 .button-layer {

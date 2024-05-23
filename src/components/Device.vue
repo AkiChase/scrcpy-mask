@@ -284,7 +284,8 @@ async function deviceGetScreenSize() {
   const size = await getDeviceScreenSize(id);
   store.hideLoading();
   message.success(
-    t("pages.Device.deviceGetScreenSize") + `${size[0]} x ${size[1]}`
+    t("pages.Device.deviceGetScreenSize") + `${size[0]} x ${size[1]}`,
+    { keepAliveOnHover: true }
   );
 }
 

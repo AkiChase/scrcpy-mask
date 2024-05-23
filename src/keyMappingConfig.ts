@@ -66,7 +66,7 @@ export interface KeyTap extends KeyBase {
 }
 
 export type KeyMacroList = Array<{
-  type: "touch" | "sleep" | "swipe" | "input-text";
+  type: "touch" | "sleep" | "swipe" | "key-input-mode";
   args: any[];
 }> | null;
 
