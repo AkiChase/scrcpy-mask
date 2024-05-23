@@ -86,6 +86,17 @@ For instance, the `key-input-mode` macro can switch from key mapping mode to key
 [{ "args": [], "type": "key-input-mode" }]
 ```
 
+## Error Report
+
+When asking a question, please provide as much detailed information as possible regarding the issue, including the operating system and software version. Specifically, if there is an error output, please be sure to include the relevant logs.
+
+There are two sources of logs that might help in identifying and solving the error. Generally, the error output can be found in the Web logs.
+
+1. Web Logs: Open Developer Tools by pressing `Ctrl+Shift+I` or `Cmd+Opt+I`, click on the console tab, and check the information output in the console.
+2. Rust Logs:
+   1. On macOS or Linux, navigate to the installation directory, use the **terminal** to run `scrcpy-mask`, and you can see the program's output in real-time in the terminal.
+   2. On Windows, you need to clone the project and run it yourself to view the Rust output.
+
 ## Contribution.
 
 If you are interested in this project, you are welcome to submit pull request or issue. But my time and energy is limited, so I may not be able to deal with it all.
