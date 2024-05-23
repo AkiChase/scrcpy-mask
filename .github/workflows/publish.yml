@@ -61,7 +61,24 @@ jobs:
         with:
           tagName: "v__VERSION__"
           releaseName: "Scrcpy Mask v__VERSION__"
-          releaseBody: "Add release notes here."
+          releaseBody: |
+            ## 更新说明
+            
+            本次更新主要新增了...
+            
+            本次更新主要修复了...
+            
+            ---
+            
+            ## Update Notice
+            
+            ...
+            
+            ---
+            
+            ## Commits
+            
+            ...
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
