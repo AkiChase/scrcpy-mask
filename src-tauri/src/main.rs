@@ -207,19 +207,27 @@ async fn main() {
                 // restore window position and size
                 match store.get("maskArea") {
                     Some(value) => {
-                        let pos_x = value["posX"].as_i64().unwrap_or(100);
-                        let pos_y = value["posY"].as_i64().unwrap_or(100);
+                        let pos_x = value["posX"].as_i64();
+                        let pos_y = value["posY"].as_i64();
                         let size_w = value["sizeW"].as_i64().unwrap_or(800);
                         let size_h = value["sizeH"].as_i64().unwrap_or(600);
+
                         let main_window: tauri::WebviewWindow =
                             app.get_webview_window("main").unwrap();
+
                         main_window.set_zoom(1.).unwrap_or(());
-                        main_window
-                            .set_position(tauri::Position::Logical(tauri::LogicalPosition {
-                                x: (pos_x - 70) as f64,
-                                y: (pos_y - 30) as f64,
-                            }))
-                            .unwrap();
+
+                        if pos_x.is_none() || pos_y.is_none() {
+                            main_window.center().unwrap_or(());
+                        } else {
+                            main_window
+                                .set_position(tauri::Position::Logical(tauri::LogicalPosition {
+                                    x: (pos_x.unwrap() - 70) as f64,
+                                    y: (pos_y.unwrap() - 30) as f64,
+                                }))
+                                .unwrap();
+                        }
+
                         main_window
                             .set_size(tauri::Size::Logical(tauri::LogicalSize {
                                 width: (size_w + 70) as f64,
@@ -230,22 +238,14 @@ async fn main() {
                     None => {
                         let main_window: tauri::WebviewWindow =
                             app.get_webview_window("main").unwrap();
+
+                        main_window.center().unwrap_or(());
+
                         main_window
                             .set_size(tauri::Size::Logical(tauri::LogicalSize {
                                 width: (800 + 70) as f64,
                                 height: (600 + 30) as f64,
                             }))
-                            .unwrap();
-                        store
-                            .insert(
-                                "maskArea".to_string(),
-                                serde_json::json!({
-                                    "posX": 0,
-                                    "posY": 0,
-                                    "sizeW": 800,
-                                    "sizeH": 600
-                                }),
-                            )
                             .unwrap();
                     }
                 }

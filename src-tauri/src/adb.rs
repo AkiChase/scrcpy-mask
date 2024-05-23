@@ -94,6 +94,7 @@ impl Adb {
             cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
             return cmd;
         }
+        #[cfg(not(target_os = "windows"))]
         Command::new(adb_path)
     }
 

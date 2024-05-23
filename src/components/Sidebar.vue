@@ -55,7 +55,7 @@ async function changeScreenPowerMode() {
 </script>
 
 <template>
-  <div data-tauri-drag-region class="sidebar">
+  <div class="sidebar">
     <div data-tauri-drag-region class="logo">S M</div>
     <div class="module">
       <div :class="{ active: route.name == 'mask' }" @click="nav('mask')">
@@ -82,7 +82,7 @@ async function changeScreenPowerMode() {
         </NIcon>
       </div>
     </div>
-
+    <div data-tauri-drag-region class="drag"></div>
     <div class="nav">
       <div @click="changeScreenPowerMode">
         <NIcon>
@@ -142,11 +142,13 @@ async function changeScreenPowerMode() {
     cursor: pointer;
   }
 
+  .drag{
+    flex-grow: 1;
+    width: 100%;
+  }
+
   .module {
     display: flex;
-    flex: 1;
-    min-height: 0;
-
     flex-direction: column;
 
     & > div {
