@@ -13,7 +13,8 @@ async function maximizeOrRestore() {
 </script>
 
 <template>
-  <div data-tauri-drag-region class="header">
+  <div class="header">
+    <div data-tauri-drag-region class="drag"></div>
     <NButtonGroup>
       <NButton quaternary :focusable="false" @click="getCurrent().minimize()">
         <template #icon>
@@ -48,6 +49,15 @@ async function maximizeOrRestore() {
   justify-content: end;
   align-items: center;
   border-radius: 0 10px 0 0;
+
+  .n-button-group{
+    flex-shrink: 0;
+  }
+
+  .drag{
+    flex-grow: 1;
+    height: 100%;
+  }
 
   .close {
     border-radius: 0 10px 0 0;
