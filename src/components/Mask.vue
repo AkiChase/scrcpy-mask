@@ -27,7 +27,6 @@ const message = useMessage();
 const dialog = useDialog();
 
 const curPageActive = ref(false);
-const screenStreamClientId = genClientId();
 
 onBeforeRouteLeave(() => {
   curPageActive.value = false;
@@ -59,6 +58,7 @@ onActivated(async () => {
 });
 
 onMounted(async () => {
+  store.screenStreamClientId = genClientId();
   await loadLocalStore();
   store.checkUpdate = checkUpdate;
   if (store.checkUpdateAtStart) checkUpdate();
@@ -266,7 +266,7 @@ async function checkUpdate() {
   <template v-if="store.keyMappingConfigList.length">
     <div @contextmenu.prevent class="mask" id="maskElement"></div>
     <ScreenStream
-      :cid="screenStreamClientId"
+      :cid="store.screenStreamClientId"
       v-if="curPageActive && store.controledDevice && store.screenStream.enable"
     />
     <div

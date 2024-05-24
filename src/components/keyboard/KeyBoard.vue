@@ -8,6 +8,7 @@ import KeySkill from "./KeySkill.vue";
 import KeyObservation from "./KeyObservation.vue";
 import KeySight from "./KeySight.vue";
 import KeyFire from "./KeyFire.vue";
+import ScreenStream from "../ScreenStream.vue";
 
 import {
   KeyDirectionalSkill,
@@ -31,6 +32,7 @@ const keyboardStore = useKeyboardStore();
 const dialog = useDialog();
 const message = useMessage();
 
+const curPageActive = ref(false);
 const addButtonPos = ref({ x: 0, y: 0 });
 const addButtonOptions: DropdownOption[] = [
   {
@@ -280,12 +282,14 @@ function resetKeyMappingConfig() {
 }
 
 onActivated(() => {
+  curPageActive.value = true;
   document.addEventListener("keydown", handleKeyDown);
   document.addEventListener("keyup", handleKeyUp);
   document.addEventListener("wheel", handleMouseWheel);
 });
 
 onBeforeRouteLeave(() => {
+  curPageActive.value = false;
   return new Promise((resolve, _) => {
     document.removeEventListener("keydown", handleKeyDown);
     document.removeEventListener("keyup", handleKeyUp);
@@ -316,6 +320,10 @@ onBeforeRouteLeave(() => {
 </script>
 
 <template>
+  <ScreenStream
+    :cid="store.screenStreamClientId"
+    v-if="curPageActive && store.controledDevice && store.screenStream.enable"
+  />
   <div
     v-if="store.keyMappingConfigList.length"
     id="keyboardElement"
