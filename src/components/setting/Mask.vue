@@ -2,7 +2,6 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import {
   NH4,
-  NP,
   NForm,
   NGrid,
   NFormItemGi,
@@ -16,6 +15,7 @@ import {
   NSlider,
   NFormItem,
   NCheckbox,
+  NInput,
 } from "naive-ui";
 import {
   LogicalPosition,
@@ -234,8 +234,47 @@ onUnmounted(() => {
           />
         </NFormItemGi>
       </NGrid>
-      <NP>{{ $t("pages.Setting.Mask.areaTip") }}</NP>
     </NForm>
+
+    <NH4 prefix="bar">设备旋转</NH4>
+    <NFormItem :label="'跟随设备旋转'" label-placement="left">
+      <NCheckbox
+        v-model:checked="store.rotation.enable"
+        @update:checked="localStore.set('rotation', store.rotation)"
+      />
+    </NFormItem>
+    <NGrid :cols="2">
+      <NFormItemGi label="竖屏蒙版高度" label-placement="left">
+        <NInputNumber
+          v-model:value="store.rotation.verticalLength"
+          @update:value="localStore.set('rotation', store.rotation)"
+          :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.w')"
+        />
+      </NFormItemGi>
+      <NFormItemGi label="横屏蒙版宽度" label-placement="left">
+        <NInputNumber
+          v-model:value="store.rotation.horizontalLength"
+          @update:value="localStore.set('rotation', store.rotation)"
+          :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.h')"
+        />
+      </NFormItemGi>
+    </NGrid>
+
+    <NH4 prefix="bar">ScreenStream</NH4>
+    <NFormItem :label="'启用投屏'" label-placement="left">
+      <NCheckbox
+        v-model:checked="store.screenStream.enable"
+        @update:checked="localStore.set('screenStream', store.screenStream)"
+      />
+    </NFormItem>
+    <NFormItem :label="'投屏地址'" label-placement="left">
+      <NInput
+        v-model:value="store.screenStream.address"
+        @update:value="localStore.set('screenStream', store.screenStream)"
+        clearable
+        :placeholder="'请输入 ScreenStream 投屏地址'"
+      />
+    </NFormItem>
   </div>
 </template>
 

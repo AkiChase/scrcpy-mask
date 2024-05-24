@@ -157,8 +157,25 @@ async function loadLocalStore() {
   };
 
   // loading checkUpdateAtStart from local store
-  let checkUpdateAtStart = await localStore.get<boolean>("checkUpdateAtStart");
+  const checkUpdateAtStart = await localStore.get<boolean>(
+    "checkUpdateAtStart"
+  );
   store.checkUpdateAtStart = checkUpdateAtStart ?? true;
+
+  // loading rotation from local store
+  const rotation = await localStore.get<{
+    enable: boolean;
+    verticalLength: number;
+    horizontalLength: number;
+  }>("rotation");
+  if (rotation) store.rotation = rotation;
+
+  // loading screenStream from local store
+  const screenStream = await localStore.get<{
+    enable: boolean;
+    address: string;
+  }>("screenStream");
+  if (screenStream) store.screenStream = screenStream;
 }
 
 async function cleanAfterimage() {
