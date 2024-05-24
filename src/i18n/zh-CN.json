@@ -86,6 +86,17 @@
           "y": "请输入蒙版左上角Y坐标",
           "w": "请输入蒙版宽度",
           "h": "请输入蒙版高度"
+        },
+        "rotation": {
+          "title": "设备旋转",
+          "rotateWithDevice": "跟随设备旋转",
+          "verticalLength": "竖屏蒙版高度",
+          "horizontalLength": "横屏蒙版宽度"
+        },
+        "screenStream": {
+          "enable": "启用投屏",
+          "address": "投屏地址",
+          "addressPlaceholder": "请输入 ScreenStream 投屏地址"
         }
       },
       "Basic": {

@@ -36,7 +36,8 @@
       "wsClose": "Close",
       "wsConnect": "Control",
       "adbDeviceError": "Unable to get available devices",
-      "adbConnectError": "Wireless connection failed"
+      "adbConnectError": "Wireless connection failed",
+      "rotation": "Device rotation {0}°"
     },
     "Mask": {
       "keyconfigException": "The key mapping config is abnormal, please delete this config",
@@ -85,6 +86,17 @@
           "y": "Y coordinate of upper left corner",
           "w": "Mask width",
           "h": "Mask height"
+        },
+        "rotation": {
+          "title": "Device rotation",
+          "rotateWithDevice": "Follow device rotation",
+          "verticalLength": "Mask height in vertical screen",
+          "horizontalLength": "Mask width in horizontal screen "
+        },
+        "screenStream": {
+          "enable": "Enable mirror",
+          "address": "Screen mirror address",
+          "addressPlaceholder": "Please enter the ScreenStream screen mirror address"
         }
       },
       "Basic": {

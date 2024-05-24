@@ -236,43 +236,58 @@ onUnmounted(() => {
       </NGrid>
     </NForm>
 
-    <NH4 prefix="bar">设备旋转</NH4>
-    <NFormItem :label="'跟随设备旋转'" label-placement="left">
+    <NH4 prefix="bar">{{ $t("pages.Setting.Mask.rotation.title") }}</NH4>
+    <NFormItem
+      :label="$t('pages.Setting.Mask.rotation.rotateWithDevice')"
+      label-placement="left"
+    >
       <NCheckbox
         v-model:checked="store.rotation.enable"
         @update:checked="localStore.set('rotation', store.rotation)"
       />
     </NFormItem>
     <NGrid :cols="2">
-      <NFormItemGi label="竖屏蒙版高度" label-placement="left">
+      <NFormItemGi
+        :label="$t('pages.Setting.Mask.rotation.verticalLength')"
+        label-placement="left"
+      >
         <NInputNumber
           v-model:value="store.rotation.verticalLength"
           @update:value="localStore.set('rotation', store.rotation)"
-          :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.w')"
+          :placeholder="$t('pages.Setting.Mask.rotation.verticalLength')"
         />
       </NFormItemGi>
-      <NFormItemGi label="横屏蒙版宽度" label-placement="left">
+      <NFormItemGi
+        :label="$t('pages.Setting.Mask.rotation.horizontalLength')"
+        label-placement="left"
+      >
         <NInputNumber
           v-model:value="store.rotation.horizontalLength"
           @update:value="localStore.set('rotation', store.rotation)"
-          :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.h')"
+          :placeholder="$t('pages.Setting.Mask.rotation.horizontalLength')"
         />
       </NFormItemGi>
     </NGrid>
 
     <NH4 prefix="bar">ScreenStream</NH4>
-    <NFormItem :label="'启用投屏'" label-placement="left">
+    <NFormItem
+      :label="$t('pages.Setting.Mask.screenStream.enable')"
+      label-placement="left"
+    >
       <NCheckbox
         v-model:checked="store.screenStream.enable"
         @update:checked="localStore.set('screenStream', store.screenStream)"
       />
     </NFormItem>
-    <NFormItem :label="'投屏地址'" label-placement="left">
+    <NFormItem
+      :label="$t('pages.Setting.Mask.screenStream.address')"
+      label-placement="left"
+    >
       <NInput
         v-model:value="store.screenStream.address"
         @update:value="localStore.set('screenStream', store.screenStream)"
         clearable
-        :placeholder="'请输入 ScreenStream 投屏地址'"
+        :placeholder="$t('pages.Setting.Mask.screenStream.addressPlaceholder')"
       />
     </NFormItem>
   </div>
