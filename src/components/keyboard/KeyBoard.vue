@@ -139,6 +139,7 @@ function onAddButtonSelect(
   } else return;
   keyboardStore.edited = true;
   store.editKeyMappingList.push(keyMapping as KeyMapping);
+  keyboardStore.activeButtonIndex = store.editKeyMappingList.length - 1;
 }
 
 function isKeyUnique(curKey: string): boolean {
