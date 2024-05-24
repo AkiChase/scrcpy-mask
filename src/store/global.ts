@@ -75,6 +75,20 @@ export const useGlobalStore = defineStore("global", () => {
 
   const keyInputFlag = ref(false);
 
+  const maskSizeW: Ref<number> = ref(0);
+  const maskSizeH: Ref<number> = ref(0);
+
+  const screenStream = ref({
+    enable: false,
+    address: "",
+  });
+
+  const rotation = ref({
+    enable: true,
+    verticalLength: 600,
+    horizontalLength: 800,
+  });
+
   // persistent storage
   const keyMappingConfigList: Ref<KeyMappingConfig[]> = ref([]);
   const curKeyMappingIndex = ref(0);
@@ -92,6 +106,10 @@ export const useGlobalStore = defineStore("global", () => {
     checkUpdateAtStart,
     externalControlled,
     // in-memory storage
+    screenStream,
+    rotation,
+    maskSizeW,
+    maskSizeH,
     screenSizeW,
     screenSizeH,
     keyInputFlag,

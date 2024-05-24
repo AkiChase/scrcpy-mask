@@ -1516,14 +1516,13 @@ export function clearShortcuts() {
 }
 
 export function applyShortcuts(
-  element: HTMLElement,
   keyMappingConfig: KeyMappingConfig,
   globalStore: ReturnType<typeof useGlobalStore>,
   messageAPI: ReturnType<typeof useMessage>,
   i18nT: ReturnType<typeof useI18n>["t"]
 ) {
   store = globalStore;
-  maskElement = element;
+  maskElement = document.getElementById("maskElement") as HTMLElement;
   message = messageAPI;
   t = i18nT;
 

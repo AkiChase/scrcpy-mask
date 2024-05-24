@@ -36,11 +36,9 @@
       "wsClose": "Close",
       "wsConnect": "Control",
       "adbDeviceError": "Unable to get available devices",
-      "adbConnectError": "Wireless connection failed",
-      "deviceRotation": "Device rotation"
+      "adbConnectError": "Wireless connection failed"
     },
     "Mask": {
-      "inputBoxPlaceholder": "Input text and then press enter/esc",
       "keyconfigException": "The key mapping config is abnormal, please delete this config",
       "blankConfig": "Blank config",
       "checkUpdate": {
@@ -77,9 +75,9 @@
         "areaSaved": "Mask area saved",
         "incorrectArea": "Please enter the coordinates and size of the mask correctly",
         "buttonPrompts": "Button prompts",
-        "ifButtonPrompts": "Whether to display",
+        "ifButtonPrompts": "Show key prompts",
         "opacity": "Opacity",
-        "areaAdjust": "Mask adjustment",
+        "areaAdjust": "Mask area",
         "areaPlaceholder": {
           "x": "X coordinate of upper left corner"
         },
@@ -87,8 +85,7 @@
           "y": "Y coordinate of upper left corner",
           "w": "Mask width",
           "h": "Mask height"
-        },
-        "areaTip": "Tip: The mask size and device size will be used for coordinate conversion, please ensure the accuracy of the size"
+        }
       },
       "Basic": {
         "delLocalStore": {
