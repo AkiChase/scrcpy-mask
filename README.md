@@ -1,4 +1,4 @@
-# Scrcpy-mask
+# Scrcpy Mask
 
 [中文介绍](./README-zh.md)
 
@@ -33,6 +33,7 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
 
 ## Demonstration video
 
+- [DNF 手游触屏操作反人类？但又不能在模拟器上玩 DNF 手游？不好意思，Scrcpy Mask “模拟器”的机制遥遥领先](https://www.bilibili.com/video/BV17U411Z7cN/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [如何用电脑玩 FPS 手游？这样的“安卓模拟器”，也不是不可以-哔哩哔哩](https://www.bilibili.com/video/BV1EU411Z7TC/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [M 系列 Mac 电脑玩王者，暃排位实录，使用 Android Stuido 模拟器和开源 Scrcpy Mask 按键映射工具-哔哩哔哩](https://b23.tv/q6iDW1w)
 - [自制跨平台开源项目 Scrcpy Mask ，像模拟器一样用键鼠控制任意安卓设备！以 M 系列芯片 MacBook 打王者为例-哔哩哔哩](https://b23.tv/gqmriXr)
