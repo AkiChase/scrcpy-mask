@@ -4,9 +4,11 @@
 
 本人对 Scrcpy 项目的开发者表示深深的敬意和感谢。Scrcpy 是一个强大而高效的开源工具，极大地方便了对 Android 设备的控制。本项目的实现基于 Scrcpy 的优秀架构，进行了鼠标键盘控制的优化和调整。
 
-**本项目不提供投屏功能，不提供投屏功能，不提供投屏功能！**本项目仅实现了 Scrcpy 的控制协议。
+**本项目不提供 Scrcpy 的投屏功能！本项目仅实现了 Scrcpy 的控制协议。**
 
-原因是投屏会存在延迟和模糊问题，本项目另辟蹊径，直接放弃投屏，而使用透明的蒙版显示窗口背后的内容（可以使用 AVD 、手机厂商提供的低延迟投屏等），从根本上杜绝了 Scrcpy 的投屏体验差的问题。
+原因是投屏会存在延迟和模糊问题，本项目另辟蹊径，直接放弃投屏，而使用透明的蒙版显示窗口背后的内容（可以使用电脑安卓模拟器 、手机厂商提供的低延迟投屏等），从根本上杜绝了 Scrcpy 的投屏体验差的问题。
+
+**如果您确实需要一个开箱即用的投屏功能，并且不在意延迟和性能问题**，可以使用安卓应用 [ScreenStream](https://github.com/dkrivoruchko/ScreenStream) 在局域网内投屏。本项目已适配 ScreenStream 投屏（自 `v0.5.0` 版本起），虽然它的性能可能不太理想，但开箱即用。
 
 除此之外，为了更好的支持 Scrcpy Mask 与安卓设备交互，本人对 scrcpy-server 进行了一些修改，在此扩展出了一个分支项目 [scrcpy-mask-server](https://github.com/AkiChase/scrcpy-mask-server)
 
@@ -21,6 +23,7 @@
 - [x] 更新检查
 - [x] 在按键映射和按键输入之间切换
 - [x] 国际化
+- [x] ScreenStream 投屏
 - [ ] 手柄按键映射
 - [ ] 更好的宏
 - [x] 通过 WebSocket 提供外部控制，见[外部控制](https://github.com/AkiChase/scrcpy-mask-external-control)

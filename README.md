@@ -6,9 +6,11 @@ To achieve computer control of Android devices, I developed a cross-platform des
 
 I express my deep respect and gratitude to the developers of the Scrcpy project. Scrcpy is a powerful and efficient open-source tool that greatly facilitates control over Android devices. This project is built upon the excellent architecture of Scrcpy, with optimizations and adjustments for mouse and keyboard control.
 
-**This project does not provide screen mirroring functionality—let me emphasize, it does not provide screen mirroring functionality!** It only implements the Scrcpy control protocol.
+**This project does not provide Scrcpy's screen mirroring feature! It only implements Scrcpy's control protocol.**
 
 Because screen mirroring may involve latency and blurriness issues, this project takes a different approach by directly abandoning screen mirroring and instead using a transparent mask to display the content behind the window (which can be AVD, low-latency screen mirroring provided by your phone manufacturers, etc.), Completely eliminates the problem of poor screen casting experience inherent in Scrcpy.
+
+**If you really need screen mirroring and don't mind the latency and performance issues,** you can use the Android app [ScreenStream](https://github.com/dkrivoruchko/ScreenStream) for LAN screen mirroring. Scrcpy MAsk has been adapted to work with ScreenStream since version `v0.5.0`. While its performance may leave something to be desired, it is ready to use out of the box.
 
 Furthermore, to better support interaction between Scrcpy Mask and Android devices, I have made some modifications to the scrcpy-server, leading to the creation of a separate branch project called [scrcpy-mask-server](https://github.com/AkiChase/scrcpy-mask-server).
 
@@ -23,6 +25,7 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
 - [x] Update check
 - [x] Toggle between key mapping and key input
 - [x] Internationalization (i18n)
+- [x] ScreenStream screen mirror
 - [ ] Gamepad key mapping
 - [ ] Better macro support
 - [x] Provide external control through websocket, see [external control](https://github.com/AkiChase/scrcpy-mask-external-control)
