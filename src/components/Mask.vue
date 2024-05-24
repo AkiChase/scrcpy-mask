@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, onActivated, onMounted } from "vue";
+import { h, onActivated, onMounted, ref } from "vue";
 import { MessageReactive, NDialog, useDialog, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
@@ -11,6 +11,7 @@ import {
   unlistenToEvent,
 } from "../hotkey";
 import { KeyMappingConfig, KeySteeringWheel } from "../keyMappingConfig";
+import ScreenStream from "./ScreenStream.vue";
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
 import { open } from "@tauri-apps/plugin-shell";
@@ -25,7 +26,11 @@ const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
 
+const curPageActive = ref(false);
+const screenStreamClientId = genClientId();
+
 onBeforeRouteLeave(() => {
+  curPageActive.value = false;
   if (store.controledDevice) {
     unlistenToEvent();
     clearShortcuts();
@@ -34,13 +39,12 @@ onBeforeRouteLeave(() => {
 });
 
 onActivated(async () => {
+  curPageActive.value = true;
   cleanAfterimage();
-  const maskElement = document.getElementById("maskElement") as HTMLElement;
 
   if (store.controledDevice) {
     if (
       applyShortcuts(
-        maskElement,
         store.keyMappingConfigList[store.curKeyMappingIndex],
         store,
         message,
@@ -61,6 +65,13 @@ onMounted(async () => {
   store.checkAdb = checkAdb;
   setTimeout(() => {
     checkAdb();
+    // listen to window resize event
+    const maskElement = document.getElementById("maskElement") as HTMLElement;
+    const appWindow = getCurrent();
+    appWindow.onResized(() => {
+      store.maskSizeH = maskElement.clientHeight;
+      store.maskSizeW = maskElement.clientWidth;
+    });
   }, 500);
 });
 
@@ -77,6 +88,17 @@ async function checkAdb() {
       duration: 0,
     });
   }
+}
+
+function genClientId() {
+  let result = "";
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const charactersLength = characters.length;
+  for (let i = 0; i < 16; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
 }
 
 async function loadLocalStore() {
@@ -135,8 +157,25 @@ async function loadLocalStore() {
   };
 
   // loading checkUpdateAtStart from local store
-  let checkUpdateAtStart = await localStore.get<boolean>("checkUpdateAtStart");
+  const checkUpdateAtStart = await localStore.get<boolean>(
+    "checkUpdateAtStart"
+  );
   store.checkUpdateAtStart = checkUpdateAtStart ?? true;
+
+  // loading rotation from local store
+  const rotation = await localStore.get<{
+    enable: boolean;
+    verticalLength: number;
+    horizontalLength: number;
+  }>("rotation");
+  if (rotation) store.rotation = rotation;
+
+  // loading screenStream from local store
+  const screenStream = await localStore.get<{
+    enable: boolean;
+    address: string;
+  }>("screenStream");
+  if (screenStream) store.screenStream = screenStream;
 }
 
 async function cleanAfterimage() {
@@ -226,6 +265,10 @@ async function checkUpdate() {
   </div>
   <template v-if="store.keyMappingConfigList.length">
     <div @contextmenu.prevent class="mask" id="maskElement"></div>
+    <ScreenStream
+      :cid="screenStreamClientId"
+      v-if="curPageActive && store.controledDevice && store.screenStream.enable"
+    />
     <div
       v-if="store.maskButton.show"
       :style="'--transparency: ' + store.maskButton.transparency"
@@ -344,4 +387,3 @@ async function checkUpdate() {
   }
 }
 </style>
-h, import { getVersion } from "@tauri-apps/api/app";

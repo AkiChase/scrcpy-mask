@@ -37,10 +37,9 @@
       "wsConnect": "Control",
       "adbDeviceError": "Unable to get available devices",
       "adbConnectError": "Wireless connection failed",
-      "deviceRotation": "Device rotation"
+      "rotation": "Device rotation {0}°"
     },
     "Mask": {
-      "inputBoxPlaceholder": "Input text and then press enter/esc",
       "keyconfigException": "The key mapping config is abnormal, please delete this config",
       "blankConfig": "Blank config",
       "checkUpdate": {
@@ -77,9 +76,9 @@
         "areaSaved": "Mask area saved",
         "incorrectArea": "Please enter the coordinates and size of the mask correctly",
         "buttonPrompts": "Button prompts",
-        "ifButtonPrompts": "Whether to display",
+        "ifButtonPrompts": "Show key prompts",
         "opacity": "Opacity",
-        "areaAdjust": "Mask adjustment",
+        "areaAdjust": "Mask area",
         "areaPlaceholder": {
           "x": "X coordinate of upper left corner"
         },
@@ -88,7 +87,17 @@
           "w": "Mask width",
           "h": "Mask height"
         },
-        "areaTip": "Tip: The mask size and device size will be used for coordinate conversion, please ensure the accuracy of the size"
+        "rotation": {
+          "title": "Device rotation",
+          "rotateWithDevice": "Follow device rotation",
+          "verticalLength": "Mask height in vertical screen",
+          "horizontalLength": "Mask width in horizontal screen "
+        },
+        "screenStream": {
+          "enable": "Enable mirror",
+          "address": "Screen mirror address",
+          "addressPlaceholder": "Please enter the ScreenStream screen mirror address"
+        }
       },
       "Basic": {
         "delLocalStore": {

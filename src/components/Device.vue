@@ -44,6 +44,7 @@ import { shutdown } from "../frontcommand/scrcpyMaskCmd";
 import { useGlobalStore } from "../store/global";
 import { useI18n } from "vue-i18n";
 import { closeExternalControl, connectExternalControl } from "../websocket";
+import { LogicalSize, getCurrent } from "@tauri-apps/api/window";
 
 const { t } = useI18n();
 const dialog = useDialog();
@@ -79,7 +80,19 @@ onMounted(async () => {
           } else {
             store.screenSizeW = payload.width;
             store.screenSizeH = payload.height;
-            message.info(t("pages.Device.deviceRotation"));
+            message.info(t("pages.Device.rotation", [payload.rotation * 90]));
+          }
+          if (store.rotation.enable) {
+            let maskW: number;
+            let maskH: number;
+            if (payload.width >= payload.height) {
+              maskW = Math.round(store.rotation.horizontalLength);
+              maskH = Math.round(maskW * (payload.height / payload.width));
+            } else {
+              maskH = Math.round(store.rotation.verticalLength);
+              maskW = Math.round(maskH * (payload.width / payload.height));
+            }
+            getCurrent().setSize(new LogicalSize(maskW + 70, maskH + 30));
           }
           break;
         default:

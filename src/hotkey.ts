@@ -24,7 +24,6 @@ import {
 import { useGlobalStore } from "./store/global";
 import { LogicalPosition, getCurrent } from "@tauri-apps/api/window";
 import { useI18n } from "vue-i18n";
-import { UnlistenFn } from "@tauri-apps/api/event";
 import { KeyToCodeMap } from "./frontcommand/KeyToCodeMap";
 import {
   AndroidKeyEventAction,
@@ -36,13 +35,13 @@ import { sendInjectKeycode } from "./frontcommand/controlMsg";
 function clientxToPosx(clientx: number) {
   return clientx < 70
     ? 0
-    : Math.floor((clientx - 70) * (store.screenSizeW / maskSizeW));
+    : Math.floor((clientx - 70) * (store.screenSizeW / store.maskSizeW));
 }
 
 function clientyToPosy(clienty: number) {
   return clienty < 30
     ? 0
-    : Math.floor((clienty - 30) * (store.screenSizeH / maskSizeH));
+    : Math.floor((clienty - 30) * (store.screenSizeH / store.maskSizeH));
 }
 
 function clientxToPosOffsetx(clientx: number, posx: number, scale = 1) {
@@ -59,6 +58,9 @@ function clientPosToSkillOffset(
   clientPos: { x: number; y: number },
   range: number
 ): { offsetX: number; offsetY: number } {
+  const maskSizeH = store.maskSizeH;
+  const maskSizeW = store.maskSizeW;
+
   const maxLength = (120 / maskSizeH) * store.screenSizeH;
   const centerX = maskSizeW * 0.5;
   const centerY = maskSizeH * 0.5;
@@ -1511,48 +1513,30 @@ export function clearShortcuts() {
   loopDownKeyCBMap.clear();
   upKeyCBMap.clear();
   cancelAbleKeyList.length = 0;
-
-  // unlisten to resize
-  unlistenResize();
 }
 
 export function applyShortcuts(
-  element: HTMLElement,
   keyMappingConfig: KeyMappingConfig,
   globalStore: ReturnType<typeof useGlobalStore>,
   messageAPI: ReturnType<typeof useMessage>,
   i18nT: ReturnType<typeof useI18n>["t"]
 ) {
   store = globalStore;
-  maskElement = element;
+  maskElement = document.getElementById("maskElement") as HTMLElement;
   message = messageAPI;
   t = i18nT;
-
-  maskSizeW = maskElement.clientWidth;
-  maskSizeH = maskElement.clientHeight;
-  // listen to resize to update mask size
-  getCurrent()
-    .onResized(() => {
-      maskSizeW = maskElement.clientWidth;
-      maskSizeH = maskElement.clientHeight;
-    })
-    .then((f) => (unlistenResize = f));
 
   addClickShortcuts("M0", 0);
 
   return applyKeyMappingConfigShortcuts(keyMappingConfig);
 }
 
-let maskSizeW: number;
-let maskSizeH: number;
 let mouseX = 0;
 let mouseY = 0;
 let store: ReturnType<typeof useGlobalStore>;
 let maskElement: HTMLElement;
 let message: ReturnType<typeof useMessage>;
 let t: ReturnType<typeof useI18n>["t"];
-
-let unlistenResize: UnlistenFn;
 
 const downKeyMap: Map<string, boolean> = new Map();
 const downKeyCBMap: Map<string, () => Promise<void>> = new Map();
