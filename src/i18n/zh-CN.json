@@ -37,7 +37,7 @@
       "wsConnect": "控制",
       "adbDeviceError": "无法获取可用设备",
       "adbConnectError": "无线连接失败",
-      "deviceRotation": "设备旋转"
+      "rotation": "设备旋转 {0}°"
     },
     "Mask": {
       "keyconfigException": "按键方案异常，请删除此方案",
@@ -56,7 +56,6 @@
         "content": "请前往设备页面，控制任意设备",
         "positiveText": "去控制"
       },
-      "inputBoxPlaceholder": "输入文本后按Enter/Esc",
       "sightMode": "鼠标已锁定, 按 {0} 键解锁",
       "checkAdb": "adb不可用，软件无法正常运行，请确保系统已安装adb，并正确添加到了Path环境变量中: {0}",
       "keyInputMode": "已进入按键输入模式，关闭本消息可退出"
@@ -71,9 +70,9 @@
         "incorrectArea": "请正确输入蒙版的坐标和尺寸",
         "areaSaved": "蒙版区域已保存",
         "buttonPrompts": "按键提示",
-        "ifButtonPrompts": "是否显示",
+        "ifButtonPrompts": "显示按键提示",
         "opacity": "不透明度",
-        "areaAdjust": "蒙版调整",
+        "areaAdjust": "蒙版区域",
         "areaPlaceholder": {
           "x": "左上角X坐标"
         },
@@ -82,12 +81,22 @@
           "w": "蒙版宽度",
           "h": "蒙版高度"
         },
-        "areaTip": "提示：蒙版尺寸与设备尺寸将用于坐标转换，请保证尺寸的准确性",
         "areaFormMissing": {
           "x": "请输入蒙版左上角X坐标",
           "y": "请输入蒙版左上角Y坐标",
           "w": "请输入蒙版宽度",
           "h": "请输入蒙版高度"
+        },
+        "rotation": {
+          "title": "设备旋转",
+          "rotateWithDevice": "跟随设备旋转",
+          "verticalLength": "竖屏蒙版高度",
+          "horizontalLength": "横屏蒙版宽度"
+        },
+        "screenStream": {
+          "enable": "启用投屏",
+          "address": "投屏地址",
+          "addressPlaceholder": "请输入 ScreenStream 投屏地址"
         }
       },
       "Basic": {

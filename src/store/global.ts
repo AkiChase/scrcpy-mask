@@ -75,6 +75,11 @@ export const useGlobalStore = defineStore("global", () => {
 
   const keyInputFlag = ref(false);
 
+  const maskSizeW: Ref<number> = ref(0);
+  const maskSizeH: Ref<number> = ref(0);
+
+  const screenStreamClientId = ref("scrcpy-mask");
+
   // persistent storage
   const keyMappingConfigList: Ref<KeyMappingConfig[]> = ref([]);
   const curKeyMappingIndex = ref(0);
@@ -84,6 +89,17 @@ export const useGlobalStore = defineStore("global", () => {
   });
   const checkUpdateAtStart = ref(true);
 
+  const screenStream = ref({
+    enable: false,
+    address: "",
+  });
+
+  const rotation = ref({
+    enable: true,
+    verticalLength: 600,
+    horizontalLength: 800,
+  });
+
   return {
     // persistent storage
     keyMappingConfigList,
@@ -91,7 +107,12 @@ export const useGlobalStore = defineStore("global", () => {
     maskButton,
     checkUpdateAtStart,
     externalControlled,
+    screenStream,
+    rotation,
     // in-memory storage
+    screenStreamClientId,
+    maskSizeW,
+    maskSizeH,
     screenSizeW,
     screenSizeH,
     keyInputFlag,

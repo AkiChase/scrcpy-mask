@@ -33,6 +33,8 @@ export async function getCurClientInfo(): Promise<{
   device_name: string;
   device_id: string;
   scid: string;
+  width: number;
+  height: number;
 } | null> {
   return await invoke("get_cur_client_info");
 }
