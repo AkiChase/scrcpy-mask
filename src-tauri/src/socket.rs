@@ -166,6 +166,12 @@ async fn handle_device_message(
                 "height": height
             })
             .to_string();
+            share::CLIENT_INFO
+                .lock()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .set_size(width, height);
             device_reply_sender.send(msg).await?;
         }
     };

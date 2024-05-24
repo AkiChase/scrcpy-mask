@@ -118,6 +118,8 @@ onActivated(async () => {
     // restore controledDevice if client exists
     if (curClientInfo) {
       message.warning(t("pages.Device.alreadyControled"));
+      store.screenSizeW = curClientInfo.width;
+      store.screenSizeH = curClientInfo.height;
       store.controledDevice = {
         scid: curClientInfo.scid,
         deviceName: curClientInfo.device_name,
