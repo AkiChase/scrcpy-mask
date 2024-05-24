@@ -67,7 +67,7 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
 1. Install software suitable for your system platform from [releases](https://github.com/AkiChase/scrcpy-mask/releases)
 2. Identify your Android device type
    1. For physical devices like phones or tablets
-      1. You need to solve the problem of screen casting on your own. Recommend using the official screen mirror method of your device brand to achieve the minimum delay
+      1. You need to solve the problem of screen casting on your own. Recommend using the official screen mirror method of your device brand to achieve the minimum delay. Since `v0.5.0` version, it can be used with [ScreenStream](https://github.com/dkrivoruchko/ScreenStream) to cast screen under the same LAN.
       2. Enable ADB debugging on your device via USB or wirelessly, then connect it to your computer.
    2. For emulator, you don't need screen mirror, and emulator generally default to enabling ADB wired debugging. So this is the best way for game, I think.
 3. Launch the software and navigate to the Device page.
