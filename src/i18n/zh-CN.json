@@ -13,7 +13,6 @@
         "screen": "获取屏幕尺寸"
       },
       "deviceControl": {
-        "closeCurDevice": "请先关闭当前控制设备",
         "controlInfo": "正在启动控制服务，请保持设备亮屏",
         "connectTimeout": "设备连接超时"
       },
@@ -37,7 +36,13 @@
       "wsConnect": "控制",
       "adbDeviceError": "无法获取可用设备",
       "adbConnectError": "无线连接失败",
-      "rotation": "设备旋转 {0}°"
+      "rotation": "设备旋转 {0}°",
+      "clipboard": {
+        "deviceSync": {
+          "success": "已从设备同步剪切板",
+          "failed": "从设备同步剪切板失败"
+        }
+      }
     },
     "Mask": {
       "keyconfigException": "按键方案异常，请删除此方案",

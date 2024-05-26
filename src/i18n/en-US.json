@@ -14,7 +14,6 @@
         "screen": "Get screen size"
       },
       "deviceControl": {
-        "closeCurDevice": "Please close the current control device first",
         "controlInfo": "The control service is starting. Please keep the device screen on.",
         "connectTimeout": "Device connection timeout"
       },
@@ -37,7 +36,13 @@
       "wsConnect": "Control",
       "adbDeviceError": "Unable to get available devices",
       "adbConnectError": "Wireless connection failed",
-      "rotation": "Device rotation {0}°"
+      "rotation": "Device rotation {0}°",
+      "clipboard": {
+        "deviceSync": {
+          "success": "Device clipboard synced",
+          "failed": "Device clipboard sync failed"
+        }
+      }
     },
     "Mask": {
       "keyconfigException": "The key mapping config is abnormal, please delete this config",

@@ -1,4 +1,4 @@
-# Scrcpy-mask
+# Scrcpy Mask
 
 [中文介绍](./README-zh.md)
 
@@ -33,6 +33,7 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
 
 ## Demonstration video
 
+- [DNF 手游触屏操作反人类？但又不能在模拟器上玩 DNF 手游？不好意思，Scrcpy Mask “模拟器”的机制遥遥领先](https://www.bilibili.com/video/BV17U411Z7cN/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [如何用电脑玩 FPS 手游？这样的“安卓模拟器”，也不是不可以-哔哩哔哩](https://www.bilibili.com/video/BV1EU411Z7TC/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [M 系列 Mac 电脑玩王者，暃排位实录，使用 Android Stuido 模拟器和开源 Scrcpy Mask 按键映射工具-哔哩哔哩](https://b23.tv/q6iDW1w)
 - [自制跨平台开源项目 Scrcpy Mask ，像模拟器一样用键鼠控制任意安卓设备！以 M 系列芯片 MacBook 打王者为例-哔哩哔哩](https://b23.tv/gqmriXr)
@@ -66,7 +67,7 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
 1. Install software suitable for your system platform from [releases](https://github.com/AkiChase/scrcpy-mask/releases)
 2. Identify your Android device type
    1. For physical devices like phones or tablets
-      1. You need to solve the problem of screen casting on your own. Recommend using the official screen mirror method of your device brand to achieve the minimum delay
+      1. You need to solve the problem of screen casting on your own. Recommend using the official screen mirror method of your device brand to achieve the minimum delay. Since `v0.5.0` version, it can be used with [ScreenStream](https://github.com/dkrivoruchko/ScreenStream) to cast screen under the same LAN.
       2. Enable ADB debugging on your device via USB or wirelessly, then connect it to your computer.
    2. For emulator, you don't need screen mirror, and emulator generally default to enabling ADB wired debugging. So this is the best way for game, I think.
 3. Launch the software and navigate to the Device page.

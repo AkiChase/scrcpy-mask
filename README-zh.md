@@ -1,4 +1,4 @@
-# Scrcpy-mask
+# Scrcpy Mask
 
 为了实现电脑控制安卓设备，本人使用 Tarui + Vue 3 + Rust 开发了一款跨平台桌面客户端。该客户端能够提供可视化的鼠标和键盘按键映射配置。通过按键映射实现了实现类似安卓模拟器的多点触控操作，具有毫秒级响应速度。该工具可广泛用于电脑控制安卓设备玩手游等等，提供流畅的触控体验。
 
@@ -31,6 +31,7 @@
 
 ## 视频演示
 
+- [DNF 手游触屏操作反人类？但又不能在模拟器上玩 DNF 手游？不好意思，Scrcpy Mask “模拟器”的机制遥遥领先](https://www.bilibili.com/video/BV17U411Z7cN/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [如何用电脑玩 FPS 手游？这样的“安卓模拟器”，也不是不可以-哔哩哔哩](https://www.bilibili.com/video/BV1EU411Z7TC/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [M 系列 Mac 电脑玩王者，暃排位实录，使用 Android Stuido 模拟器和开源 Scrcpy Mask 按键映射工具-哔哩哔哩](https://b23.tv/q6iDW1w)
 - [自制跨平台开源项目 Scrcpy Mask ，像模拟器一样用键鼠控制任意安卓设备！以 M 系列芯片 MacBook 打王者为例-哔哩哔哩](https://b23.tv/gqmriXr)
@@ -64,9 +65,9 @@
 1. 从 [releases](https://github.com/AkiChase/scrcpy-mask/releases) 中安装适合你系统平台的软件包
 2. 确认你的安卓设备类型
    1. 对于手机或平板电脑等物理设备
-      1. 你需要自己解决投屏的问题。推荐使用设备品牌的官方投屏方式，这样一般延迟最小。
+      1. 你需要自己解决投屏的问题。推荐使用设备品牌的官方投屏方式，这样一般延迟最小。自 `v0.5.0` 版本起，可以配合[ScreenStream](https://github.com/dkrivoruchko/ScreenStream)在同一局域网下投屏。
       2. 通过 USB 或无线方式在设备上启用 ADB 调试，然后将其连接到电脑。
-   2. 对于模拟器，不仅不需要投屏，而且模拟器通常默认启用 ADB 有线调试。所以几乎不用操作就能获得最好的体验。
+   2. 对于模拟器，不仅不需要投屏，而且模拟器通常默认已经启用了 ADB 有线调试。所以几乎不用操作就能获得最好的体验。
 3. 启动软件并导航到设备页面。
    1. 在可用的设备中查找你的设备(如果未找到，请自行搜索如何为安装设备启用 ADB 调试)。
    2. 右击设备并选择“控制此设备”。

@@ -60,6 +60,8 @@ let deviceWaitForMetadataTask: ((deviceName: string) => void) | null = null;
 let deviceWaitForScreenSizeTask: ((w: number, h: number) => void) | null = null;
 
 let unlisten: UnlistenFn | undefined;
+let lastClipboard = "";
+
 onMounted(async () => {
   unlisten = await listen("device-reply", (event) => {
     try {
@@ -69,10 +71,19 @@ onMounted(async () => {
           deviceWaitForMetadataTask?.(payload.deviceName);
           break;
         case "ClipboardChanged":
-          console.log("ClipboardChanged", payload.clipboard);
+          if (payload.clipboard === lastClipboard) break;
+          lastClipboard = payload.clipboard;
+          navigator.clipboard
+            .writeText(payload.clipboard)
+            .then(() => {
+              message.info(t("pages.Device.clipboard.deviceSync.success"));
+            })
+            .catch((e) => {
+              console.error(e);
+              message.error(t("pages.Device.clipboard.deviceSync.failed"));
+            });
           break;
         case "ClipboardSetAck":
-          console.log("ClipboardSetAck", payload.sequence);
           break;
         case "DeviceRotation":
           if (deviceWaitForScreenSizeTask) {
@@ -222,7 +233,7 @@ function onMenuClickoutside() {
 async function deviceControl() {
   let curClientInfo = await getCurClientInfo();
   if (curClientInfo) {
-    message.warning(t("pages.Device.alreadyControled"));
+    message.error(t("pages.Device.alreadyControled"));
     store.controledDevice = {
       scid: curClientInfo.scid,
       deviceName: curClientInfo.device_name,
@@ -234,12 +245,6 @@ async function deviceControl() {
 
   if (!port.value) {
     port.value = 27183;
-  }
-
-  if (store.controledDevice) {
-    message.error(t("pages.Device.deviceControl.closeCurDevice"));
-    store.hideLoading();
-    return;
   }
 
   message.info(t("pages.Device.deviceControl.controlInfo"));
