@@ -178,7 +178,7 @@ onUnmounted(() => {
     <NFormItem :label="$t('pages.Setting.Mask.opacity')" label-placement="left">
       <NSlider
         v-model:value="store.maskButton.transparency"
-        @update:checked="localStore.set('maskButton', store.maskButton)"
+        @update:value="localStore.set('maskButton', store.maskButton)"
         :min="0"
         :max="1"
         :step="0.01"
