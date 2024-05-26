@@ -14,7 +14,6 @@
         "screen": "Get screen size"
       },
       "deviceControl": {
-        "closeCurDevice": "Please close the current control device first",
         "controlInfo": "The control service is starting. Please keep the device screen on.",
         "connectTimeout": "Device connection timeout"
       },

@@ -13,7 +13,6 @@
         "screen": "获取屏幕尺寸"
       },
       "deviceControl": {
-        "closeCurDevice": "请先关闭当前控制设备",
         "controlInfo": "正在启动控制服务，请保持设备亮屏",
         "connectTimeout": "设备连接超时"
       },
