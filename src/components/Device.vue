@@ -76,15 +76,14 @@ onMounted(async () => {
           navigator.clipboard
             .writeText(payload.clipboard)
             .then(() => {
-              message.info("Device clipboard synced");
+              message.info(t("pages.Device.clipboard.deviceSync.success"));
             })
             .catch((e) => {
               console.error(e);
-              message.error("Device clipboard sync failed");
+              message.error(t("pages.Device.clipboard.deviceSync.failed"));
             });
           break;
         case "ClipboardSetAck":
-          console.log("ClipboardSetAck", payload.sequence);
           break;
         case "DeviceRotation":
           if (deviceWaitForScreenSizeTask) {
