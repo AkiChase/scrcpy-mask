@@ -62,7 +62,7 @@
         "positiveText": "去控制"
       },
       "sightMode": "鼠标已锁定, 按 {0} 键解锁",
-      "checkAdb": "adb不可用，软件无法正常运行，请确保系统已安装adb，并正确添加到了Path环境变量中: {0}",
+      "checkAdb": "adb不可用，软件无法正常运行，请确保系统已安装adb。请将adb文件路径填入软件设置界面，或者将其所在文件夹添加到Path环境变量中: {0}",
       "keyInputMode": "已进入按键输入模式，关闭本消息可退出"
     },
     "Setting": {

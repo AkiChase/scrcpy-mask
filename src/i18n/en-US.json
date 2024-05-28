@@ -62,7 +62,7 @@
         "positiveText": "To control"
       },
       "sightMode": "Mouse is locked, press {0} to unlock",
-      "checkAdb": "adb is not available and the software cannot run normally. Please ensure that adb is installed on the system and added to the Path environment variable correctly: {0}",
+      "checkAdb": "adb is not available and the software cannot run normally. Fill in the path of the adb file in the setup page, or add the folder where it is located to the Path environment variable.: {0}",
       "keyInputMode": "Has entered the keystroke input mode, close this message to exit."
     },
     "Setting": {
