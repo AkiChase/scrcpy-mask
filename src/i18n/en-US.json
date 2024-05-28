@@ -63,7 +63,8 @@
       "tabs": {
         "basic": "Basic settings",
         "mask": "Mask setting",
-        "about": "About"
+        "about": "About",
+        "data": "Data management"
       },
       "Mask": {
         "areaFormMissing": {
@@ -99,6 +100,15 @@
         }
       },
       "Basic": {
+        "language": "Language",
+        "adbPath": {
+          "placeholder": "adb path",
+          "set": "Save",
+          "setSuccess": "adb path set successfully",
+          "title": "adb path"
+        }
+      },
+      "Data": {
         "delLocalStore": {
           "dialog": {
             "title": "Warning",
@@ -109,15 +119,8 @@
           },
           "warning": "Deleting data may lead to unpredictable consequences, so please operate with caution. \nIf an exception occurs, please try clearing the data and restarting the software."
         },
-        "language": "Language",
         "localStore": "Local data",
-        "delCurData": "Delete current data",
-        "adbPath": {
-          "placeholder": "adb path",
-          "set": "Save",
-          "setSuccess": "adb path set successfully",
-          "title": "adb path"
-        }
+        "delCurData": "Delete current data"
       },
       "About": {
         "introduction": "A Scrcpy client in Rust & Tarui aimed at providing mouse and key mapping to control Android device.",

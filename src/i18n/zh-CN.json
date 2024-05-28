@@ -63,7 +63,8 @@
       "tabs": {
         "basic": "基本设置",
         "mask": "蒙版设置",
-        "about": "关于"
+        "about": "关于",
+        "data": "数据管理"
       },
       "Mask": {
         "incorrectArea": "请正确输入蒙版的坐标和尺寸",
@@ -99,6 +100,15 @@
         }
       },
       "Basic": {
+        "language": "语言",
+        "adbPath": {
+          "setSuccess": "adb 路径设置成功",
+          "title": "adb 路径",
+          "placeholder": "adb 路径",
+          "set": "设置"
+        }
+      },
+      "Data": {
         "delLocalStore": {
           "dialog": {
             "title": "警告",
@@ -109,15 +119,8 @@
           },
           "warning": "删除数据可能导致无法预料的后果，请慎重操作。若出现异常请尝试清空数据并重启软件。"
         },
-        "language": "语言",
         "localStore": "本地数据",
-        "delCurData": "删除当前数据",
-        "adbPath": {
-          "setSuccess": "adb 路径设置成功",
-          "title": "adb 路径",
-          "placeholder": "adb 路径",
-          "set": "设置"
-        }
+        "delCurData": "删除当前数据"
       },
       "About": {
         "about": "关于",

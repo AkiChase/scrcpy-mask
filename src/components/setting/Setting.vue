@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Basic from "./Basic.vue";
 import Mask from "./Mask.vue";
+import Data from "./Data.vue";
 import About from "./About.vue";
 import { NTabs, NTabPane, NScrollbar, NSpin } from "naive-ui";
 import { useGlobalStore } from "../../store/global";
@@ -20,6 +21,11 @@ const store = useGlobalStore();
         <NTabPane :tab="$t('pages.Setting.tabs.mask')" name="mask">
           <NScrollbar>
             <Mask />
+          </NScrollbar>
+        </NTabPane>
+        <NTabPane :tab="$t('pages.Setting.tabs.data')" name="data">
+          <NScrollbar>
+            <Data />
           </NScrollbar>
         </NTabPane>
         <NTabPane :tab="$t('pages.Setting.tabs.about')" name="about">
