@@ -63,7 +63,6 @@ let deviceWaitForScreenSizeTask: ((w: number, h: number) => void) | null = null;
 let unlisten: UnlistenFn | undefined;
 let lastClipboard = "";
 
-// TODO 1. 窗口激活时剪切板同步到设备 2. 为剪切板同步设置两个选项
 // TODO 添加一个滑动的按键，相当于调用swipe，难点在于如何设定多个坐标点
 // 当滑动按键激活时
 // 1. 使用svg的polyline，可见gpt配合vue来渲染直线
