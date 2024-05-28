@@ -19,6 +19,7 @@ import { loadDefaultKeyconfig } from "../../invoke";
 import { KeyMappingConfig } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 import { useI18n } from "vue-i18n";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -251,8 +252,7 @@ function renameKeyMappingConfig() {
 function exportKeyMappingConfig() {
   const config = store.keyMappingConfigList[store.curKeyMappingIndex];
   const data = JSON.stringify(config, null, 2);
-  navigator.clipboard
-    .writeText(data)
+  writeText(data)
     .then(() => {
       message.success(t("pages.KeyBoard.KeySetting.exportSuccess"));
     })

@@ -23,6 +23,7 @@ import {
 } from "./keyMappingConfig";
 import { useGlobalStore } from "./store/global";
 import { LogicalPosition, getCurrent } from "@tauri-apps/api/window";
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { useI18n } from "vue-i18n";
 import { KeyToCodeMap } from "./frontcommand/KeyToCodeMap";
 import {
@@ -30,7 +31,7 @@ import {
   AndroidMetastate,
 } from "./frontcommand/android";
 import { UIEventsCode } from "./frontcommand/UIEventsCode";
-import { sendInjectKeycode } from "./frontcommand/controlMsg";
+import { sendInjectKeycode, sendSetClipboard } from "./frontcommand/controlMsg";
 
 function clientxToPosx(clientx: number) {
   return clientx < 70
@@ -1046,6 +1047,8 @@ export class KeyInputHandler {
     let action: AndroidKeyEventAction;
     let repeatCount = 0;
     if (event.type === "keydown") {
+      if (event.getModifierState("Control") && event.code === "KeyV") return;
+
       action = AndroidKeyEventAction.AKEY_EVENT_ACTION_DOWN;
       if (event.repeat) {
         let count = KeyInputHandler.repeatCounter.get(keycode);
@@ -1058,6 +1061,18 @@ export class KeyInputHandler {
         KeyInputHandler.repeatCounter.set(keycode, count);
       }
     } else if (event.type === "keyup") {
+      if (event.getModifierState("Control") && event.code === "KeyV") {
+        (async () => {
+          const text = await readText();
+          await sendSetClipboard({
+            sequence: Math.floor(Math.random() * 10000),
+            text,
+            paste: true,
+          });
+        })();
+        return;
+      }
+
       action = AndroidKeyEventAction.AKEY_EVENT_ACTION_UP;
       KeyInputHandler.repeatCounter.delete(keycode);
     } else {
@@ -1078,12 +1093,6 @@ export class KeyInputHandler {
         ? AndroidMetastate.AMETA_NUM_LOCK_ON
         : 0);
 
-    // const controlMessage = new KeyCodeControlMessage(
-    //   action,
-    //   keyCode,
-    //   repeatCount,
-    //   metaState
-    // );
     sendInjectKeycode({
       action,
       keycode,

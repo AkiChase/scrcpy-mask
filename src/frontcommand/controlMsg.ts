@@ -163,13 +163,13 @@ interface InjectKeycode {
   metastate: AndroidMetastate;
 }
 
-enum ScCopyKey {
+export enum ScCopyKey {
   SC_COPY_KEY_NONE,
   SC_COPY_KEY_COPY,
   SC_COPY_KEY_CUT,
 }
 
-enum ScScreenPowerMode {
+export enum ScScreenPowerMode {
   // see <https://android.googlesource.com/platform/frameworks/base.git/+/pie-release-2/core/java/android/view/SurfaceControl.java#305>
   SC_SCREEN_POWER_MODE_OFF = 0,
   SC_SCREEN_POWER_MODE_NORMAL = 2,

@@ -181,6 +181,7 @@ fn set_adb_path(adb_path: String, app: tauri::AppHandle) -> Result<(), String> {
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
