@@ -100,6 +100,11 @@ export const useGlobalStore = defineStore("global", () => {
     horizontalLength: 800,
   });
 
+  const clipboardSync = ref({
+    syncFromDevice: true,
+    pasteFromPC: true,
+  });
+
   return {
     // persistent storage
     keyMappingConfigList,
@@ -109,6 +114,7 @@ export const useGlobalStore = defineStore("global", () => {
     externalControlled,
     screenStream,
     rotation,
+    clipboardSync,
     // in-memory storage
     screenStreamClientId,
     maskSizeW,
