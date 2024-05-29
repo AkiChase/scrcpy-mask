@@ -17,6 +17,7 @@ import {
   KeyObservation,
   KeySight,
   KeySteeringWheel,
+  KeySwipe,
   KeyTap,
   KeyTriggerWhenDoublePressedSkill,
   KeyTriggerWhenPressedSkill,
@@ -948,6 +949,37 @@ function addSightShortcuts(
   });
 }
 
+function addSwipeShortcuts(
+  key: string,
+  relativeSize: { w: number; h: number },
+  // pos relative to the mask
+  pos: { x: number; y: number }[],
+  pointerId: number,
+  intervalBetweenPos: number
+) {
+  for (const posObj of pos) {
+    posObj.x = Math.round((posObj.x / relativeSize.w) * store.screenSizeW);
+    posObj.y = Math.round((posObj.y / relativeSize.h) * store.screenSizeH);
+  }
+  addShortcut(
+    key,
+    async () => {
+      await swipe({
+        action: SwipeAction.Default,
+        pointerId,
+        screen: {
+          w: store.screenSizeW,
+          h: store.screenSizeH,
+        },
+        pos,
+        intervalBetweenPos,
+      });
+    },
+    undefined,
+    undefined
+  );
+}
+
 function createMouseRangeBox(): HTMLElement {
   const box = document.createElement("div");
   box.id = "mouseRangeBox";
@@ -1385,6 +1417,16 @@ function applyKeyMappingConfigShortcuts(
             item.posX,
             item.posY,
             item.pointerId
+          );
+          break;
+        case "Swipe":
+          asType<KeySwipe>(item);
+          addSwipeShortcuts(
+            item.key,
+            relativeSize,
+            item.pos,
+            item.pointerId,
+            item.intervalBetweenPos
           );
           break;
         case "TriggerWhenPressedSkill":
