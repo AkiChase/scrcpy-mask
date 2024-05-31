@@ -45,6 +45,7 @@ import { useGlobalStore } from "../store/global";
 import { useI18n } from "vue-i18n";
 import { closeExternalControl, connectExternalControl } from "../websocket";
 import { LogicalSize, getCurrent } from "@tauri-apps/api/window";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 const { t } = useI18n();
 const dialog = useDialog();
@@ -73,15 +74,8 @@ onMounted(async () => {
         case "ClipboardChanged":
           if (payload.clipboard === lastClipboard) break;
           lastClipboard = payload.clipboard;
-          navigator.clipboard
-            .writeText(payload.clipboard)
-            .then(() => {
-              message.info(t("pages.Device.clipboard.deviceSync.success"));
-            })
-            .catch((e) => {
-              console.error(e);
-              message.error(t("pages.Device.clipboard.deviceSync.failed"));
-            });
+          writeText(payload.clipboard);
+          console.log(payload);
           break;
         case "ClipboardSetAck":
           break;

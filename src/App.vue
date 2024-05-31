@@ -58,4 +58,9 @@ onMounted(async () => {
   width: 100%;
   height: 100%;
 }
+
+.n-message {
+  user-select: none;
+  -webkit-user-select: none;
+}
 </style>

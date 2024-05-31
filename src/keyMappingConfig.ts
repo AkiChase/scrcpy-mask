@@ -65,6 +65,14 @@ export interface KeyTap extends KeyBase {
   time: number;
 }
 
+export interface KeySwipe extends KeyBase {
+  type: "Swipe";
+  pointerId: number;
+  key: string;
+  pos: { x: number; y: number }[];
+  intervalBetweenPos: number;
+}
+
 export type KeyMacroList = Array<{
   type: "touch" | "sleep" | "swipe" | "key-input-mode";
   args: any[];
@@ -106,6 +114,7 @@ export type KeyMapping =
   | KeyMacro
   | KeyCancelSkill
   | KeyTap
+  | KeySwipe
   | KeySight
   | KeyFire;
 

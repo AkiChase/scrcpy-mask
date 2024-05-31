@@ -36,13 +36,7 @@
       "wsConnect": "控制",
       "adbDeviceError": "无法获取可用设备",
       "adbConnectError": "无线连接失败",
-      "rotation": "设备旋转 {0}°",
-      "clipboard": {
-        "deviceSync": {
-          "success": "已从设备同步剪切板",
-          "failed": "从设备同步剪切板失败"
-        }
-      }
+      "rotation": "设备旋转 {0}°"
     },
     "Mask": {
       "keyconfigException": "按键方案异常，请删除此方案",
@@ -62,14 +56,15 @@
         "positiveText": "去控制"
       },
       "sightMode": "鼠标已锁定, 按 {0} 键解锁",
-      "checkAdb": "adb不可用，软件无法正常运行，请确保系统已安装adb，并正确添加到了Path环境变量中: {0}",
+      "checkAdb": "adb不可用，软件无法正常运行，请确保系统已安装adb。请将adb文件路径填入软件设置界面，或者将其所在文件夹添加到Path环境变量中: {0}",
       "keyInputMode": "已进入按键输入模式，关闭本消息可退出"
     },
     "Setting": {
       "tabs": {
         "basic": "基本设置",
         "mask": "蒙版设置",
-        "about": "关于"
+        "about": "关于",
+        "data": "数据管理"
       },
       "Mask": {
         "incorrectArea": "请正确输入蒙版的坐标和尺寸",
@@ -105,6 +100,15 @@
         }
       },
       "Basic": {
+        "language": "语言",
+        "adbPath": {
+          "setSuccess": "adb 路径设置成功",
+          "title": "adb 路径",
+          "placeholder": "adb 路径",
+          "set": "设置"
+        }
+      },
+      "Data": {
         "delLocalStore": {
           "dialog": {
             "title": "警告",
@@ -115,15 +119,8 @@
           },
           "warning": "删除数据可能导致无法预料的后果，请慎重操作。若出现异常请尝试清空数据并重启软件。"
         },
-        "language": "语言",
         "localStore": "本地数据",
-        "delCurData": "删除当前数据",
-        "adbPath": {
-          "setSuccess": "adb 路径设置成功",
-          "title": "adb 路径",
-          "placeholder": "adb 路径",
-          "set": "设置"
-        }
+        "delCurData": "删除当前数据"
       },
       "About": {
         "about": "关于",
@@ -147,7 +144,8 @@
         "Sight": "准星",
         "Fire": "开火",
         "existSight": "已存在准星按钮",
-        "existFire": "已存在开火按钮"
+        "existFire": "已存在开火按钮",
+        "Swipe": "滑动"
       },
       "buttonKeyRepeat": "按键重复: {0}",
       "noSaveDialog": {
@@ -256,6 +254,14 @@
         "scaleX": "水平灵敏度",
         "scaleY": "垂直灵敏度",
         "scalePlaceholder": "请输入灵敏度"
+      },
+      "Swipe": {
+        "swipe": "滑动",
+        "interval": "滑动时间间隔",
+        "intervalPlaceholder": "输入坐标点之间的时间间隔",
+        "pos": "坐标点",
+        "editPos": "编辑",
+        "editTips": "左键点击空白区域添加新坐标点。左键拖拽移动特定坐标点，右键删除特定坐标点"
       }
     }
   },

@@ -36,13 +36,7 @@
       "wsConnect": "Control",
       "adbDeviceError": "Unable to get available devices",
       "adbConnectError": "Wireless connection failed",
-      "rotation": "Device rotation {0}°",
-      "clipboard": {
-        "deviceSync": {
-          "success": "Device clipboard synced",
-          "failed": "Device clipboard sync failed"
-        }
-      }
+      "rotation": "Device rotation {0}°"
     },
     "Mask": {
       "keyconfigException": "The key mapping config is abnormal, please delete this config",
@@ -62,14 +56,15 @@
         "positiveText": "To control"
       },
       "sightMode": "Mouse is locked, press {0} to unlock",
-      "checkAdb": "adb is not available and the software cannot run normally. Please ensure that adb is installed on the system and added to the Path environment variable correctly: {0}",
+      "checkAdb": "adb is not available and the software cannot run normally. Fill in the path of the adb file in the setup page, or add the folder where it is located to the Path environment variable.: {0}",
       "keyInputMode": "Has entered the keystroke input mode, close this message to exit."
     },
     "Setting": {
       "tabs": {
         "basic": "Basic settings",
         "mask": "Mask setting",
-        "about": "About"
+        "about": "About",
+        "data": "Data management"
       },
       "Mask": {
         "areaFormMissing": {
@@ -105,6 +100,15 @@
         }
       },
       "Basic": {
+        "language": "Language",
+        "adbPath": {
+          "placeholder": "adb path",
+          "set": "Save",
+          "setSuccess": "adb path set successfully",
+          "title": "adb path"
+        }
+      },
+      "Data": {
         "delLocalStore": {
           "dialog": {
             "title": "Warning",
@@ -115,15 +119,8 @@
           },
           "warning": "Deleting data may lead to unpredictable consequences, so please operate with caution. \nIf an exception occurs, please try clearing the data and restarting the software."
         },
-        "language": "Language",
         "localStore": "Local data",
-        "delCurData": "Delete current data",
-        "adbPath": {
-          "placeholder": "adb path",
-          "set": "Save",
-          "setSuccess": "adb path set successfully",
-          "title": "adb path"
-        }
+        "delCurData": "Delete current data"
       },
       "About": {
         "introduction": "A Scrcpy client in Rust & Tarui aimed at providing mouse and key mapping to control Android device.",
@@ -154,7 +151,8 @@
         "Sight": "Front sight",
         "Fire": "Fire",
         "existFire": "Fire button already exists",
-        "existSight": "Front sight button already exists"
+        "existSight": "Front sight button already exists",
+        "Swipe": "Swipe"
       },
       "buttonKeyRepeat": "Key repeat: {0}",
       "KeyCommon": {
@@ -256,6 +254,14 @@
         "scaleX": "Horizontal sensitivity",
         "scalePlaceholder": "Please enter sensitivity",
         "scaleY": "Vertical sensitivity"
+      },
+      "Swipe": {
+        "swipe": "Swipe",
+        "interval": "Swipe time interval",
+        "intervalPlaceholder": "Enter the time interval between points",
+        "pos": "Points",
+        "editPos": "Edit",
+        "editTips": "Left-click on a blank area to add a new coordinate point. \nLeft-click and drag to move a specific point, and right-click to delete the point."
       }
     }
   },

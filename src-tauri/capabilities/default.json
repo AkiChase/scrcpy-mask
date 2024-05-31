@@ -34,11 +34,16 @@
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "https://api.github.com/repos/AkiChase/scrcpy-mask/*" }
+        {
+          "url": "https://api.github.com/repos/AkiChase/scrcpy-mask/*"
+        }
       ]
     },
     "http:allow-fetch",
     "app:default",
-    "app:allow-version"
+    "app:allow-version",
+    "clipboard-manager:default",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text"
   ]
 }

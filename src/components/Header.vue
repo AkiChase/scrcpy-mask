@@ -50,6 +50,7 @@ async function maximizeOrRestore() {
   align-items: center;
   border-radius: 0 10px 0 0;
   user-select: none;
+  -webkit-user-select: none;
 
   .n-button-group{
     flex-shrink: 0;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Settings, CloseCircle } from "@vicons/ionicons5";
+import { Settings, CloseCircle, ReturnUpBack } from "@vicons/ionicons5";
 import {
   NButton,
   NIcon,
@@ -19,6 +19,7 @@ import { loadDefaultKeyconfig } from "../../invoke";
 import { KeyMappingConfig } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 import { useI18n } from "vue-i18n";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -121,14 +122,18 @@ function dragHandler(downEvent: MouseEvent) {
       localStore.set("keySettingPos", keySettingPos.value);
     } else {
       // click up
-      keyboardStore.activeButtonIndex = -1;
-      keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
-      keyboardStore.showSettingFlag = !keyboardStore.showSettingFlag;
-      if (
-        keyboardStore.showSettingFlag &&
-        store.keyMappingConfigList.length === 1
-      ) {
-        message.info(t("pages.KeyBoard.KeySetting.onlyOneConfig"));
+      if (keyboardStore.editSwipePointsFlag) {
+        keyboardStore.editSwipePointsFlag = false;
+      } else {
+        keyboardStore.activeButtonIndex = -1;
+        keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
+        keyboardStore.showSettingFlag = !keyboardStore.showSettingFlag;
+        if (
+          keyboardStore.showSettingFlag &&
+          store.keyMappingConfigList.length === 1
+        ) {
+          message.info(t("pages.KeyBoard.KeySetting.onlyOneConfig"));
+        }
       }
     }
   };
@@ -251,8 +256,7 @@ function renameKeyMappingConfig() {
 function exportKeyMappingConfig() {
   const config = store.keyMappingConfigList[store.curKeyMappingIndex];
   const data = JSON.stringify(config, null, 2);
-  navigator.clipboard
-    .writeText(data)
+  writeText(data)
     .then(() => {
       message.success(t("pages.KeyBoard.KeySetting.exportSuccess"));
     })
@@ -374,7 +378,10 @@ function resetKeyMappingConfig() {
     }"
   >
     <template #icon>
-      <NIcon><Settings /></NIcon>
+      <NIcon>
+        <ReturnUpBack v-if="keyboardStore.editSwipePointsFlag" />
+        <Settings v-else />
+      </NIcon>
     </template>
   </NButton>
   <div

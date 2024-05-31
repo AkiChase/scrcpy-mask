@@ -10,7 +10,7 @@ import {
   listenToEvent,
   unlistenToEvent,
 } from "../hotkey";
-import { KeyMappingConfig, KeySteeringWheel } from "../keyMappingConfig";
+import { KeySteeringWheel } from "../keyMappingConfig";
 import ScreenStream from "./ScreenStream.vue";
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
@@ -19,6 +19,7 @@ import { getCurrent, PhysicalSize } from "@tauri-apps/api/window";
 import { Store } from "@tauri-apps/plugin-store";
 import { useI18n } from "vue-i18n";
 import { checkAdbAvailable } from "../invoke";
+import { loadLocalStorage } from "../storeLoader";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -103,79 +104,7 @@ function genClientId() {
 
 async function loadLocalStore() {
   const localStore = new Store("store.bin");
-  // loading keyMappingConfigList from local store
-  let keyMappingConfigList = await localStore.get<KeyMappingConfig[]>(
-    "keyMappingConfigList"
-  );
-  if (keyMappingConfigList === null || keyMappingConfigList.length === 0) {
-    // add empty key mapping config
-    // unable to get mask element when app is not ready
-    // so we use the stored mask area to get relative size
-    const maskArea = await localStore.get<{
-      posX: number;
-      posY: number;
-      sizeW: number;
-      sizeH: number;
-    }>("maskArea");
-    let relativeSize = { w: 800, h: 600 };
-    if (maskArea !== null) {
-      relativeSize = {
-        w: maskArea.sizeW,
-        h: maskArea.sizeH,
-      };
-    }
-    keyMappingConfigList = [
-      {
-        relativeSize,
-        title: t("pages.Mask.blankConfig"),
-        list: [],
-      },
-    ];
-    await localStore.set("keyMappingConfigList", keyMappingConfigList);
-  }
-  store.keyMappingConfigList = keyMappingConfigList;
-
-  // loading curKeyMappingIndex from local store
-  let curKeyMappingIndex = await localStore.get<number>("curKeyMappingIndex");
-  if (
-    curKeyMappingIndex === null ||
-    curKeyMappingIndex >= keyMappingConfigList.length
-  ) {
-    curKeyMappingIndex = 0;
-    localStore.set("curKeyMappingIndex", curKeyMappingIndex);
-  }
-  store.curKeyMappingIndex = curKeyMappingIndex;
-
-  // loading maskButton from local store
-  let maskButton = await localStore.get<{
-    show: boolean;
-    transparency: number;
-  }>("maskButton");
-  store.maskButton = maskButton ?? {
-    show: true,
-    transparency: 0.5,
-  };
-
-  // loading checkUpdateAtStart from local store
-  const checkUpdateAtStart = await localStore.get<boolean>(
-    "checkUpdateAtStart"
-  );
-  store.checkUpdateAtStart = checkUpdateAtStart ?? true;
-
-  // loading rotation from local store
-  const rotation = await localStore.get<{
-    enable: boolean;
-    verticalLength: number;
-    horizontalLength: number;
-  }>("rotation");
-  if (rotation) store.rotation = rotation;
-
-  // loading screenStream from local store
-  const screenStream = await localStore.get<{
-    enable: boolean;
-    address: string;
-  }>("screenStream");
-  if (screenStream) store.screenStream = screenStream;
+  await loadLocalStorage(localStore, store, t);
 }
 
 async function cleanAfterimage() {

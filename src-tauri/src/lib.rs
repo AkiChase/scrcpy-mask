@@ -4,5 +4,5 @@ pub mod client;
 pub mod control_msg;
 pub mod resource;
 pub mod scrcpy_mask_cmd;
-pub mod socket;
 pub mod share;
+pub mod socket;
