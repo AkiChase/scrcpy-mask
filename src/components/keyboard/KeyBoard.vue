@@ -8,6 +8,7 @@ import KeySkill from "./KeySkill.vue";
 import KeyObservation from "./KeyObservation.vue";
 import KeySight from "./KeySight.vue";
 import KeyFire from "./KeyFire.vue";
+import KeySwipe from "./KeySwipe.vue";
 import ScreenStream from "../ScreenStream.vue";
 
 import {
@@ -17,6 +18,7 @@ import {
   KeyTap,
   KeyMacro,
   KeyMapping,
+  KeySwipe as KeyMappingKeySwipe,
   KeySight as KeyMappingKeySight,
   KeyFire as KeyMappingKeyFire,
 } from "../../keyMappingConfig";
@@ -42,6 +44,10 @@ const addButtonOptions: DropdownOption[] = [
   {
     label: () => t("pages.KeyBoard.addButton.SteeringWheel"),
     key: "SteeringWheel",
+  },
+  {
+    label: () => t("pages.KeyBoard.addButton.Swipe"),
+    key: "Swipe",
   },
   {
     label: () => t("pages.KeyBoard.addButton.Skill"),
@@ -72,6 +78,7 @@ const addButtonOptions: DropdownOption[] = [
 function onAddButtonSelect(
   type:
     | "Tap"
+    | "Swipe"
     | "SteeringWheel"
     | "DirectionalSkill"
     | "CancelSkill"
@@ -92,6 +99,12 @@ function onAddButtonSelect(
   if (type === "Tap") {
     keyMapping.pointerId = 3;
     (keyMapping as KeyTap).time = 80;
+  } else if (type === "Swipe") {
+    keyMapping.pointerId = 3;
+    (keyMapping as KeyMappingKeySwipe).pos = [
+      { x: keyMapping.posX, y: keyMapping.posY },
+    ];
+    (keyMapping as KeyMappingKeySwipe).intervalBetweenPos = 0;
   } else if (type === "SteeringWheel") {
     keyMapping.pointerId = 1;
     (keyMapping as unknown as KeyMappingSteeringWheel).key = {
@@ -173,6 +186,7 @@ function setCurButtonKey(curKey: string) {
     keyboardStore.showButtonSettingFlag ||
     keyboardStore.activeButtonIndex >= store.editKeyMappingList.length ||
     keyboardStore.showButtonSettingFlag ||
+    keyboardStore.editSwipePointsFlag ||
     keyboardStore.showButtonAddFlag
   )
     return;
@@ -361,6 +375,10 @@ onBeforeRouteLeave(() => {
       />
       <KeyObservation
         v-else-if="store.editKeyMappingList[index].type === 'Observation'"
+        :index="index"
+      />
+      <KeySwipe
+        v-else-if="store.editKeyMappingList[index].type === 'Swipe'"
         :index="index"
       />
       <KeySight

@@ -151,7 +151,8 @@
         "Sight": "Front sight",
         "Fire": "Fire",
         "existFire": "Fire button already exists",
-        "existSight": "Front sight button already exists"
+        "existSight": "Front sight button already exists",
+        "Swipe": "Swipe"
       },
       "buttonKeyRepeat": "Key repeat: {0}",
       "KeyCommon": {
@@ -253,6 +254,14 @@
         "scaleX": "Horizontal sensitivity",
         "scalePlaceholder": "Please enter sensitivity",
         "scaleY": "Vertical sensitivity"
+      },
+      "Swipe": {
+        "swipe": "Swipe",
+        "interval": "Swipe time interval",
+        "intervalPlaceholder": "Enter the time interval between points",
+        "pos": "Points",
+        "editPos": "Edit",
+        "editTips": "Left-click on a blank area to add a new coordinate point. \nLeft-click and drag to move a specific point, and right-click to delete the point."
       }
     }
   },

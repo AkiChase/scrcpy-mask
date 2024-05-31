@@ -144,7 +144,8 @@
         "Sight": "准星",
         "Fire": "开火",
         "existSight": "已存在准星按钮",
-        "existFire": "已存在开火按钮"
+        "existFire": "已存在开火按钮",
+        "Swipe": "滑动"
       },
       "buttonKeyRepeat": "按键重复: {0}",
       "noSaveDialog": {
@@ -253,6 +254,14 @@
         "scaleX": "水平灵敏度",
         "scaleY": "垂直灵敏度",
         "scalePlaceholder": "请输入灵敏度"
+      },
+      "Swipe": {
+        "swipe": "滑动",
+        "interval": "滑动时间间隔",
+        "intervalPlaceholder": "输入坐标点之间的时间间隔",
+        "pos": "坐标点",
+        "editPos": "编辑",
+        "editTips": "左键点击空白区域添加新坐标点。左键拖拽移动特定坐标点，右键删除特定坐标点"
       }
     }
   },

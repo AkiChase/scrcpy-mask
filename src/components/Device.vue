@@ -63,16 +63,6 @@ let deviceWaitForScreenSizeTask: ((w: number, h: number) => void) | null = null;
 let unlisten: UnlistenFn | undefined;
 let lastClipboard = "";
 
-// TODO 添加一个滑动的按键，相当于调用swipe，难点在于如何设定多个坐标点
-// 当滑动按键激活时
-// 1. 使用svg的polyline，可见gpt配合vue来渲染直线
-// 2. 并使用svg的circle单独渲染每个圆点
-// 当滑动按键激活并点开设置后
-// 1. 停止原来的按键监听，创建一个新的透明蒙版
-// 2. 在新的透明蒙版上使用svg来画线，但是用新元素来渲染每个圆点，每个圆点右上角添加删除按钮
-// 3. 每个圆点都添加点击监听来拖动
-// 4. 点击蒙版其他位置则插入新的圆点（到列表末尾）
-
 onMounted(async () => {
   unlisten = await listen("device-reply", (event) => {
     try {

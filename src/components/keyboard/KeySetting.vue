@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Settings, CloseCircle } from "@vicons/ionicons5";
+import { Settings, CloseCircle, ReturnUpBack } from "@vicons/ionicons5";
 import {
   NButton,
   NIcon,
@@ -122,14 +122,18 @@ function dragHandler(downEvent: MouseEvent) {
       localStore.set("keySettingPos", keySettingPos.value);
     } else {
       // click up
-      keyboardStore.activeButtonIndex = -1;
-      keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
-      keyboardStore.showSettingFlag = !keyboardStore.showSettingFlag;
-      if (
-        keyboardStore.showSettingFlag &&
-        store.keyMappingConfigList.length === 1
-      ) {
-        message.info(t("pages.KeyBoard.KeySetting.onlyOneConfig"));
+      if (keyboardStore.editSwipePointsFlag) {
+        keyboardStore.editSwipePointsFlag = false;
+      } else {
+        keyboardStore.activeButtonIndex = -1;
+        keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
+        keyboardStore.showSettingFlag = !keyboardStore.showSettingFlag;
+        if (
+          keyboardStore.showSettingFlag &&
+          store.keyMappingConfigList.length === 1
+        ) {
+          message.info(t("pages.KeyBoard.KeySetting.onlyOneConfig"));
+        }
       }
     }
   };
@@ -374,7 +378,10 @@ function resetKeyMappingConfig() {
     }"
   >
     <template #icon>
-      <NIcon><Settings /></NIcon>
+      <NIcon>
+        <ReturnUpBack v-if="keyboardStore.editSwipePointsFlag" />
+        <Settings v-else />
+      </NIcon>
     </template>
   </NButton>
   <div
