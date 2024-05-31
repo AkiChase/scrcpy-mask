@@ -102,6 +102,7 @@ function editSwipePoints() {
   message.info(t("pages.KeyBoard.Swipe.editTips"));
   keyboardStore.showButtonSettingFlag = false;
   keyboardStore.editSwipePointsFlag = true;
+  keyboardStore.edited = true;
 }
 
 function swipePointDragHandlue(downEvent: MouseEvent, index: number) {

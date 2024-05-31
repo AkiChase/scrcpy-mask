@@ -104,7 +104,7 @@ function onAddButtonSelect(
     (keyMapping as KeyMappingKeySwipe).pos = [
       { x: keyMapping.posX, y: keyMapping.posY },
     ];
-    (keyMapping as KeyMappingKeySwipe).intervalBetweenPos = 0;
+    (keyMapping as KeyMappingKeySwipe).intervalBetweenPos = 100;
   } else if (type === "SteeringWheel") {
     keyMapping.pointerId = 1;
     (keyMapping as unknown as KeyMappingSteeringWheel).key = {

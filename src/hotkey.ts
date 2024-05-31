@@ -957,10 +957,13 @@ function addSwipeShortcuts(
   pointerId: number,
   intervalBetweenPos: number
 ) {
-  for (const posObj of pos) {
-    posObj.x = Math.round((posObj.x / relativeSize.w) * store.screenSizeW);
-    posObj.y = Math.round((posObj.y / relativeSize.h) * store.screenSizeH);
-  }
+  const newPosList = pos.map((posObj) => {
+    return {
+      x: Math.round((posObj.x / relativeSize.w) * store.screenSizeW),
+      y: Math.round((posObj.y / relativeSize.h) * store.screenSizeH),
+    };
+  });
+
   addShortcut(
     key,
     async () => {
@@ -971,7 +974,7 @@ function addSwipeShortcuts(
           w: store.screenSizeW,
           h: store.screenSizeH,
         },
-        pos,
+        pos: newPosList,
         intervalBetweenPos,
       });
     },
