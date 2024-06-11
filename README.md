@@ -33,6 +33,7 @@ Furthermore, to better support interaction between Scrcpy Mask and Android devic
 
 ## Demonstration video
 
+- [别再说你不会用电脑控制手机玩手游了，Scrcpy Mask 纯小白教程+常见问题解答](https://www.bilibili.com/video/BV1Sm42157md/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [DNF 手游触屏操作反人类？但又不能在模拟器上玩 DNF 手游？不好意思，Scrcpy Mask “模拟器”的机制遥遥领先](https://www.bilibili.com/video/BV17U411Z7cN/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [如何用电脑玩 FPS 手游？这样的“安卓模拟器”，也不是不可以-哔哩哔哩](https://www.bilibili.com/video/BV1EU411Z7TC/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
 - [M 系列 Mac 电脑玩王者，暃排位实录，使用 Android Stuido 模拟器和开源 Scrcpy Mask 按键映射工具-哔哩哔哩](https://b23.tv/q6iDW1w)
