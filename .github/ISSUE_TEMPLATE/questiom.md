@@ -7,7 +7,7 @@ assignees: ''
 ---
 
 **Describe the Question**
-A clear and concise description of what the bug is.
+A clear and concise description of what the question is.
 
 **Additional context**
 Add any other context about the problem here.
