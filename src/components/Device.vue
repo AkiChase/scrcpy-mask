@@ -362,7 +362,7 @@ function closeWS() {
   <div class="container">
     <NScrollbar>
       <div class="device">
-        <NSpin :show="store.showLoadingRef">
+        <NSpin :show="store.showLoadingFlag">
           <NH4 prefix="bar">{{ $t("pages.Device.localPort") }}</NH4>
           <NInputNumber
             v-model:value="port"

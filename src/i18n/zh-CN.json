@@ -40,7 +40,6 @@
     },
     "Mask": {
       "keyconfigException": "按键方案异常，请删除此方案",
-      "blankConfig": "空白方案",
       "checkUpdate": {
         "failed": "检查更新失败",
         "isLatest": "最新版本: {0}，当前已是最新版本: {1}",

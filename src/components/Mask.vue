@@ -18,7 +18,6 @@ import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
 import { useI18n } from "vue-i18n";
 import { checkAdbAvailable } from "../invoke";
-import { loadPersistentStorage } from "../storeLoader";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -59,7 +58,6 @@ onActivated(async () => {
 
 onMounted(async () => {
   store.screenStreamClientId = genClientId();
-  loadPersistentStorage(store, t);
   store.checkUpdate = checkUpdate;
   if (store.checkUpdateAtStart) checkUpdate();
   store.checkAdb = checkAdb;
@@ -176,7 +174,7 @@ async function checkUpdate() {
 
 <template>
   <div class="content-container">
-    <div v-show="!store.controledDevice" class="notice">
+    <div v-show="store.controledDevice === null" class="notice">
       <div class="content">
         <NDialog
           :closable="false"
@@ -197,8 +195,8 @@ async function checkUpdate() {
         "
       />
       <div
-        v-if="store.maskButton.show"
-        :style="'--transparency: ' + store.maskButton.transparency"
+        v-if="store.maskKeyTip.show"
+        :style="'--transparency: ' + store.maskKeyTip.transparency"
         class="button-layer"
       >
         <!-- <div style="position: absolute;height: 100%;width: 1px;background-color: red;left: 50%;"></div>

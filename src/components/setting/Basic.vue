@@ -11,9 +11,8 @@ import {
   NTooltip,
 } from "naive-ui";
 import { onMounted, ref } from "vue";
-import i18n, { allLanguage } from "../../i18n";
+import { allLanguage } from "../../i18n";
 import { useI18n } from "vue-i18n";
-import { setAdbPath } from "../../invoke";
 import { useGlobalStore } from "../../store/global";
 import { LocalStore } from "../../store/localStore";
 
@@ -28,28 +27,17 @@ const languageOptions = Object.entries(allLanguage).map(([key, value]) => {
   };
 });
 
-const curLanguage = ref("en-US");
-
-const adbPath = ref("");
+const curAdbPath = ref("");
 
 onMounted(async () => {
-  curLanguage.value = (await LocalStore.get<string>("language")) ?? "en-US";
-  adbPath.value = (await LocalStore.get<string>("adbPath")) ?? "";
+  curAdbPath.value = store.adbPath;
 });
-
-function changeLanguage(language: "zh-CN" | "en-US") {
-  if (language === curLanguage.value) return;
-  curLanguage.value = language;
-  LocalStore.set("language", language);
-  i18n.global.locale = language;
-}
 
 async function adjustAdbPath() {
   store.showLoading();
-  await setAdbPath(adbPath.value);
+  store.changeAbdPath(curAdbPath.value);
   message.success(t("pages.Setting.Basic.adbPath.setSuccess"));
   await store.checkAdb();
-  adbPath.value = (await LocalStore.get<string>("adbPath")) ?? "";
   store.hideLoading();
 }
 
@@ -62,15 +50,15 @@ function changeClipboardSync() {
   <div class="setting-page">
     <NH4 prefix="bar">{{ $t("pages.Setting.Basic.language") }}</NH4>
     <NSelect
-      :value="curLanguage"
-      @update:value="changeLanguage"
+      :value="store.language"
+      @update:value="store.setLanguage"
       :options="languageOptions"
       style="max-width: 300px; margin: 20px 0"
     />
     <NH4 prefix="bar">{{ $t("pages.Setting.Basic.adbPath.title") }}</NH4>
     <NInputGroup style="max-width: 300px; margin-bottom: 20px">
       <NInput
-        v-model:value="adbPath"
+        v-model:value="curAdbPath"
         clearable
         :placeholder="$t('pages.Setting.Basic.adbPath.placeholder')"
       />

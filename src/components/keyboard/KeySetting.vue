@@ -20,6 +20,7 @@ import { useKeyboardStore } from "../../store/keyboard";
 import { useI18n } from "vue-i18n";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { LocalStore } from "../../store/localStore";
+import { NonReactiveStore } from "../../store/noneReactiveStore";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -47,26 +48,26 @@ const curRelativeSize = computed(() => {
   return store.keyMappingConfigList[store.curKeyMappingIndex].relativeSize;
 });
 
-const keySettingPos = ref({ x: 100, y: 100 });
-
 onMounted(async () => {
-  // loading keySettingPos from local store
-  let storedPos = await LocalStore.get<{ x: number; y: number }>(
-    "keySettingPos"
-  );
-
-  if (storedPos === undefined) {
-    await LocalStore.set("keySettingPos", keySettingPos.value);
-    storedPos = { x: 100, y: 100 };
-  }
   // apply keySettingPos
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
   const maxWidth = keyboardElement.clientWidth - 40;
   const maxHeight = keyboardElement.clientHeight - 40;
-  keySettingPos.value.x = Math.max(0, Math.min(storedPos.x, maxWidth));
-  keySettingPos.value.y = Math.max(0, Math.min(storedPos.y, maxHeight));
+  NonReactiveStore.setLocal("keySettingPos", {
+    x: Math.max(0, Math.min(NonReactiveStore.local.keySettingPos.x, maxWidth)),
+    y: Math.max(0, Math.min(NonReactiveStore.local.keySettingPos.y, maxHeight)),
+  });
+  const target = document.getElementById("keySettingBtn") as HTMLElement;
+  target.style.setProperty(
+    "left",
+    `${NonReactiveStore.local.keySettingPos.x}px`
+  );
+  target.style.setProperty(
+    "top",
+    `${NonReactiveStore.local.keySettingPos.y}px`
+  );
 });
 
 onActivated(() => {
@@ -92,24 +93,26 @@ function dragHandler(downEvent: MouseEvent) {
   const maxWidth = keyboardElement.clientWidth - 40;
   const maxHeight = keyboardElement.clientHeight - 40;
 
-  const oldX = keySettingPos.value.x;
-  const oldY = keySettingPos.value.y;
+  const oldX = NonReactiveStore.local.keySettingPos.x;
+  const oldY = NonReactiveStore.local.keySettingPos.y;
   const x = downEvent.clientX;
   const y = downEvent.clientY;
 
   let moveFlag = false;
+  let newX = oldX;
+  let newY = oldY;
   const moveHandler = (moveEvent: MouseEvent) => {
-    const newX = oldX + moveEvent.clientX - x;
-    const newY = oldY + moveEvent.clientY - y;
-    keySettingPos.value.x = Math.max(0, Math.min(newX, maxWidth));
-    keySettingPos.value.y = Math.max(0, Math.min(newY, maxHeight));
+    newX = Math.max(0, Math.min(oldX + moveEvent.clientX - x, maxWidth));
+    newY = Math.max(0, Math.min(oldY + moveEvent.clientY - y, maxHeight));
+    target.style.setProperty("left", `${newX}px`);
+    target.style.setProperty("top", `${newY}px`);
   };
 
   const timer = setTimeout(() => {
     moveFlag = true;
     target.style.setProperty("cursor", "grabbing");
     window.addEventListener("mousemove", moveHandler);
-  }, 1000);
+  }, 500);
 
   const upHandler = () => {
     clearTimeout(timer);
@@ -118,7 +121,10 @@ function dragHandler(downEvent: MouseEvent) {
     if (moveFlag) {
       // move up
       target.style.setProperty("cursor", "pointer");
-      LocalStore.set("keySettingPos", keySettingPos.value);
+      NonReactiveStore.setLocal("keySettingPos", {
+        x: newX,
+        y: newY,
+      });
     } else {
       // click up
       if (keyboardStore.editSwipePointsFlag) {
@@ -149,7 +155,7 @@ function importKeyMappingConfig() {
     return;
   }
   store.keyMappingConfigList.push(keyMappingConfig);
-  store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
+  store.setCurKeyMappingIndex(store.keyMappingConfigList.length - 1);
   showImportModal.value = false;
   LocalStore.set("keyMappingConfigList", store.keyMappingConfigList);
   message.success(t("pages.KeyBoard.KeySetting.importSuccess"));
@@ -193,7 +199,7 @@ function createKeyMappingConfig() {
     list: [],
   };
   store.keyMappingConfigList.push(newConfig);
-  store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
+  store.setCurKeyMappingIndex(store.keyMappingConfigList.length - 1);
   LocalStore.set("keyMappingConfigList", store.keyMappingConfigList);
   message.success(t("pages.KeyBoard.KeySetting.newConfigSuccess"));
 }
@@ -216,7 +222,7 @@ function copyCurKeyMappingConfig() {
   store.keyMappingConfigList.push(newConfig);
   keyboardStore.activeButtonIndex = -1;
   keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
-  store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
+  store.setCurKeyMappingIndex(store.keyMappingConfigList.length - 1);
   LocalStore.set("keyMappingConfigList", store.keyMappingConfigList);
   message.success(t("pages.KeyBoard.KeySetting.copyConfigSuccess", [newTitle]));
 }
@@ -233,7 +239,7 @@ function delCurKeyMappingConfig() {
   keyboardStore.activeButtonIndex = -1;
   keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
   keyboardStore.edited = false;
-  store.setKeyMappingIndex(
+  store.setCurKeyMappingIndex(
     store.curKeyMappingIndex > 0 ? store.curKeyMappingIndex - 1 : 0
   );
   LocalStore.set("keyMappingConfigList", store.keyMappingConfigList);
@@ -337,7 +343,7 @@ function migrateKeyMappingConfig() {
     );
     keyboardStore.activeButtonIndex = -1;
     keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
-    store.setKeyMappingIndex(store.curKeyMappingIndex + 1);
+    store.setCurKeyMappingIndex(store.curKeyMappingIndex + 1);
   } else {
     message.info(t("pages.KeyBoard.KeySetting.migrateConfigNeedless"));
   }
@@ -351,7 +357,7 @@ function selectKeyMappingConfig(index: number) {
 
   keyboardStore.activeButtonIndex = -1;
   keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
-  store.setKeyMappingIndex(index);
+  store.setCurKeyMappingIndex(index);
 }
 
 function resetKeyMappingConfig() {
@@ -371,10 +377,6 @@ function resetKeyMappingConfig() {
     id="keySettingBtn"
     :title="$t('pages.KeyBoard.KeySetting.buttonDrag')"
     @mousedown="dragHandler"
-    :style="{
-      left: keySettingPos.x + 'px',
-      top: keySettingPos.y + 'px',
-    }"
   >
     <template #icon>
       <NIcon>

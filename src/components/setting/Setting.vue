@@ -11,7 +11,7 @@ const store = useGlobalStore();
 
 <template>
   <div class="setting">
-    <NSpin :show="store.showLoadingRef">
+    <NSpin :show="store.showLoadingFlag">
       <NTabs type="line" animated placement="left" default-value="basic">
         <NTabPane :tab="$t('pages.Setting.tabs.basic')" name="basic">
           <NScrollbar>

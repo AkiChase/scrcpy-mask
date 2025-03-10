@@ -9,10 +9,12 @@ import {
 } from "naive-ui";
 import { onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { LocalStore } from "./store/localStore";
 
 const router = useRouter();
 
 onMounted(async () => {
+  await LocalStore.init();
   await router.replace({ name: "mask" });
 });
 </script>

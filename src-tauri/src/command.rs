@@ -10,7 +10,6 @@ use std::{fs::read_to_string, sync::Arc};
 use tauri::{Emitter, Listener, Manager};
 use tauri_plugin_store::StoreExt;
 
-// TODO move to command.rs
 #[tauri::command]
 /// get devices info list
 pub fn adb_devices() -> Result<Vec<Device>, String> {

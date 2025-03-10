@@ -40,7 +40,6 @@
     },
     "Mask": {
       "keyconfigException": "The key mapping config is abnormal, please delete this config",
-      "blankConfig": "Blank config",
       "checkUpdate": {
         "failed": "Check for updates failed",
         "isLatest": "Latest version: {0}, currently the latest version: {1}",

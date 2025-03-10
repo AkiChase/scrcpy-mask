@@ -29,6 +29,7 @@ import { UnlistenFn } from "@tauri-apps/api/event";
 import { useGlobalStore } from "../../store/global";
 import { useI18n } from "vue-i18n";
 import { LocalStore } from "../../store/localStore";
+import { NonReactiveStore } from "../../store/noneReactiveStore";
 
 let unlistenResize: UnlistenFn = () => {};
 let unlistenMove: UnlistenFn = () => {};
@@ -40,13 +41,7 @@ const message = useMessage();
 const formRef = ref<FormInst | null>(null);
 
 // logical pos and size of the mask area
-interface MaskArea {
-  posX: number;
-  posY: number;
-  sizeW: number;
-  sizeH: number;
-}
-const areaModel = ref({
+const curMaskArea = ref({
   posX: 0,
   posY: 0,
   sizeW: 0,
@@ -80,7 +75,7 @@ const areaFormRules: FormRules = {
   },
 };
 
-async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
+async function refreshCurMaskArea(size?: PhysicalSize, pos?: PhysicalPosition) {
   const lSize = size?.toLogical(factor);
   const lPos = pos?.toLogical(factor);
 
@@ -90,12 +85,12 @@ async function refreshAreaModel(size?: PhysicalSize, pos?: PhysicalPosition) {
 
   // use logical position and size
   if (lSize !== undefined) {
-    areaModel.value.sizeW = Math.round(lSize.width) - ml;
-    areaModel.value.sizeH = Math.round(lSize.height) - mt;
+    curMaskArea.value.sizeW = Math.round(lSize.width) - ml;
+    curMaskArea.value.sizeH = Math.round(lSize.height) - mt;
   }
   if (lPos !== undefined) {
-    areaModel.value.posX = Math.round(lPos.x) + ml;
-    areaModel.value.posY = Math.round(lPos.y) + mt;
+    curMaskArea.value.posX = Math.round(lPos.x) + ml;
+    curMaskArea.value.posY = Math.round(lPos.y) + mt;
   }
 }
 
@@ -103,8 +98,9 @@ function handleAdjustClick(e: MouseEvent) {
   e.preventDefault();
   formRef.value?.validate((errors) => {
     if (!errors) {
+      // save the mask area
       adjustMaskArea().then(() => {
-        LocalStore.set("maskArea", areaModel.value);
+        NonReactiveStore.setLocal("maskArea", curMaskArea.value);
         message.success(t("pages.Setting.Mask.areaSaved"));
       });
     } else {
@@ -113,7 +109,6 @@ function handleAdjustClick(e: MouseEvent) {
   });
 }
 
-// move and resize window to the selected window (control) area
 async function adjustMaskArea() {
   // header size and sidebar size
   const mt = 30;
@@ -122,13 +117,13 @@ async function adjustMaskArea() {
   const appWindow = getCurrentWindow();
 
   const pos = new LogicalPosition(
-    areaModel.value.posX - ml,
-    areaModel.value.posY - mt
+    curMaskArea.value.posX - ml,
+    curMaskArea.value.posY - mt
   );
 
   const size = new LogicalSize(
-    areaModel.value.sizeW + ml,
-    areaModel.value.sizeH + mt
+    curMaskArea.value.sizeW + ml,
+    curMaskArea.value.sizeH + mt
   );
 
   await appWindow.setPosition(pos);
@@ -139,18 +134,13 @@ onMounted(async () => {
   const appWindow = getCurrentWindow();
   factor = await appWindow.scaleFactor();
 
-  let maskArea = await LocalStore.get<MaskArea>("maskArea");
-  if (maskArea !== undefined) {
-    areaModel.value = maskArea;
-  }
-
   unlistenResize = await appWindow.onResized(({ payload: size }) => {
-    refreshAreaModel(size, undefined);
+    refreshCurMaskArea(size, undefined);
   });
   unlistenMove = await appWindow.onMoved(({ payload: position }) => {
-    refreshAreaModel(undefined, position);
+    refreshCurMaskArea(undefined, position);
   });
-  refreshAreaModel(
+  refreshCurMaskArea(
     await appWindow.outerSize(),
     await appWindow.outerPosition()
   );
@@ -170,14 +160,14 @@ onUnmounted(() => {
       label-placement="left"
     >
       <NCheckbox
-        v-model:checked="store.maskButton.show"
-        @update:checked="LocalStore.set('maskButton', store.maskButton)"
+        v-model:checked="store.maskKeyTip.show"
+        @update:checked="LocalStore.set('maskKeyTip', store.maskKeyTip)"
       />
     </NFormItem>
     <NFormItem :label="$t('pages.Setting.Mask.opacity')" label-placement="left">
       <NSlider
-        v-model:value="store.maskButton.transparency"
-        @update:value="LocalStore.set('maskButton', store.maskButton)"
+        v-model:value="store.maskKeyTip.transparency"
+        @update:value="LocalStore.set('maskKeyTip', store.maskKeyTip)"
         :min="0"
         :max="1"
         :step="0.01"
@@ -187,7 +177,7 @@ onUnmounted(() => {
 
     <NForm
       ref="formRef"
-      :model="areaModel"
+      :model="curMaskArea"
       :rules="areaFormRules"
       label-placement="left"
       label-width="auto"
@@ -210,25 +200,25 @@ onUnmounted(() => {
       <NGrid :cols="2" :x-gap="24">
         <NFormItemGi label="X" path="posX">
           <NInputNumber
-            v-model:value="areaModel.posX"
+            v-model:value="curMaskArea.posX"
             :placeholder="$t('pages.Setting.Mask.areaPlaceholder.x')"
           />
         </NFormItemGi>
         <NFormItemGi label="Y" path="posY">
           <NInputNumber
-            v-model:value="areaModel.posY"
+            v-model:value="curMaskArea.posY"
             :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.y')"
           />
         </NFormItemGi>
         <NFormItemGi label="W" path="sizeW">
           <NInputNumber
-            v-model:value="areaModel.sizeW"
+            v-model:value="curMaskArea.sizeW"
             :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.w')"
           />
         </NFormItemGi>
         <NFormItemGi label="H" path="sizeH">
           <NInputNumber
-            v-model:value="areaModel.sizeH"
+            v-model:value="curMaskArea.sizeH"
             :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.h')"
           />
         </NFormItemGi>

@@ -6,14 +6,16 @@ import {
   KeySteeringWheel,
 } from "../keyMappingConfig";
 import { LocalStore } from "./localStore";
+import { setAdbPath } from "../invoke";
+import i18n, { allLanguage } from "../i18n";
 
 export const useGlobalStore = defineStore("global", () => {
-  const showLoadingRef = ref(false);
+  const showLoadingFlag = ref(false);
   function showLoading() {
-    showLoadingRef.value = true;
+    showLoadingFlag.value = true;
   }
   function hideLoading() {
-    showLoadingRef.value = false;
+    showLoadingFlag.value = false;
   }
 
   interface ControledDevice {
@@ -58,7 +60,7 @@ export const useGlobalStore = defineStore("global", () => {
   }
 
   // change key mapping scheme
-  function setKeyMappingIndex(index: number) {
+  function setCurKeyMappingIndex(index: number) {
     curKeyMappingIndex.value = index;
     resetEditKeyMappingList();
     LocalStore.set("curKeyMappingIndex", index);
@@ -79,7 +81,7 @@ export const useGlobalStore = defineStore("global", () => {
   // persistent storage
   const keyMappingConfigList: Ref<KeyMappingConfig[]> = ref([]);
   const curKeyMappingIndex = ref(0);
-  const maskButton = ref({
+  const maskKeyTip = ref({
     transparency: 0.5,
     show: true,
   });
@@ -101,31 +103,52 @@ export const useGlobalStore = defineStore("global", () => {
     pasteFromPC: true,
   });
 
+  const adbPath = ref("adb");
+  function changeAbdPath(path: string) {
+    adbPath.value = path;
+    setAdbPath(path);
+    LocalStore.set("adbPath", path);
+  }
+
+  const language = ref<keyof typeof allLanguage>("en-US");
+  function setLanguage(lang: keyof typeof allLanguage) {
+    if (lang === language.value) return;
+    language.value = lang;
+    i18n.global.locale = lang;
+    LocalStore.set("language", lang);
+  }
+
   return {
     // persistent storage
     keyMappingConfigList,
     curKeyMappingIndex,
-    maskButton,
+    maskKeyTip,
     checkUpdateAtStart,
     externalControlled,
     screenStream,
     rotation,
     clipboardSync,
+    adbPath,
+    language,
     // in-memory storage
-    screenStreamClientId,
+    screenStreamClientId, // TODO none reactive
     maskSizeW,
     maskSizeH,
     screenSizeW,
     screenSizeH,
-    keyInputFlag,
-    showLoading,
-    hideLoading,
-    showLoadingRef,
+    keyInputFlag, // TODO none reactive
+    showLoadingFlag,
     controledDevice,
     editKeyMappingList,
+    // action
+    showLoading,
+    hideLoading,
     applyEditKeyMappingList,
     resetEditKeyMappingList,
-    setKeyMappingIndex,
+    setCurKeyMappingIndex,
+    changeAbdPath,
+    setLanguage,
+    // TODO move to NonReactive Store
     checkUpdate,
     checkAdb,
   };
