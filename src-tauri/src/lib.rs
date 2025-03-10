@@ -1,6 +1,7 @@
 pub mod adb;
 pub mod binary;
 pub mod client;
+pub mod command;
 pub mod control_msg;
 pub mod resource;
 pub mod scrcpy_mask_cmd;
