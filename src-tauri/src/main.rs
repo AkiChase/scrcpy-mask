@@ -12,6 +12,8 @@ use std::{fs::read_to_string, sync::Arc};
 use tauri::{Emitter, Listener, Manager};
 use tauri_plugin_store::StoreExt;
 
+
+// TODO move to command.rs
 #[tauri::command]
 /// get devices info list
 fn adb_devices() -> Result<Vec<Device>, String> {
@@ -40,6 +42,8 @@ fn push_server_file(id: String, app: tauri::AppHandle) -> Result<(), String> {
     }
 }
 
+
+// TODO fix: device connect timeout
 #[tauri::command]
 /// start scrcpy server and connect to it
 fn start_scrcpy_server(

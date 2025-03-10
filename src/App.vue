@@ -18,21 +18,23 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Suspense>
-    <NConfigProvider :theme="darkTheme" class="container">
-      <NMessageProvider>
-        <Header />
-        <NDialogProvider>
-          <RouterView v-slot="{ Component }">
-            <KeepAlive>
-              <component :is="Component" />
-            </KeepAlive>
-          </RouterView>
-        </NDialogProvider>
-        <Sidebar />
-      </NMessageProvider>
-    </NConfigProvider>
-  </Suspense>
+  <NConfigProvider :theme="darkTheme" class="container">
+    <NMessageProvider>
+      <Header />
+      <NDialogProvider>
+        <RouterView v-slot="{ Component }">
+          <KeepAlive>
+            <Suspense>
+              <div>
+                <component :is="Component" />
+              </div>
+            </Suspense>
+          </KeepAlive>
+        </RouterView>
+      </NDialogProvider>
+      <Sidebar />
+    </NMessageProvider>
+  </NConfigProvider>
 </template>
 
 <style>
