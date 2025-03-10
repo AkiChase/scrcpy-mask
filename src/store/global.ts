@@ -5,9 +5,7 @@ import {
   KeyMappingConfig,
   KeySteeringWheel,
 } from "../keyMappingConfig";
-import { load } from "@tauri-apps/plugin-store";
-
-const localStore = await load("store.json");
+import { LocalStore } from "./localStore";
 
 export const useGlobalStore = defineStore("global", () => {
   const showLoadingRef = ref(false);
@@ -48,7 +46,7 @@ export const useGlobalStore = defineStore("global", () => {
 
     keyMappingConfigList.value[curKeyMappingIndex.value].list =
       editKeyMappingList.value;
-    localStore.set("keyMappingConfigList", keyMappingConfigList.value);
+    LocalStore.set("keyMappingConfigList", keyMappingConfigList.value);
     return true;
   }
 
@@ -63,7 +61,7 @@ export const useGlobalStore = defineStore("global", () => {
   function setKeyMappingIndex(index: number) {
     curKeyMappingIndex.value = index;
     resetEditKeyMappingList();
-    localStore.set("curKeyMappingIndex", index);
+    LocalStore.set("curKeyMappingIndex", index);
   }
 
   const externalControlled = ref(false);

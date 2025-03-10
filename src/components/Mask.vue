@@ -19,7 +19,6 @@ import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
 import { useI18n } from "vue-i18n";
 import { checkAdbAvailable } from "../invoke";
 import { loadPersistentStorage } from "../storeLoader";
-import { load } from "@tauri-apps/plugin-store";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -60,7 +59,7 @@ onActivated(async () => {
 
 onMounted(async () => {
   store.screenStreamClientId = genClientId();
-  await loadLocalStore();
+  loadPersistentStorage(store, t);
   store.checkUpdate = checkUpdate;
   if (store.checkUpdateAtStart) checkUpdate();
   store.checkAdb = checkAdb;
@@ -100,11 +99,6 @@ function genClientId() {
     result += characters.charAt(Math.floor(Math.random() * charactersLength));
   }
   return result;
-}
-
-async function loadLocalStore() {
-  const localStore = await load("store.json");
-  await loadPersistentStorage(localStore, store, t);
 }
 
 async function cleanAfterimage() {
@@ -181,71 +175,81 @@ async function checkUpdate() {
 </script>
 
 <template>
-  <div v-show="!store.controledDevice" class="notice">
-    <div class="content">
-      <NDialog
-        :closable="false"
-        :title="$t('pages.Mask.noControledDevice.title')"
-        :content="$t('pages.Mask.noControledDevice.content')"
-        :positive-text="$t('pages.Mask.noControledDevice.positiveText')"
-        type="warning"
-        @positive-click="toStartServer"
+  <div class="content-container">
+    <div v-show="!store.controledDevice" class="notice">
+      <div class="content">
+        <NDialog
+          :closable="false"
+          :title="$t('pages.Mask.noControledDevice.title')"
+          :content="$t('pages.Mask.noControledDevice.content')"
+          :positive-text="$t('pages.Mask.noControledDevice.positiveText')"
+          type="warning"
+          @positive-click="toStartServer"
+        />
+      </div>
+    </div>
+    <template v-if="store.keyMappingConfigList.length">
+      <div @contextmenu.prevent class="mask" id="maskElement"></div>
+      <ScreenStream
+        :cid="store.screenStreamClientId"
+        v-if="
+          curPageActive && store.controledDevice && store.screenStream.enable
+        "
       />
-    </div>
-  </div>
-  <template v-if="store.keyMappingConfigList.length">
-    <div @contextmenu.prevent class="mask" id="maskElement"></div>
-    <ScreenStream
-      :cid="store.screenStreamClientId"
-      v-if="curPageActive && store.controledDevice && store.screenStream.enable"
-    />
-    <div
-      v-if="store.maskButton.show"
-      :style="'--transparency: ' + store.maskButton.transparency"
-      class="button-layer"
-    >
-      <!-- <div style="position: absolute;height: 100%;width: 1px;background-color: red;left: 50%;"></div>
-      <div style="position: absolute;width: 100%;height: 1px;background-color: red;top: 56.6%;"></div> -->
-      <template
-        v-for="button in store.keyMappingConfigList[store.curKeyMappingIndex]
-          .list"
+      <div
+        v-if="store.maskButton.show"
+        :style="'--transparency: ' + store.maskButton.transparency"
+        class="button-layer"
       >
-        <div
-          v-if="button.type === 'SteeringWheel'"
-          class="mask-steering-wheel"
-          :style="{
-            left: button.posX - 75 + 'px',
-            top: button.posY - 75 + 'px',
-          }"
+        <!-- <div style="position: absolute;height: 100%;width: 1px;background-color: red;left: 50%;"></div>
+        <div style="position: absolute;width: 100%;height: 1px;background-color: red;top: 56.6%;"></div> -->
+        <template
+          v-for="button in store.keyMappingConfigList[store.curKeyMappingIndex]
+            .list"
         >
-          <div class="wheel-container">
-            <i />
-            <span>{{ (button as KeySteeringWheel).key.up }}</span>
-            <i />
-            <span>{{ (button as KeySteeringWheel).key.left }}</span>
-            <i />
-            <span>{{ (button as KeySteeringWheel).key.right }}</span>
-            <i />
-            <span>{{ (button as KeySteeringWheel).key.down }}</span>
-            <i />
+          <div
+            v-if="button.type === 'SteeringWheel'"
+            class="mask-steering-wheel"
+            :style="{
+              left: button.posX - 75 + 'px',
+              top: button.posY - 75 + 'px',
+            }"
+          >
+            <div class="wheel-container">
+              <i />
+              <span>{{ (button as KeySteeringWheel).key.up }}</span>
+              <i />
+              <span>{{ (button as KeySteeringWheel).key.left }}</span>
+              <i />
+              <span>{{ (button as KeySteeringWheel).key.right }}</span>
+              <i />
+              <span>{{ (button as KeySteeringWheel).key.down }}</span>
+              <i />
+            </div>
           </div>
-        </div>
-        <div
-          v-else
-          class="mask-button"
-          :style="{
-            left: button.posX + 'px',
-            top: button.posY - 14 + 'px',
-          }"
-        >
-          {{ button.type === "Fire" ? "Fire" : button.key }}
-        </div>
-      </template>
-    </div>
-  </template>
+          <div
+            v-else
+            class="mask-button"
+            :style="{
+              left: button.posX + 'px',
+              top: button.posY - 14 + 'px',
+            }"
+          >
+            {{ button.type === "Fire" ? "Fire" : button.key }}
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
 </template>
 
 <style scoped lang="scss">
+@use "../css/common.scss";
+
+.content-container {
+  @include common.contentContainer;
+}
+
 .mask {
   background-color: transparent;
   overflow: hidden;

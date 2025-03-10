@@ -24,18 +24,17 @@ import {
   PhysicalSize,
   getCurrentWindow,
 } from "@tauri-apps/api/window";
-import { load } from "@tauri-apps/plugin-store";
 import { SettingsOutline } from "@vicons/ionicons5";
 import { UnlistenFn } from "@tauri-apps/api/event";
 import { useGlobalStore } from "../../store/global";
 import { useI18n } from "vue-i18n";
+import { LocalStore } from "../../store/localStore";
 
 let unlistenResize: UnlistenFn = () => {};
 let unlistenMove: UnlistenFn = () => {};
 let factor = 1;
 
 const { t } = useI18n();
-const localStore = await load("store.json");
 const store = useGlobalStore();
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
@@ -105,7 +104,7 @@ function handleAdjustClick(e: MouseEvent) {
   formRef.value?.validate((errors) => {
     if (!errors) {
       adjustMaskArea().then(() => {
-        localStore.set("maskArea", areaModel.value);
+        LocalStore.set("maskArea", areaModel.value);
         message.success(t("pages.Setting.Mask.areaSaved"));
       });
     } else {
@@ -140,7 +139,7 @@ onMounted(async () => {
   const appWindow = getCurrentWindow();
   factor = await appWindow.scaleFactor();
 
-  let maskArea = await localStore.get<MaskArea>("maskArea");
+  let maskArea = await LocalStore.get<MaskArea>("maskArea");
   if (maskArea !== undefined) {
     areaModel.value = maskArea;
   }
@@ -172,13 +171,13 @@ onUnmounted(() => {
     >
       <NCheckbox
         v-model:checked="store.maskButton.show"
-        @update:checked="localStore.set('maskButton', store.maskButton)"
+        @update:checked="LocalStore.set('maskButton', store.maskButton)"
       />
     </NFormItem>
     <NFormItem :label="$t('pages.Setting.Mask.opacity')" label-placement="left">
       <NSlider
         v-model:value="store.maskButton.transparency"
-        @update:value="localStore.set('maskButton', store.maskButton)"
+        @update:value="LocalStore.set('maskButton', store.maskButton)"
         :min="0"
         :max="1"
         :step="0.01"
@@ -243,7 +242,7 @@ onUnmounted(() => {
     >
       <NCheckbox
         v-model:checked="store.rotation.enable"
-        @update:checked="localStore.set('rotation', store.rotation)"
+        @update:checked="LocalStore.set('rotation', store.rotation)"
       />
     </NFormItem>
     <NGrid :cols="2">
@@ -253,7 +252,7 @@ onUnmounted(() => {
       >
         <NInputNumber
           v-model:value="store.rotation.verticalLength"
-          @update:value="localStore.set('rotation', store.rotation)"
+          @update:value="LocalStore.set('rotation', store.rotation)"
           :placeholder="$t('pages.Setting.Mask.rotation.verticalLength')"
         />
       </NFormItemGi>
@@ -263,7 +262,7 @@ onUnmounted(() => {
       >
         <NInputNumber
           v-model:value="store.rotation.horizontalLength"
-          @update:value="localStore.set('rotation', store.rotation)"
+          @update:value="LocalStore.set('rotation', store.rotation)"
           :placeholder="$t('pages.Setting.Mask.rotation.horizontalLength')"
         />
       </NFormItemGi>
@@ -276,7 +275,7 @@ onUnmounted(() => {
     >
       <NCheckbox
         v-model:checked="store.screenStream.enable"
-        @update:checked="localStore.set('screenStream', store.screenStream)"
+        @update:checked="LocalStore.set('screenStream', store.screenStream)"
       />
     </NFormItem>
     <NFormItem
@@ -285,7 +284,7 @@ onUnmounted(() => {
     >
       <NInput
         v-model:value="store.screenStream.address"
-        @update:value="localStore.set('screenStream', store.screenStream)"
+        @update:value="LocalStore.set('screenStream', store.screenStream)"
         clearable
         :placeholder="$t('pages.Setting.Mask.screenStream.addressPlaceholder')"
       />

@@ -1,0 +1,5 @@
+@mixin contentContainer {
+  grid-area: content;
+  width: 100%;
+  height: 100%;
+}
