@@ -171,7 +171,6 @@ function isKeyUnique(curKey: string): boolean {
         set.add((keyMapping as KeyMappingSteeringWheel).key[name]);
       }
     } else if (keyMapping.type !== "Fire") {
-      if (set.has(keyMapping.key as string)) return false;
       set.add(keyMapping.key as string);
     }
   }
