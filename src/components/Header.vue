@@ -2,10 +2,10 @@
 import { NButtonGroup, NButton, NIcon } from "naive-ui";
 import { Close } from "@vicons/ionicons5";
 import { Maximize16Regular, Subtract16Regular } from "@vicons/fluent";
-import { getCurrent } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 async function maximizeOrRestore() {
-  const appWindow = getCurrent();
+  const appWindow = getCurrentWindow();
   appWindow.isMaximized().then((maximized) => {
     maximized ? appWindow.unmaximize() : appWindow.maximize();
   });
@@ -16,7 +16,11 @@ async function maximizeOrRestore() {
   <div class="header">
     <div data-tauri-drag-region class="drag"></div>
     <NButtonGroup>
-      <NButton quaternary :focusable="false" @click="getCurrent().minimize()">
+      <NButton
+        quaternary
+        :focusable="false"
+        @click="getCurrentWindow().minimize()"
+      >
         <template #icon>
           <NIcon><Subtract16Regular /></NIcon>
         </template>
@@ -30,7 +34,7 @@ async function maximizeOrRestore() {
         quaternary
         :focusable="false"
         class="close"
-        @click="getCurrent().close()"
+        @click="getCurrentWindow().close()"
       >
         <template #icon>
           <NIcon><Close /></NIcon>
@@ -52,11 +56,11 @@ async function maximizeOrRestore() {
   user-select: none;
   -webkit-user-select: none;
 
-  .n-button-group{
+  .n-button-group {
     flex-shrink: 0;
   }
 
-  .drag{
+  .drag {
     flex-grow: 1;
     height: 100%;
   }

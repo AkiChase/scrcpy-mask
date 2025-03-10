@@ -44,7 +44,7 @@ import { shutdown } from "../frontcommand/scrcpyMaskCmd";
 import { useGlobalStore } from "../store/global";
 import { useI18n } from "vue-i18n";
 import { closeExternalControl, connectExternalControl } from "../websocket";
-import { LogicalSize, getCurrent } from "@tauri-apps/api/window";
+import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 const { t } = useI18n();
@@ -75,7 +75,6 @@ onMounted(async () => {
           if (payload.clipboard === lastClipboard) break;
           lastClipboard = payload.clipboard;
           writeText(payload.clipboard);
-          console.log(payload);
           break;
         case "ClipboardSetAck":
           break;
@@ -97,11 +96,11 @@ onMounted(async () => {
               maskH = Math.round(store.rotation.verticalLength);
               maskW = Math.round(maskH * (payload.width / payload.height));
             }
-            getCurrent().setSize(new LogicalSize(maskW + 70, maskH + 30));
+            getCurrentWindow().setSize(new LogicalSize(maskW + 70, maskH + 30));
           }
           break;
         default:
-          console.log("Unknown reply", payload);
+          console.warn("Unknown reply", payload);
           break;
       }
     } catch (e) {
@@ -360,119 +359,127 @@ function closeWS() {
 </script>
 
 <template>
-  <NScrollbar>
-    <div class="device">
-      <NSpin :show="store.showLoadingRef">
-        <NH4 prefix="bar">{{ $t("pages.Device.localPort") }}</NH4>
-        <NInputNumber
-          v-model:value="port"
-          :show-button="false"
-          :min="16384"
-          :max="49151"
-          :placeholder="$t('pages.Device.localPortPlaceholder')"
-          style="max-width: 300px"
-        />
-        <NH4 prefix="bar">{{ $t("pages.Device.wireless") }}</NH4>
-        <NInputGroup style="max-width: 300px">
-          <NInput
-            v-model:value="wireless_address"
-            clearable
-            :placeholder="$t('pages.Device.wirelessPlaceholder')"
+  <div class="container">
+    <NScrollbar>
+      <div class="device">
+        <NSpin :show="store.showLoadingRef">
+          <NH4 prefix="bar">{{ $t("pages.Device.localPort") }}</NH4>
+          <NInputNumber
+            v-model:value="port"
+            :show-button="false"
+            :min="16384"
+            :max="49151"
+            :placeholder="$t('pages.Device.localPortPlaceholder')"
+            style="max-width: 300px"
           />
-          <NButton type="primary" @click="connectDevice">{{
-            $t("pages.Device.connect")
-          }}</NButton>
-        </NInputGroup>
-        <NH4 prefix="bar">{{ $t("pages.Device.externalControl") }}</NH4>
-        <NInputGroup style="max-width: 300px">
-          <NInput
-            v-model:value="ws_address"
-            clearable
-            :placeholder="$t('pages.Device.wsAddress')"
-            :disabled="store.externalControlled"
-          />
-          <NButton
-            v-if="store.externalControlled"
-            type="error"
-            @click="closeWS"
-            >{{ $t("pages.Device.wsClose") }}</NButton
-          >
-          <NButton v-else type="primary" @click="connectWS">{{
-            $t("pages.Device.wsConnect")
-          }}</NButton>
-        </NInputGroup>
-        <NH4 prefix="bar">{{ $t("pages.Device.controledDevice") }}</NH4>
-        <div class="controled-device-list">
-          <NEmpty
-            size="small"
-            :description="$t('pages.Device.noControledDevice')"
-            v-if="!store.controledDevice"
-          />
-          <div class="controled-device" v-if="store.controledDevice">
-            <div>
-              {{ store.controledDevice.deviceName }} ({{
-                store.controledDevice.deviceID
-              }})
-            </div>
-            <div class="device-op">
-              <NTooltip trigger="hover">
-                <template #trigger>
-                  <NButton quaternary circle type="info">
-                    <template #icon>
-                      <NIcon><InformationCircle /></NIcon>
-                    </template>
-                  </NButton>
-                </template>
-                scid: {{ store.controledDevice.scid }}
-              </NTooltip>
-              <NButton quaternary circle type="error" @click="shutdownSC()">
-                <template #icon>
-                  <NIcon><CloseCircle /></NIcon>
-                </template>
-              </NButton>
+          <NH4 prefix="bar">{{ $t("pages.Device.wireless") }}</NH4>
+          <NInputGroup style="max-width: 300px">
+            <NInput
+              v-model:value="wireless_address"
+              clearable
+              :placeholder="$t('pages.Device.wirelessPlaceholder')"
+            />
+            <NButton type="primary" @click="connectDevice">{{
+              $t("pages.Device.connect")
+            }}</NButton>
+          </NInputGroup>
+          <NH4 prefix="bar">{{ $t("pages.Device.externalControl") }}</NH4>
+          <NInputGroup style="max-width: 300px">
+            <NInput
+              v-model:value="ws_address"
+              clearable
+              :placeholder="$t('pages.Device.wsAddress')"
+              :disabled="store.externalControlled"
+            />
+            <NButton
+              v-if="store.externalControlled"
+              type="error"
+              @click="closeWS"
+              >{{ $t("pages.Device.wsClose") }}</NButton
+            >
+            <NButton v-else type="primary" @click="connectWS">{{
+              $t("pages.Device.wsConnect")
+            }}</NButton>
+          </NInputGroup>
+          <NH4 prefix="bar">{{ $t("pages.Device.controledDevice") }}</NH4>
+          <div class="controled-device-list">
+            <NEmpty
+              size="small"
+              :description="$t('pages.Device.noControledDevice')"
+              v-if="!store.controledDevice"
+            />
+            <div class="controled-device" v-if="store.controledDevice">
+              <div>
+                {{ store.controledDevice.deviceName }} ({{
+                  store.controledDevice.deviceID
+                }})
+              </div>
+              <div class="device-op">
+                <NTooltip trigger="hover">
+                  <template #trigger>
+                    <NButton quaternary circle type="info">
+                      <template #icon>
+                        <NIcon><InformationCircle /></NIcon>
+                      </template>
+                    </NButton>
+                  </template>
+                  scid: {{ store.controledDevice.scid }}
+                </NTooltip>
+                <NButton quaternary circle type="error" @click="shutdownSC()">
+                  <template #icon>
+                    <NIcon><CloseCircle /></NIcon>
+                  </template>
+                </NButton>
+              </div>
             </div>
           </div>
-        </div>
-        <NFlex justify="space-between" align="center">
-          <NH4 style="margin: 20px 0" prefix="bar">{{
-            $t("pages.Device.availableDevice")
-          }}</NH4>
-          <NButton
-            tertiary
-            circle
-            type="primary"
-            @click="refreshDevices"
-            style="margin-right: 20px"
-          >
-            <template #icon>
-              <NIcon><Refresh /></NIcon>
-            </template>
-          </NButton>
-        </NFlex>
-        <NDataTable
-          max-height="120"
-          :columns="tableCols"
-          :data="availableDevice"
-          :row-props="tableRowProps"
-          :pagination="false"
-          :bordered="false"
-        />
-        <NDropdown
-          placement="bottom-start"
-          trigger="manual"
-          :x="menuX"
-          :y="menuY"
-          :options="menuOptions"
-          :show="showMenu"
-          :on-clickoutside="onMenuClickoutside"
-          @select="onMenuSelect"
-        />
-      </NSpin>
-    </div>
-  </NScrollbar>
+          <NFlex justify="space-between" align="center">
+            <NH4 style="margin: 20px 0" prefix="bar">{{
+              $t("pages.Device.availableDevice")
+            }}</NH4>
+            <NButton
+              tertiary
+              circle
+              type="primary"
+              @click="refreshDevices"
+              style="margin-right: 20px"
+            >
+              <template #icon>
+                <NIcon><Refresh /></NIcon>
+              </template>
+            </NButton>
+          </NFlex>
+          <NDataTable
+            max-height="120"
+            :columns="tableCols"
+            :data="availableDevice"
+            :row-props="tableRowProps"
+            :pagination="false"
+            :bordered="false"
+          />
+          <NDropdown
+            placement="bottom-start"
+            trigger="manual"
+            :x="menuX"
+            :y="menuY"
+            :options="menuOptions"
+            :show="showMenu"
+            :on-clickoutside="onMenuClickoutside"
+            @select="onMenuSelect"
+          />
+        </NSpin>
+      </div>
+    </NScrollbar>
+  </div>
 </template>
 
 <style scoped lang="scss">
+@use "./../css/common.scss";
+
+.container {
+  @include common.contentContainer;
+}
+
 .device {
   color: var(--light-color);
   background-color: var(--bg-color);

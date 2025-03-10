@@ -9,8 +9,11 @@ use scrcpy_mask::{
     socket::connect_socket,
 };
 use std::{fs::read_to_string, sync::Arc};
-use tauri::Manager;
+use tauri::{Emitter, Listener, Manager};
+use tauri_plugin_store::StoreExt;
 
+
+// TODO move to command.rs
 #[tauri::command]
 /// get devices info list
 fn adb_devices() -> Result<Vec<Device>, String> {
@@ -39,6 +42,8 @@ fn push_server_file(id: String, app: tauri::AppHandle) -> Result<(), String> {
     }
 }
 
+
+// TODO fix: device connect timeout
 #[tauri::command]
 /// start scrcpy server and connect to it
 fn start_scrcpy_server(
@@ -159,101 +164,80 @@ fn check_adb_available() -> Result<(), String> {
 
 #[tauri::command]
 fn set_adb_path(adb_path: String, app: tauri::AppHandle) -> Result<(), String> {
-    let app_h = app.app_handle().clone();
-    let stores = app_h.state::<tauri_plugin_store::StoreCollection<tauri::Wry>>();
-    let path = std::path::PathBuf::from("store.bin");
-    let store_res: Result<(), tauri_plugin_store::Error> =
-        tauri_plugin_store::with_store(app, stores, path, |store| {
-            store.insert(
-                "adbPath".to_string(),
-                serde_json::Value::String(adb_path.clone()),
-            )?;
-            *share::ADB_PATH.lock().unwrap() = adb_path;
-            Ok(())
-        });
-
-    match store_res {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e.to_string()),
-    }
+    let store = app
+        .store("store.bin")
+        .map_err(|_| "failed to load store".to_string())?;
+    store.set("adbPath", adb_path.clone());
+    *share::ADB_PATH.lock().unwrap() = adb_path;
+    Ok(())
 }
-
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
-            let stores = app
-                .app_handle()
-                .state::<tauri_plugin_store::StoreCollection<tauri::Wry>>();
-            let path: std::path::PathBuf = std::path::PathBuf::from("store.bin");
-            tauri_plugin_store::with_store(app.app_handle().clone(), stores, path, |store| {
-                // load adb path
-                match store.get("adbPath") {
-                    Some(value) => {
-                        *share::ADB_PATH.lock().unwrap() = value.as_str().unwrap().to_string()
-                    }
-                    None => store
-                        .insert(
-                            "adbPath".to_string(),
-                            serde_json::Value::String("adb".to_string()),
-                        )
-                        .unwrap(),
-                };
+            let store = app
+                .store("store.bin")
+                .map_err(|_| "failed to load store".to_string())?;
 
-                // restore window position and size
-                match store.get("maskArea") {
-                    Some(value) => {
-                        let pos_x = value["posX"].as_i64();
-                        let pos_y = value["posY"].as_i64();
-                        let size_w = value["sizeW"].as_i64().unwrap_or(800);
-                        let size_h = value["sizeH"].as_i64().unwrap_or(600);
-
-                        let main_window: tauri::WebviewWindow =
-                            app.get_webview_window("main").unwrap();
-
-                        main_window.set_zoom(1.).unwrap_or(());
-
-                        if pos_x.is_none() || pos_y.is_none() {
-                            main_window.center().unwrap_or(());
-                        } else {
-                            main_window
-                                .set_position(tauri::Position::Logical(tauri::LogicalPosition {
-                                    x: (pos_x.unwrap() - 70) as f64,
-                                    y: (pos_y.unwrap() - 30) as f64,
-                                }))
-                                .unwrap();
-                        }
-
-                        main_window
-                            .set_size(tauri::Size::Logical(tauri::LogicalSize {
-                                width: (size_w + 70) as f64,
-                                height: (size_h + 30) as f64,
-                            }))
-                            .unwrap();
-                    }
-                    None => {
-                        let main_window: tauri::WebviewWindow =
-                            app.get_webview_window("main").unwrap();
-
-                        main_window.center().unwrap_or(());
-
-                        main_window
-                            .set_size(tauri::Size::Logical(tauri::LogicalSize {
-                                width: (800 + 70) as f64,
-                                height: (600 + 30) as f64,
-                            }))
-                            .unwrap();
-                    }
+            // set adb path
+            match store.get("adbPath") {
+                Some(value) => {
+                    *share::ADB_PATH.lock().unwrap() = value.as_str().unwrap().to_string()
                 }
+                None => store.set("adbPath", "adb".to_string()),
+            }
 
-                Ok(())
-            })
-            .unwrap();
+            // restore window position and size
+            match store.get("maskArea") {
+                Some(value) => {
+                    // TODO check position and size validity
+
+                    let pos_x = value["posX"].as_i64();
+                    let pos_y = value["posY"].as_i64();
+                    let size_w = value["sizeW"].as_i64().unwrap_or(800);
+                    let size_h = value["sizeH"].as_i64().unwrap_or(600);
+
+                    let main_window: tauri::WebviewWindow = app.get_webview_window("main").unwrap();
+
+                    main_window.set_zoom(1.).unwrap_or(());
+
+                    if pos_x.is_none() || pos_y.is_none() {
+                        main_window.center().unwrap_or(());
+                    } else {
+                        main_window
+                            .set_position(tauri::Position::Logical(tauri::LogicalPosition {
+                                x: (pos_x.unwrap() - 70) as f64,
+                                y: (pos_y.unwrap() - 30) as f64,
+                            }))
+                            .unwrap();
+                    }
+
+                    main_window
+                        .set_size(tauri::Size::Logical(tauri::LogicalSize {
+                            width: (size_w + 70) as f64,
+                            height: (size_h + 30) as f64,
+                        }))
+                        .unwrap();
+                }
+                None => {
+                    let main_window: tauri::WebviewWindow = app.get_webview_window("main").unwrap();
+
+                    main_window.center().unwrap_or(());
+
+                    main_window
+                        .set_size(tauri::Size::Logical(tauri::LogicalSize {
+                            width: (800 + 70) as f64,
+                            height: (600 + 30) as f64,
+                        }))
+                        .unwrap();
+                }
+            }
 
             // check resource files
             ResHelper::res_init(

@@ -141,7 +141,6 @@ function swipePointDragHandlue(downEvent: MouseEvent, index: number) {
 
 function swipeTrackClickHandler(event: MouseEvent) {
   if (event.button !== 0) return;
-  console.log(event.target, event.currentTarget);
   if (event.target !== event.currentTarget) return;
   keyMapping.value.pos.push({ x: event.clientX - 70, y: event.clientY - 30 });
 }

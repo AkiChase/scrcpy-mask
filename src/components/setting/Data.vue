@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Store } from "@tauri-apps/plugin-store";
 import { Refresh, TrashBinOutline } from "@vicons/ionicons5";
 import {
   NH4,
@@ -17,9 +16,10 @@ import {
 import { relaunch } from "@tauri-apps/plugin-process";
 import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { LocalStore } from "../../store/localStore";
 
 const { t } = useI18n();
-const localStore = new Store("store.bin");
+
 const dialog = useDialog();
 
 const localStoreEntries = ref<[string, unknown][]>([]);
@@ -32,7 +32,7 @@ onMounted(async () => {
 });
 
 async function refreshLocalData() {
-  localStoreEntries.value = await localStore.entries();
+  localStoreEntries.value = await LocalStore.entries();
 }
 
 function showLocalStore(index: number) {
@@ -53,7 +53,7 @@ function delLocalStore(key?: string) {
       positiveText: t("pages.Setting.Data.delLocalStore.dialog.positiveText"),
       negativeText: t("pages.Setting.Data.delLocalStore.dialog.negativeText"),
       onPositiveClick: () => {
-        localStore.delete(key);
+        LocalStore.delete(key);
         localStoreEntries.value.splice(curDataIndex, 1);
         showDataModal.value = false;
       },
@@ -65,7 +65,7 @@ function delLocalStore(key?: string) {
       positiveText: t("pages.Setting.Data.delLocalStore.dialog.positiveText"),
       negativeText: t("pages.Setting.Data.delLocalStore.dialog.negativeText"),
       onPositiveClick: () => {
-        localStore.clear();
+        LocalStore.clear();
         relaunch();
       },
     });

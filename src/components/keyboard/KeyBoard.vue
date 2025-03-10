@@ -335,67 +335,78 @@ onBeforeRouteLeave(() => {
 </script>
 
 <template>
-  <ScreenStream
-    :cid="store.screenStreamClientId"
-    v-if="curPageActive && store.controledDevice && store.screenStream.enable"
-  />
-  <div
-    v-if="store.keyMappingConfigList.length"
-    id="keyboardElement"
-    class="keyboard"
-    @mousedown="handleClick"
-    @contextmenu.prevent
-  >
-    <KeySetting />
-    <KeyInfo />
-    <NDropdown
-      :options="addButtonOptions"
-      :show="keyboardStore.showButtonAddFlag"
-      placement="bottom-start"
-      trigger="manual"
-      :x="addButtonPos.x"
-      :y="addButtonPos.y"
-      @clickoutside="keyboardStore.showButtonAddFlag = false"
-      @select="onAddButtonSelect"
+  <div class="content-container">
+    <ScreenStream
+      :cid="store.screenStreamClientId"
+      v-if="curPageActive && store.controledDevice && store.screenStream.enable"
     />
-    <template v-for="(_, index) in store.editKeyMappingList">
-      <KeySteeringWheel
-        v-if="store.editKeyMappingList[index].type === 'SteeringWheel'"
-        :index="index"
+    <div
+      v-if="store.keyMappingConfigList.length"
+      id="keyboardElement"
+      class="keyboard"
+      @mousedown="handleClick"
+      @contextmenu.prevent
+    >
+      <KeySetting />
+      <KeyInfo />
+      <NDropdown
+        :options="addButtonOptions"
+        :show="keyboardStore.showButtonAddFlag"
+        placement="bottom-start"
+        trigger="manual"
+        :x="addButtonPos.x"
+        :y="addButtonPos.y"
+        @clickoutside="keyboardStore.showButtonAddFlag = false"
+        @select="onAddButtonSelect"
       />
-      <KeySkill
-        v-else-if="
-          store.editKeyMappingList[index].type === 'DirectionalSkill' ||
-          store.editKeyMappingList[index].type === 'DirectionlessSkill' ||
-          store.editKeyMappingList[index].type === 'TriggerWhenPressedSkill' ||
-          store.editKeyMappingList[index].type ===
-            'TriggerWhenDoublePressedSkill'
-        "
-        :index="index"
-      />
-      <KeyObservation
-        v-else-if="store.editKeyMappingList[index].type === 'Observation'"
-        :index="index"
-      />
-      <KeySwipe
-        v-else-if="store.editKeyMappingList[index].type === 'Swipe'"
-        :index="index"
-      />
-      <KeySight
-        v-else-if="store.editKeyMappingList[index].type === 'Sight'"
-        :index="index"
-      />
-      <KeyFire
-        v-else-if="store.editKeyMappingList[index].type === 'Fire'"
-        :index="index"
-      />
-      <KeyCommon v-else :index="index" />
-    </template>
+      <template v-for="(_, index) in store.editKeyMappingList">
+        <KeySteeringWheel
+          v-if="store.editKeyMappingList[index].type === 'SteeringWheel'"
+          :index="index"
+        />
+        <KeySkill
+          v-else-if="
+            store.editKeyMappingList[index].type === 'DirectionalSkill' ||
+            store.editKeyMappingList[index].type === 'DirectionlessSkill' ||
+            store.editKeyMappingList[index].type ===
+              'TriggerWhenPressedSkill' ||
+            store.editKeyMappingList[index].type ===
+              'TriggerWhenDoublePressedSkill'
+          "
+          :index="index"
+        />
+        <KeyObservation
+          v-else-if="store.editKeyMappingList[index].type === 'Observation'"
+          :index="index"
+        />
+        <KeySwipe
+          v-else-if="store.editKeyMappingList[index].type === 'Swipe'"
+          :index="index"
+        />
+        <KeySight
+          v-else-if="store.editKeyMappingList[index].type === 'Sight'"
+          :index="index"
+        />
+        <KeyFire
+          v-else-if="store.editKeyMappingList[index].type === 'Fire'"
+          :index="index"
+        />
+        <KeyCommon v-else :index="index" />
+      </template>
+    </div>
   </div>
 </template>
 
 <style scoped lang="scss">
+@use "../../css/common.scss";
+
+.content-container {
+  @include common.contentContainer;
+}
+
 .keyboard {
+  width: 100%;
+  height: 100%;
   color: var(--light-color);
   background-color: rgba(0, 0, 0, 0.5);
   overflow: hidden;

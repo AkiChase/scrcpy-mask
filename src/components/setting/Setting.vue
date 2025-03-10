@@ -39,10 +39,12 @@ const store = useGlobalStore();
 </template>
 
 <style scoped lang="scss">
+@use "../../css/common.scss";
+
 .setting {
+  @include common.contentContainer;
   background-color: var(--content-bg-color);
   color: var(--light-color);
-  height: 100%;
   overflow-y: auto;
   display: flex;
 
