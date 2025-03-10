@@ -5,10 +5,10 @@ import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
 import { onMounted, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
-import { Store } from "@tauri-apps/plugin-store";
+import { load } from "@tauri-apps/plugin-store";
 
 const store = useGlobalStore();
-const localStore = new Store("store.bin");
+const localStore = await load('store.json');
 
 const appVersion = ref("");
 onMounted(async () => {

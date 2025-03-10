@@ -5,9 +5,9 @@ import {
   KeyMappingConfig,
   KeySteeringWheel,
 } from "../keyMappingConfig";
-import { Store } from "@tauri-apps/plugin-store";
+import { load } from "@tauri-apps/plugin-store";
 
-const localStore = new Store("store.bin");
+const localStore = await load("store.json");
 
 export const useGlobalStore = defineStore("global", () => {
   const showLoadingRef = ref(false);
@@ -30,21 +30,17 @@ export const useGlobalStore = defineStore("global", () => {
   let checkUpdate: () => Promise<void> = async () => {};
   let checkAdb: () => Promise<void> = async () => {};
 
+  // Applies the edited key mapping list and checks for duplicate keys
   function applyEditKeyMappingList(): boolean {
     const set = new Set<string>();
     for (const keyMapping of editKeyMappingList.value) {
       if (keyMapping.type === "SteeringWheel") {
-        const nameList: ["up", "down", "left", "right"] = [
-          "up",
-          "down",
-          "left",
-          "right",
-        ];
-        for (const name of nameList) {
+        for (const name of ["up", "down", "left", "right"] as const) {
           if (set.has((keyMapping as KeySteeringWheel).key[name])) return false;
           set.add((keyMapping as KeySteeringWheel).key[name]);
         }
       } else if (keyMapping.type !== "Fire") {
+        // check duplicated key
         if (set.has(keyMapping.key as string)) return false;
         set.add(keyMapping.key as string);
       }
@@ -56,12 +52,14 @@ export const useGlobalStore = defineStore("global", () => {
     return true;
   }
 
+  // Reset the edited key mapping to the original key mapping list
   function resetEditKeyMappingList() {
     editKeyMappingList.value = JSON.parse(
       JSON.stringify(keyMappingConfigList.value[curKeyMappingIndex.value].list)
     );
   }
 
+  // change key mapping scheme
   function setKeyMappingIndex(index: number) {
     curKeyMappingIndex.value = index;
     resetEditKeyMappingList();

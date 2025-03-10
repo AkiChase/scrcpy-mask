@@ -23,7 +23,7 @@ import {
   KeyTriggerWhenPressedSkill,
 } from "./keyMappingConfig";
 import { useGlobalStore } from "./store/global";
-import { LogicalPosition, getCurrent } from "@tauri-apps/api/window";
+import { LogicalPosition, getCurrentWindow } from "@tauri-apps/api/window";
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { useI18n } from "vue-i18n";
 import { KeyToCodeMap } from "./frontcommand/KeyToCodeMap";
@@ -663,7 +663,7 @@ function addSightShortcuts(
   sightKeyMapping: KeySight,
   fireKeyMapping?: KeyFire
 ) {
-  const appWindow = getCurrent();
+  const appWindow = getCurrentWindow();
 
   let mouseLock = false;
   let msgReactive: ReturnType<typeof message.info> | null = null;

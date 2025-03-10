@@ -14,17 +14,17 @@ import {
 } from "naive-ui";
 import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useGlobalStore } from "../../store/global";
-import { Store } from "@tauri-apps/plugin-store";
 import { loadDefaultKeyconfig } from "../../invoke";
 import { KeyMappingConfig } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 import { useI18n } from "vue-i18n";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { load } from "@tauri-apps/plugin-store";
 
 const { t } = useI18n();
 const store = useGlobalStore();
 const keyboardStore = useKeyboardStore();
-const localStore = new Store("store.bin");
+const localStore = await load("store.json");
 const message = useMessage();
 
 const showImportModal = ref(false);
@@ -56,7 +56,7 @@ onMounted(async () => {
     "keySettingPos"
   );
 
-  if (storedPos === null) {
+  if (storedPos === undefined) {
     await localStore.set("keySettingPos", keySettingPos.value);
     storedPos = { x: 100, y: 100 };
   }

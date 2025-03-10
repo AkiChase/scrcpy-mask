@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use serde_json::json;
+use tauri::Listener;
 use tokio::{
     io::AsyncReadExt,
     net::{

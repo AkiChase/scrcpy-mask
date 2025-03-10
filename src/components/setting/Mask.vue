@@ -22,9 +22,9 @@ import {
   LogicalSize,
   PhysicalPosition,
   PhysicalSize,
-  getCurrent,
+  getCurrentWindow,
 } from "@tauri-apps/api/window";
-import { Store } from "@tauri-apps/plugin-store";
+import { load } from "@tauri-apps/plugin-store";
 import { SettingsOutline } from "@vicons/ionicons5";
 import { UnlistenFn } from "@tauri-apps/api/event";
 import { useGlobalStore } from "../../store/global";
@@ -35,7 +35,7 @@ let unlistenMove: UnlistenFn = () => {};
 let factor = 1;
 
 const { t } = useI18n();
-const localStore = new Store("store.bin");
+const localStore = await load("store.json");
 const store = useGlobalStore();
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
@@ -120,7 +120,7 @@ async function adjustMaskArea() {
   const mt = 30;
   const ml = 70;
 
-  const appWindow = getCurrent();
+  const appWindow = getCurrentWindow();
 
   const pos = new LogicalPosition(
     areaModel.value.posX - ml,
@@ -137,11 +137,11 @@ async function adjustMaskArea() {
 }
 
 onMounted(async () => {
-  const appWindow = getCurrent();
+  const appWindow = getCurrentWindow();
   factor = await appWindow.scaleFactor();
 
   let maskArea = await localStore.get<MaskArea>("maskArea");
-  if (maskArea !== null) {
+  if (maskArea !== undefined) {
     areaModel.value = maskArea;
   }
 

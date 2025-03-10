@@ -12,7 +12,7 @@ async function loadKeyMappingConfigList() {
   let keyMappingConfigList = await localStore.get<KeyMappingConfig[]>(
     "keyMappingConfigList"
   );
-  if (keyMappingConfigList === null || keyMappingConfigList.length === 0) {
+  if (keyMappingConfigList === undefined || keyMappingConfigList.length === 0) {
     // add empty key mapping config
     // unable to get mask element when app is not ready
     // so we use the stored mask area to get relative size
@@ -23,7 +23,7 @@ async function loadKeyMappingConfigList() {
       sizeH: number;
     }>("maskArea");
     let relativeSize = { w: 800, h: 600 };
-    if (maskArea !== null) {
+    if (maskArea !== undefined) {
       relativeSize = {
         w: maskArea.sizeW,
         h: maskArea.sizeH,
@@ -45,7 +45,7 @@ async function loadCurKeyMappingIndex() {
   // loading curKeyMappingIndex from local store
   let curKeyMappingIndex = await localStore.get<number>("curKeyMappingIndex");
   if (
-    curKeyMappingIndex === null ||
+    curKeyMappingIndex === undefined ||
     curKeyMappingIndex >= store.keyMappingConfigList.length
   ) {
     curKeyMappingIndex = 0;
@@ -100,10 +100,9 @@ async function loadClipboardSync() {
     pasteFromPC: boolean;
   }>("clipboardSync");
   if (clipboardSync) store.clipboardSync = clipboardSync;
-  console.log(store.clipboardSync);
 }
 
-export async function loadLocalStorage(
+export async function loadPersistentStorage(
   theLocalStore: Store,
   theStore: ReturnType<typeof useGlobalStore>,
   theT: ReturnType<typeof useI18n>["t"]

@@ -15,11 +15,11 @@ import ScreenStream from "./ScreenStream.vue";
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
 import { open } from "@tauri-apps/plugin-shell";
-import { getCurrent, PhysicalSize } from "@tauri-apps/api/window";
-import { Store } from "@tauri-apps/plugin-store";
+import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
 import { useI18n } from "vue-i18n";
 import { checkAdbAvailable } from "../invoke";
-import { loadLocalStorage } from "../storeLoader";
+import { loadPersistentStorage } from "../storeLoader";
+import { load } from "@tauri-apps/plugin-store";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -68,7 +68,7 @@ onMounted(async () => {
     checkAdb();
     // listen to window resize event
     const maskElement = document.getElementById("maskElement") as HTMLElement;
-    const appWindow = getCurrent();
+    const appWindow = getCurrentWindow();
     appWindow.onResized(() => {
       store.maskSizeH = maskElement.clientHeight;
       store.maskSizeW = maskElement.clientWidth;
@@ -103,12 +103,13 @@ function genClientId() {
 }
 
 async function loadLocalStore() {
-  const localStore = new Store("store.bin");
-  await loadLocalStorage(localStore, store, t);
+  const localStore = await load("store.json");
+  await loadPersistentStorage(localStore, store, t);
 }
 
 async function cleanAfterimage() {
-  const appWindow = getCurrent();
+  // TODO fix oldSize making window large
+  const appWindow = getCurrentWindow();
   const oldSize = await appWindow.outerSize();
   const newSize = new PhysicalSize(oldSize.width, oldSize.height + 1);
   await appWindow.setSize(newSize);

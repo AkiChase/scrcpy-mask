@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Store } from "@tauri-apps/plugin-store";
+import { load } from "@tauri-apps/plugin-store";
 import {
   NH4,
   NButton,
@@ -12,20 +12,22 @@ import {
   NTooltip,
 } from "naive-ui";
 import { onMounted, ref } from "vue";
-import i18n from "../../i18n";
+import i18n, { allLanguage } from "../../i18n";
 import { useI18n } from "vue-i18n";
 import { setAdbPath } from "../../invoke";
 import { useGlobalStore } from "../../store/global";
 
 const { t } = useI18n();
-const localStore = new Store("store.bin");
+const localStore = await load("store.json");
 const store = useGlobalStore();
 const message = useMessage();
 
-const languageOptions = [
-  { label: "简体中文", value: "zh-CN" },
-  { label: "English", value: "en-US" },
-];
+const languageOptions = Object.entries(allLanguage).map(([key, value]) => {
+  return {
+    label: value.label,
+    value: key,
+  };
+});
 
 const curLanguage = ref("en-US");
 
@@ -40,7 +42,7 @@ function changeLanguage(language: "zh-CN" | "en-US") {
   if (language === curLanguage.value) return;
   curLanguage.value = language;
   localStore.set("language", language);
-  i18n.global.locale.value = language;
+  i18n.global.locale = language;
 }
 
 async function adjustAdbPath() {
