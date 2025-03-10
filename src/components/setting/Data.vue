@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Store } from "@tauri-apps/plugin-store";
+import { load } from "@tauri-apps/plugin-store";
 import { Refresh, TrashBinOutline } from "@vicons/ionicons5";
 import {
   NH4,
@@ -19,7 +19,8 @@ import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
-const localStore = new Store("store.bin");
+const localStore = await load("store.json");
+
 const dialog = useDialog();
 
 const localStoreEntries = ref<[string, unknown][]>([]);

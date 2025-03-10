@@ -44,7 +44,7 @@ import { shutdown } from "../frontcommand/scrcpyMaskCmd";
 import { useGlobalStore } from "../store/global";
 import { useI18n } from "vue-i18n";
 import { closeExternalControl, connectExternalControl } from "../websocket";
-import { LogicalSize, getCurrent } from "@tauri-apps/api/window";
+import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 const { t } = useI18n();
@@ -97,7 +97,7 @@ onMounted(async () => {
               maskH = Math.round(store.rotation.verticalLength);
               maskW = Math.round(maskH * (payload.width / payload.height));
             }
-            getCurrent().setSize(new LogicalSize(maskW + 70, maskH + 30));
+            getCurrentWindow().setSize(new LogicalSize(maskW + 70, maskH + 30));
           }
           break;
         default:

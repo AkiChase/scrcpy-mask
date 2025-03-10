@@ -13,24 +13,26 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 
 onMounted(async () => {
-  router.replace({ name: "mask" });
+  await router.replace({ name: "mask" });
 });
 </script>
 
 <template>
-  <NConfigProvider :theme="darkTheme" class="container">
-    <NMessageProvider>
-      <Header />
-      <NDialogProvider>
-        <RouterView v-slot="{ Component }">
-          <KeepAlive>
-            <component :is="Component" />
-          </KeepAlive>
-        </RouterView>
-      </NDialogProvider>
-      <Sidebar />
-    </NMessageProvider>
-  </NConfigProvider>
+  <Suspense>
+    <NConfigProvider :theme="darkTheme" class="container">
+      <NMessageProvider>
+        <Header />
+        <NDialogProvider>
+          <RouterView v-slot="{ Component }">
+            <KeepAlive>
+              <component :is="Component" />
+            </KeepAlive>
+          </RouterView>
+        </NDialogProvider>
+        <Sidebar />
+      </NMessageProvider>
+    </NConfigProvider>
+  </Suspense>
 </template>
 
 <style>
