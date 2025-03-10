@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { load } from "@tauri-apps/plugin-store";
 import {
   NH4,
   NButton,
@@ -16,9 +15,9 @@ import i18n, { allLanguage } from "../../i18n";
 import { useI18n } from "vue-i18n";
 import { setAdbPath } from "../../invoke";
 import { useGlobalStore } from "../../store/global";
+import { LocalStore } from "../../store/localStore";
 
 const { t } = useI18n();
-const localStore = await load("store.json");
 const store = useGlobalStore();
 const message = useMessage();
 
@@ -34,14 +33,14 @@ const curLanguage = ref("en-US");
 const adbPath = ref("");
 
 onMounted(async () => {
-  curLanguage.value = (await localStore.get<string>("language")) ?? "en-US";
-  adbPath.value = (await localStore.get<string>("adbPath")) ?? "";
+  curLanguage.value = (await LocalStore.get<string>("language")) ?? "en-US";
+  adbPath.value = (await LocalStore.get<string>("adbPath")) ?? "";
 });
 
 function changeLanguage(language: "zh-CN" | "en-US") {
   if (language === curLanguage.value) return;
   curLanguage.value = language;
-  localStore.set("language", language);
+  LocalStore.set("language", language);
   i18n.global.locale = language;
 }
 
@@ -50,12 +49,12 @@ async function adjustAdbPath() {
   await setAdbPath(adbPath.value);
   message.success(t("pages.Setting.Basic.adbPath.setSuccess"));
   await store.checkAdb();
-  adbPath.value = (await localStore.get<string>("adbPath")) ?? "";
+  adbPath.value = (await LocalStore.get<string>("adbPath")) ?? "";
   store.hideLoading();
 }
 
 function changeClipboardSync() {
-  localStore.set("clipboardSync", store.clipboardSync);
+  LocalStore.set("clipboardSync", store.clipboardSync);
 }
 </script>
 

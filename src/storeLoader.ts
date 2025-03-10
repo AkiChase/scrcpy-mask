@@ -1,22 +1,21 @@
-import { Store } from "@tauri-apps/plugin-store";
 import { KeyMappingConfig } from "./keyMappingConfig";
 import { useGlobalStore } from "./store/global";
 import { useI18n } from "vue-i18n";
+import { LocalStore } from "./store/localStore";
 
-let localStore: Store;
 let store: ReturnType<typeof useGlobalStore>;
 let t: ReturnType<typeof useI18n>["t"];
 
 async function loadKeyMappingConfigList() {
   // loading keyMappingConfigList from local store
-  let keyMappingConfigList = await localStore.get<KeyMappingConfig[]>(
+  let keyMappingConfigList = await LocalStore.get<KeyMappingConfig[]>(
     "keyMappingConfigList"
   );
   if (keyMappingConfigList === undefined || keyMappingConfigList.length === 0) {
     // add empty key mapping config
     // unable to get mask element when app is not ready
     // so we use the stored mask area to get relative size
-    const maskArea = await localStore.get<{
+    const maskArea = await LocalStore.get<{
       posX: number;
       posY: number;
       sizeW: number;
@@ -36,27 +35,27 @@ async function loadKeyMappingConfigList() {
         list: [],
       },
     ];
-    await localStore.set("keyMappingConfigList", keyMappingConfigList);
+    await LocalStore.set("keyMappingConfigList", keyMappingConfigList);
   }
   store.keyMappingConfigList = keyMappingConfigList;
 }
 
 async function loadCurKeyMappingIndex() {
   // loading curKeyMappingIndex from local store
-  let curKeyMappingIndex = await localStore.get<number>("curKeyMappingIndex");
+  let curKeyMappingIndex = await LocalStore.get<number>("curKeyMappingIndex");
   if (
     curKeyMappingIndex === undefined ||
     curKeyMappingIndex >= store.keyMappingConfigList.length
   ) {
     curKeyMappingIndex = 0;
-    localStore.set("curKeyMappingIndex", curKeyMappingIndex);
+    LocalStore.set("curKeyMappingIndex", curKeyMappingIndex);
   }
   store.curKeyMappingIndex = curKeyMappingIndex;
 }
 
 async function loadMaskButton() {
   // loading maskButton from local store
-  let maskButton = await localStore.get<{
+  const maskButton = await LocalStore.get<{
     show: boolean;
     transparency: number;
   }>("maskButton");
@@ -68,7 +67,7 @@ async function loadMaskButton() {
 
 async function loadCheckUpdateAtStart() {
   // loading checkUpdateAtStart from local store
-  const checkUpdateAtStart = await localStore.get<boolean>(
+  const checkUpdateAtStart = await LocalStore.get<boolean>(
     "checkUpdateAtStart"
   );
   store.checkUpdateAtStart = checkUpdateAtStart ?? true;
@@ -76,7 +75,7 @@ async function loadCheckUpdateAtStart() {
 
 async function loadRotation() {
   // loading rotation from local store
-  const rotation = await localStore.get<{
+  const rotation = await LocalStore.get<{
     enable: boolean;
     verticalLength: number;
     horizontalLength: number;
@@ -86,7 +85,7 @@ async function loadRotation() {
 
 async function loadScreenStream() {
   // loading screenStream from local store
-  const screenStream = await localStore.get<{
+  const screenStream = await LocalStore.get<{
     enable: boolean;
     address: string;
   }>("screenStream");
@@ -95,7 +94,7 @@ async function loadScreenStream() {
 
 async function loadClipboardSync() {
   // loading clipboardSync from local store
-  const clipboardSync = await localStore.get<{
+  const clipboardSync = await LocalStore.get<{
     syncFromDevice: boolean;
     pasteFromPC: boolean;
   }>("clipboardSync");
@@ -103,11 +102,11 @@ async function loadClipboardSync() {
 }
 
 export async function loadPersistentStorage(
-  theLocalStore: Store,
   theStore: ReturnType<typeof useGlobalStore>,
   theT: ReturnType<typeof useI18n>["t"]
 ) {
-  localStore = theLocalStore;
+  await LocalStore.init();
+
   store = theStore;
   t = theT;
 

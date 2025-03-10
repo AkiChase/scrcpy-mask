@@ -5,10 +5,9 @@ import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
 import { onMounted, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
-import { load } from "@tauri-apps/plugin-store";
+import { LocalStore } from "../../store/localStore";
 
 const store = useGlobalStore();
-const localStore = await load('store.json');
 
 const appVersion = ref("");
 onMounted(async () => {
@@ -73,7 +72,7 @@ async function checkUpdate() {
     <NCheckbox
       v-model:checked="store.checkUpdateAtStart"
       @update:checked="
-        localStore.set('checkUpdateAtStart', store.checkUpdateAtStart)
+        LocalStore.set('checkUpdateAtStart', store.checkUpdateAtStart)
       "
       >{{ $t("pages.Setting.About.checkUpdateOnStartup") }}</NCheckbox
     >

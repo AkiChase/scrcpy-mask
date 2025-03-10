@@ -51,7 +51,6 @@ async function handleMessage(event: MessageEvent) {
       delete msg.type;
       await touch(msg);
     } else if (msg.type === "swipe") {
-      console.log(msg);
       msg.screen = { w: sharedStore.screenSizeW, h: sharedStore.screenSizeH };
       delete msg.type;
       await swipe(msg);

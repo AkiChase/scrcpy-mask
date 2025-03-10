@@ -19,12 +19,11 @@ import { KeyMappingConfig } from "../../keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 import { useI18n } from "vue-i18n";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { load } from "@tauri-apps/plugin-store";
+import { LocalStore } from "../../store/localStore";
 
 const { t } = useI18n();
 const store = useGlobalStore();
 const keyboardStore = useKeyboardStore();
-const localStore = await load("store.json");
 const message = useMessage();
 
 const showImportModal = ref(false);
@@ -52,12 +51,12 @@ const keySettingPos = ref({ x: 100, y: 100 });
 
 onMounted(async () => {
   // loading keySettingPos from local store
-  let storedPos = await localStore.get<{ x: number; y: number }>(
+  let storedPos = await LocalStore.get<{ x: number; y: number }>(
     "keySettingPos"
   );
 
   if (storedPos === undefined) {
-    await localStore.set("keySettingPos", keySettingPos.value);
+    await LocalStore.set("keySettingPos", keySettingPos.value);
     storedPos = { x: 100, y: 100 };
   }
   // apply keySettingPos
@@ -119,7 +118,7 @@ function dragHandler(downEvent: MouseEvent) {
     if (moveFlag) {
       // move up
       target.style.setProperty("cursor", "pointer");
-      localStore.set("keySettingPos", keySettingPos.value);
+      LocalStore.set("keySettingPos", keySettingPos.value);
     } else {
       // click up
       if (keyboardStore.editSwipePointsFlag) {
@@ -152,7 +151,7 @@ function importKeyMappingConfig() {
   store.keyMappingConfigList.push(keyMappingConfig);
   store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
   showImportModal.value = false;
-  localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+  LocalStore.set("keyMappingConfigList", store.keyMappingConfigList);
   message.success(t("pages.KeyBoard.KeySetting.importSuccess"));
 }
 
@@ -172,7 +171,7 @@ async function importDefaultKeyMappingConfig() {
     return;
   }
 
-  localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+  LocalStore.set("keyMappingConfigList", store.keyMappingConfigList);
   message.success(t("pages.KeyBoard.KeySetting.importDefaultSuccess", [count]));
 }
 
@@ -195,7 +194,7 @@ function createKeyMappingConfig() {
   };
   store.keyMappingConfigList.push(newConfig);
   store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
-  localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+  LocalStore.set("keyMappingConfigList", store.keyMappingConfigList);
   message.success(t("pages.KeyBoard.KeySetting.newConfigSuccess"));
 }
 
@@ -218,7 +217,7 @@ function copyCurKeyMappingConfig() {
   keyboardStore.activeButtonIndex = -1;
   keyboardStore.activeSteeringWheelButtonKeyIndex = -1;
   store.setKeyMappingIndex(store.keyMappingConfigList.length - 1);
-  localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+  LocalStore.set("keyMappingConfigList", store.keyMappingConfigList);
   message.success(t("pages.KeyBoard.KeySetting.copyConfigSuccess", [newTitle]));
 }
 
@@ -237,7 +236,7 @@ function delCurKeyMappingConfig() {
   store.setKeyMappingIndex(
     store.curKeyMappingIndex > 0 ? store.curKeyMappingIndex - 1 : 0
   );
-  localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+  LocalStore.set("keyMappingConfigList", store.keyMappingConfigList);
   message.success(t("pages.KeyBoard.KeySetting.delSuccess", [title]));
 }
 
@@ -246,7 +245,7 @@ function renameKeyMappingConfig() {
   showRenameModal.value = false;
   if (newTitle !== "") {
     store.keyMappingConfigList[store.curKeyMappingIndex].title = newTitle;
-    localStore.set("keyMappingConfigList", store.keyMappingConfigList);
+    LocalStore.set("keyMappingConfigList", store.keyMappingConfigList);
     message.success(t("pages.KeyBoard.KeySetting.renameSuccess", [newTitle]));
   } else {
     message.error(t("pages.KeyBoard.KeySetting.renameEmpty"));

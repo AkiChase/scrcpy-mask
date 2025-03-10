@@ -18,27 +18,23 @@ onMounted(async () => {
 </script>
 
 <template>
-  <NConfigProvider :theme="darkTheme" class="container">
+  <NConfigProvider :theme="darkTheme" class="root">
     <NMessageProvider>
-      <Header />
       <NDialogProvider>
+        <Header />
         <RouterView v-slot="{ Component }">
           <KeepAlive>
-            <Suspense>
-              <div>
-                <component :is="Component" />
-              </div>
-            </Suspense>
+            <component :is="Component" />
           </KeepAlive>
         </RouterView>
+        <Sidebar />
       </NDialogProvider>
-      <Sidebar />
     </NMessageProvider>
   </NConfigProvider>
 </template>
 
 <style>
-.container {
+.root {
   background-color: transparent;
   height: 100%;
   display: grid;
