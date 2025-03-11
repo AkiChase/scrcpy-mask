@@ -69,8 +69,6 @@ export const useGlobalStore = defineStore("global", () => {
   const screenSizeW: Ref<number> = ref(0);
   const screenSizeH: Ref<number> = ref(0);
 
-  const keyInputFlag = ref(false);
-
   const curMaskSize = ref({
     w: 0,
     h: 0,
@@ -146,7 +144,6 @@ export const useGlobalStore = defineStore("global", () => {
     curMaskPos,
     screenSizeW,
     screenSizeH,
-    keyInputFlag, // TODO none reactive
     showLoadingFlag,
     controledDevice,
     editKeyMappingList,

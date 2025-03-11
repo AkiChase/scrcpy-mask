@@ -33,6 +33,7 @@ import {
 } from "./frontcommand/android";
 import { UIEventsCode } from "./frontcommand/UIEventsCode";
 import { sendInjectKeycode, sendSetClipboard } from "./frontcommand/controlMsg";
+import { NonReactiveStore } from "./store/noneReactiveStore";
 
 function clientxToPosx(clientx: number) {
   return clientx < 70
@@ -1142,7 +1143,7 @@ export class KeyInputHandler {
       onClose: () => {
         KeyInputHandler.removeEventListener();
         listenToEvent(true);
-        store.keyInputFlag = false;
+        NonReactiveStore.mem.keyInputFlag = false;
       },
     });
     window.addEventListener("keydown", KeyInputHandler.handler);
@@ -1327,16 +1328,16 @@ async function execMacro(
           });
           break;
         case "key-input-mode":
-          if (!store.keyInputFlag) {
+          if (!NonReactiveStore.mem.keyInputFlag) {
             // on
             unlistenToEvent(true);
             KeyInputHandler.addEventListener();
-            store.keyInputFlag = true;
+            NonReactiveStore.mem.keyInputFlag = true;
           } else {
             // off
             KeyInputHandler.removeEventListener();
             listenToEvent(true);
-            store.keyInputFlag = false;
+            NonReactiveStore.mem.keyInputFlag = false;
           }
           break;
         default:

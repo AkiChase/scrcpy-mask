@@ -2,6 +2,7 @@ import { LocalStore } from "./localStore";
 
 interface MemType {
   screenStreamClientId: string;
+  keyInputFlag: boolean;
 }
 
 interface LocalType {
@@ -17,6 +18,7 @@ interface LocalType {
 export class NonReactiveStore {
   static mem: MemType = {
     screenStreamClientId: "",
+    keyInputFlag: false,
   };
 
   static local: LocalType = {

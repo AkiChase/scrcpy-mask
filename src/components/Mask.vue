@@ -15,6 +15,7 @@ import ScreenStream from "./ScreenStream.vue";
 import { useI18n } from "vue-i18n";
 import { secondaryClean, secondaryInit } from "../tools/init";
 import { cleanAfterimage } from "../tools/tools";
+import { NonReactiveStore } from "../store/noneReactiveStore";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -29,7 +30,8 @@ onBeforeRouteLeave(() => {
   if (store.controledDevice) {
     unlistenToEvent();
     clearShortcuts();
-    if (store.keyInputFlag) KeyInputHandler.removeEventListener();
+    if (NonReactiveStore.mem.keyInputFlag)
+      KeyInputHandler.removeEventListener();
   }
 });
 
@@ -38,6 +40,7 @@ onActivated(async () => {
   if (initFlag) cleanAfterimage();
 
   if (store.controledDevice) {
+    console.log("applyShortcuts");
     if (
       applyShortcuts(
         store.keyMappingConfigList[store.curKeyMappingIndex],
@@ -152,6 +155,8 @@ function toStartServer() {
   user-select: none;
   -webkit-user-select: none;
   z-index: 2;
+  width: 100%;
+  height: 100%;
 }
 
 .button-layer {
