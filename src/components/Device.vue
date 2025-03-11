@@ -31,7 +31,6 @@ import {
   NFlex,
   NIcon,
   NSpin,
-  NScrollbar,
   DataTableColumns,
   DropdownOption,
   useDialog,
@@ -55,8 +54,6 @@ const message = useMessage();
 const port = ref(27183);
 const wireless_address = ref("");
 const ws_address = ref("");
-
-// TODO scrollable
 
 //#region listener
 let deviceWaitForMetadataTask: ((deviceName: string) => void) | null = null;
@@ -362,116 +359,114 @@ function closeWS() {
 
 <template>
   <div class="container">
-    <NScrollbar>
-      <div class="device">
-        <NSpin :show="store.showLoadingFlag">
-          <NH4 prefix="bar">{{ $t("pages.Device.localPort") }}</NH4>
-          <NInputNumber
-            v-model:value="port"
-            :show-button="false"
-            :min="16384"
-            :max="49151"
-            :placeholder="$t('pages.Device.localPortPlaceholder')"
-            style="max-width: 300px"
+    <div class="device">
+      <NSpin :show="store.showLoadingFlag">
+        <NH4 prefix="bar">{{ $t("pages.Device.localPort") }}</NH4>
+        <NInputNumber
+          v-model:value="port"
+          :show-button="false"
+          :min="16384"
+          :max="49151"
+          :placeholder="$t('pages.Device.localPortPlaceholder')"
+          style="max-width: 300px"
+        />
+        <NH4 prefix="bar">{{ $t("pages.Device.wireless") }}</NH4>
+        <NInputGroup style="max-width: 300px">
+          <NInput
+            v-model:value="wireless_address"
+            clearable
+            :placeholder="$t('pages.Device.wirelessPlaceholder')"
           />
-          <NH4 prefix="bar">{{ $t("pages.Device.wireless") }}</NH4>
-          <NInputGroup style="max-width: 300px">
-            <NInput
-              v-model:value="wireless_address"
-              clearable
-              :placeholder="$t('pages.Device.wirelessPlaceholder')"
-            />
-            <NButton type="primary" @click="connectDevice">{{
-              $t("pages.Device.connect")
-            }}</NButton>
-          </NInputGroup>
-          <NH4 prefix="bar">{{ $t("pages.Device.externalControl") }}</NH4>
-          <NInputGroup style="max-width: 300px">
-            <NInput
-              v-model:value="ws_address"
-              clearable
-              :placeholder="$t('pages.Device.wsAddress')"
-              :disabled="store.externalControlled"
-            />
-            <NButton
-              v-if="store.externalControlled"
-              type="error"
-              @click="closeWS"
-              >{{ $t("pages.Device.wsClose") }}</NButton
-            >
-            <NButton v-else type="primary" @click="connectWS">{{
-              $t("pages.Device.wsConnect")
-            }}</NButton>
-          </NInputGroup>
-          <NH4 prefix="bar">{{ $t("pages.Device.controledDevice") }}</NH4>
-          <div class="controled-device-list">
-            <NEmpty
-              size="small"
-              :description="$t('pages.Device.noControledDevice')"
-              v-if="!store.controledDevice"
-            />
-            <div class="controled-device" v-if="store.controledDevice">
-              <div>
-                {{ store.controledDevice.deviceName }} ({{
-                  store.controledDevice.deviceID
-                }})
-              </div>
-              <div class="device-op">
-                <NTooltip trigger="hover">
-                  <template #trigger>
-                    <NButton quaternary circle type="info">
-                      <template #icon>
-                        <NIcon><InformationCircle /></NIcon>
-                      </template>
-                    </NButton>
-                  </template>
-                  scid: {{ store.controledDevice.scid }}
-                </NTooltip>
-                <NButton quaternary circle type="error" @click="shutdownSC()">
-                  <template #icon>
-                    <NIcon><CloseCircle /></NIcon>
-                  </template>
-                </NButton>
-              </div>
+          <NButton type="primary" @click="connectDevice">{{
+            $t("pages.Device.connect")
+          }}</NButton>
+        </NInputGroup>
+        <NH4 prefix="bar">{{ $t("pages.Device.externalControl") }}</NH4>
+        <NInputGroup style="max-width: 300px">
+          <NInput
+            v-model:value="ws_address"
+            clearable
+            :placeholder="$t('pages.Device.wsAddress')"
+            :disabled="store.externalControlled"
+          />
+          <NButton
+            v-if="store.externalControlled"
+            type="error"
+            @click="closeWS"
+            >{{ $t("pages.Device.wsClose") }}</NButton
+          >
+          <NButton v-else type="primary" @click="connectWS">{{
+            $t("pages.Device.wsConnect")
+          }}</NButton>
+        </NInputGroup>
+        <NH4 prefix="bar">{{ $t("pages.Device.controledDevice") }}</NH4>
+        <div class="controled-device-list">
+          <NEmpty
+            size="small"
+            :description="$t('pages.Device.noControledDevice')"
+            v-if="!store.controledDevice"
+          />
+          <div class="controled-device" v-if="store.controledDevice">
+            <div>
+              {{ store.controledDevice.deviceName }} ({{
+                store.controledDevice.deviceID
+              }})
+            </div>
+            <div class="device-op">
+              <NTooltip trigger="hover">
+                <template #trigger>
+                  <NButton quaternary circle type="info">
+                    <template #icon>
+                      <NIcon><InformationCircle /></NIcon>
+                    </template>
+                  </NButton>
+                </template>
+                scid: {{ store.controledDevice.scid }}
+              </NTooltip>
+              <NButton quaternary circle type="error" @click="shutdownSC()">
+                <template #icon>
+                  <NIcon><CloseCircle /></NIcon>
+                </template>
+              </NButton>
             </div>
           </div>
-          <NFlex justify="space-between" align="center">
-            <NH4 style="margin: 20px 0" prefix="bar">{{
-              $t("pages.Device.availableDevice")
-            }}</NH4>
-            <NButton
-              tertiary
-              circle
-              type="primary"
-              @click="refreshDevices"
-              style="margin-right: 20px"
-            >
-              <template #icon>
-                <NIcon><Refresh /></NIcon>
-              </template>
-            </NButton>
-          </NFlex>
-          <NDataTable
-            max-height="120"
-            :columns="tableCols"
-            :data="availableDevice"
-            :row-props="tableRowProps"
-            :pagination="false"
-            :bordered="false"
-          />
-          <NDropdown
-            placement="bottom-start"
-            trigger="manual"
-            :x="menuX"
-            :y="menuY"
-            :options="menuOptions"
-            :show="showMenu"
-            :on-clickoutside="onMenuClickoutside"
-            @select="onMenuSelect"
-          />
-        </NSpin>
-      </div>
-    </NScrollbar>
+        </div>
+        <NFlex justify="space-between" align="center">
+          <NH4 style="margin: 20px 0" prefix="bar">{{
+            $t("pages.Device.availableDevice")
+          }}</NH4>
+          <NButton
+            tertiary
+            circle
+            type="primary"
+            @click="refreshDevices"
+            style="margin-right: 20px"
+          >
+            <template #icon>
+              <NIcon><Refresh /></NIcon>
+            </template>
+          </NButton>
+        </NFlex>
+        <NDataTable
+          max-height="120"
+          :columns="tableCols"
+          :data="availableDevice"
+          :row-props="tableRowProps"
+          :pagination="false"
+          :bordered="false"
+        />
+        <NDropdown
+          placement="bottom-start"
+          trigger="manual"
+          :x="menuX"
+          :y="menuY"
+          :options="menuOptions"
+          :show="showMenu"
+          :on-clickoutside="onMenuClickoutside"
+          @select="onMenuSelect"
+        />
+      </NSpin>
+    </div>
   </div>
 </template>
 
@@ -480,13 +475,18 @@ function closeWS() {
 
 .container {
   @include common.contentContainer;
+  display: flex;
+  flex-direction: column;
 }
 
 .device {
+  flex-grow: 1;
   color: var(--light-color);
   background-color: var(--bg-color);
   padding: 0 20px;
-  height: 100%;
+  height: 0;
+  overflow-y: auto;
+  @include common.scrollbar;
 }
 
 .controled-device-list {

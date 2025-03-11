@@ -76,7 +76,7 @@ function delLocalStore(key?: string) {
 </script>
 
 <template>
-  <div class="setting-page">
+  <div>
     <NFlex justify="space-between">
       <NH4 prefix="bar">{{ $t("pages.Setting.Data.localStore") }}</NH4>
       <NFlex>
@@ -139,13 +139,3 @@ function delLocalStore(key?: string) {
     </NCard>
   </NModal>
 </template>
-
-<style scoped>
-.setting-page {
-  padding: 10px 25px;
-
-  .data-list {
-    margin: 20px 0;
-  }
-}
-</style>

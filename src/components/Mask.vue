@@ -40,7 +40,6 @@ onActivated(async () => {
   if (initFlag) cleanAfterimage();
 
   if (store.controledDevice) {
-    console.log("applyShortcuts");
     if (
       applyShortcuts(
         store.keyMappingConfigList[store.curKeyMappingIndex],

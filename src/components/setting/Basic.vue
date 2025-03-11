@@ -49,7 +49,7 @@ function changeClipboardSync() {
 </script>
 
 <template>
-  <div class="setting-page">
+  <div>
     <NH4 prefix="bar">{{ $t("pages.Setting.Basic.language") }}</NH4>
     <NSelect
       :value="store.language"
@@ -91,9 +91,3 @@ function changeClipboardSync() {
     </NFlex>
   </div>
 </template>
-
-<style scoped>
-.setting-page {
-  padding: 10px 25px;
-}
-</style>

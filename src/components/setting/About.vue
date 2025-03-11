@@ -6,8 +6,10 @@ import { getVersion } from "@tauri-apps/api/app";
 import { onMounted, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
 import { LocalStore } from "../../store/localStore";
+import { useCheckUpdate } from "../../tools/hooks";
 
 const store = useGlobalStore();
+const checkUpdate = useCheckUpdate();
 
 const appVersion = ref("");
 onMounted(async () => {
@@ -18,18 +20,18 @@ function opendWebsite(url: string) {
   open(url);
 }
 
-async function checkUpdate() {
+async function onClickCheckUpdate() {
   store.showLoading();
-  await store.checkUpdate();
+  await checkUpdate();
   store.hideLoading();
 }
 </script>
 
 <template>
-  <div class="setting-page">
+  <div>
     <NH4 prefix="bar">{{ $t("pages.Setting.About.about") }}</NH4>
     <NP>{{ $t("pages.Setting.About.introduction") }}</NP>
-    <NFlex class="website">
+    <NFlex :size="30">
       <NButton
         text
         @click="opendWebsite('https://github.com/AkiChase/scrcpy-mask')"
@@ -77,18 +79,8 @@ async function checkUpdate() {
       >{{ $t("pages.Setting.About.checkUpdateOnStartup") }}</NCheckbox
     >
     <NP>{{ $t("pages.Setting.About.curVersion", [appVersion]) }}</NP>
-    <NButton @click="checkUpdate">{{
+    <NButton @click="onClickCheckUpdate">{{
       $t("pages.Setting.About.checkUpdate")
     }}</NButton>
   </div>
 </template>
-
-<style scoped>
-.setting-page {
-  padding: 10px 25px;
-
-  .website .n-button {
-    margin-right: 30px;
-  }
-}
-</style>

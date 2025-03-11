@@ -122,7 +122,7 @@ async function adjustWindowMaskArea() {
 </script>
 
 <template>
-  <div class="setting-page">
+  <div>
     <NH4 prefix="bar">{{ $t("pages.Setting.Mask.buttonPrompts") }}</NH4>
     <NFormItem
       :label="$t('pages.Setting.Mask.ifButtonPrompts')"

@@ -3,8 +3,9 @@ import Basic from "./Basic.vue";
 import Mask from "./Mask.vue";
 import Data from "./Data.vue";
 import About from "./About.vue";
-import { NTabs, NTabPane, NScrollbar, NSpin } from "naive-ui";
+import { NTabs, NTabPane, NSpin } from "naive-ui";
 import { useGlobalStore } from "../../store/global";
+import SettingTab from "./SettingTab.vue";
 
 const store = useGlobalStore();
 </script>
@@ -14,24 +15,24 @@ const store = useGlobalStore();
     <NSpin :show="store.showLoadingFlag">
       <NTabs type="line" animated placement="left" default-value="basic">
         <NTabPane :tab="$t('pages.Setting.tabs.basic')" name="basic">
-          <NScrollbar>
+          <SettingTab>
             <Basic />
-          </NScrollbar>
+          </SettingTab>
         </NTabPane>
         <NTabPane :tab="$t('pages.Setting.tabs.mask')" name="mask">
-          <NScrollbar>
+          <SettingTab>
             <Mask />
-          </NScrollbar>
+          </SettingTab>
         </NTabPane>
         <NTabPane :tab="$t('pages.Setting.tabs.data')" name="data">
-          <NScrollbar>
+          <SettingTab>
             <Data />
-          </NScrollbar>
+          </SettingTab>
         </NTabPane>
         <NTabPane :tab="$t('pages.Setting.tabs.about')" name="about">
-          <NScrollbar>
+          <SettingTab>
             <About />
-          </NScrollbar>
+          </SettingTab>
         </NTabPane>
       </NTabs>
     </NSpin>
@@ -55,10 +56,6 @@ const store = useGlobalStore();
 
   .n-tab-pane {
     padding: 0;
-  }
-
-  .setting-page {
-    padding: 10px 25px;
   }
 }
 </style>

@@ -43,14 +43,6 @@ onMounted(() => {
     "sidebar content";
 }
 
-.n-scrollbar-container {
-  background-color: var(--bg-color);
-}
-
-.n-scrollbar-content {
-  height: 100%;
-}
-
 .n-spin-content,
 .n-spin-container {
   width: 100%;
