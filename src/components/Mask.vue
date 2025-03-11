@@ -12,9 +12,9 @@ import {
 } from "../hotkey";
 import { KeySteeringWheel } from "../keyMappingConfig";
 import ScreenStream from "./ScreenStream.vue";
-import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { useI18n } from "vue-i18n";
 import { secondaryClean, secondaryInit } from "../tools/init";
+import { cleanAfterimage } from "../tools/tools";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -59,15 +59,6 @@ onMounted(() => {
 onUnmounted(() => {
   secondaryClean();
 });
-
-async function cleanAfterimage() {
-  const appWindow = getCurrentWindow();
-  const scale = await appWindow.scaleFactor();
-  const oldSize = (await appWindow.innerSize()).toLogical(scale);
-  const newSize = new LogicalSize(oldSize.width, oldSize.height + 1);
-  await appWindow.setSize(newSize);
-  await appWindow.setSize(oldSize);
-}
 
 function toStartServer() {
   router.replace({ name: "device" });

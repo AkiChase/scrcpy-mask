@@ -6,6 +6,7 @@ import { allLanguage } from "../i18n";
 import { locale } from "@tauri-apps/plugin-os";
 import { NonReactiveStore } from "./noneReactiveStore";
 import {
+  currentMonitor,
   getCurrentWindow,
   LogicalPosition,
   LogicalSize,
@@ -86,7 +87,7 @@ async function initAdbPath() {
   LocalStore.vueStore.adbPath = adbPath;
 }
 
-async function initMaskArea() {
+export async function initMaskArea() {
   const maskArea = (await LocalStore.get<{
     posX: number;
     posY: number;
@@ -102,29 +103,41 @@ async function initMaskArea() {
 
   // min size
   if (sizeW < 120) sizeW = 120;
-  if (sizeH < 150) sizeH = 120;
-  // max size
-  const monitor = await primaryMonitor();
-  const monitorSize = monitor?.size.toLogical(monitor.scaleFactor);
-  if (monitorSize !== undefined) {
+  if (sizeH < 120) sizeH = 120;
+
+  let monitor = await currentMonitor();
+  if (monitor === null) monitor = await primaryMonitor();
+
+  if (monitor) {
+    const monitorSize = monitor.size.toLogical(monitor.scaleFactor);
+    const monitorPos = monitor.position.toLogical(monitor.scaleFactor);
+
+    // max size
     if (sizeW > monitorSize.width - ml) sizeW = monitorSize.width - ml;
     if (sizeH > monitorSize.height - mt) sizeH = monitorSize.height - mt;
+
+    const tlPos = { x: monitorPos.x, y: monitorPos.y };
+    const brPos = {
+      x: monitorPos.x + monitorSize.width,
+      y: monitorPos.y + monitorSize.height,
+    };
+
+    // min pos (bottom right corner)
+    // move to top left corner
+    if (posX + sizeW < tlPos.x) posX = tlPos.x + ml;
+    if (posY + sizeH < tlPos.y) posY = tlPos.y + mt;
+
+    if (brPos !== null) {
+      // max pos (top left corner)
+      // move to bottom right corner
+      if (posX > brPos.x) posX = brPos.x - sizeW;
+      if (posY > brPos.y) posY = brPos.y - sizeH;
+    }
   }
+
   [sizeW, sizeH] = [sizeW, sizeH].map((v) => Math.round(v));
-  appWindow.setSize(new LogicalSize(sizeW + ml, sizeH + mt));
-
-  // min pos (right bottom corner)
-  // move to left top corner
-  if (posX + sizeW < 0) posX = ml;
-  if (posY + sizeH < 0) posY = mt;
-  if (monitorSize !== undefined) {
-    // max pos (left top corner)
-    // move to right bottom corner
-    if (posX > monitorSize.width) posX = monitorSize.width - sizeW;
-    if (posY > monitorSize.height) posY = monitorSize.height - sizeH;
-  }
-
   [posX, posY] = [posX, posY].map((v) => Math.round(v));
+  appWindow.setSize(new LogicalSize(sizeW + ml, sizeH + mt));
   appWindow.setPosition(new LogicalPosition(posX - 70, posY - 30));
 
   NonReactiveStore.setLocal("maskArea", {

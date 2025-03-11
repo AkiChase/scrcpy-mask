@@ -1,3 +1,5 @@
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+
 export function compareVersion(v1: string, v2: string) {
   const [x1, y1, z1] = v1.split(".");
   const [x2, y2, z2] = v2.split(".");
@@ -24,4 +26,15 @@ export function genClientId() {
     result += characters.charAt(Math.floor(Math.random() * charactersLength));
   }
   return result;
+}
+
+export async function cleanAfterimage() {
+  const appWindow = getCurrentWindow();
+  const scale = await appWindow.scaleFactor();
+  const oldSize = (await appWindow.innerSize()).toLogical(scale);
+  const newSize = new LogicalSize(oldSize.width, oldSize.height + 1);
+  await appWindow.setSize(newSize);
+  setTimeout(() => {
+    appWindow.setSize(oldSize);
+  }, 150);
 }
