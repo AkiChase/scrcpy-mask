@@ -34,7 +34,5 @@ export async function cleanAfterimage() {
   const oldSize = (await appWindow.innerSize()).toLogical(scale);
   const newSize = new LogicalSize(oldSize.width, oldSize.height + 1);
   await appWindow.setSize(newSize);
-  setTimeout(() => {
-    appWindow.setSize(oldSize);
-  }, 150);
+  await appWindow.setSize(oldSize);
 }

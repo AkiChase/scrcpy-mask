@@ -96,14 +96,19 @@ export async function initMaskArea() {
   }>("maskArea")) ?? { posX: 100, posY: 100, sizeW: 800, sizeH: 600 };
 
   // mask area validation
-  const appWindow = getCurrentWindow();
-  let { posX, posY, sizeW, sizeH } = maskArea;
   const mt = 30;
   const ml = 70;
+  const appWindow = getCurrentWindow();
+  let [winX, winY, winW, winH] = [
+    maskArea.posX - ml,
+    maskArea.posY - mt,
+    maskArea.sizeW + ml,
+    maskArea.sizeH + mt,
+  ];
 
   // min size
-  if (sizeW < 120) sizeW = 120;
-  if (sizeH < 120) sizeH = 120;
+  if (winW < 200) winW = 200;
+  if (winH < 200) winH = 200;
 
   let monitor = await currentMonitor();
   if (monitor === null) monitor = await primaryMonitor();
@@ -113,8 +118,8 @@ export async function initMaskArea() {
     const monitorPos = monitor.position.toLogical(monitor.scaleFactor);
 
     // max size
-    if (sizeW > monitorSize.width - ml) sizeW = monitorSize.width - ml;
-    if (sizeH > monitorSize.height - mt) sizeH = monitorSize.height - mt;
+    if (winW > monitorSize.width - ml) winW = monitorSize.width;
+    if (winH > monitorSize.height - mt) winH = monitorSize.height;
 
     const tlPos = { x: monitorPos.x, y: monitorPos.y };
     const brPos = {
@@ -124,28 +129,28 @@ export async function initMaskArea() {
 
     // min pos (bottom right corner)
     // move to top left corner
-    if (posX + sizeW < tlPos.x) posX = tlPos.x + ml;
-    if (posY + sizeH < tlPos.y) posY = tlPos.y + mt;
+    if (winX + winW < tlPos.x) winX = tlPos.x;
+    if (winY + winH < tlPos.y) winY = tlPos.y;
 
     if (brPos !== null) {
       // max pos (top left corner)
       // move to bottom right corner
-      if (posX > brPos.x) posX = brPos.x - sizeW;
-      if (posY > brPos.y) posY = brPos.y - sizeH;
+      if (winX > brPos.x) winX = brPos.x - winW;
+      if (winY > brPos.y) winY = brPos.y - winH;
     }
   }
 
-  [sizeW, sizeH] = [sizeW, sizeH].map((v) => Math.round(v));
-  [posX, posY] = [posX, posY].map((v) => Math.round(v));
-  appWindow.setSize(new LogicalSize(sizeW + ml, sizeH + mt));
-  appWindow.setPosition(new LogicalPosition(posX - 70, posY - 30));
+  [winW, winH] = [winW, winH].map((v) => Math.round(v));
+  [winX, winY] = [winX, winY].map((v) => Math.round(v));
+  appWindow.setSize(new LogicalSize(winW, winH));
+  appWindow.setPosition(new LogicalPosition(winX, winY));
 
-  NonReactiveStore.setLocal("maskArea", {
-    posX,
-    posY,
-    sizeW,
-    sizeH,
-  });
+  NonReactiveStore.local.maskArea = {
+    posX: winX + ml,
+    posY: winY + mt,
+    sizeW: winW - ml,
+    sizeH: winH - mt,
+  };
 }
 
 // init keyMappingConfigList from local store

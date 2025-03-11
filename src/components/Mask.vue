@@ -20,6 +20,7 @@ const { t } = useI18n();
 const store = useGlobalStore();
 const router = useRouter();
 const message = useMessage();
+let initFlag = false;
 
 const curPageActive = ref(false);
 
@@ -34,7 +35,7 @@ onBeforeRouteLeave(() => {
 
 onActivated(async () => {
   curPageActive.value = true;
-  cleanAfterimage();
+  if (initFlag) cleanAfterimage();
 
   if (store.controledDevice) {
     if (
@@ -53,7 +54,7 @@ onActivated(async () => {
 });
 
 onMounted(() => {
-  secondaryInit();
+  secondaryInit().then(() => (initFlag = true));
 });
 
 onUnmounted(() => {
