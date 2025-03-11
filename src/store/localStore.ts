@@ -5,6 +5,12 @@ import { setAdbPath } from "../invoke";
 import { allLanguage } from "../i18n";
 import { locale } from "@tauri-apps/plugin-os";
 import { NonReactiveStore } from "./noneReactiveStore";
+import {
+  getCurrentWindow,
+  LogicalPosition,
+  LogicalSize,
+  primaryMonitor,
+} from "@tauri-apps/api/window";
 
 export class LocalStore {
   public static store: Store;
@@ -88,8 +94,45 @@ async function initMaskArea() {
     sizeH: number;
   }>("maskArea")) ?? { posX: 100, posY: 100, sizeW: 800, sizeH: 600 };
 
-  // TODO check mask area valid and remove related code in rust
-  NonReactiveStore.setLocal("maskArea", maskArea);
+  // mask area validation
+  const appWindow = getCurrentWindow();
+  let { posX, posY, sizeW, sizeH } = maskArea;
+  const mt = 30;
+  const ml = 70;
+
+  // min size
+  if (sizeW < 120) sizeW = 120;
+  if (sizeH < 150) sizeH = 120;
+  // max size
+  const monitor = await primaryMonitor();
+  const monitorSize = monitor?.size.toLogical(monitor.scaleFactor);
+  if (monitorSize !== undefined) {
+    if (sizeW > monitorSize.width - ml) sizeW = monitorSize.width - ml;
+    if (sizeH > monitorSize.height - mt) sizeH = monitorSize.height - mt;
+  }
+  [sizeW, sizeH] = [sizeW, sizeH].map((v) => Math.round(v));
+  appWindow.setSize(new LogicalSize(sizeW + ml, sizeH + mt));
+
+  // min pos (right bottom corner)
+  // move to left top corner
+  if (posX + sizeW < 0) posX = ml;
+  if (posY + sizeH < 0) posY = mt;
+  if (monitorSize !== undefined) {
+    // max pos (left top corner)
+    // move to right bottom corner
+    if (posX > monitorSize.width) posX = monitorSize.width - sizeW;
+    if (posY > monitorSize.height) posY = monitorSize.height - sizeH;
+  }
+
+  [posX, posY] = [posX, posY].map((v) => Math.round(v));
+  appWindow.setPosition(new LogicalPosition(posX - 70, posY - 30));
+
+  NonReactiveStore.setLocal("maskArea", {
+    posX,
+    posY,
+    sizeW,
+    sizeH,
+  });
 }
 
 // init keyMappingConfigList from local store

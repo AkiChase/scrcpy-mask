@@ -15,7 +15,7 @@ import ScreenStream from "./ScreenStream.vue";
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
 import { open } from "@tauri-apps/plugin-shell";
-import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { useI18n } from "vue-i18n";
 import { checkAdbAvailable } from "../invoke";
 
@@ -67,10 +67,12 @@ onMounted(async () => {
     const maskElement = document.getElementById("maskElement") as HTMLElement;
     const appWindow = getCurrentWindow();
     appWindow.onResized(() => {
+      // TODO use store.curMaskSize
       store.maskSizeH = maskElement.clientHeight;
       store.maskSizeW = maskElement.clientWidth;
     });
   }, 500);
+  console.log("mask mounted");
 });
 
 let checkAdbMessage: MessageReactive | null = null;
@@ -100,10 +102,10 @@ function genClientId() {
 }
 
 async function cleanAfterimage() {
-  // TODO fix oldSize making window large
   const appWindow = getCurrentWindow();
-  const oldSize = await appWindow.outerSize();
-  const newSize = new PhysicalSize(oldSize.width, oldSize.height + 1);
+  const scale = await appWindow.scaleFactor();
+  const oldSize = (await appWindow.innerSize()).toLogical(scale);
+  const newSize = new LogicalSize(oldSize.width, oldSize.height + 1);
   await appWindow.setSize(newSize);
   await appWindow.setSize(oldSize);
 }

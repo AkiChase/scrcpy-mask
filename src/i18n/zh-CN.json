@@ -178,10 +178,6 @@
         "note": "备注",
         "notePlaceholder": "请输入备注"
       },
-      "KeyInfo": {
-        "title": "Key Info",
-        "note": "Press any key"
-      },
       "Observation": {
         "observation": "观察视角",
         "scale": "灵敏度",
@@ -261,6 +257,10 @@
         "pos": "坐标点",
         "editPos": "编辑",
         "editTips": "左键点击空白区域添加新坐标点。左键拖拽移动特定坐标点，右键删除特定坐标点"
+      },
+      "KeyInfo": {
+        "title": "按键信息",
+        "note": "按下任意按键"
       }
     }
   },

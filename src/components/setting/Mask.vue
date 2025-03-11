@@ -20,8 +20,6 @@ import {
 import {
   LogicalPosition,
   LogicalSize,
-  PhysicalPosition,
-  PhysicalSize,
   getCurrentWindow,
 } from "@tauri-apps/api/window";
 import { SettingsOutline } from "@vicons/ionicons5";
@@ -41,6 +39,7 @@ const message = useMessage();
 const formRef = ref<FormInst | null>(null);
 
 // logical pos and size of the mask area
+// TODO use store.curMaskSize and store.curMaskPos
 const curMaskArea = ref({
   posX: 0,
   posY: 0,
@@ -75,22 +74,20 @@ const areaFormRules: FormRules = {
   },
 };
 
-async function refreshCurMaskArea(size?: PhysicalSize, pos?: PhysicalPosition) {
-  const lSize = size?.toLogical(factor);
-  const lPos = pos?.toLogical(factor);
-
+async function refreshCurMaskArea(size?: LogicalSize, pos?: LogicalPosition) {
   // header size and sidebar size
   const mt = 30;
   const ml = 70;
 
   // use logical position and size
-  if (lSize !== undefined) {
-    curMaskArea.value.sizeW = Math.round(lSize.width) - ml;
-    curMaskArea.value.sizeH = Math.round(lSize.height) - mt;
+  if (size !== undefined) {
+    curMaskArea.value.sizeW = Math.round(size.width) - ml;
+    curMaskArea.value.sizeH = Math.round(size.height) - mt;
+    console.log(curMaskArea.value);
   }
-  if (lPos !== undefined) {
-    curMaskArea.value.posX = Math.round(lPos.x) + ml;
-    curMaskArea.value.posY = Math.round(lPos.y) + mt;
+  if (pos !== undefined) {
+    curMaskArea.value.posX = Math.round(pos.x) + ml;
+    curMaskArea.value.posY = Math.round(pos.y) + mt;
   }
 }
 
@@ -135,14 +132,14 @@ onMounted(async () => {
   factor = await appWindow.scaleFactor();
 
   unlistenResize = await appWindow.onResized(({ payload: size }) => {
-    refreshCurMaskArea(size, undefined);
+    refreshCurMaskArea(size.toLogical(factor), undefined);
   });
   unlistenMove = await appWindow.onMoved(({ payload: position }) => {
-    refreshCurMaskArea(undefined, position);
+    refreshCurMaskArea(undefined, position.toLogical(factor));
   });
   refreshCurMaskArea(
-    await appWindow.outerSize(),
-    await appWindow.outerPosition()
+    (await appWindow.outerSize()).toLogical(factor),
+    (await appWindow.outerPosition()).toLogical(factor)
   );
 });
 

@@ -46,6 +46,7 @@ const store = useGlobalStore();
   background-color: var(--content-bg-color);
   color: var(--light-color);
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
 
   .n-tabs {

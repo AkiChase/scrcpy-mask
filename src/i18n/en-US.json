@@ -178,10 +178,6 @@
         "note": "Note",
         "notePlaceholder": "Please enter note"
       },
-      "KeyInfo": {
-        "title": "按键信息",
-        "note": "按下任意键"
-      },
       "Observation": {
         "observation": "Observation",
         "scale": "Sensitivity",
@@ -261,6 +257,10 @@
         "pos": "Points",
         "editPos": "Edit",
         "editTips": "Left-click on a blank area to add a new coordinate point. \nLeft-click and drag to move a specific point, and right-click to delete the point."
+      },
+      "KeyInfo": {
+        "title": "Key Info",
+        "note": "Press any key"
       }
     }
   },
