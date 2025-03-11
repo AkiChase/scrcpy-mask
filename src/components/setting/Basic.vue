@@ -15,6 +15,7 @@ import { allLanguage } from "../../i18n";
 import { useI18n } from "vue-i18n";
 import { useGlobalStore } from "../../store/global";
 import { LocalStore } from "../../store/localStore";
+import { useCheckAdb } from "../../tools/hooks";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -28,6 +29,7 @@ const languageOptions = Object.entries(allLanguage).map(([key, value]) => {
 });
 
 const curAdbPath = ref("");
+const checkAdb = useCheckAdb();
 
 onMounted(async () => {
   curAdbPath.value = store.adbPath;
@@ -37,7 +39,7 @@ async function adjustAdbPath() {
   store.showLoading();
   store.changeAbdPath(curAdbPath.value);
   message.success(t("pages.Setting.Basic.adbPath.setSuccess"));
-  await store.checkAdb();
+  await checkAdb();
   store.hideLoading();
 }
 

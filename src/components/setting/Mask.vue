@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
+import { ref, watch } from "vue";
 import {
   NH4,
   NForm,
@@ -23,31 +23,41 @@ import {
   getCurrentWindow,
 } from "@tauri-apps/api/window";
 import { SettingsOutline } from "@vicons/ionicons5";
-import { UnlistenFn } from "@tauri-apps/api/event";
 import { useGlobalStore } from "../../store/global";
 import { useI18n } from "vue-i18n";
 import { LocalStore } from "../../store/localStore";
 import { NonReactiveStore } from "../../store/noneReactiveStore";
-
-let unlistenResize: UnlistenFn = () => {};
-let unlistenMove: UnlistenFn = () => {};
-let factor = 1;
 
 const { t } = useI18n();
 const store = useGlobalStore();
 const message = useMessage();
 const formRef = ref<FormInst | null>(null);
 
-// logical pos and size of the mask area
-// TODO use store.curMaskSize and store.curMaskPos
-const curMaskArea = ref({
-  posX: 0,
-  posY: 0,
-  sizeW: 0,
-  sizeH: 0,
+const maskAreaFormModel = ref({
+  posX: store.curMaskPos.x,
+  posY: store.curMaskPos.y,
+  sizeW: store.curMaskSize.w,
+  sizeH: store.curMaskSize.h,
 });
 
-const areaFormRules: FormRules = {
+watch(
+  () => store.curMaskSize,
+  (curMaskSize) => {
+    maskAreaFormModel.value.sizeW = curMaskSize.w;
+    maskAreaFormModel.value.sizeH = curMaskSize.h;
+  },
+  { deep: true }
+);
+watch(
+  () => store.curMaskPos,
+  (curMaskPos) => {
+    maskAreaFormModel.value.posX = curMaskPos.x;
+    maskAreaFormModel.value.posY = curMaskPos.y;
+  },
+  { deep: true }
+);
+
+const maskAreaFormRules: FormRules = {
   posX: {
     type: "number",
     required: true,
@@ -74,30 +84,13 @@ const areaFormRules: FormRules = {
   },
 };
 
-async function refreshCurMaskArea(size?: LogicalSize, pos?: LogicalPosition) {
-  // header size and sidebar size
-  const mt = 30;
-  const ml = 70;
-
-  // use logical position and size
-  if (size !== undefined) {
-    curMaskArea.value.sizeW = Math.round(size.width) - ml;
-    curMaskArea.value.sizeH = Math.round(size.height) - mt;
-    console.log(curMaskArea.value);
-  }
-  if (pos !== undefined) {
-    curMaskArea.value.posX = Math.round(pos.x) + ml;
-    curMaskArea.value.posY = Math.round(pos.y) + mt;
-  }
-}
-
 function handleAdjustClick(e: MouseEvent) {
   e.preventDefault();
   formRef.value?.validate((errors) => {
     if (!errors) {
       // save the mask area
-      adjustMaskArea().then(() => {
-        NonReactiveStore.setLocal("maskArea", curMaskArea.value);
+      adjustWindowMaskArea().then(() => {
+        NonReactiveStore.setLocal("maskArea", maskAreaFormModel.value);
         message.success(t("pages.Setting.Mask.areaSaved"));
       });
     } else {
@@ -106,7 +99,7 @@ function handleAdjustClick(e: MouseEvent) {
   });
 }
 
-async function adjustMaskArea() {
+async function adjustWindowMaskArea() {
   // header size and sidebar size
   const mt = 30;
   const ml = 70;
@@ -114,39 +107,18 @@ async function adjustMaskArea() {
   const appWindow = getCurrentWindow();
 
   const pos = new LogicalPosition(
-    curMaskArea.value.posX - ml,
-    curMaskArea.value.posY - mt
+    maskAreaFormModel.value.posX - ml,
+    maskAreaFormModel.value.posY - mt
   );
 
   const size = new LogicalSize(
-    curMaskArea.value.sizeW + ml,
-    curMaskArea.value.sizeH + mt
+    maskAreaFormModel.value.sizeW + ml,
+    maskAreaFormModel.value.sizeH + mt
   );
 
   await appWindow.setPosition(pos);
   await appWindow.setSize(size);
 }
-
-onMounted(async () => {
-  const appWindow = getCurrentWindow();
-  factor = await appWindow.scaleFactor();
-
-  unlistenResize = await appWindow.onResized(({ payload: size }) => {
-    refreshCurMaskArea(size.toLogical(factor), undefined);
-  });
-  unlistenMove = await appWindow.onMoved(({ payload: position }) => {
-    refreshCurMaskArea(undefined, position.toLogical(factor));
-  });
-  refreshCurMaskArea(
-    (await appWindow.outerSize()).toLogical(factor),
-    (await appWindow.outerPosition()).toLogical(factor)
-  );
-});
-
-onUnmounted(() => {
-  unlistenResize();
-  unlistenMove();
-});
 </script>
 
 <template>
@@ -174,8 +146,8 @@ onUnmounted(() => {
 
     <NForm
       ref="formRef"
-      :model="curMaskArea"
-      :rules="areaFormRules"
+      :model="maskAreaFormModel"
+      :rules="maskAreaFormRules"
       label-placement="left"
       label-width="auto"
       require-mark-placement="right-hanging"
@@ -197,25 +169,25 @@ onUnmounted(() => {
       <NGrid :cols="2" :x-gap="24">
         <NFormItemGi label="X" path="posX">
           <NInputNumber
-            v-model:value="curMaskArea.posX"
+            v-model:value="maskAreaFormModel.posX"
             :placeholder="$t('pages.Setting.Mask.areaPlaceholder.x')"
           />
         </NFormItemGi>
         <NFormItemGi label="Y" path="posY">
           <NInputNumber
-            v-model:value="curMaskArea.posY"
+            v-model:value="maskAreaFormModel.posY"
             :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.y')"
           />
         </NFormItemGi>
         <NFormItemGi label="W" path="sizeW">
           <NInputNumber
-            v-model:value="curMaskArea.sizeW"
+            v-model:value="maskAreaFormModel.sizeW"
             :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.w')"
           />
         </NFormItemGi>
         <NFormItemGi label="H" path="sizeH">
           <NInputNumber
-            v-model:value="curMaskArea.sizeH"
+            v-model:value="maskAreaFormModel.sizeH"
             :placeholder="$t('pages.Setting.Mask.areaFormPlaceholder.h')"
           />
         </NFormItemGi>

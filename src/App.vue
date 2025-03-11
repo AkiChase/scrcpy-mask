@@ -8,14 +8,10 @@ import {
   NDialogProvider,
 } from "naive-ui";
 import { onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { LocalStore } from "./store/localStore";
+import { primaryInit } from "./tools/init";
 
-const router = useRouter();
-
-onMounted(async () => {
-  await LocalStore.init();
-  await router.replace({ name: "mask" });
+onMounted(() => {
+  primaryInit();
 });
 </script>
 

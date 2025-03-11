@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { h, onActivated, onMounted, ref } from "vue";
-import { MessageReactive, NDialog, useDialog, useMessage } from "naive-ui";
+import { onActivated, onMounted, onUnmounted, ref } from "vue";
+import { NDialog, useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { onBeforeRouteLeave, useRouter } from "vue-router";
 import {
@@ -12,18 +12,14 @@ import {
 } from "../hotkey";
 import { KeySteeringWheel } from "../keyMappingConfig";
 import ScreenStream from "./ScreenStream.vue";
-import { getVersion } from "@tauri-apps/api/app";
-import { fetch } from "@tauri-apps/plugin-http";
-import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { useI18n } from "vue-i18n";
-import { checkAdbAvailable } from "../invoke";
+import { secondaryClean, secondaryInit } from "../tools/init";
 
 const { t } = useI18n();
 const store = useGlobalStore();
 const router = useRouter();
 const message = useMessage();
-const dialog = useDialog();
 
 const curPageActive = ref(false);
 
@@ -56,50 +52,13 @@ onActivated(async () => {
   }
 });
 
-onMounted(async () => {
-  store.screenStreamClientId = genClientId();
-  store.checkUpdate = checkUpdate;
-  if (store.checkUpdateAtStart) checkUpdate();
-  store.checkAdb = checkAdb;
-  setTimeout(() => {
-    checkAdb();
-    // listen to window resize event
-    const maskElement = document.getElementById("maskElement") as HTMLElement;
-    const appWindow = getCurrentWindow();
-    appWindow.onResized(() => {
-      // TODO use store.curMaskSize
-      store.maskSizeH = maskElement.clientHeight;
-      store.maskSizeW = maskElement.clientWidth;
-    });
-  }, 500);
-  console.log("mask mounted");
+onMounted(() => {
+  secondaryInit();
 });
 
-let checkAdbMessage: MessageReactive | null = null;
-async function checkAdb() {
-  try {
-    if (checkAdbMessage) {
-      checkAdbMessage.destroy();
-      checkAdbMessage = null;
-    }
-    await checkAdbAvailable();
-  } catch (e) {
-    checkAdbMessage = message.error(t("pages.Mask.checkAdb", [e]), {
-      duration: 0,
-    });
-  }
-}
-
-function genClientId() {
-  let result = "";
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const charactersLength = characters.length;
-  for (let i = 0; i < 16; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-  }
-  return result;
-}
+onUnmounted(() => {
+  secondaryClean();
+});
 
 async function cleanAfterimage() {
   const appWindow = getCurrentWindow();
@@ -112,65 +71,6 @@ async function cleanAfterimage() {
 
 function toStartServer() {
   router.replace({ name: "device" });
-}
-
-function renderUpdateInfo(content: string) {
-  const pList = content.split("\r\n").map((line: string) => h("p", line));
-  return h("div", { style: "margin: 20px 0" }, pList);
-}
-
-function compareVersion(v1: string, v2: string) {
-  const [x1, y1, z1] = v1.split(".");
-  const [x2, y2, z2] = v2.split(".");
-
-  if (x1 !== x2) {
-    return parseInt(x1) > parseInt(x2) ? 1 : -1;
-  }
-  if (y1 !== y2) {
-    return parseInt(y1) > parseInt(y2) ? 1 : -1;
-  }
-  if (z1 !== z2) {
-    return parseInt(z1) > parseInt(z2) ? 1 : -1;
-  }
-
-  return 0;
-}
-
-async function checkUpdate() {
-  try {
-    const curVersion = await getVersion();
-    const res = await fetch(
-      "https://api.github.com/repos/AkiChase/scrcpy-mask/releases/latest",
-      {
-        connectTimeout: 5000,
-      }
-    );
-    if (res.status !== 200) {
-      message.error(t("pages.Mask.checkUpdate.failed"));
-    } else {
-      const data = await res.json();
-      const latestVersion = (data.tag_name as string).slice(1);
-      if (compareVersion(curVersion, latestVersion) >= 0) {
-        message.success(
-          t("pages.Mask.checkUpdate.isLatest", [latestVersion, curVersion])
-        );
-        return;
-      }
-      const body = data.body as string;
-      dialog.info({
-        title: t("pages.Mask.checkUpdate.notLatest.title", [latestVersion]),
-        content: () => renderUpdateInfo(body),
-        positiveText: t("pages.Mask.checkUpdate.notLatest.positiveText"),
-        negativeText: t("pages.Mask.checkUpdate.notLatest.negativeText"),
-        onPositiveClick: () => {
-          open(data.html_url);
-        },
-      });
-    }
-  } catch (e) {
-    console.error(e);
-    message.error(t("pages.Mask.checkUpdate.failed"));
-  }
 }
 </script>
 
@@ -191,7 +91,6 @@ async function checkUpdate() {
     <template v-if="store.keyMappingConfigList.length">
       <div @contextmenu.prevent class="mask" id="maskElement"></div>
       <ScreenStream
-        :cid="store.screenStreamClientId"
         v-if="
           curPageActive && store.controledDevice && store.screenStream.enable
         "

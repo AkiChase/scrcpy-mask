@@ -8,6 +8,7 @@ import {
 import { LocalStore } from "./localStore";
 import { setAdbPath } from "../invoke";
 import i18n, { allLanguage } from "../i18n";
+import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 
 export const useGlobalStore = defineStore("global", () => {
   const showLoadingFlag = ref(false);
@@ -26,9 +27,6 @@ export const useGlobalStore = defineStore("global", () => {
 
   const controledDevice: Ref<ControledDevice | null> = ref(null);
   const editKeyMappingList: Ref<KeyMapping[]> = ref([]);
-
-  let checkUpdate: () => Promise<void> = async () => {};
-  let checkAdb: () => Promise<void> = async () => {};
 
   // Applies the edited key mapping list and checks for duplicate keys
   function applyEditKeyMappingList(): boolean {
@@ -73,10 +71,23 @@ export const useGlobalStore = defineStore("global", () => {
 
   const keyInputFlag = ref(false);
 
-  const maskSizeW: Ref<number> = ref(0);
-  const maskSizeH: Ref<number> = ref(0);
+  const curMaskSize = ref({
+    w: 0,
+    h: 0,
+  });
+  const curMaskPos = ref({
+    x: 0,
+    y: 0,
+  });
 
-  const screenStreamClientId = ref("scrcpy-mask");
+  function setCurMaskSize(size: LogicalSize) {
+    curMaskSize.value.w = Math.round(size.width) - 70;
+    curMaskSize.value.h = Math.round(size.height) - 30;
+  }
+  function setCurMaskPos(pos: LogicalPosition) {
+    curMaskPos.value.x = Math.round(pos.x) + 70;
+    curMaskPos.value.y = Math.round(pos.y) + 30;
+  }
 
   // persistent storage
   const keyMappingConfigList: Ref<KeyMappingConfig[]> = ref([]);
@@ -131,9 +142,8 @@ export const useGlobalStore = defineStore("global", () => {
     adbPath,
     language,
     // in-memory storage
-    screenStreamClientId, // TODO none reactive
-    maskSizeW,
-    maskSizeH,
+    curMaskSize,
+    curMaskPos,
     screenSizeW,
     screenSizeH,
     keyInputFlag, // TODO none reactive
@@ -143,13 +153,12 @@ export const useGlobalStore = defineStore("global", () => {
     // action
     showLoading,
     hideLoading,
+    setCurMaskPos,
+    setCurMaskSize,
     applyEditKeyMappingList,
     resetEditKeyMappingList,
     setCurKeyMappingIndex,
     changeAbdPath,
     setLanguage,
-    // TODO move to NonReactive Store
-    checkUpdate,
-    checkAdb,
   };
 });

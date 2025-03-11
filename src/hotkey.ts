@@ -37,13 +37,13 @@ import { sendInjectKeycode, sendSetClipboard } from "./frontcommand/controlMsg";
 function clientxToPosx(clientx: number) {
   return clientx < 70
     ? 0
-    : Math.floor((clientx - 70) * (store.screenSizeW / store.maskSizeW));
+    : Math.floor((clientx - 70) * (store.screenSizeW / store.curMaskSize.w));
 }
 
 function clientyToPosy(clienty: number) {
   return clienty < 30
     ? 0
-    : Math.floor((clienty - 30) * (store.screenSizeH / store.maskSizeH));
+    : Math.floor((clienty - 30) * (store.screenSizeH / store.curMaskSize.h));
 }
 
 function clientxToPosOffsetx(clientx: number, posx: number, scale = 1) {
@@ -60,8 +60,7 @@ function clientPosToSkillOffset(
   clientPos: { x: number; y: number },
   range: number
 ): { offsetX: number; offsetY: number } {
-  const maskSizeH = store.maskSizeH;
-  const maskSizeW = store.maskSizeW;
+  const [maskSizeW, maskSizeH] = [store.curMaskSize.w, store.curMaskSize.h];
 
   const maxLength = (120 / maskSizeH) * store.screenSizeH;
   const centerX = maskSizeW * 0.5;

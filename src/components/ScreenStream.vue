@@ -3,10 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useGlobalStore } from "../store/global";
 import { MessageReactive, useMessage } from "naive-ui";
 import { ScreenStream } from "../screenStream";
-
-const props = defineProps<{
-  cid: string;
-}>();
+import { NonReactiveStore } from "../store/noneReactiveStore";
 
 const store = useGlobalStore();
 const message = useMessage();
@@ -17,7 +14,7 @@ let msgReactive: MessageReactive | null = null;
 
 function connectScreenStream() {
   if (streamImg.value) {
-    const ss = new ScreenStream(streamImg.value, props.cid);
+    const ss = new ScreenStream(streamImg.value, NonReactiveStore.mem.screenStreamClientId);
     ss.connect(
       store.screenStream.address,
       () => {},
@@ -48,8 +45,8 @@ onBeforeUnmount(() => {
   <div class="screen-stream">
     <img
       :style="{
-        width: `${store.maskSizeW}px`,
-        height: `${store.maskSizeH}px`,
+        width: `${store.curMaskSize.w}px`,
+        height: `${store.curMaskSize.h}px`,
       }"
       ref="streamImg"
     />

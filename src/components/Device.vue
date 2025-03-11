@@ -56,11 +56,13 @@ const port = ref(27183);
 const wireless_address = ref("");
 const ws_address = ref("");
 
+// TODO scrollable
+
 //#region listener
 let deviceWaitForMetadataTask: ((deviceName: string) => void) | null = null;
 let deviceWaitForScreenSizeTask: ((w: number, h: number) => void) | null = null;
 
-let unlisten: UnlistenFn | undefined;
+let unlisten: UnlistenFn | undefined = undefined;
 let lastClipboard = "";
 
 onMounted(async () => {
@@ -136,7 +138,7 @@ onActivated(async () => {
 });
 
 onUnmounted(() => {
-  if (unlisten !== undefined) unlisten();
+  unlisten?.();
 });
 //#endregion
 

@@ -22,6 +22,8 @@ const { t } = useI18n();
 
 const dialog = useDialog();
 
+// TODO add tooltip for btn
+
 const localStoreEntries = ref<[string, unknown][]>([]);
 const showDataModal = ref(false);
 const dataModalInputVal = ref("");

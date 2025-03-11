@@ -336,7 +336,6 @@ onBeforeRouteLeave(() => {
 <template>
   <div class="content-container">
     <ScreenStream
-      :cid="store.screenStreamClientId"
       v-if="curPageActive && store.controledDevice && store.screenStream.enable"
     />
     <div
