@@ -4,9 +4,11 @@ import { useGlobalStore } from "../store/global";
 import { MessageReactive, useMessage } from "naive-ui";
 import { ScreenStream } from "../tools/screenStream";
 import { NonReactiveStore } from "../store/noneReactiveStore";
+import { useI18n } from "vue-i18n";
 
 const store = useGlobalStore();
 const message = useMessage();
+const { t } = useI18n();
 
 const streamImg = ref<HTMLImageElement | null>(null);
 
@@ -14,16 +16,22 @@ let msgReactive: MessageReactive | null = null;
 
 function connectScreenStream() {
   if (streamImg.value) {
-    const ss = new ScreenStream(streamImg.value, NonReactiveStore.mem.screenStreamClientId);
+    const ss = new ScreenStream(
+      streamImg.value,
+      NonReactiveStore.mem.screenStreamClientId
+    );
     ss.connect(
       store.screenStream.address,
       () => {},
       () => {
-        msgReactive = message.error("投屏连接失败。关闭此信息将尝试重新连接", {
-          duration: 0,
-          closable: true,
-          onClose: () => connectScreenStream(),
-        });
+        msgReactive = message.error(
+          t("pages.Setting.Mask.screenStream.connectError"),
+          {
+            duration: 0,
+            closable: true,
+            onClose: () => connectScreenStream(),
+          }
+        );
       }
     );
   }

@@ -1,4 +1,5 @@
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { open as shellOpen } from "@tauri-apps/plugin-shell";
 
 export function compareVersion(v1: string, v2: string) {
   const [x1, y1, z1] = v1.split(".");
@@ -35,4 +36,8 @@ export async function cleanAfterimage() {
   const newSize = new LogicalSize(oldSize.width, oldSize.height + 1);
   await appWindow.setSize(newSize);
   await appWindow.setSize(oldSize);
+}
+
+export function openWebsite(url: string) {
+  shellOpen(url);
 }

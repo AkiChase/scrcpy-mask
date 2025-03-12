@@ -30,6 +30,7 @@ div#app {
 }
 
 .n-spin-container {
+  background-color: var(--bg-color);
   @include common.flexFullHeight;
   .n-spin-content {
     @include common.flexFullHeight;

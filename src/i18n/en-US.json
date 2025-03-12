@@ -38,7 +38,10 @@
       "adbConnectError": "Wireless connection failed",
       "rotation": "Device rotation {0}°",
       "btnShutdown": "Shutdown control",
-      "btnRefresh": "Refresh"
+      "btnRefresh": "Refresh",
+      "btnReStart": "Restart ADB",
+      "adbRestartError": "ADB Restart Failed",
+      "adbUnavailable": "ADB Unavailable"
     },
     "Mask": {
       "keyconfigException": "The key mapping config is abnormal, please delete this config",
@@ -97,8 +100,11 @@
         "screenStream": {
           "enable": "Enable mirror",
           "address": "Screen mirror address",
-          "addressPlaceholder": "Please enter the ScreenStream screen mirror address"
-        }
+          "addressPlaceholder": "Please enter the ScreenStream screen mirror address",
+          "connectError": "ScreenStream connection failed. Closing this message will attempt to reconnect",
+          "btnHelp": "ScreenStream is an Android screen mirror app with 0.5-1s screen delay, only as a complementary solution to Scrcpy Mask's screen mirror (click to open its project homepage)"
+        },
+        "btnAreaAdjustTip": "Setting the mask area"
       },
       "Basic": {
         "language": "Language",
@@ -282,5 +288,6 @@
     "open": "Connected to external control server",
     "close": "External control connection disconnected",
     "error": "Something was wrong, the exter connection is closed"
-  }
+  },
+  "screenStream": {}
 }

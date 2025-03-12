@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { NFlex, NH4, NButton, NIcon, NP, NCheckbox } from "naive-ui";
 import { LogoGithub, Planet } from "@vicons/ionicons5";
-import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
 import { onMounted, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
 import { LocalStore } from "../../store/localStore";
 import { useCheckUpdate } from "../../tools/hooks";
+import { openWebsite } from "../../tools/tools";
 
 const store = useGlobalStore();
 const checkUpdate = useCheckUpdate();
@@ -15,10 +15,6 @@ const appVersion = ref("");
 onMounted(async () => {
   appVersion.value = await getVersion();
 });
-
-function opendWebsite(url: string) {
-  open(url);
-}
 
 async function onClickCheckUpdate() {
   store.showLoading();
@@ -34,7 +30,7 @@ async function onClickCheckUpdate() {
     <NFlex :size="30">
       <NButton
         text
-        @click="opendWebsite('https://github.com/AkiChase/scrcpy-mask')"
+        @click="openWebsite('https://github.com/AkiChase/scrcpy-mask')"
       >
         <template #icon>
           <NIcon><LogoGithub /> </NIcon>
@@ -43,7 +39,7 @@ async function onClickCheckUpdate() {
       </NButton>
       <NButton
         text
-        @click="opendWebsite('https://space.bilibili.com/440760180')"
+        @click="openWebsite('https://space.bilibili.com/440760180')"
       >
         <template #icon>
           <NIcon
@@ -63,7 +59,7 @@ async function onClickCheckUpdate() {
         </template>
         BiliBili
       </NButton>
-      <NButton text @click="opendWebsite('https://www.akichase.top/')">
+      <NButton text @click="openWebsite('https://www.akichase.top/')">
         <template #icon>
           <NIcon><Planet /> </NIcon>
         </template>

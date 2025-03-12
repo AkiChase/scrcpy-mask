@@ -18,6 +18,7 @@ import {
   getDeviceScreenSize,
   adbConnect,
   getCurClientInfo,
+  adbRestartServer,
 } from "../tools/invoke";
 import {
   NH4,
@@ -34,6 +35,7 @@ import {
   useDialog,
   useMessage,
   NInputGroup,
+  NSpace,
 } from "naive-ui";
 import { CloseCircle, InformationCircle, Refresh } from "@vicons/ionicons5";
 import { UnlistenFn, listen } from "@tauri-apps/api/event";
@@ -47,6 +49,7 @@ import {
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import ButtonWithTip from "./common/ButtonWithTip.vue";
+import { NonReactiveStore } from "../store/noneReactiveStore";
 
 const { t } = useI18n();
 const dialog = useDialog();
@@ -328,6 +331,21 @@ async function refreshDevices() {
   store.hideLoading();
 }
 
+async function restartAdb() {
+  if (NonReactiveStore.mem.adbUnavailableMsgIns !== null) {
+    message.error(t("pages.Device.adbUnavailable"));
+    return;
+  }
+  store.showLoading();
+  try {
+    await adbRestartServer();
+  } catch (e) {
+    message.error(t("pages.Device.adbRestartError"));
+    console.error(e);
+  }
+  store.hideLoading();
+}
+
 async function connectDevice() {
   if (!wireless_address.value) {
     message.error(t("pages.Device.inputWirelessAddress"));
@@ -437,15 +455,24 @@ function closeWS() {
           <NH4 style="margin: 20px 0" prefix="bar">{{
             $t("pages.Device.availableDevice")
           }}</NH4>
-          <ButtonWithTip
-            tertiary
-            circle
-            type="primary"
-            @click="refreshDevices"
-            style="margin-right: 20px"
-            :tip="$t('pages.Device.btnRefresh')"
-            :icon="Refresh"
-          />
+          <NSpace>
+            <ButtonWithTip
+              tertiary
+              circle
+              type="primary"
+              @click="refreshDevices"
+              :tip="$t('pages.Device.btnRefresh')"
+              :icon="Refresh"
+            />
+            <ButtonWithTip
+              tertiary
+              circle
+              type="error"
+              @click="restartAdb"
+              :tip="$t('pages.Device.btnReStart')"
+              :icon="Refresh"
+            />
+          </NSpace>
         </NFlex>
         <NDataTable
           max-height="120"

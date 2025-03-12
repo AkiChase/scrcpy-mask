@@ -1,8 +1,10 @@
+import { MessageReactive } from "naive-ui";
 import { LocalStore } from "./localStore";
 
 interface MemType {
   screenStreamClientId: string;
   keyInputFlag: boolean;
+  adbUnavailableMsgIns: MessageReactive | null;
 }
 
 interface LocalType {
@@ -19,6 +21,7 @@ export class NonReactiveStore {
   static mem: MemType = {
     screenStreamClientId: "",
     keyInputFlag: false,
+    adbUnavailableMsgIns: null,
   };
 
   static local: LocalType = {

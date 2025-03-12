@@ -7,9 +7,7 @@ import {
   NFormItemGi,
   NInputNumber,
   FormRules,
-  NButton,
   NFlex,
-  NIcon,
   FormInst,
   useMessage,
   NSlider,
@@ -22,11 +20,13 @@ import {
   LogicalSize,
   getCurrentWindow,
 } from "@tauri-apps/api/window";
-import { SettingsOutline } from "@vicons/ionicons5";
+import { Help, SettingsOutline } from "@vicons/ionicons5";
 import { useGlobalStore } from "../../store/global";
 import { useI18n } from "vue-i18n";
 import { LocalStore } from "../../store/localStore";
 import { NonReactiveStore } from "../../store/noneReactiveStore";
+import ButtonWithTip from "../common/ButtonWithTip.vue";
+import { openWebsite } from "../../tools/tools";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -154,17 +154,14 @@ async function adjustWindowMaskArea() {
     >
       <NFlex justify="space-between" align="center">
         <NH4 prefix="bar">{{ $t("pages.Setting.Mask.areaAdjust") }}</NH4>
-        <NButton
+        <ButtonWithTip
           tertiary
           circle
           type="primary"
           @click="handleAdjustClick"
-          style="margin-right: 20px"
-        >
-          <template #icon>
-            <NIcon><SettingsOutline /></NIcon>
-          </template>
-        </NButton>
+          :tip="$t('pages.Setting.Mask.btnAreaAdjustTip')"
+          :icon="SettingsOutline"
+        />
       </NFlex>
       <NGrid :cols="2" :x-gap="24">
         <NFormItemGi label="X" path="posX">
@@ -226,8 +223,17 @@ async function adjustWindowMaskArea() {
         />
       </NFormItemGi>
     </NGrid>
-
-    <NH4 prefix="bar">ScreenStream</NH4>
+    <NFlex justify="space-between" align="center">
+      <NH4 prefix="bar">ScreenStream</NH4>
+      <ButtonWithTip
+        tertiary
+        circle
+        type="primary"
+        @click="openWebsite('https://github.com/dkrivoruchko/ScreenStream')"
+        :tip="$t('pages.Setting.Mask.screenStream.btnHelp')"
+        :icon="Help"
+      />
+    </NFlex>
     <NFormItem
       :label="$t('pages.Setting.Mask.screenStream.enable')"
       label-placement="left"

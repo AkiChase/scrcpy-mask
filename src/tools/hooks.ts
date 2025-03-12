@@ -1,13 +1,13 @@
 import { getVersion } from "@tauri-apps/api/app";
-import { MessageReactive, useDialog, useMessage } from "naive-ui";
+import { useDialog, useMessage } from "naive-ui";
 import { h } from "vue";
 import { useI18n } from "vue-i18n";
 import { fetch } from "@tauri-apps/plugin-http";
 import { compareVersion } from "./tools";
 import { checkAdbAvailable } from "./invoke";
+import { NonReactiveStore } from "../store/noneReactiveStore";
 
 // TODO use markdown to render update info
-// TODO check screen stream available
 
 function renderUpdateInfo(content: string) {
   const pList = content.split("\r\n").map((line: string) => h("p", line));
@@ -56,22 +56,24 @@ export function useCheckUpdate() {
   };
 }
 
-let checkAdbMessage: MessageReactive | null = null;
 export function useCheckAdb() {
   const message = useMessage();
   const { t } = useI18n();
 
   return async function checkAdb() {
     try {
-      if (checkAdbMessage) {
-        checkAdbMessage.destroy();
-        checkAdbMessage = null;
+      if (NonReactiveStore.mem.adbUnavailableMsgIns) {
+        NonReactiveStore.mem.adbUnavailableMsgIns.destroy();
+        NonReactiveStore.mem.adbUnavailableMsgIns = null;
       }
       await checkAdbAvailable();
     } catch (e) {
-      checkAdbMessage = message.error(t("pages.Mask.checkAdb", [e]), {
-        duration: 0,
-      });
+      NonReactiveStore.mem.adbUnavailableMsgIns = message.error(
+        t("pages.Mask.checkAdb", [e]),
+        {
+          duration: 0,
+        }
+      );
     }
   };
 }

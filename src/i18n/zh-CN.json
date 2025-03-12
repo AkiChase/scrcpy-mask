@@ -38,7 +38,10 @@
       "adbConnectError": "无线连接失败",
       "rotation": "设备旋转 {0}°",
       "btnShutdown": "关闭控制",
-      "btnRefresh": "刷新"
+      "btnRefresh": "刷新",
+      "btnReStart": "重启ABD",
+      "adbRestartError": "ADB 重启失败",
+      "adbUnavailable": "ADB 不可用"
     },
     "Mask": {
       "keyconfigException": "按键方案异常，请删除此方案",
@@ -97,8 +100,11 @@
         "screenStream": {
           "enable": "启用投屏",
           "address": "投屏地址",
-          "addressPlaceholder": "请输入 ScreenStream 投屏地址"
-        }
+          "addressPlaceholder": "请输入 ScreenStream 投屏地址",
+          "connectError": "ScreenStream 投屏连接失败。关闭此信息将尝试重新连接",
+          "btnHelp": "ScreenStream 是一款安卓投屏App，存在0.5-1s的画面延迟，仅作为 Scrcpy Mask 的投屏补充方案（点击打开其项目主页）"
+        },
+        "btnAreaAdjustTip": "设置蒙版区域"
       },
       "Basic": {
         "language": "语言",
@@ -282,5 +288,6 @@
     "open": "已连接到外部控制服务端",
     "close": "外部控制连接断开",
     "error": "未知错误，外部控制连接断开"
-  }
+  },
+  "screenStream": {}
 }
