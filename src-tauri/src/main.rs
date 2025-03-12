@@ -30,6 +30,7 @@ async fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             command::adb_devices,
+            command::adb_restart_server,
             command::forward_server_port,
             command::push_server_file,
             command::start_scrcpy_server,

@@ -20,6 +20,14 @@ pub fn adb_devices() -> Result<Vec<Device>, String> {
 }
 
 #[tauri::command]
+pub fn adb_restart_server() -> Result<(), String> {
+    match ScrcpyClient::adb_restart_server() {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
 /// forward local port to the device port
 pub fn forward_server_port(id: String, scid: String, port: u16) -> Result<(), String> {
     match ScrcpyClient::forward_server_port(&id, &scid, port) {
