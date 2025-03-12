@@ -5,7 +5,7 @@ import {
   TouchAction,
   swipe,
   touch,
-} from "./frontcommand/scrcpyMaskCmd";
+} from "../frontcommand/scrcpyMaskCmd";
 import {
   KeyCancelSkill,
   KeyDirectionalSkill,
@@ -22,18 +22,18 @@ import {
   KeyTriggerWhenDoublePressedSkill,
   KeyTriggerWhenPressedSkill,
 } from "./keyMappingConfig";
-import { useGlobalStore } from "./store/global";
+import { useGlobalStore } from "../store/global";
 import { LogicalPosition, getCurrentWindow } from "@tauri-apps/api/window";
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { useI18n } from "vue-i18n";
-import { KeyToCodeMap } from "./frontcommand/KeyToCodeMap";
+import { KeyToCodeMap } from "../frontcommand/KeyToCodeMap";
 import {
   AndroidKeyEventAction,
   AndroidMetastate,
-} from "./frontcommand/android";
-import { UIEventsCode } from "./frontcommand/UIEventsCode";
-import { sendInjectKeycode, sendSetClipboard } from "./frontcommand/controlMsg";
-import { NonReactiveStore } from "./store/noneReactiveStore";
+} from "../frontcommand/android";
+import { UIEventsCode } from "../frontcommand/UIEventsCode";
+import { sendInjectKeycode, sendSetClipboard } from "../frontcommand/controlMsg";
+import { NonReactiveStore } from "../store/noneReactiveStore";
 
 function clientxToPosx(clientx: number) {
   return clientx < 70

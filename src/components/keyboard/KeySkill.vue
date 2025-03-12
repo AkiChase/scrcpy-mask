@@ -16,7 +16,7 @@ import {
   KeyDirectionalSkill,
   KeySkill,
   KeyTriggerWhenPressedSkill,
-} from "../../keyMappingConfig";
+} from "../../tools/keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 
 const props = defineProps<{

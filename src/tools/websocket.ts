@@ -1,6 +1,6 @@
 import { useMessage } from "naive-ui";
-import { useGlobalStore } from "./store/global";
-import { sendKey, shutdown, swipe, touch } from "./frontcommand/scrcpyMaskCmd";
+import { useGlobalStore } from "../store/global";
+import { sendKey, shutdown, swipe, touch } from "../frontcommand/scrcpyMaskCmd";
 import { useI18n } from "vue-i18n";
 
 let ws: WebSocket;

@@ -12,7 +12,7 @@ import {
 } from "naive-ui";
 import { Analytics, CloseCircle, Settings } from "@vicons/ionicons5";
 import { useKeyboardStore } from "../../store/keyboard";
-import { KeySwipe } from "../../keyMappingConfig";
+import { KeySwipe } from "../../tools/keyMappingConfig";
 import { useI18n } from "vue-i18n";
 
 const props = defineProps<{

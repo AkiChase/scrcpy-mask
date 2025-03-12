@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
 import { NIcon, NButton, NFormItem, NInput, NH4, NInputNumber } from "naive-ui";
 import { Eye, CloseCircle, Settings } from "@vicons/ionicons5";
-import { KeyObservation } from "../../keyMappingConfig";
+import { KeyObservation } from "../../tools/keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 
 const props = defineProps<{

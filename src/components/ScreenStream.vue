@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useGlobalStore } from "../store/global";
 import { MessageReactive, useMessage } from "naive-ui";
-import { ScreenStream } from "../screenStream";
+import { ScreenStream } from "../tools/screenStream";
 import { NonReactiveStore } from "../store/noneReactiveStore";
 
 const store = useGlobalStore();

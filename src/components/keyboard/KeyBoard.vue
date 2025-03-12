@@ -21,7 +21,7 @@ import {
   KeySwipe as KeyMappingKeySwipe,
   KeySight as KeyMappingKeySight,
   KeyFire as KeyMappingKeyFire,
-} from "../../keyMappingConfig";
+} from "../../tools/keyMappingConfig";
 import { useGlobalStore } from "../../store/global";
 import { DropdownOption, NDropdown, useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";

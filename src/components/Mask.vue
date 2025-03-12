@@ -9,8 +9,8 @@ import {
   clearShortcuts,
   listenToEvent,
   unlistenToEvent,
-} from "../hotkey";
-import { KeySteeringWheel } from "../keyMappingConfig";
+} from "../tools/hotkey";
+import { KeySteeringWheel } from "../tools/keyMappingConfig";
 import ScreenStream from "./ScreenStream.vue";
 import { useI18n } from "vue-i18n";
 import { secondaryClean, secondaryInit } from "../tools/init";

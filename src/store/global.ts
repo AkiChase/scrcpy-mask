@@ -4,9 +4,9 @@ import {
   KeyMapping,
   KeyMappingConfig,
   KeySteeringWheel,
-} from "../keyMappingConfig";
+} from "../tools/keyMappingConfig";
 import { LocalStore } from "./localStore";
-import { setAdbPath } from "../invoke";
+import { setAdbPath } from "../tools/invoke";
 import i18n, { allLanguage } from "../i18n";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 

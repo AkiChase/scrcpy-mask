@@ -14,7 +14,7 @@ import {
   NInputNumber,
 } from "naive-ui";
 import { CloseCircle, Settings } from "@vicons/ionicons5";
-import { KeyCommon, KeyMacro, KeyMacroList } from "../../keyMappingConfig";
+import { KeyCommon, KeyMacro, KeyMacroList } from "../../tools/keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 import { useI18n } from "vue-i18n";
 

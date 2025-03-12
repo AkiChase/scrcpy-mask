@@ -14,8 +14,8 @@ import {
 } from "naive-ui";
 import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useGlobalStore } from "../../store/global";
-import { loadDefaultKeyconfig } from "../../invoke";
-import { KeyMappingConfig } from "../../keyMappingConfig";
+import { loadDefaultKeyconfig } from "../../tools/invoke";
+import { KeyMappingConfig } from "../../tools/keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 import { useI18n } from "vue-i18n";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";

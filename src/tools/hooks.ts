@@ -4,9 +4,11 @@ import { h } from "vue";
 import { useI18n } from "vue-i18n";
 import { fetch } from "@tauri-apps/plugin-http";
 import { compareVersion } from "./tools";
-import { checkAdbAvailable } from "../invoke";
+import { checkAdbAvailable } from "./invoke";
 
 // TODO use markdown to render update info
+// TODO check screen stream available
+
 function renderUpdateInfo(content: string) {
   const pList = content.split("\r\n").map((line: string) => h("p", line));
   return h("div", { style: "margin: 20px 0" }, pList);

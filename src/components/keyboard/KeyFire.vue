@@ -11,7 +11,7 @@ import {
   NCheckbox,
 } from "naive-ui";
 import { CloseCircle, Settings } from "@vicons/ionicons5";
-import { KeyFire } from "../../keyMappingConfig";
+import { KeyFire } from "../../tools/keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
 
 const props = defineProps<{

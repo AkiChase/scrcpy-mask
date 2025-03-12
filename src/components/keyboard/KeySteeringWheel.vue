@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useGlobalStore } from "../../store/global";
-import { KeySteeringWheel } from "../../keyMappingConfig";
+import { KeySteeringWheel } from "../../tools/keyMappingConfig";
 import { NButton, NFormItem, NH4, NIcon, NInput, NInputNumber } from "naive-ui";
 import { CloseCircle, Move, Settings } from "@vicons/ionicons5";
 import { useKeyboardStore } from "../../store/keyboard";

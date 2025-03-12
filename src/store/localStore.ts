@@ -1,7 +1,7 @@
 import { load, Store } from "@tauri-apps/plugin-store";
-import { KeyMappingConfig } from "../keyMappingConfig";
+import { KeyMappingConfig } from "../tools/keyMappingConfig";
 import { useGlobalStore } from "./global";
-import { setAdbPath } from "../invoke";
+import { setAdbPath } from "../tools/invoke";
 import { allLanguage } from "../i18n";
 import { locale } from "@tauri-apps/plugin-os";
 import { NonReactiveStore } from "./noneReactiveStore";

@@ -18,7 +18,7 @@ import {
   getDeviceScreenSize,
   adbConnect,
   getCurClientInfo,
-} from "../invoke";
+} from "../tools/invoke";
 import {
   NH4,
   NInput,
@@ -40,7 +40,10 @@ import { UnlistenFn, listen } from "@tauri-apps/api/event";
 import { shutdown } from "../frontcommand/scrcpyMaskCmd";
 import { useGlobalStore } from "../store/global";
 import { useI18n } from "vue-i18n";
-import { closeExternalControl, connectExternalControl } from "../websocket";
+import {
+  closeExternalControl,
+  connectExternalControl,
+} from "../tools/websocket";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import ButtonWithTip from "./common/ButtonWithTip.vue";
