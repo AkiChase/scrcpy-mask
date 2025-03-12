@@ -48,12 +48,13 @@ const store = useGlobalStore();
   color: var(--light-color);
   overflow-y: auto;
   overflow-x: hidden;
+  // for spin div
   display: flex;
+  flex-direction: column;
 
   .n-tabs {
     height: 100%;
   }
-
   .n-tab-pane {
     padding: 0;
   }

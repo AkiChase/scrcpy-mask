@@ -27,9 +27,7 @@ import {
   NDataTable,
   NDropdown,
   NEmpty,
-  NTooltip,
   NFlex,
-  NIcon,
   NSpin,
   DataTableColumns,
   DropdownOption,
@@ -45,6 +43,7 @@ import { useI18n } from "vue-i18n";
 import { closeExternalControl, connectExternalControl } from "../websocket";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import ButtonWithTip from "./common/ButtonWithTip.vue";
 
 const { t } = useI18n();
 const dialog = useDialog();
@@ -359,8 +358,8 @@ function closeWS() {
 
 <template>
   <div class="container">
-    <div class="device">
-      <NSpin :show="store.showLoadingFlag">
+    <NSpin :show="store.showLoadingFlag">
+      <div class="device">
         <NH4 prefix="bar">{{ $t("pages.Device.localPort") }}</NH4>
         <NInputNumber
           v-model:value="port"
@@ -413,21 +412,21 @@ function closeWS() {
               }})
             </div>
             <div class="device-op">
-              <NTooltip trigger="hover">
-                <template #trigger>
-                  <NButton quaternary circle type="info">
-                    <template #icon>
-                      <NIcon><InformationCircle /></NIcon>
-                    </template>
-                  </NButton>
-                </template>
-                scid: {{ store.controledDevice.scid }}
-              </NTooltip>
-              <NButton quaternary circle type="error" @click="shutdownSC()">
-                <template #icon>
-                  <NIcon><CloseCircle /></NIcon>
-                </template>
-              </NButton>
+              <ButtonWithTip
+                quaternary
+                circle
+                type="info"
+                :tip="`scid: ${store.controledDevice.scid}`"
+                :icon="InformationCircle"
+              />
+              <ButtonWithTip
+                quaternary
+                circle
+                type="error"
+                @click="shutdownSC()"
+                :tip="$t('pages.Device.btnShutdown')"
+                :icon="CloseCircle"
+              />
             </div>
           </div>
         </div>
@@ -435,17 +434,15 @@ function closeWS() {
           <NH4 style="margin: 20px 0" prefix="bar">{{
             $t("pages.Device.availableDevice")
           }}</NH4>
-          <NButton
+          <ButtonWithTip
             tertiary
             circle
             type="primary"
             @click="refreshDevices"
             style="margin-right: 20px"
-          >
-            <template #icon>
-              <NIcon><Refresh /></NIcon>
-            </template>
-          </NButton>
+            :tip="$t('pages.Device.btnRefresh')"
+            :icon="Refresh"
+          />
         </NFlex>
         <NDataTable
           max-height="120"
@@ -465,8 +462,8 @@ function closeWS() {
           :on-clickoutside="onMenuClickoutside"
           @select="onMenuSelect"
         />
-      </NSpin>
-    </div>
+      </div>
+    </NSpin>
   </div>
 </template>
 
@@ -480,13 +477,12 @@ function closeWS() {
 }
 
 .device {
-  flex-grow: 1;
+  @include common.scrollbar;
+  @include common.flexFullHeight;
   color: var(--light-color);
   background-color: var(--bg-color);
   padding: 0 20px;
-  height: 0;
   overflow-y: auto;
-  @include common.scrollbar;
 }
 
 .controled-device-list {

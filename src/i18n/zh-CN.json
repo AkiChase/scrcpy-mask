@@ -36,7 +36,9 @@
       "wsConnect": "控制",
       "adbDeviceError": "无法获取可用设备",
       "adbConnectError": "无线连接失败",
-      "rotation": "设备旋转 {0}°"
+      "rotation": "设备旋转 {0}°",
+      "btnShutdown": "关闭控制",
+      "btnRefresh": "刷新"
     },
     "Mask": {
       "keyconfigException": "按键方案异常，请删除此方案",
@@ -105,6 +107,13 @@
           "title": "adb 路径",
           "placeholder": "adb 路径",
           "set": "设置"
+        },
+        "clipboardSync": {
+          "title": "剪切板同步",
+          "syncFromDevice": "从设备同步",
+          "syncFromDeviceTip": "设备剪切板发生变化时自动同步更新电脑剪切板",
+          "pasteFromPC": "从电脑粘贴",
+          "pasteFromPCTip": "在按键输入模式下，按下 Ctrl + V 可将电脑剪切板内容同步粘贴到设备"
         }
       },
       "Data": {
@@ -119,7 +128,9 @@
           "warning": "删除数据可能导致无法预料的后果，请慎重操作。若出现异常请尝试清空数据并重启软件。"
         },
         "localStore": "本地数据",
-        "delCurData": "删除当前数据"
+        "delCurData": "删除当前数据",
+        "btnDelAll": "清空本地数据",
+        "btnRefresh": "刷新"
       },
       "About": {
         "about": "关于",

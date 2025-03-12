@@ -68,15 +68,17 @@ function changeClipboardSync() {
         $t("pages.Setting.Basic.adbPath.set")
       }}</NButton>
     </NInputGroup>
-    <NH4 prefix="bar">剪切板同步</NH4>
+    <NH4 prefix="bar">{{ $t("pages.Setting.Basic.clipboardSync.title") }}</NH4>
     <NFlex vertical>
       <NCheckbox
         v-model:checked="store.clipboardSync.syncFromDevice"
         @update:checked="changeClipboardSync"
       >
         <NTooltip trigger="hover">
-          <template #trigger>从设备同步</template>
-          设备剪切板发生变化时自动同步更新电脑剪切板
+          <template #trigger>{{
+            $t("pages.Setting.Basic.clipboardSync.syncFromDevice")
+          }}</template>
+          {{ $t("pages.Setting.Basic.clipboardSync.syncFromDeviceTip") }}
         </NTooltip>
       </NCheckbox>
       <NCheckbox
@@ -84,8 +86,10 @@ function changeClipboardSync() {
         @update:checked="changeClipboardSync"
       >
         <NTooltip trigger="hover">
-          <template #trigger>粘贴时同步</template>
-          在按键输入模式下，按下 Ctrl + V 可将电脑剪切板内容同步粘贴到设备
+          <template #trigger>{{
+            $t("pages.Setting.Basic.clipboardSync.pasteFromPC")
+          }}</template>
+          {{ $t("pages.Setting.Basic.clipboardSync.pasteFromPCTip") }}
         </NTooltip>
       </NCheckbox>
     </NFlex>

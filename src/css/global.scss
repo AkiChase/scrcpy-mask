@@ -1,3 +1,5 @@
+@use "./common.scss";
+
 :root {
   --primary-color: #63e2b7;
   --primary-hover-color: #7fe7c4;
@@ -10,8 +12,8 @@
   --gray-color: #6b6e76;
   --red-color: #fc5185;
   --red-pressed-color: #f4336d;
-  --blue-color: #70C0E8;
-  --blue-pressed-color: #66AFD3;
+  --blue-color: #70c0e8;
+  --blue-pressed-color: #66afd3;
 }
 
 html,
@@ -25,4 +27,11 @@ body {
 div#app {
   height: 100%;
   box-sizing: border-box;
+}
+
+.n-spin-container {
+  @include common.flexFullHeight;
+  .n-spin-content {
+    @include common.flexFullHeight;
+  }
 }

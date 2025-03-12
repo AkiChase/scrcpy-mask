@@ -43,12 +43,6 @@ onMounted(() => {
     "sidebar content";
 }
 
-.n-spin-content,
-.n-spin-container {
-  width: 100%;
-  height: 100%;
-}
-
 .n-message {
   user-select: none;
   -webkit-user-select: none;

@@ -36,7 +36,9 @@
       "wsConnect": "Control",
       "adbDeviceError": "Unable to get available devices",
       "adbConnectError": "Wireless connection failed",
-      "rotation": "Device rotation {0}°"
+      "rotation": "Device rotation {0}°",
+      "btnShutdown": "Shutdown control",
+      "btnRefresh": "Refresh"
     },
     "Mask": {
       "keyconfigException": "The key mapping config is abnormal, please delete this config",
@@ -105,6 +107,13 @@
           "set": "Save",
           "setSuccess": "adb path set successfully",
           "title": "adb path"
+        },
+        "clipboardSync": {
+          "title": "Clipboard Sync",
+          "syncFromDevice": "Sync from device",
+          "syncFromDeviceTip": "Automatically synchronize and update your computer's clipboard when the device clipboard changes.",
+          "pasteFromPC": "Paste from PC",
+          "pasteFromPCTip": "In KeyInpu mode, press Ctrl + V to paste the contents of your computer's clipboard to your device."
         }
       },
       "Data": {
@@ -119,7 +128,9 @@
           "warning": "Deleting data may lead to unpredictable consequences, so please operate with caution. \nIf an exception occurs, please try clearing the data and restarting the software."
         },
         "localStore": "Local data",
-        "delCurData": "Delete current data"
+        "delCurData": "Delete current data",
+        "btnRefresh": "Refresh",
+        "btnDelAll": "Clear local data"
       },
       "About": {
         "introduction": "A Scrcpy client in Rust & Tarui aimed at providing mouse and key mapping to control Android device.",

@@ -11,18 +11,16 @@ import {
   NInput,
   useDialog,
   NCard,
-  NIcon,
 } from "naive-ui";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { LocalStore } from "../../store/localStore";
+import ButtonWithTip from "../common/ButtonWithTip.vue";
 
 const { t } = useI18n();
 
 const dialog = useDialog();
-
-// TODO add tooltip for btn
 
 const localStoreEntries = ref<[string, unknown][]>([]);
 const showDataModal = ref(false);
@@ -80,28 +78,22 @@ function delLocalStore(key?: string) {
     <NFlex justify="space-between">
       <NH4 prefix="bar">{{ $t("pages.Setting.Data.localStore") }}</NH4>
       <NFlex>
-        <NButton
+        <ButtonWithTip
           tertiary
           circle
           type="primary"
           @click="delLocalStore()"
-          style="margin-right: 20px"
-        >
-          <template #icon>
-            <NIcon><TrashBinOutline /></NIcon>
-          </template>
-        </NButton>
-        <NButton
+          :tip="$t('pages.Setting.Data.btnDelAll')"
+          :icon="TrashBinOutline"
+        />
+        <ButtonWithTip
           tertiary
           circle
           type="primary"
           @click="refreshLocalData()"
-          style="margin-right: 20px"
-        >
-          <template #icon>
-            <NIcon><Refresh /></NIcon>
-          </template>
-        </NButton>
+          :tip="$t('pages.Setting.Data.btnRefresh')"
+          :icon="Refresh"
+        />
       </NFlex>
     </NFlex>
     <NP>{{ $t("pages.Setting.Data.delLocalStore.warning") }}</NP>

@@ -4,6 +4,14 @@
   height: 100%;
 }
 
+@mixin flexFullHeight {
+  flex-grow: 1;
+  height: 0;
+  // for child
+  display: flex;
+  flex-direction: column;
+}
+
 @mixin scrollbar {
   &::-webkit-scrollbar {
     height: 6px;
