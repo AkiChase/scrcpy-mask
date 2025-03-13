@@ -5,6 +5,11 @@ interface MemType {
   screenStreamClientId: string;
   keyInputFlag: boolean;
   adbUnavailableMsgIns: MessageReactive | null;
+  rotationState: {
+    direction: "horizontal" | "vertical";
+    maskW: number;
+    maskH: number;
+  };
 }
 
 interface LocalType {
@@ -22,6 +27,11 @@ export class NonReactiveStore {
     screenStreamClientId: "",
     keyInputFlag: false,
     adbUnavailableMsgIns: null,
+    rotationState: {
+      direction: "horizontal",
+      maskW: 0,
+      maskH: 0,
+    },
   };
 
   static local: LocalType = {

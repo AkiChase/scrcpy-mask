@@ -38,7 +38,7 @@
       "adbConnectError": "Wireless connection failed",
       "rotation": "Device rotation {0}°",
       "btnShutdown": "Shutdown control",
-      "btnRefresh": "Refresh",
+      "btnRefresh": "Refresh devices list",
       "btnReStart": "Restart ADB",
       "adbRestartError": "ADB Restart Failed",
       "adbUnavailable": "ADB Unavailable"

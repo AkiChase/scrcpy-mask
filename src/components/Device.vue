@@ -50,24 +50,29 @@ import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import ButtonWithTip from "./common/ButtonWithTip.vue";
 import { NonReactiveStore } from "../store/noneReactiveStore";
+import { useRoute } from "vue-router";
+import { useHorRotation } from "../tools/hooks";
 
 const { t } = useI18n();
 const dialog = useDialog();
 const store = useGlobalStore();
 const message = useMessage();
+const route = useRoute();
+const horRotation = useHorRotation();
 
 const port = ref(27183);
 const wireless_address = ref("");
 const ws_address = ref("");
 
 //#region listener
+let unlisten: UnlistenFn | null = null;
+
 let deviceWaitForMetadataTask: ((deviceName: string) => void) | null = null;
 let deviceWaitForScreenSizeTask: ((w: number, h: number) => void) | null = null;
-
-let unlisten: UnlistenFn | undefined = undefined;
 let lastClipboard = "";
 
 onMounted(async () => {
+  const appWindow = getCurrentWindow();
   unlisten = await listen("device-reply", (event) => {
     try {
       let payload = JSON.parse(event.payload as string);
@@ -90,17 +95,32 @@ onMounted(async () => {
             store.screenSizeH = payload.height;
             message.info(t("pages.Device.rotation", [payload.rotation * 90]));
           }
-          if (store.rotation.enable) {
-            let maskW: number;
-            let maskH: number;
-            if (payload.width >= payload.height) {
-              maskW = Math.round(store.rotation.horizontalLength);
-              maskH = Math.round(maskW * (payload.height / payload.width));
-            } else {
-              maskH = Math.round(store.rotation.verticalLength);
-              maskW = Math.round(maskH * (payload.width / payload.height));
-            }
-            getCurrentWindow().setSize(new LogicalSize(maskW + 70, maskH + 30));
+
+          let maskW: number;
+          let maskH: number;
+          if (payload.width >= payload.height) {
+            maskW = Math.round(store.rotation.horizontalLength);
+            maskH = Math.round(maskW * (payload.height / payload.width));
+            NonReactiveStore.mem.rotationState = {
+              direction: "horizontal",
+              maskW,
+              maskH,
+            };
+          } else {
+            maskH = Math.round(store.rotation.verticalLength);
+            maskW = Math.round(maskH * (payload.width / payload.height));
+            NonReactiveStore.mem.rotationState = {
+              direction: "vertical",
+              maskW,
+              maskH,
+            };
+          }
+
+          if (
+            store.rotation.enable &&
+            (route.name === "mask" || route.name === "keyboard")
+          ) {
+            appWindow.setSize(new LogicalSize(maskW + 70, maskH + 30));
           }
           break;
         default:
@@ -114,7 +134,7 @@ onMounted(async () => {
 });
 
 onActivated(async () => {
-  let curClientInfo = await getCurClientInfo();
+  const curClientInfo = await getCurClientInfo();
   if (store.controledDevice) {
     // update controledDevice if client not exists
     if (!curClientInfo) {
@@ -135,7 +155,7 @@ onActivated(async () => {
       };
     }
   }
-
+  await horRotation();
   await refreshDevices();
 });
 
@@ -228,7 +248,7 @@ function onMenuClickoutside() {
 }
 
 async function deviceControl() {
-  let curClientInfo = await getCurClientInfo();
+  const curClientInfo = await getCurClientInfo();
   if (curClientInfo) {
     message.error(t("pages.Device.alreadyControled"));
     store.controledDevice = {
@@ -248,7 +268,7 @@ async function deviceControl() {
 
   const device = devices.value[rowIndex];
 
-  let scid = (
+  const scid = (
     "00000000" + Math.floor(Math.random() * 100000).toString(16)
   ).slice(-8);
 
@@ -257,7 +277,7 @@ async function deviceControl() {
   await startScrcpyServer(device.id, scid, `127.0.0.1:${port.value}`);
 
   // connection timeout check
-  let id = setTimeout(async () => {
+  const connectionTimeout = setTimeout(async () => {
     if (deviceWaitForMetadataTask) {
       await shutdown();
       store.controledDevice = null;
@@ -276,7 +296,7 @@ async function deviceControl() {
     deviceWaitForMetadataTask = null;
     if (!deviceWaitForScreenSizeTask) {
       nextTick(() => {
-        clearTimeout(id);
+        clearTimeout(connectionTimeout);
         store.hideLoading();
       });
     }
@@ -289,7 +309,7 @@ async function deviceControl() {
     deviceWaitForScreenSizeTask = null;
     if (!deviceWaitForMetadataTask) {
       nextTick(() => {
-        clearTimeout(id);
+        clearTimeout(connectionTimeout);
         store.hideLoading();
       });
     }
@@ -437,7 +457,7 @@ function closeWS() {
                 quaternary
                 circle
                 type="info"
-                :tip="`scid: ${store.controledDevice.scid}`"
+                :tip="`scid: ${store.controledDevice.scid}; w: ${store.screenSizeW}; h: ${store.screenSizeH}`"
                 :icon="InformationCircle"
               />
               <ButtonWithTip

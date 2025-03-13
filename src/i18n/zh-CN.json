@@ -38,8 +38,8 @@
       "adbConnectError": "无线连接失败",
       "rotation": "设备旋转 {0}°",
       "btnShutdown": "关闭控制",
-      "btnRefresh": "刷新",
-      "btnReStart": "重启ABD",
+      "btnRefresh": "刷新设备列表",
+      "btnReStart": "重启ADB",
       "adbRestartError": "ADB 重启失败",
       "adbUnavailable": "ADB 不可用"
     },

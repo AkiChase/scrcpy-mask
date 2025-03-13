@@ -6,9 +6,16 @@ import About from "./About.vue";
 import { NTabs, NTabPane, NSpin } from "naive-ui";
 import { useGlobalStore } from "../../store/global";
 import SettingTab from "./SettingTab.vue";
+import { useHorRotation } from "../../tools/hooks";
+import { onActivated } from "vue";
 
 // TODO Switch back to landscape size when entering Settings and Devices screen
 const store = useGlobalStore();
+const horRotation = useHorRotation();
+
+onActivated(() => {
+  horRotation();
+});
 </script>
 
 <template>

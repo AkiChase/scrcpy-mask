@@ -27,12 +27,14 @@ import { DropdownOption, NDropdown, useDialog, useMessage } from "naive-ui";
 import { onBeforeRouteLeave } from "vue-router";
 import { useKeyboardStore } from "../../store/keyboard";
 import { useI18n } from "vue-i18n";
+import { useRotation } from "../../tools/hooks";
 
 const { t } = useI18n();
 const store = useGlobalStore();
 const keyboardStore = useKeyboardStore();
 const dialog = useDialog();
 const message = useMessage();
+const rotation = useRotation();
 
 const curPageActive = ref(false);
 const addButtonPos = ref({ x: 0, y: 0 });
@@ -300,6 +302,7 @@ onActivated(() => {
   document.addEventListener("keydown", handleKeyDown);
   document.addEventListener("keyup", handleKeyUp);
   document.addEventListener("wheel", handleMouseWheel);
+  rotation();
 });
 
 onBeforeRouteLeave(() => {

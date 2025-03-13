@@ -16,12 +16,17 @@ import { useI18n } from "vue-i18n";
 import { secondaryClean, secondaryInit } from "../tools/init";
 import { cleanAfterimage } from "../tools/tools";
 import { NonReactiveStore } from "../store/noneReactiveStore";
+import { useRotation } from "../tools/hooks";
+import { platform } from "@tauri-apps/plugin-os";
 
 const { t } = useI18n();
 const store = useGlobalStore();
 const router = useRouter();
 const message = useMessage();
+const rotation = useRotation();
+
 let initFlag = false;
+const platformName = platform();
 
 const curPageActive = ref(false);
 
@@ -37,7 +42,8 @@ onBeforeRouteLeave(() => {
 
 onActivated(async () => {
   curPageActive.value = true;
-  if (initFlag) cleanAfterimage();
+
+  if (initFlag && platformName === "macos") await cleanAfterimage();
 
   if (store.controledDevice) {
     if (
@@ -53,6 +59,7 @@ onActivated(async () => {
       message.error(t("pages.Mask.keyconfigException"));
     }
   }
+  await rotation();
 });
 
 onMounted(() => {
