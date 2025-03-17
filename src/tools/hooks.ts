@@ -1,6 +1,5 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { useDialog, useMessage } from "naive-ui";
-import { h } from "vue";
 import { useI18n } from "vue-i18n";
 import { fetch } from "@tauri-apps/plugin-http";
 import { compareVersion } from "./tools";
@@ -8,13 +7,16 @@ import { checkAdbAvailable } from "./invoke";
 import { NonReactiveStore } from "../store/noneReactiveStore";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { useGlobalStore } from "../store/global";
+import { h } from "vue";
+import { marked } from "marked";
 
-// TODO use markdown to render update info
-
-function renderUpdateInfo(content: string) {
-  const pList = content.split("\r\n").map((line: string) => h("p", line));
-  return h("div", { style: "margin: 20px 0" }, pList);
-}
+const render = new marked.Renderer();
+marked.setOptions({
+  renderer: render,
+  gfm: true,
+  pedantic: false,
+  async: false,
+});
 
 export function useCheckUpdate() {
   const message = useMessage();
@@ -43,7 +45,11 @@ export function useCheckUpdate() {
         const body = data.body as string;
         dialog.info({
           title: t("pages.Mask.checkUpdate.notLatest.title", [latestVersion]),
-          content: () => renderUpdateInfo(body),
+          content: () =>
+            h("div", {
+              style: "margin: 20px 0",
+              innerHTML: marked.parse(body),
+            }),
           positiveText: t("pages.Mask.checkUpdate.notLatest.positiveText"),
           negativeText: t("pages.Mask.checkUpdate.notLatest.negativeText"),
           onPositiveClick: () => {
