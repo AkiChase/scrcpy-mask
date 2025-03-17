@@ -282,7 +282,20 @@
     }
   },
   "sidebar": {
-    "noControledDevice": "未控制任何设备"
+    "noControledDevice": "未控制任何设备",
+    "tip": {
+      "mask": "蒙版",
+      "device": "设备",
+      "keyboard": "按键映射",
+      "setting": "设置",
+      "screenPowerModeOff": "息屏",
+      "screenPowerModeOn": "亮屏",
+      "volumeUp": "增加音量",
+      "volumeDown": "减少音量",
+      "back": "返回",
+      "home": "主页",
+      "appSwitch": "最近任务"
+    }
   },
   "websocket": {
     "open": "已连接到外部控制服务端",

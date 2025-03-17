@@ -282,7 +282,20 @@
     }
   },
   "sidebar": {
-    "noControledDevice": "No devices are controlled"
+    "noControledDevice": "No devices are controlled",
+    "tip": {
+      "mask": "Mask",
+      "device": "Device",
+      "keyboard": "Key mapping",
+      "setting": "Setting",
+      "screenPowerModeOff": "Screen off",
+      "screenPowerModeOn": "Screen on",
+      "volumeUp": "Volume up",
+      "volumeDown": "Volume down",
+      "back": "Back",
+      "home": "Home",
+      "appSwitch": "App switch"
+    }
   },
   "websocket": {
     "open": "Connected to external control server",
