@@ -9,7 +9,6 @@ import SettingTab from "./SettingTab.vue";
 import { useHorRotation } from "../../tools/hooks";
 import { onActivated } from "vue";
 
-// TODO Switch back to landscape size when entering Settings and Devices screen
 const store = useGlobalStore();
 const horRotation = useHorRotation();
 
