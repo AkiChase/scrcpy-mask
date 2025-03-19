@@ -153,6 +153,27 @@ onActivated(async () => {
         deviceName: curClientInfo.device_name,
         deviceID: curClientInfo.device_id,
       };
+      if (curClientInfo.width < curClientInfo.height) {
+        const maskH = Math.round(store.rotation.verticalLength);
+        const maskW = Math.round(
+          maskH * (curClientInfo.width / curClientInfo.height)
+        );
+        NonReactiveStore.mem.rotationState = {
+          direction: "vertical",
+          maskW,
+          maskH,
+        };
+      } else {
+        const maskW = Math.round(store.rotation.horizontalLength);
+        const maskH = Math.round(
+          maskW * (curClientInfo.height / curClientInfo.width)
+        );
+        NonReactiveStore.mem.rotationState = {
+          direction: "horizontal",
+          maskW,
+          maskH,
+        };
+      }
     }
   }
   await horRotation();
