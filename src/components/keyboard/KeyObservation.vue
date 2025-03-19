@@ -5,6 +5,7 @@ import { NIcon, NButton, NFormItem, NInput, NH4, NInputNumber } from "naive-ui";
 import { Eye, CloseCircle, Settings } from "@vicons/ionicons5";
 import { KeyObservation } from "../../tools/keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
+import { configKeyObservation } from "./config";
 
 const props = defineProps<{
   index: number;
@@ -69,8 +70,8 @@ function showSetting() {
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
-  const maxWidth = keyboardElement.clientWidth - 150;
-  const maxHeight = keyboardElement.clientHeight - 300;
+  const maxWidth = keyboardElement.clientWidth - configKeyObservation.settingW;
+  const maxHeight = keyboardElement.clientHeight - configKeyObservation.settingH;
 
   settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
   settingPosY.value = Math.min(keyMapping.value.posY - 40, maxHeight);
@@ -122,6 +123,8 @@ function showSetting() {
     :style="{
       left: `${settingPosX}px`,
       top: `${settingPosY}px`,
+      width: `${configKeyObservation.settingW}px`,
+      height: `${configKeyObservation.settingH}px`,
     }"
   >
     <NH4 prefix="bar">{{ $t("pages.KeyBoard.Observation.observation") }}</NH4>
@@ -158,8 +161,6 @@ function showSetting() {
   flex-direction: column;
   padding: 10px 20px;
   box-sizing: border-box;
-  width: 150px;
-  height: 300px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);

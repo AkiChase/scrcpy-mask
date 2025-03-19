@@ -252,7 +252,11 @@
       },
       "SteeringWheel": {
         "steeringWheel": "SteeringWheel",
-        "offset": "Offset"
+        "offset": "Offset",
+        "smoothDelay": "Smooth Delay",
+        "delayStepLength": "Delay StepLength",
+        "smoothDelayPlaceholder": "Set 0 to disable smooth delay",
+        "delayStepLengthPlaceholder": "Smooth delay step length"
       },
       "KeySight": {
         "sight": "Front sight",

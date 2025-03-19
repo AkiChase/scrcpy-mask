@@ -21,6 +21,7 @@ import {
   KeySwipe as KeyMappingKeySwipe,
   KeySight as KeyMappingKeySight,
   KeyFire as KeyMappingKeyFire,
+  KeyCancelSkill,
 } from "../../tools/keyMappingConfig";
 import { useGlobalStore } from "../../store/global";
 import { DropdownOption, NDropdown, useDialog, useMessage } from "naive-ui";
@@ -28,6 +29,7 @@ import { onBeforeRouteLeave } from "vue-router";
 import { useKeyboardStore } from "../../store/keyboard";
 import { useI18n } from "vue-i18n";
 import { useRotation } from "../../tools/hooks";
+import { asType } from "../../tools/tools";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -97,35 +99,42 @@ function onAddButtonSelect(
     posX: addButtonPos.value.x - 70,
     posY: addButtonPos.value.y - 30,
     pointerId: 2, // default skill and fire pointerId
-  };
+  } as any;
   if (type === "Tap") {
+    asType<KeyTap>(keyMapping);
     keyMapping.pointerId = 3;
-    (keyMapping as KeyTap).time = 80;
+    keyMapping.time = 80;
   } else if (type === "Swipe") {
+    asType<KeyMappingKeySwipe>(keyMapping);
     keyMapping.pointerId = 3;
-    (keyMapping as KeyMappingKeySwipe).pos = [
-      { x: keyMapping.posX, y: keyMapping.posY },
-    ];
-    (keyMapping as KeyMappingKeySwipe).intervalBetweenPos = 100;
+    keyMapping.pos = [{ x: keyMapping.posX, y: keyMapping.posY }];
+    keyMapping.intervalBetweenPos = 100;
   } else if (type === "SteeringWheel") {
+    asType<KeyMappingSteeringWheel>(keyMapping);
     keyMapping.pointerId = 1;
-    (keyMapping as unknown as KeyMappingSteeringWheel).key = {
+    keyMapping.key = {
       left: "NONE1",
       right: "NONE2",
       up: "NONE3",
       down: "NONE4",
     };
-    (keyMapping as unknown as KeyMappingSteeringWheel).offset = 100;
+    keyMapping.offset = 100;
+    keyMapping.smoothDelay = 0;
+    keyMapping.delayStepLength = 25;
   } else if (type === "DirectionalSkill") {
-    (keyMapping as unknown as KeyDirectionalSkill).range = 30;
+    asType<KeyDirectionalSkill>(keyMapping);
+    keyMapping.range = 30;
   } else if (type === "CancelSkill") {
+    asType<KeyCancelSkill>(keyMapping);
     keyMapping.note = t("pages.KeyBoard.addButton.CancelSkill");
   } else if (type === "Observation") {
+    asType<KeyMappingObservation>(keyMapping);
     keyMapping.pointerId = 4;
-    (keyMapping as unknown as KeyMappingObservation).scale = 0.6;
+    keyMapping.scale = 0.6;
   } else if (type === "Macro") {
-    delete (keyMapping as any).pointerId;
-    (keyMapping as unknown as KeyMacro).macro = {
+    delete keyMapping.pointerId;
+    asType<KeyMacro>(keyMapping);
+    keyMapping.macro = {
       down: null,
       loop: null,
       up: null,
@@ -137,9 +146,10 @@ function onAddButtonSelect(
         return;
       }
     }
+    asType<KeyMappingKeySight>(keyMapping);
     keyMapping.pointerId = 0;
-    (keyMapping as unknown as KeyMappingKeySight).scaleX = 0.5;
-    (keyMapping as unknown as KeyMappingKeySight).scaleY = 0.5;
+    keyMapping.scaleX = 0.5;
+    keyMapping.scaleY = 0.5;
   } else if (type === "Fire") {
     for (const mapping of store.editKeyMappingList) {
       if (mapping.type === "Fire") {
@@ -147,10 +157,11 @@ function onAddButtonSelect(
         return;
       }
     }
-    delete (keyMapping as any).key;
-    (keyMapping as unknown as KeyMappingKeyFire).scaleX = 0.5;
-    (keyMapping as unknown as KeyMappingKeyFire).scaleY = 0.5;
-    (keyMapping as unknown as KeyMappingKeyFire).drag = false;
+    delete keyMapping.key;
+    asType<KeyMappingKeyFire>(keyMapping);
+    keyMapping.scaleX = 0.5;
+    keyMapping.scaleY = 0.5;
+    keyMapping.drag = false;
   } else return;
   keyboardStore.edited = true;
   store.editKeyMappingList.push(keyMapping as KeyMapping);

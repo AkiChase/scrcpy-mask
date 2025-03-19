@@ -495,12 +495,13 @@ function closeWS() {
           </NSpace>
         </NFlex>
         <NDataTable
-          max-height="120"
+          :max-height="150"
           :columns="tableCols"
           :data="availableDevice"
           :row-props="tableRowProps"
           :pagination="false"
           :bordered="false"
+          style="margin-bottom: 32px"
         />
         <NDropdown
           placement="bottom-start"

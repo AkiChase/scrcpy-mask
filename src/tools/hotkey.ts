@@ -32,8 +32,12 @@ import {
   AndroidMetastate,
 } from "../frontcommand/android";
 import { UIEventsCode } from "../frontcommand/UIEventsCode";
-import { sendInjectKeycode, sendSetClipboard } from "../frontcommand/controlMsg";
+import {
+  sendInjectKeycode,
+  sendSetClipboard,
+} from "../frontcommand/controlMsg";
 import { NonReactiveStore } from "../store/noneReactiveStore";
+import { asType } from "./tools";
 
 function clientxToPosx(clientx: number) {
   return clientx < 70
@@ -515,19 +519,20 @@ function addDirectionalSkillShortcuts(
 
 // add shortcuts for steering wheel
 function addSteeringWheelKeyboardShortcuts(
-  key: wheelKey,
+  key: WheelKey,
   relativeSize: { w: number; h: number },
   // pos relative to the mask
   posX: number,
   posY: number,
   offset: number,
-  pointerId: number
+  pointerId: number,
+  delay?: { smoothDelay: number; delayStepLength: number }
 ) {
-  let loopFlag = false;
-  let curPosX = 0;
-  let curPosY = 0;
   posX = Math.round((posX / relativeSize.w) * store.screenSizeW);
   posY = Math.round((posY / relativeSize.h) * store.screenSizeH);
+  let loopFlag = false;
+  let curPosX = posX;
+  let curPosY = posY;
 
   // calculate the end coordinates of the eight directions of the direction wheel
   let offsetHalf = Math.round(offset / 1.414);
@@ -570,8 +575,29 @@ function addSteeringWheelKeyboardShortcuts(
     let newPos = calculatedPosList[newPosIndex];
     if (newPos.x === curPosX && newPos.y === curPosY) return;
 
-    curPosX = newPos.x;
-    curPosY = newPos.y;
+    // TODO add config in KeySteeringWheel.vue
+    if (delay) {
+      const { smoothDelay, delayStepLength } = delay;
+      let movePosX = curPosX;
+      let movePosY = curPosY;
+
+      curPosX = newPos.x;
+      curPosY = newPos.y;
+
+      const delayTimes = Math.floor(smoothDelay / delayStepLength);
+      const deltaX = Math.floor((newPos.x - movePosX) / delayTimes);
+      const deltaY = Math.floor((newPos.y - movePosY) / delayTimes);
+      for (let i = 0; i < delayTimes; i++) {
+        movePosX += deltaX;
+        movePosY += deltaY;
+        await touchX(TouchAction.Move, pointerId, movePosX, movePosY);
+        await sleep(delayStepLength);
+      }
+    } else {
+      curPosX = newPos.x;
+      curPosY = newPos.y;
+    }
+
     // move to the direction
     await touchX(TouchAction.Move, pointerId, newPos.x, newPos.y);
   };
@@ -584,7 +610,7 @@ function addSteeringWheelKeyboardShortcuts(
       downKeyMap.get(key.down) === false
     ) {
       // all wheel keys has been released
-      for (const k of ["left", "right", "up", "down"]) {
+      for (const k of ["left", "right", "up", "down"] as const) {
         // only delete the valid key
         loopDownKeyCBMap.delete(key[k]);
         upKeyCBMap.delete(key[k]);
@@ -592,13 +618,13 @@ function addSteeringWheelKeyboardShortcuts(
       // touch up
       await touchX(TouchAction.Up, pointerId, curPosX, curPosY);
       // recover the status
-      curPosX = 0;
-      curPosY = 0;
+      curPosX = posX;
+      curPosY = posY;
       loopFlag = false;
     }
   };
 
-  for (const k of ["left", "right", "up", "down"]) {
+  for (const k of ["left", "right", "up", "down"] as const) {
     addShortcut(
       key[k],
       async () => {
@@ -618,13 +644,12 @@ function addSteeringWheelKeyboardShortcuts(
   }
 }
 
-interface wheelKey {
+type WheelKey = {
   left: string;
   right: string;
   up: string;
   down: string;
-  [key: string]: string;
-}
+};
 
 // add baisc click shortcuts
 function addClickShortcuts(key: string, pointerId: number) {
@@ -1359,9 +1384,6 @@ function execLoopCB() {
   if (loopFlag) requestAnimationFrame(execLoopCB);
 }
 
-// change ts type
-function asType<T>(_val: any): asserts _val is T {}
-
 function applyKeyMappingConfigShortcuts(
   keyMappingConfig: KeyMappingConfig
 ): boolean {
@@ -1377,7 +1399,13 @@ function applyKeyMappingConfigShortcuts(
             item.posX,
             item.posY,
             item.offset,
-            item.pointerId
+            item.pointerId,
+            item.smoothDelay === 0
+              ? undefined
+              : {
+                  smoothDelay: item.smoothDelay,
+                  delayStepLength: item.delayStepLength,
+                }
           );
           break;
         case "DirectionalSkill":
@@ -1513,6 +1541,7 @@ function applyKeyMappingConfigShortcuts(
   }
 }
 
+// Wrapping of the touch action
 async function touchX(
   action: TouchAction,
   pointerId: number,
@@ -1520,7 +1549,7 @@ async function touchX(
   posY: number,
   time?: number
 ) {
-  await touch({
+  return touch({
     action,
     pointerId,
     screen: {
