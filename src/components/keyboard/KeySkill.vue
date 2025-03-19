@@ -18,6 +18,7 @@ import {
   KeyTriggerWhenPressedSkill,
 } from "../../tools/keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
+import { configKeySkill } from "./config";
 
 const props = defineProps<{
   index: number;
@@ -184,8 +185,8 @@ function showSetting() {
     "keyboardElement"
   ) as HTMLElement;
   // setting
-  const maxWidth = keyboardElement.clientWidth - 220;
-  const maxHeight = keyboardElement.clientHeight - 430;
+  const maxWidth = keyboardElement.clientWidth - configKeySkill.settingW;
+  const maxHeight = keyboardElement.clientHeight - configKeySkill.settingH;
   settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
   settingPosY.value = Math.min(keyMapping.value.posY - 40, maxHeight);
   updateRangeIndicator(keyboardElement);
@@ -258,6 +259,8 @@ function updateRangeIndicator(element?: HTMLElement) {
     :style="{
       left: `${settingPosX}px`,
       top: `${settingPosY}px`,
+      width: `${configKeySkill.settingW}px`,
+      height: `${configKeySkill.settingH}px`,
     }"
   >
     <NH4 prefix="bar">{{ $t("pages.KeyBoard.KeySkill.skill") }}</NH4>
@@ -373,8 +376,6 @@ function updateRangeIndicator(element?: HTMLElement) {
   flex-direction: column;
   padding: 10px 20px;
   box-sizing: border-box;
-  width: 220px;
-  height: 430px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);

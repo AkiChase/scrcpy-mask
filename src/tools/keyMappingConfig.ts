@@ -15,6 +15,8 @@ export interface KeySteeringWheel extends KeyBase {
     down: string;
   };
   offset: number;
+  smoothDelay: number;
+  delayStepLength: number;
 }
 
 export interface KeyDirectionalSkill extends KeyBase {

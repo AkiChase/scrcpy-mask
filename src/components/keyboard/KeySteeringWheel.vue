@@ -5,6 +5,7 @@ import { KeySteeringWheel } from "../../tools/keyMappingConfig";
 import { NButton, NFormItem, NH4, NIcon, NInput, NInputNumber } from "naive-ui";
 import { CloseCircle, Move, Settings } from "@vicons/ionicons5";
 import { useKeyboardStore } from "../../store/keyboard";
+import { configKeySteeringWheel } from "./config";
 
 const props = defineProps<{
   index: number;
@@ -79,8 +80,8 @@ function showSetting() {
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
-  const maxWidth = keyboardElement.clientWidth - 179;
-  const maxHeight = keyboardElement.clientHeight - 300;
+  const maxWidth = keyboardElement.clientWidth - configKeySteeringWheel.settingW;
+  const maxHeight = keyboardElement.clientHeight - configKeySteeringWheel.settingH;
 
   settingPosX.value = Math.min(
     keyMapping.value.posX + offset.value + 10,
@@ -182,6 +183,8 @@ function showSetting() {
     :style="{
       left: `${settingPosX}px`,
       top: `${settingPosY}px`,
+      width: `${configKeySteeringWheel.settingW}px`,
+      height: `${configKeySteeringWheel.settingH}px`,
     }"
   >
     <NH4 prefix="bar">{{
@@ -191,6 +194,24 @@ function showSetting() {
       <NInputNumber
         v-model:value="keyMapping.offset"
         :min="1"
+        @update:value="keyboardStore.edited = true"
+      />
+    </NFormItem>
+    <NFormItem :label="$t('pages.KeyBoard.SteeringWheel.smoothDelay')">
+      <NInputNumber
+        v-model:value="keyMapping.smoothDelay"
+        :min="0"
+        :placeholder="$t('pages.KeyBoard.SteeringWheel.smoothDelayPlaceholder')"
+        @update:value="keyboardStore.edited = true"
+      />
+    </NFormItem>
+    <NFormItem :label="$t('pages.KeyBoard.SteeringWheel.delayStepLength')">
+      <NInputNumber
+        v-model:value="keyMapping.delayStepLength"
+        :min="10"
+        :placeholder="
+          $t('pages.KeyBoard.SteeringWheel.delayStepLengthPlaceholder')
+        "
         @update:value="keyboardStore.edited = true"
       />
     </NFormItem>
@@ -219,8 +240,6 @@ function showSetting() {
   flex-direction: column;
   padding: 10px 20px;
   box-sizing: border-box;
-  width: 170px;
-  height: 300px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);

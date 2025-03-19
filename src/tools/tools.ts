@@ -41,3 +41,5 @@ export async function cleanAfterimage() {
 export function openWebsite(url: string) {
   shellOpen(url);
 }
+
+export function asType<T>(_val: any): asserts _val is T {}

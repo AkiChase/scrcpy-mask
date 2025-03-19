@@ -5,6 +5,7 @@ import { NIcon, NButton, NFormItem, NInput, NH4, NInputNumber } from "naive-ui";
 import { CloseCircle, Settings } from "@vicons/ionicons5";
 import { KeySight } from "../../tools/keyMappingConfig";
 import { useKeyboardStore } from "../../store/keyboard";
+import { configKeySight } from "./config";
 
 const props = defineProps<{
   index: number;
@@ -69,8 +70,8 @@ function showSetting() {
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
-  const maxWidth = keyboardElement.clientWidth - 200;
-  const maxHeight = keyboardElement.clientHeight - 380;
+  const maxWidth = keyboardElement.clientWidth - configKeySight.settingW;
+  const maxHeight = keyboardElement.clientHeight - configKeySight.settingH;
 
   settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
   settingPosY.value = Math.min(keyMapping.value.posY - 40, maxHeight);
@@ -132,6 +133,8 @@ function showSetting() {
     :style="{
       left: `${settingPosX}px`,
       top: `${settingPosY}px`,
+      width: `${configKeySight.settingW}px`,
+      height: `${configKeySight.settingH}px`,
     }"
   >
     <NH4 prefix="bar">{{ $t('pages.KeyBoard.KeySight.sight') }}</NH4>
@@ -176,8 +179,6 @@ function showSetting() {
   flex-direction: column;
   padding: 10px 20px;
   box-sizing: border-box;
-  width: 200px;
-  height: 380px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);

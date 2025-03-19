@@ -14,6 +14,7 @@ import { Analytics, CloseCircle, Settings } from "@vicons/ionicons5";
 import { useKeyboardStore } from "../../store/keyboard";
 import { KeySwipe } from "../../tools/keyMappingConfig";
 import { useI18n } from "vue-i18n";
+import { configKeySwipe } from "./config";
 
 const props = defineProps<{
   index: number;
@@ -90,8 +91,8 @@ function showSetting() {
   const keyboardElement = document.getElementById(
     "keyboardElement"
   ) as HTMLElement;
-  const maxWidth = keyboardElement.clientWidth - 150;
-  const maxHeight = keyboardElement.clientHeight - 380;
+  const maxWidth = keyboardElement.clientWidth - configKeySwipe.settingW;
+  const maxHeight = keyboardElement.clientHeight - configKeySwipe.settingH;
 
   settingPosX.value = Math.min(keyMapping.value.posX + 40, maxWidth);
   settingPosY.value = Math.min(keyMapping.value.posY - 40, maxHeight);
@@ -190,6 +191,8 @@ function swipeTrackClickHandler(event: MouseEvent) {
     :style="{
       left: `${settingPosX}px`,
       top: `${settingPosY}px`,
+      width: `${configKeySwipe.settingW}px`,
+      height: `${configKeySwipe.settingH}px`,
     }"
   >
     <NH4 prefix="bar">{{ $t("pages.KeyBoard.Swipe.swipe") }}</NH4>
@@ -293,8 +296,6 @@ function swipeTrackClickHandler(event: MouseEvent) {
   flex-direction: column;
   padding: 10px 20px;
   box-sizing: border-box;
-  width: 150px;
-  height: 380px;
   border-radius: 5px;
   border: 2px solid var(--light-color);
   background-color: var(--bg-color);

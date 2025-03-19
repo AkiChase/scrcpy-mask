@@ -252,7 +252,11 @@
       },
       "SteeringWheel": {
         "steeringWheel": "键盘行走",
-        "offset": "偏移"
+        "offset": "偏移",
+        "smoothDelay": "平滑延迟",
+        "delayStepLength": "延迟步长",
+        "smoothDelayPlaceholder": "0则禁用平滑延迟",
+        "delayStepLengthPlaceholder": "平滑延迟的步长"
       },
       "KeySight": {
         "sight": "准星",
