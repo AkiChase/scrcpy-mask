@@ -20,6 +20,8 @@
     "core:window:allow-set-cursor-visible",
     "core:app:allow-version",
     "core:app:default",
+    "core:path:default",
+    "core:path:allow-resolve-directory",
     "store:default",
     "store:allow-get",
     "store:allow-set",

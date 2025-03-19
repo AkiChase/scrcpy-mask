@@ -1,4 +1,3 @@
-import { useRouter } from "vue-router";
 import { LocalStore } from "../store/localStore";
 import { NonReactiveStore } from "../store/noneReactiveStore";
 import { useGlobalStore } from "../store/global";
@@ -7,9 +6,7 @@ import { genClientId } from "./tools";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export async function primaryInit() {
-  const router = useRouter();
   await LocalStore.init();
-  await router.replace({ name: "mask" });
 }
 
 let unlistenResize = () => {};

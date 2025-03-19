@@ -9,6 +9,7 @@ import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { useGlobalStore } from "../store/global";
 import { h } from "vue";
 import { marked } from "marked";
+import { open } from "@tauri-apps/plugin-shell";
 
 const render = new marked.Renderer();
 marked.setOptions({

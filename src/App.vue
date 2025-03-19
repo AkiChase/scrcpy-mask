@@ -6,12 +6,15 @@ import {
   NConfigProvider,
   NMessageProvider,
   NDialogProvider,
+  NSpin,
+  NFlex,
 } from "naive-ui";
 import { onMounted } from "vue";
-import { primaryInit } from "./tools/init";
+import { useRouter } from "vue-router";
 
 onMounted(() => {
-  primaryInit();
+  const router = useRouter();
+  router.replace({ name: "mask" });
 });
 </script>
 
@@ -21,9 +24,25 @@ onMounted(() => {
       <NDialogProvider>
         <Header />
         <RouterView v-slot="{ Component }">
-          <KeepAlive>
-            <component :is="Component" />
-          </KeepAlive>
+          <template v-if="Component">
+            <KeepAlive>
+              <Suspense>
+                <component :is="Component" />
+                <template #fallback>
+                  <NFlex
+                    justify="center"
+                    align="center"
+                    style="
+                      grid-area: content;
+                      background-color: var(--content-bg-color);
+                    "
+                  >
+                    <NSpin :size="75" />
+                  </NFlex>
+                </template>
+              </Suspense>
+            </KeepAlive>
+          </template>
         </RouterView>
         <Sidebar />
       </NDialogProvider>

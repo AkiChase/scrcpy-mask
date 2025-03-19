@@ -17,6 +17,7 @@ import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { LocalStore } from "../../store/localStore";
 import ButtonWithTip from "../common/ButtonWithTip.vue";
+import { open } from "@tauri-apps/plugin-shell";
 
 const { t } = useI18n();
 
@@ -25,6 +26,7 @@ const dialog = useDialog();
 const localStoreEntries = ref<[string, unknown][]>([]);
 const showDataModal = ref(false);
 const dataModalInputVal = ref("");
+
 let curDataIndex = -1;
 
 onMounted(async () => {
@@ -96,6 +98,7 @@ function delLocalStore(key?: string) {
         />
       </NFlex>
     </NFlex>
+    <NButton text @click="open(LocalStore.dir)">{{ LocalStore.path }}</NButton>
     <NP>{{ $t("pages.Setting.Data.delLocalStore.warning") }}</NP>
     <NList class="data-list" hoverable clickable>
       <NListItem

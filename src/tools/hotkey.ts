@@ -575,7 +575,6 @@ function addSteeringWheelKeyboardShortcuts(
     let newPos = calculatedPosList[newPosIndex];
     if (newPos.x === curPosX && newPos.y === curPosY) return;
 
-    // TODO add config in KeySteeringWheel.vue
     if (delay) {
       const { smoothDelay, delayStepLength } = delay;
       let movePosX = curPosX;

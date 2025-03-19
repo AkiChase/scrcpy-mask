@@ -13,11 +13,13 @@ import {
 import { KeySteeringWheel } from "../tools/keyMappingConfig";
 import ScreenStream from "./ScreenStream.vue";
 import { useI18n } from "vue-i18n";
-import { secondaryClean, secondaryInit } from "../tools/init";
+import { primaryInit, secondaryClean, secondaryInit } from "../tools/init";
 import { cleanAfterimage } from "../tools/tools";
 import { NonReactiveStore } from "../store/noneReactiveStore";
 import { useRotation } from "../tools/hooks";
 import { platform } from "@tauri-apps/plugin-os";
+
+await primaryInit(); // suspend for primary initialization
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -62,8 +64,9 @@ onActivated(async () => {
   await rotation();
 });
 
-onMounted(() => {
-  secondaryInit().then(() => (initFlag = true));
+onMounted(async () => {
+  await secondaryInit();
+  initFlag = true;
 });
 
 onUnmounted(() => {
