@@ -107,7 +107,12 @@ impl ScrcpyClient {
             if let core::result::Result::Ok(Some(_)) = child.try_wait() {
                 break;
             }
-            log::info!("{}", s.trim());
+
+            let trimmed = s.trim();
+            if !trimmed.is_empty() {
+                log::info!("{}", trimmed);
+            }
+            
             // clear string to store new line only
             s.clear();
         }
