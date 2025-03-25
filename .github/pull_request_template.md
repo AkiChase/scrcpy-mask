@@ -12,5 +12,3 @@ Is there any related issue? Please attach here.
 - #xxxx1
 - #xxxx2
 -->
-
-- [ ] Does this PR introduce any public API change?
