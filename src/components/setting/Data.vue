@@ -77,6 +77,14 @@ function delLocalStore(key?: string) {
 
 <template>
   <div>
+    <NH4 prefix="bar">{{ $t("pages.Setting.Data.logs") }}</NH4>
+    <NButton
+      text
+      @click="open(LocalStore.logDir)"
+      style="margin-bottom: 32px"
+      >{{ LocalStore.logDir }}</NButton
+    >
+
     <NFlex justify="space-between">
       <NH4 prefix="bar">{{ $t("pages.Setting.Data.localStore") }}</NH4>
       <NFlex>
@@ -110,27 +118,27 @@ function delLocalStore(key?: string) {
         </div>
       </NListItem>
     </NList>
+    <NModal v-model:show="showDataModal">
+      <NCard
+        style="width: 50%; height: 80%"
+        :title="localStoreEntries[curDataIndex][0]"
+      >
+        <NFlex vertical style="height: 100%">
+          <NInput
+            type="textarea"
+            style="flex-grow: 1"
+            :value="dataModalInputVal"
+            round
+            readonly
+          />
+          <NButton
+            type="success"
+            round
+            @click="delLocalStore(localStoreEntries[curDataIndex][0])"
+            >{{ $t("pages.Setting.Data.delCurData") }}</NButton
+          >
+        </NFlex>
+      </NCard>
+    </NModal>
   </div>
-  <NModal v-model:show="showDataModal">
-    <NCard
-      style="width: 50%; height: 80%"
-      :title="localStoreEntries[curDataIndex][0]"
-    >
-      <NFlex vertical style="height: 100%">
-        <NInput
-          type="textarea"
-          style="flex-grow: 1"
-          :value="dataModalInputVal"
-          round
-          readonly
-        />
-        <NButton
-          type="success"
-          round
-          @click="delLocalStore(localStoreEntries[curDataIndex][0])"
-          >{{ $t("pages.Setting.Data.delCurData") }}</NButton
-        >
-      </NFlex>
-    </NCard>
-  </NModal>
 </template>

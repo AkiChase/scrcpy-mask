@@ -2,6 +2,7 @@ import { useMessage } from "naive-ui";
 import { useGlobalStore } from "../store/global";
 import { sendKey, shutdown, swipe, touch } from "../frontcommand/scrcpyMaskCmd";
 import { useI18n } from "vue-i18n";
+import { error } from "@tauri-apps/plugin-log";
 
 let ws: WebSocket;
 let sharedMessage: ReturnType<typeof useMessage>;
@@ -58,10 +59,11 @@ async function handleMessage(event: MessageEvent) {
       await shutdown();
       sharedStore.controledDevice = null;
     } else {
-      console.error("Invalid message received", msg);
+      error("Invalid message received: " + msg);
     }
-  } catch (error) {
-    console.error("Message received failed", error);
+  } catch (e) {
+    error("Message received failed, " + e);
+    console.error(e);
   }
 }
 

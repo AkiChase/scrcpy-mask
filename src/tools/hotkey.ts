@@ -38,6 +38,7 @@ import {
 } from "../frontcommand/controlMsg";
 import { NonReactiveStore } from "../store/noneReactiveStore";
 import { asType } from "./tools";
+import { error } from "@tauri-apps/plugin-log";
 
 function clientxToPosx(clientx: number) {
   return clientx < 70
@@ -1289,7 +1290,7 @@ async function execMacro(
   if (macro === null) return;
   for (const cmd of macro) {
     if (!cmd.hasOwnProperty("type") || !cmd.hasOwnProperty("args")) {
-      console.error("Invalid command: ", cmd);
+      error("Invalid command: " + cmd);
       return;
     }
     try {
@@ -1313,7 +1314,7 @@ async function execMacro(
               touchAction = TouchAction.Move;
               break;
             default:
-              console.error("Invalid touch action: ", cmd.args[0]);
+              error("Invalid touch action: " + cmd.args[0]);
               return;
           }
           await touchX(
@@ -1337,7 +1338,7 @@ async function execMacro(
               swipeAction = SwipeAction.NoDown;
               break;
             default:
-              console.error("Invalid swipe action: ", cmd.args[0]);
+              error("Invalid swipe action: " + cmd.args[0]);
               return;
           }
           await swipe({
@@ -1365,11 +1366,12 @@ async function execMacro(
           }
           break;
         default:
-          console.error("Invalid command: ", cmd);
+          error("Invalid command: " + cmd);
           return;
       }
     } catch (e) {
-      console.error("Invalid command: ", cmd, e);
+      error(`Invalid command: ${cmd}, ${e}`);
+      console.error(e);
       return;
     }
   }
@@ -1528,13 +1530,14 @@ function applyKeyMappingConfigShortcuts(
         case "Fire":
           break;
         default:
-          console.error("Invalid item type: ", item);
+          error("Invalid item type: " + item);
           break;
       }
     }
     return true;
   } catch (e) {
-    console.error("Invalid keyMappingConfig: ", keyMappingConfig, e);
+    error("Invalid keyMappingConfig, " + e);
+    console.error(keyMappingConfig, e);
     clearShortcuts();
     return false;
   }

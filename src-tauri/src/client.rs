@@ -54,7 +54,7 @@ impl ScrcpyClient {
             "/data/local/tmp/scrcpy-server.jar",
         )?;
 
-        println!("{}\nSuccessfully push server files", info);
+        log::info!("Successfully push server files: {}", info);
         Ok(())
     }
 
@@ -65,7 +65,7 @@ impl ScrcpyClient {
             &format!("tcp:{}", port),
             &format!("localabstract:scrcpy_{}", scid),
         )?;
-        println!("Successfully forward port");
+        log::info!("Successfully forward port");
         Ok(())
     }
 
@@ -76,7 +76,7 @@ impl ScrcpyClient {
             &format!("localabstract:scrcpy_{}", scid),
             &format!("tcp:{}", port),
         )?;
-        println!("Successfully reverse port");
+        log::info!("Successfully reverse port");
         Ok(())
     }
 
@@ -97,7 +97,7 @@ impl ScrcpyClient {
             ],
         )?;
 
-        println!("Starting scrcpy server...");
+        log::info!("Starting scrcpy server...");
         let out = child.stdout.take().unwrap();
         let mut out = std::io::BufReader::new(out);
         let mut s = String::new();
@@ -107,13 +107,18 @@ impl ScrcpyClient {
             if let core::result::Result::Ok(Some(_)) = child.try_wait() {
                 break;
             }
-            print!("{}", s);
+
+            let trimmed = s.trim();
+            if !trimmed.is_empty() {
+                log::info!("{}", trimmed);
+            }
+            
             // clear string to store new line only
             s.clear();
         }
 
         *share::CLIENT_INFO.lock().unwrap() = None;
-        println!("Scrcpy server closed");
+        log::info!("Scrcpy server closed");
         Ok(())
     }
 }

@@ -21,6 +21,7 @@ import { useI18n } from "vue-i18n";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { LocalStore } from "../../store/localStore";
 import { NonReactiveStore } from "../../store/noneReactiveStore";
+import { error } from "@tauri-apps/plugin-log";
 
 const { t } = useI18n();
 const store = useGlobalStore();
@@ -150,8 +151,9 @@ function importKeyMappingConfig() {
   try {
     keyMappingConfig = JSON.parse(importModalInputValue.value);
   } catch (e) {
-    console.error(e);
     message.error(t("pages.KeyBoard.KeySetting.importFailed"));
+    error("Failed to import key mapping config, " + e);
+    console.error(e);
     return;
   }
   store.keyMappingConfigList.push(keyMappingConfig);
@@ -172,8 +174,9 @@ async function importDefaultKeyMappingConfig() {
       count++;
     }
   } catch (e) {
-    console.error(e);
     message.error(t("pages.KeyBoard.KeySetting.importDefaultFailed"));
+    error("Failed to import default key mapping config, " + e);
+    console.error(e);
     return;
   }
 
@@ -266,8 +269,9 @@ function exportKeyMappingConfig() {
       message.success(t("pages.KeyBoard.KeySetting.exportSuccess"));
     })
     .catch((e) => {
-      console.error(e);
       message.error(t("pages.KeyBoard.KeySetting.exportFailed"));
+      error("Failed to export key mapping config, " + e);
+      console.error(e);
     });
 }
 

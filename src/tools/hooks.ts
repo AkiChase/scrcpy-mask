@@ -10,6 +10,7 @@ import { useGlobalStore } from "../store/global";
 import { h } from "vue";
 import { marked } from "marked";
 import { open } from "@tauri-apps/plugin-shell";
+import { error } from "@tauri-apps/plugin-log";
 
 const render = new marked.Renderer();
 marked.setOptions({
@@ -59,8 +60,9 @@ export function useCheckUpdate() {
         });
       }
     } catch (e) {
-      console.error(e);
       message.error(t("pages.Mask.checkUpdate.failed"));
+      error("Failed to check for update, " + e);
+      console.error(e);
     }
   };
 }

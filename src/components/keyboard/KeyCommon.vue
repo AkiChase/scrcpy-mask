@@ -22,6 +22,7 @@ import {
 import { useKeyboardStore } from "../../store/keyboard";
 import { useI18n } from "vue-i18n";
 import { configKeyCommon } from "./config";
+import { error } from "@tauri-apps/plugin-log";
 
 const props = defineProps<{
   index: number;
@@ -148,8 +149,9 @@ function saveMacro() {
     keyboardStore.edited = true;
     message.success(t("pages.KeyBoard.KeyCommon.macroParseSuccess"));
   } catch (e) {
-    console.error(e);
     message.error(t("pages.KeyBoard.KeyCommon.macroParseFailed"));
+    error("Failed to save macro, " + e);
+    console.error(e);
   }
 }
 

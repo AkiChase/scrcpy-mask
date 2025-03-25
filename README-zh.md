@@ -91,14 +91,16 @@
 
 ## 错误报告
 
-提问时请尽可能全面而清晰地提供问题相关的信息，包括操作系统和软件版本。特别是如果有错误输出，请务必附带相关日志。
+提交错误报告时请尽可能全面而清晰地提供问题相关的信息，包括操作系统和软件版本，相关错误日志。
 
-日志有两个来源，可能对定位并解决错误有所帮助。一般来说，Web 日志中就可以找到错误输出。
+日志有两个来源，可能对定位并解决错误有所帮助。
 
 1. Web 日志：通过 `Ctrl+Shift+I` 或 `Cmd+Opt+I` 打开开发者工具，点击控制台 (console)，查看控制台内输出的信息。
-2. Rust 日志：
-   1. 在 macOS 或 Linux 系统下，可以进入安装位置，使用**终端**运行 `scrcpy-mask`，可在终端中实时看到程序的输出信息。
-   2. 在 Windows 系统下，目前只能克隆项目后自行运行，查看 Rust 输出信息。
+2. 持久化日志：
+   - 不同系统日志路径不同，可在 设置页面 -> 数据管理 -> 日志目录 中快速查看
+   - Linux: /home/<用户名>/.local/share/com.akichase.mask/logs
+   - macOS: /Users/<用户名>/Library/Logs/com.akichase.mask
+   - Windows: C:\Users\<用户名>\AppData\Local\com.akichase.mask\logs
 
 ## 贡献
 

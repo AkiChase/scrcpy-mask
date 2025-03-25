@@ -4,6 +4,9 @@ import "./css/global.scss";
 import App from "./App.vue";
 import router from "./router";
 import i18n from "./i18n";
+import { attachConsole } from "@tauri-apps/plugin-log";
+
+attachConsole()
 
 const pinia = createPinia();
 

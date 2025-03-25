@@ -3,10 +3,24 @@
 
 use scrcpy_mask::{command, resource::ResHelper};
 use tauri::Manager;
+use tauri_plugin_log::{Target, TargetKind};
 
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .clear_targets()
+                .targets([
+                    Target::new(TargetKind::Webview)
+                        .filter(|metadata| metadata.target().starts_with("scrcpy_mask")),
+                    Target::new(TargetKind::LogDir {
+                        file_name: Some(chrono::Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()),
+                    })
+                    .filter(|metadata| metadata.target().starts_with("scrcpy_mask")),
+                ])
+                .build(),
+        )
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_http::init())
