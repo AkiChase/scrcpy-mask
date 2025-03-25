@@ -136,7 +136,8 @@
         "localStore": "Local data",
         "delCurData": "Delete current data",
         "btnRefresh": "Refresh",
-        "btnDelAll": "Clear local data"
+        "btnDelAll": "Clear local data",
+        "logs": "Log dir"
       },
       "About": {
         "introduction": "A Scrcpy client in Rust & Tarui aimed at providing mouse and key mapping to control Android device.",

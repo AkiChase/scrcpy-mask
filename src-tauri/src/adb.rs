@@ -24,7 +24,15 @@ impl Device {
             .args(&["-s", id, "push", src, des])
             .output()
             .with_context(|| format!("Failed to execute 'adb push {} {}'", src, des))?;
-        Ok(String::from_utf8(res.stdout).unwrap())
+
+        let output = [
+            String::from_utf8(res.stdout)?,
+            String::from_utf8(res.stderr)?,
+        ]
+        .join("\n")
+        .trim()
+        .to_string();
+        Ok(output)
     }
 
     /// execute "adb reverse" to reverse the device port to local port

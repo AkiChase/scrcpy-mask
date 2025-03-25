@@ -12,16 +12,18 @@ import {
   LogicalSize,
   primaryMonitor,
 } from "@tauri-apps/api/window";
-import { appDataDir, join } from "@tauri-apps/api/path";
+import { appDataDir, appLogDir, join } from "@tauri-apps/api/path";
 
 export class LocalStore {
   public static store: Store;
   public static vueStore: ReturnType<typeof useGlobalStore>;
   public static path: string;
   public static dir: string;
+  public static logDir: string;
 
   static async init() {
     this.dir = await appDataDir();
+    this.logDir = await appLogDir();
     this.path = await join(this.dir, "store.bin");
     this.store = await load("store.bin", { autoSave: true });
     this.vueStore = useGlobalStore();

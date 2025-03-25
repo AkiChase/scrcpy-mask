@@ -52,6 +52,7 @@ import ButtonWithTip from "./common/ButtonWithTip.vue";
 import { NonReactiveStore } from "../store/noneReactiveStore";
 import { useRoute } from "vue-router";
 import { useHorRotation } from "../tools/hooks";
+import { error, warn } from "@tauri-apps/plugin-log";
 
 const { t } = useI18n();
 const dialog = useDialog();
@@ -124,11 +125,12 @@ onMounted(async () => {
           }
           break;
         default:
-          console.warn("Unknown reply", payload);
+          warn("Unknown device reply: " + event.payload);
           break;
       }
     } catch (e) {
-      console.error(e);
+      error(("Failed to handle device reply: " + event.payload) as string);
+      console.error(event.payload, e);
     }
   });
 });
@@ -367,6 +369,7 @@ async function refreshDevices() {
     devices.value = await adbDevices();
   } catch (e) {
     message.error(t("pages.Device.adbDeviceError"));
+    error("Failed to get devices, " + e);
     console.error(e);
   }
   store.hideLoading();
@@ -382,6 +385,7 @@ async function restartAdb() {
     await adbRestartServer();
   } catch (e) {
     message.error(t("pages.Device.adbRestartError"));
+    error("Failed to restart adb server, " + e);
     console.error(e);
   }
   store.hideLoading();
@@ -399,6 +403,7 @@ async function connectDevice() {
     await refreshDevices();
   } catch (e) {
     message.error("t('pages.Device.adbConnectError')");
+    error("Failed to connect device wirelessly, " + e);
     console.error(e);
   }
 }

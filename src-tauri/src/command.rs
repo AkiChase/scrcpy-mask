@@ -84,12 +84,12 @@ pub fn start_scrcpy_server(
         let share_app = app.clone();
         let (device_reply_sender, mut device_reply_receiver) =
             tokio::sync::mpsc::channel::<String>(16);
-        println!("device reply channel created");
+        log::info!("Device reply channel created");
         tokio::spawn(async move {
             while let Some(reply) = device_reply_receiver.recv().await {
                 share_app.emit("device-reply", reply).unwrap();
             }
-            println!("device reply channel closed");
+            log::info!("Device reply channel closed");
         });
 
         // create channel to transmit front msg to TcpStream handler
@@ -97,10 +97,10 @@ pub fn start_scrcpy_server(
         let share_app = app.clone();
         let listen_handler = share_app.listen("front-command", move |event| {
             let sender = front_msg_sender.clone();
-            // println!("收到front-command: {}", event.payload());
+            // log::debug!("Received front-command: {}", event.payload());
             tokio::spawn(async move {
                 if let Err(_) = sender.send(event.payload().into()).await {
-                    println!("front-command forwarding failure, please restart the program !");
+                    log::error!("Forwarding front command failed, please restart the program!");
                 };
             });
         });

@@ -136,7 +136,8 @@
         "localStore": "本地数据",
         "delCurData": "删除当前数据",
         "btnDelAll": "清空本地数据",
-        "btnRefresh": "刷新"
+        "btnRefresh": "刷新",
+        "logs": "日志目录"
       },
       "About": {
         "about": "关于",

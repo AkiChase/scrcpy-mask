@@ -16,6 +16,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
 lazy_static = "1"
+log = "0.4"
+chrono = "0.4"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "macros", "io-util", "time", "sync"] }
 tauri-plugin-store = "2"
 tauri-plugin-process = "2"
@@ -23,3 +25,4 @@ tauri-plugin-shell = "2"
 tauri-plugin-http = "2"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-os = "2"
+tauri-plugin-log = "2"
