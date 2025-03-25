@@ -93,14 +93,16 @@ For instance, the `key-input-mode` macro can switch from key mapping mode to key
 
 ## Error Report
 
-When asking a question, please provide as much detailed information as possible regarding the issue, including the operating system and software version. Specifically, if there is an error output, please be sure to include the relevant logs.
+When submitting a bug report, please provide as much comprehensive and clear information as possible regarding the issue, including operating system and software versions, and relevant error logs.
 
-There are two sources of logs that might help in identifying and solving the error. Generally, the error output can be found in the Web logs.
+There are two sources of logs that may be helpful in locating and resolving the issue.
 
-1. Web Logs: Open Developer Tools by pressing `Ctrl+Shift+I` or `Cmd+Opt+I`, click on the console tab, and check the information output in the console.
-2. Rust Logs:
-   1. On macOS or Linux, navigate to the installation directory, use the **terminal** to run `scrcpy-mask`, and you can see the program's output in real-time in the terminal.
-   2. On Windows, you need to clone the project and run it yourself to view the Rust output.
+1. Web Logs: Open the developer tools using `Ctrl+Shift+I` or `Cmd+Opt+I`, then go to the Console tab to check the output in the console.
+2. Persistent Logs:
+   - The log directory may vary depending on the system. You can quickly find it in the "Settings page -> Data management -> Log dir".
+   - Linux: /home/<username>/.local/share/com.akichase.mask/logs
+   - macOS: /Users/<username>/Library/Logs/com.akichase.mask
+   - Windows: C:\Users\<username>\AppData\Local\com.akichase.mask\logs
 
 ## Contribution.
 
