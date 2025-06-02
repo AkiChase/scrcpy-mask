@@ -9,8 +9,8 @@ export async function adbDevices(): Promise<Device[]> {
   return await invoke("adb_devices");
 }
 
-export async function adbRestartServer(): Promise<void> {
-  return await invoke("adb_restart_server");
+export async function adbKillServer(): Promise<void> {
+  return await invoke("adb_kill_server");
 }
 
 export async function forwardServerPort(

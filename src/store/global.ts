@@ -12,10 +12,10 @@ import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 
 export const useGlobalStore = defineStore("global", () => {
   const showLoadingFlag = ref(false);
-  function showLoading() {
+  async function showLoading() {
     showLoadingFlag.value = true;
   }
-  function hideLoading() {
+  async function hideLoading() {
     showLoadingFlag.value = false;
   }
 

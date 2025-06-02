@@ -1371,7 +1371,6 @@ async function execMacro(
       }
     } catch (e) {
       error(`Invalid command: ${cmd}, ${e}`);
-      console.error(e);
       return;
     }
   }
@@ -1536,8 +1535,7 @@ function applyKeyMappingConfigShortcuts(
     }
     return true;
   } catch (e) {
-    error("Invalid keyMappingConfig, " + e);
-    console.error(keyMappingConfig, e);
+    error(`Invalid keyMappingConfig: ${e}`);
     clearShortcuts();
     return false;
   }

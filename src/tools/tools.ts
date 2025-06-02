@@ -1,5 +1,4 @@
-import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
-import { open as shellOpen } from "@tauri-apps/plugin-shell";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 export function compareVersion(v1: string, v2: string) {
   const [x1, y1, z1] = v1.split(".");
@@ -29,17 +28,8 @@ export function genClientId() {
   return result;
 }
 
-export async function cleanAfterimage() {
-  const appWindow = getCurrentWindow();
-  const scale = await appWindow.scaleFactor();
-  const oldSize = (await appWindow.innerSize()).toLogical(scale);
-  const newSize = new LogicalSize(oldSize.width, oldSize.height + 1);
-  await appWindow.setSize(newSize);
-  await appWindow.setSize(oldSize);
-}
-
 export function openWebsite(url: string) {
-  shellOpen(url);
+  openUrl(url);
 }
 
 export function asType<T>(_val: any): asserts _val is T {}

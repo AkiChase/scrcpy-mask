@@ -62,8 +62,7 @@ async function handleMessage(event: MessageEvent) {
       error("Invalid message received: " + msg);
     }
   } catch (e) {
-    error("Message received failed, " + e);
-    console.error(e);
+    error(`Message received failed: ${e}`);
   }
 }
 

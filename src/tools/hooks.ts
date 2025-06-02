@@ -9,8 +9,8 @@ import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { useGlobalStore } from "../store/global";
 import { h } from "vue";
 import { marked } from "marked";
-import { open } from "@tauri-apps/plugin-shell";
 import { error } from "@tauri-apps/plugin-log";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 const render = new marked.Renderer();
 marked.setOptions({
@@ -55,14 +55,13 @@ export function useCheckUpdate() {
           positiveText: t("pages.Mask.checkUpdate.notLatest.positiveText"),
           negativeText: t("pages.Mask.checkUpdate.notLatest.negativeText"),
           onPositiveClick: () => {
-            open(data.html_url);
+            openUrl(data.html_url);
           },
         });
       }
     } catch (e) {
       message.error(t("pages.Mask.checkUpdate.failed"));
-      error("Failed to check for update, " + e);
-      console.error(e);
+      error(`Failed to check for update: ${e}`);
     }
   };
 }
