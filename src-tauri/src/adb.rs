@@ -1,14 +1,14 @@
+use adb_client::{ADBDeviceExt, ADBServer, ADBServerDevice};
+use tokio::{sync::mpsc, task::JoinHandle};
+
 use std::{
-    io::BufRead,
-    process::{Child, Command, Stdio},
+    fs::File,
+    io::Cursor,
+    net::{Ipv4Addr, SocketAddrV4},
+    path::Path,
 };
 
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
-
-use anyhow::{Context, Ok, Result};
-
-use crate::share;
+use crate::{share, utils::ChannelWriter};
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct Device {
@@ -17,171 +17,140 @@ pub struct Device {
 }
 
 impl Device {
-    /// execute "adb push" to push file from src to des
-    pub fn cmd_push(id: &str, src: &str, des: &str) -> Result<String> {
-        let mut adb_command = Adb::cmd_base();
-        let res = adb_command
-            .args(&["-s", id, "push", src, des])
-            .output()
-            .with_context(|| format!("Failed to execute 'adb push {} {}'", src, des))?;
-
-        let output = [
-            String::from_utf8(res.stdout)?,
-            String::from_utf8(res.stderr)?,
-        ]
-        .join("\n")
-        .trim()
-        .to_string();
-        Ok(output)
+    fn new_server_device(id: &str) -> ADBServerDevice {
+        ADBServerDevice::new(id.to_string(), None)
     }
 
-    /// execute "adb reverse" to reverse the device port to local port
-    pub fn cmd_reverse(id: &str, remote: &str, local: &str) -> Result<()> {
-        let mut adb_command = Adb::cmd_base();
-        adb_command
-            .args(&["-s", id, "reverse", remote, local])
-            .output()
-            .with_context(|| format!("Failed to execute 'adb reverse {} {}'", remote, local))?;
+    pub fn push(id: &str, src: &str, des: &str) -> Result<(), String> {
+        let mut device = Device::new_server_device(id);
+        let mut input = File::open(Path::new(src))
+            .map_err(|e| format!("Failed to open file '{}': {}", src, e))?;
+        device
+            .push(&mut input, des)
+            .map_err(|e| format!("Failed to push file '{}' to '{}': {}", src, des, e))?;
         Ok(())
     }
 
-    /// execute "adb forward" to forward the local port to the device
-    pub fn cmd_forward(id: &str, local: &str, remote: &str) -> Result<()> {
-        let mut adb_command = Adb::cmd_base();
-        adb_command
-            .args(&["-s", id, "forward", local, remote])
-            .output()
-            .with_context(|| format!("Failed to execute 'adb forward {} {}'", local, remote))?;
-        Ok(())
+    pub fn reverse(id: &str, remote: &str, local: &str) -> Result<(), String> {
+        let mut device = Device::new_server_device(id);
+        device
+            .reverse(remote.to_string(), local.to_string())
+            .map_err(|e| format!("Failed to reverse '{}' to '{}': {}", remote, local, e))
     }
 
-    /// execute "adb shell" to execute shell command on the device
-    pub fn cmd_shell(id: &str, shell_args: &[&str]) -> Result<Child> {
-        let mut adb_command = Adb::cmd_base();
-        let mut args = vec!["-s", id, "shell"];
-        args.extend_from_slice(shell_args);
-        Ok(adb_command
-            .args(args)
-            .stdout(Stdio::piped())
-            .spawn()
-            .context("Failed to execute 'adb shell'")?)
+    pub fn forward(id: &str, local: &str, remote: &str) -> Result<(), String> {
+        let mut device = Device::new_server_device(id);
+        device
+            .forward(remote.to_string(), local.to_string())
+            .map_err(|e| format!("Failed to forward '{}' to '{}': {}", local, remote, e))
     }
 
-    /// execute "adb shell wm size" to get screen size
-    pub fn cmd_screen_size(id: &str) -> Result<(u32, u32)> {
-        let mut adb_command = Adb::cmd_base();
-        let output = adb_command
-            .args(&["-s", id, "shell", "wm", "size"])
-            .output()
-            .context("Failed to execute 'adb shell wm size'")?;
+    pub fn shell_process(id: &str, shell_args: &[&str]) -> JoinHandle<Result<(), String>> {
+        let mut device = Device::new_server_device(id);
+        let shell_args: Vec<String> = shell_args.iter().map(|&s| s.to_string()).collect();
 
-        for line in output.stdout.lines() {
-            if let std::result::Result::Ok(line) = line {
-                if line.starts_with("Physical size: ") {
-                    let size_str = line.trim_start_matches("Physical size: ").split('x');
-                    let width = size_str.clone().next().unwrap().parse::<u32>().unwrap();
-                    let height = size_str.clone().last().unwrap().parse::<u32>().unwrap();
-                    return Ok((width, height));
-                }
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let h: JoinHandle<Result<(), String>> = tokio::task::spawn_blocking(move || {
+            let mut writer = ChannelWriter { sender: tx };
+            let shell_args: Vec<&str> = shell_args.iter().map(|s| s.as_str()).collect();
+            device
+                .shell_command(&shell_args, &mut writer)
+                .map_err(|e| format!("Failed to run adb shell command: {}", e))
+        });
+
+        tokio::spawn(async move {
+            while let Some(line) = rx.recv().await {
+                log::info!("{}", line);
+            }
+        });
+
+        h
+    }
+
+    pub fn cmd_screen_size(id: &str) -> Result<(u32, u32), String> {
+        let mut device = Device::new_server_device(id);
+
+        let mut output: Vec<u8> = Vec::new();
+        let mut cursor = Cursor::new(&mut output);
+        device
+            .shell_command(&["wm", "size"], &mut cursor)
+            .map_err(|e| format!("Failed to run adb shell command: {}", e))?;
+
+        let stdout = String::from_utf8_lossy(&output);
+        for line in stdout.lines() {
+            if let Some(rest) = line.strip_prefix("Physical size: ") {
+                let mut parts = rest.trim().split('x');
+                let width = parts
+                    .next()
+                    .ok_or("Missing width")?
+                    .parse::<u32>()
+                    .map_err(|e| format!("Failed to parse width: {}", e))?;
+
+                let height = parts
+                    .next()
+                    .ok_or("Missing height")?
+                    .parse::<u32>()
+                    .map_err(|e| format!("Failed to parse height: {}", e))?;
+                return Ok((width, height));
             }
         }
-        Err(anyhow::anyhow!("Failed to get screen size"))
+        Err("Failed to get screen size".to_string())
     }
 }
 
-pub struct Adb;
+pub struct Adb {
+    pub server: ADBServer,
+}
 
 /// Module to execute adb command and fetch output.
 /// But some output of command won't be output, like adb service startup information.
 impl Adb {
-    pub fn cmd_base() -> Command {
+    // pub fn cmd_base() -> Command {
+    //     let adb_path = share::ADB_PATH.lock().unwrap().clone();
+    //     #[cfg(target_os = "windows")]
+    //     {
+    //         let mut cmd = Command::new(adb_path);
+    //         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    //         return cmd;
+    //     }
+    //     #[cfg(not(target_os = "windows"))]
+    //     Command::new(adb_path)
+    // }
+
+    pub fn new() -> Adb {
         let adb_path = share::ADB_PATH.lock().unwrap().clone();
-        #[cfg(target_os = "windows")]
-        {
-            let mut cmd = Command::new(adb_path);
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-            return cmd;
+        Self {
+            server: ADBServer::new_from_path(
+                SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 5037),
+                Some(adb_path),
+            ),
         }
-        #[cfg(not(target_os = "windows"))]
-        Command::new(adb_path)
     }
 
-    /// execute "adb devices" and return devices list
-    pub fn cmd_devices() -> Result<Vec<Device>> {
-        let mut adb_command = Adb::cmd_base();
-        let output = adb_command
-            .args(&["devices"])
-            .output()
-            .context("Failed to execute 'adb devices'")?;
-
-        let mut devices_vec: Vec<Device> = Vec::new();
-        let mut lines = output.stdout.lines();
-        // skip first line
-        lines.next();
-
-        // parse string to Device
-        for line in lines {
-            if let std::result::Result::Ok(s) = line {
-                let device_info: Vec<&str> = s.split('\t').collect();
-                if device_info.len() == 2 {
-                    devices_vec.push(Device {
-                        id: device_info[0].to_string(),
-                        status: device_info[1].to_string(),
-                    });
-                }
-            }
-        }
-        Ok(devices_vec)
+    pub fn devices(&mut self) -> Result<Vec<Device>, String> {
+        let device = self.server.devices().map_err(|e| e.to_string())?;
+        Ok(device
+            .iter()
+            .map(|d| Device {
+                id: d.identifier.clone(),
+                status: d.state.to_string(),
+            })
+            .collect::<Vec<_>>())
     }
 
-    /// execute "adb kill-server"
-    pub fn cmd_kill_server() -> Result<()> {
-        let mut adb_command = Adb::cmd_base();
-        adb_command
-            .args(&["kill-server"])
-            .output()
-            .context("Failed to execute 'adb kill-server'")?;
-        Ok(())
+    pub fn kill_server(&mut self) -> Result<(), String> {
+        self.server
+            .kill()
+            .map_err(|e| format!("Failed to kill adb server': {}", e))
     }
 
-    /// execute "adb reverse --remove-all"
-    pub fn cmd_reverse_remove() -> Result<()> {
-        let mut adb_command = Adb::cmd_base();
-        adb_command
-            .args(&["reverse", " --remove-all"])
-            .output()
-            .context("Failed to execute 'adb reverse --remove-all'")?;
-        Ok(())
-    }
+    pub fn connect_device(&mut self, address: &str) -> Result<(), String> {
+        let socket_addr = address
+            .parse::<SocketAddrV4>()
+            .map_err(|e| format!("Failed to parse device address: {}", e))?;
 
-    /// execute "adb forward --remove-all"
-    pub fn cmd_forward_remove() -> Result<()> {
-        let mut adb_command = Adb::cmd_base();
-        adb_command
-            .args(&["forward", " --remove-all"])
-            .output()
-            .context("Failed to execute 'adb forward --remove-all'")?;
-        Ok(())
-    }
-
-    /// execute "adb start-server"
-    pub fn cmd_start_server() -> Result<()> {
-        let mut adb_command = Adb::cmd_base();
-        adb_command
-            .args(&["start-server"])
-            .output()
-            .context("Failed to execute 'adb start-server'")?;
-        Ok(())
-    }
-
-    pub fn cmd_connect(address: &str) -> Result<String> {
-        let mut adb_command = Adb::cmd_base();
-        let output = adb_command
-            .args(&["connect", address])
-            .output()
-            .context(format!("Failed to execute 'adb connect {}'", address))?;
-
-        let res = String::from_utf8(output.stdout)?;
-        Ok(res)
+        self.server
+            .connect_device(socket_addr)
+            .map_err(|e| format!("Failed to connect to device '{}': {}", address, e))
     }
 }

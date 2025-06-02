@@ -28,7 +28,10 @@ pub async fn connect_socket(
         .await
         .context("Socket connect failed")?;
 
-    log::info!("Connected to scrcpy server: {}", client.local_addr().unwrap());
+    log::info!(
+        "Connected to scrcpy server: {}",
+        client.local_addr().unwrap()
+    );
 
     let (read_half, write_half) = client.into_split();
 

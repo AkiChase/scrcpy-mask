@@ -14,10 +14,8 @@ import { KeySteeringWheel } from "../tools/keyMappingConfig";
 import ScreenStream from "./ScreenStream.vue";
 import { useI18n } from "vue-i18n";
 import { primaryInit, secondaryClean, secondaryInit } from "../tools/init";
-import { cleanAfterimage } from "../tools/tools";
 import { NonReactiveStore } from "../store/noneReactiveStore";
 import { useRotation } from "../tools/hooks";
-import { platform } from "@tauri-apps/plugin-os";
 
 await primaryInit(); // suspend for primary initialization
 
@@ -28,7 +26,6 @@ const message = useMessage();
 const rotation = useRotation();
 
 let initFlag = false;
-const platformName = platform();
 
 const curPageActive = ref(false);
 
@@ -44,8 +41,6 @@ onBeforeRouteLeave(() => {
 
 onActivated(async () => {
   curPageActive.value = true;
-
-  if (initFlag && platformName === "macos") await cleanAfterimage();
 
   if (store.controledDevice) {
     if (

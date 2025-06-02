@@ -2,9 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "core:event:default",
     "core:window:default",
@@ -34,8 +32,6 @@
     "process:allow-restart",
     "core:webview:default",
     "core:webview:allow-internal-toggle-devtools",
-    "shell:default",
-    "shell:allow-open",
     "http:default",
     {
       "identifier": "http:default",
@@ -50,6 +46,16 @@
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "os:default",
-    "log:default"
+    "log:default",
+    "opener:default",
+    "opener:allow-default-urls",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    }
   ]
 }

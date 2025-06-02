@@ -18,7 +18,7 @@ import {
   getDeviceScreenSize,
   adbConnect,
   getCurClientInfo,
-  adbRestartServer,
+  adbKillServer,
 } from "../tools/invoke";
 import {
   NH4,
@@ -129,8 +129,7 @@ onMounted(async () => {
           break;
       }
     } catch (e) {
-      error(("Failed to handle device reply: " + event.payload) as string);
-      console.error(event.payload, e);
+      error(`Failed to handle device reply: ${event.payload}`);
     }
   });
 });
@@ -271,72 +270,78 @@ function onMenuClickoutside() {
 }
 
 async function deviceControl() {
-  const curClientInfo = await getCurClientInfo();
-  if (curClientInfo) {
-    message.error(t("pages.Device.alreadyControled"));
-    store.controledDevice = {
-      scid: curClientInfo.scid,
-      deviceName: curClientInfo.device_name,
-      deviceID: curClientInfo.device_id,
-    };
-    store.hideLoading();
-    return;
-  }
-
-  if (!port.value) {
-    port.value = 27183;
-  }
-
-  message.info(t("pages.Device.deviceControl.controlInfo"));
-
-  const device = devices.value[rowIndex];
-
-  const scid = (
-    "00000000" + Math.floor(Math.random() * 100000).toString(16)
-  ).slice(-8);
-
-  await pushServerFile(device.id);
-  await forwardServerPort(device.id, scid, port.value);
-  await startScrcpyServer(device.id, scid, `127.0.0.1:${port.value}`);
-
-  // connection timeout check
-  const connectionTimeout = setTimeout(async () => {
-    if (deviceWaitForMetadataTask) {
-      await shutdown();
-      store.controledDevice = null;
+  try {
+    const curClientInfo = await getCurClientInfo();
+    if (curClientInfo) {
+      message.error(t("pages.Device.alreadyControled"));
+      store.controledDevice = {
+        scid: curClientInfo.scid,
+        deviceName: curClientInfo.device_name,
+        deviceID: curClientInfo.device_id,
+      };
       store.hideLoading();
-      message.error(t("pages.Device.deviceControl.connectTimeout"));
+      return;
     }
-  }, 6000);
 
-  // add cb for metadata
-  deviceWaitForMetadataTask = (deviceName: string) => {
-    store.controledDevice = {
-      scid,
-      deviceName,
-      deviceID: device.id,
+    if (!port.value) {
+      port.value = 27183;
+    }
+
+    message.info(t("pages.Device.deviceControl.controlInfo"));
+
+    const device = devices.value[rowIndex];
+
+    const scid = (
+      "00000000" + Math.floor(Math.random() * 100000).toString(16)
+    ).slice(-8);
+
+    await pushServerFile(device.id);
+    await forwardServerPort(device.id, scid, port.value);
+    await startScrcpyServer(device.id, scid, `127.0.0.1:${port.value}`);
+
+    // connection timeout check
+    const connectionTimeout = setTimeout(async () => {
+      if (deviceWaitForMetadataTask) {
+        await shutdown();
+        store.controledDevice = null;
+        store.hideLoading();
+        message.error(t("pages.Device.deviceControl.connectTimeout"));
+      }
+    }, 6000);
+
+    // add cb for metadata
+    deviceWaitForMetadataTask = (deviceName: string) => {
+      store.controledDevice = {
+        scid,
+        deviceName,
+        deviceID: device.id,
+      };
+      deviceWaitForMetadataTask = null;
+      if (!deviceWaitForScreenSizeTask) {
+        nextTick(() => {
+          clearTimeout(connectionTimeout);
+          store.hideLoading();
+        });
+      }
     };
-    deviceWaitForMetadataTask = null;
-    if (!deviceWaitForScreenSizeTask) {
-      nextTick(() => {
-        clearTimeout(connectionTimeout);
-        store.hideLoading();
-      });
-    }
-  };
 
-  // add cb for screen size
-  deviceWaitForScreenSizeTask = (w: number, h: number) => {
-    store.screenSizeW = w;
-    store.screenSizeH = h;
-    deviceWaitForScreenSizeTask = null;
-    if (!deviceWaitForMetadataTask) {
-      nextTick(() => {
-        clearTimeout(connectionTimeout);
-        store.hideLoading();
-      });
-    }
-  };
+    // add cb for screen size
+    deviceWaitForScreenSizeTask = (w: number, h: number) => {
+      store.screenSizeW = w;
+      store.screenSizeH = h;
+      deviceWaitForScreenSizeTask = null;
+      if (!deviceWaitForMetadataTask) {
+        nextTick(() => {
+          clearTimeout(connectionTimeout);
+          store.hideLoading();
+        });
+      }
+    };
+  } catch (e) {
+    message.error(e as string);
+    error(e as string);
+    store.hideLoading();
+  }
 }
 
 async function deviceGetScreenSize() {
@@ -369,8 +374,7 @@ async function refreshDevices() {
     devices.value = await adbDevices();
   } catch (e) {
     message.error(t("pages.Device.adbDeviceError"));
-    error("Failed to get devices, " + e);
-    console.error(e);
+    error(`Failed to get devices: ${e}`);
   }
   store.hideLoading();
 }
@@ -380,15 +384,16 @@ async function restartAdb() {
     message.error(t("pages.Device.adbUnavailable"));
     return;
   }
-  store.showLoading();
+  await store.showLoading();
   try {
-    await adbRestartServer();
+    await adbKillServer();
+    devices.value = await adbDevices();
   } catch (e) {
     message.error(t("pages.Device.adbRestartError"));
-    error("Failed to restart adb server, " + e);
-    console.error(e);
+    error(`Failed to restart adb server: ${e}`);
   }
-  store.hideLoading();
+  message.success(t("pages.Device.adbRestartSuccess"));
+  await store.hideLoading();
 }
 
 async function connectDevice() {
@@ -403,8 +408,7 @@ async function connectDevice() {
     await refreshDevices();
   } catch (e) {
     message.error("t('pages.Device.adbConnectError')");
-    error("Failed to connect device wirelessly, " + e);
-    console.error(e);
+    error(`Failed to connect device wirelessly: ${e}`);
   }
 }
 

@@ -8,23 +8,30 @@ use tauri_plugin_log::{Target, TargetKind};
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .clear_targets()
                 .targets([
-                    Target::new(TargetKind::Webview)
-                        .filter(|metadata| metadata.target().starts_with("scrcpy_mask")),
+                    Target::new(TargetKind::Webview).filter(|metadata| {
+                        metadata.target().starts_with("scrcpy_mask")
+                            || metadata.target().starts_with("webview")
+                    }),
                     Target::new(TargetKind::LogDir {
-                        file_name: Some(chrono::Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()),
+                        file_name: Some(
+                            chrono::Local::now().format("%Y-%m-%d_%H-%M-%S").to_string(),
+                        ),
                     })
-                    .filter(|metadata| metadata.target().starts_with("scrcpy_mask")),
+                    .filter(|metadata| {
+                        metadata.target().starts_with("scrcpy_mask")
+                            || metadata.target().starts_with("webview")
+                    }),
                 ])
                 .build(),
         )
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
@@ -44,7 +51,7 @@ async fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             command::adb_devices,
-            command::adb_restart_server,
+            command::adb_kill_server,
             command::forward_server_port,
             command::push_server_file,
             command::start_scrcpy_server,

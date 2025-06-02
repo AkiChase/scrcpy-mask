@@ -150,8 +150,7 @@ function saveMacro() {
     message.success(t("pages.KeyBoard.KeyCommon.macroParseSuccess"));
   } catch (e) {
     message.error(t("pages.KeyBoard.KeyCommon.macroParseFailed"));
-    error("Failed to save macro, " + e);
-    console.error(e);
+    error(`Failed to save macro: ${e}`);
   }
 }
 

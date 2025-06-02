@@ -26,7 +26,7 @@
       "deviceSize": {},
       "controledDevice": "Controlled device",
       "availableDevice": "Available devices",
-      "noControledDevice": "No Controled Device",
+      "noControledDevice": "No controled device",
       "alreadyControled": "Controlled device already exists",
       "alreadyDisconnected": "Controlled device connection has been disconnected",
       "externalControl": "External control",
@@ -40,8 +40,9 @@
       "btnShutdown": "Shutdown control",
       "btnRefresh": "Refresh devices list",
       "btnReStart": "Restart ADB",
-      "adbRestartError": "ADB Restart Failed",
-      "adbUnavailable": "ADB Unavailable"
+      "adbRestartError": "ADB restart failed",
+      "adbUnavailable": "ADB unavailable",
+      "adbRestartSuccess": "ADB restarted successfully"
     },
     "Mask": {
       "keyconfigException": "The key mapping config is abnormal, please delete this config",

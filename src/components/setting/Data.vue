@@ -17,7 +17,7 @@ import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { LocalStore } from "../../store/localStore";
 import ButtonWithTip from "../common/ButtonWithTip.vue";
-import { open } from "@tauri-apps/plugin-shell";
+import { openPath } from "@tauri-apps/plugin-opener";
 
 const { t } = useI18n();
 
@@ -80,7 +80,7 @@ function delLocalStore(key?: string) {
     <NH4 prefix="bar">{{ $t("pages.Setting.Data.logs") }}</NH4>
     <NButton
       text
-      @click="open(LocalStore.logDir)"
+      @click="openPath(LocalStore.logDir)"
       style="margin-bottom: 32px"
       >{{ LocalStore.logDir }}</NButton
     >
@@ -106,7 +106,7 @@ function delLocalStore(key?: string) {
         />
       </NFlex>
     </NFlex>
-    <NButton text @click="open(LocalStore.dir)">{{ LocalStore.path }}</NButton>
+    <NButton text @click="openPath(LocalStore.dir)">{{ LocalStore.path }}</NButton>
     <NP>{{ $t("pages.Setting.Data.delLocalStore.warning") }}</NP>
     <NList class="data-list" hoverable clickable>
       <NListItem

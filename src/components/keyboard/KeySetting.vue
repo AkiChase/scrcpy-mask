@@ -152,8 +152,7 @@ function importKeyMappingConfig() {
     keyMappingConfig = JSON.parse(importModalInputValue.value);
   } catch (e) {
     message.error(t("pages.KeyBoard.KeySetting.importFailed"));
-    error("Failed to import key mapping config, " + e);
-    console.error(e);
+    error(`Failed to import key mapping config: ${e}`);
     return;
   }
   store.keyMappingConfigList.push(keyMappingConfig);
@@ -175,8 +174,7 @@ async function importDefaultKeyMappingConfig() {
     }
   } catch (e) {
     message.error(t("pages.KeyBoard.KeySetting.importDefaultFailed"));
-    error("Failed to import default key mapping config, " + e);
-    console.error(e);
+    error(`Failed to import default key mapping config: ${e}`);
     return;
   }
 
@@ -270,8 +268,7 @@ function exportKeyMappingConfig() {
     })
     .catch((e) => {
       message.error(t("pages.KeyBoard.KeySetting.exportFailed"));
-      error("Failed to export key mapping config, " + e);
-      console.error(e);
+      error(`Failed to export key mapping config: ${e}`);
     });
 }
 

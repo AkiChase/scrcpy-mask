@@ -41,7 +41,8 @@
       "btnRefresh": "刷新设备列表",
       "btnReStart": "重启ADB",
       "adbRestartError": "ADB 重启失败",
-      "adbUnavailable": "ADB 不可用"
+      "adbUnavailable": "ADB 不可用",
+      "adbRestartSuccess": "ADB 重启成功"
     },
     "Mask": {
       "keyconfigException": "按键方案异常，请删除此方案",

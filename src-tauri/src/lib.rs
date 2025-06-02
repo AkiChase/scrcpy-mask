@@ -7,3 +7,4 @@ pub mod resource;
 pub mod scrcpy_mask_cmd;
 pub mod share;
 pub mod socket;
+pub mod utils;

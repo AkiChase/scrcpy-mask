@@ -1,49 +1,37 @@
 use crate::{
-    adb::{Adb, Device},
+    adb::Device,
     client::ScrcpyClient,
     resource::{ResHelper, ResourceName},
     share,
     socket::connect_socket,
 };
-
 use std::{fs::read_to_string, sync::Arc};
 use tauri::{Emitter, Listener, Manager};
 use tauri_plugin_store::StoreExt;
+use which::which;
 
 #[tauri::command]
 /// get devices info list
 pub fn adb_devices() -> Result<Vec<Device>, String> {
-    match Adb::cmd_devices() {
-        Ok(devices) => Ok(devices),
-        Err(e) => Err(e.to_string()),
-    }
+    ScrcpyClient::adb_devices()
 }
 
 #[tauri::command]
-pub fn adb_restart_server() -> Result<(), String> {
-    match ScrcpyClient::adb_restart_server() {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e.to_string()),
-    }
+pub async fn adb_kill_server() -> Result<(), String> {
+    ScrcpyClient::adb_kill_server()
 }
 
 #[tauri::command]
 /// forward local port to the device port
 pub fn forward_server_port(id: String, scid: String, port: u16) -> Result<(), String> {
-    match ScrcpyClient::forward_server_port(&id, &scid, port) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e.to_string()),
-    }
+    ScrcpyClient::forward_server_port(&id, &scid, port)
 }
 
 #[tauri::command]
 /// push scrcpy-server file to the device
 pub fn push_server_file(id: String, app: tauri::AppHandle) -> Result<(), String> {
     let dir = app.path().resource_dir().unwrap().join("resource");
-    match ScrcpyClient::push_server_file(&dir, &id) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e.to_string()),
-    }
+    ScrcpyClient::push_server_file(&dir, &id)
 }
 
 // TODO fix: device connect timeout
@@ -70,7 +58,7 @@ pub fn start_scrcpy_server(
 
     // start scrcpy server
     tokio::spawn(async move {
-        ScrcpyClient::shell_start_server(&id, &scid, &version).unwrap();
+        ScrcpyClient::shell_start_server(&id, &scid, &version).await;
     });
 
     // connect to scrcpy server
@@ -120,7 +108,7 @@ pub fn start_scrcpy_server(
 }
 
 #[tauri::command]
-pub fn get_cur_client_info() -> Result<Option<share::ClientInfo>, String> {
+pub async fn get_cur_client_info() -> Result<Option<share::ClientInfo>, String> {
     let client_info = share::CLIENT_INFO.lock().unwrap();
     match &*client_info {
         Some(client) => Ok(Some(client.clone())),
@@ -129,26 +117,18 @@ pub fn get_cur_client_info() -> Result<Option<share::ClientInfo>, String> {
 }
 
 #[tauri::command]
-/// get device screen size
 pub fn get_device_screen_size(id: String) -> Result<(u32, u32), String> {
-    match ScrcpyClient::get_device_screen_size(&id) {
-        Ok(size) => Ok(size),
-        Err(e) => Err(e.to_string()),
-    }
+    ScrcpyClient::get_device_screen_size(&id)
 }
 
 #[tauri::command]
-/// connect to wireless device
-pub fn adb_connect(address: String) -> Result<String, String> {
-    match Adb::cmd_connect(&address) {
-        Ok(res) => Ok(res),
-        Err(e) => Err(e.to_string()),
-    }
+pub fn adb_connect(address: String) -> Result<(), String> {
+    ScrcpyClient::connect_device(&address)
 }
 
 #[tauri::command]
 /// load default key mapping config file
-pub fn load_default_keyconfig(app: tauri::AppHandle) -> Result<String, String> {
+pub async fn load_default_keyconfig(app: tauri::AppHandle) -> Result<String, String> {
     let dir = app.path().resource_dir().unwrap().join("resource");
     let file = ResHelper::get_file_path(&dir, ResourceName::DefaultKeyConfig);
     match read_to_string(file) {
@@ -158,10 +138,10 @@ pub fn load_default_keyconfig(app: tauri::AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn check_adb_available() -> Result<(), String> {
-    match Adb::cmd_base().output() {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e.to_string()),
+pub async fn check_adb_available() -> Result<String, String> {
+    match which(&share::ADB_PATH.lock().unwrap().clone()) {
+        Ok(p) => Ok(p.to_str().unwrap().to_string()),
+        Err(_) => Err("adb not found".to_string()),
     }
 }
 

@@ -1,11 +1,9 @@
-use anyhow::{Ok, Result};
-use std::{io::BufRead, path::PathBuf};
-
 use crate::{
     adb::{Adb, Device},
     resource::{ResHelper, ResourceName},
     share,
 };
+use std::path::PathBuf;
 
 /**
  * the client of scrcpy
@@ -23,44 +21,43 @@ impl ScrcpyClient {
         ResHelper::get_scrcpy_version()
     }
 
-    pub fn adb_devices() -> Result<Vec<Device>> {
-        Adb::cmd_devices()
+    pub fn adb_devices() -> Result<Vec<Device>, String> {
+        let mut adb = Adb::new();
+        adb.devices()
     }
 
-    pub fn adb_restart_server() -> Result<()> {
-        Adb::cmd_kill_server()?;
-        Adb::cmd_start_server()?;
-        Ok(())
+    pub fn adb_kill_server() -> Result<(), String> {
+        let mut adb = Adb::new();
+        adb.kill_server()
     }
 
-    pub fn adb_reverse_remove() -> Result<()> {
-        Adb::cmd_reverse_remove()
-    }
-
-    pub fn adb_forward_remove() -> Result<()> {
-        Adb::cmd_forward_remove()
-    }
-
-    // get the screen size of the device
-    pub fn get_device_screen_size(id: &str) -> Result<(u32, u32)> {
+    /// get device screen size
+    pub fn get_device_screen_size(id: &str) -> Result<(u32, u32), String> {
         Device::cmd_screen_size(id)
     }
 
+    /// connect to wireless device
+    pub fn connect_device(address: &str) -> Result<(), String> {
+        let mut adb = Adb::new();
+        adb.connect_device(address)
+    }
+
     /// push server file to current device
-    pub fn push_server_file(dir: &PathBuf, id: &str) -> Result<()> {
-        let info = Device::cmd_push(
+    pub fn push_server_file(dir: &PathBuf, id: &str) -> Result<(), String> {
+        let src = ResHelper::get_file_path(dir, ResourceName::ScrcpyServer);
+
+        Device::push(
             id,
-            &ResHelper::get_file_path(dir, ResourceName::ScrcpyServer).to_string_lossy(),
+            &src.to_string_lossy(),
             "/data/local/tmp/scrcpy-server.jar",
         )?;
-
-        log::info!("Successfully push server files: {}", info);
+        log::info!("Successfully push server files: {}", src.to_str().unwrap());
         Ok(())
     }
 
     /// forward the local port to the device
-    pub fn forward_server_port(id: &str, scid: &str, port: u16) -> Result<()> {
-        Device::cmd_forward(
+    pub fn forward_server_port(id: &str, scid: &str, port: u16) -> Result<(), String> {
+        Device::forward(
             id,
             &format!("tcp:{}", port),
             &format!("localabstract:scrcpy_{}", scid),
@@ -70,8 +67,8 @@ impl ScrcpyClient {
     }
 
     /// reverse the device port to the local port
-    pub fn reverse_server_port(id: &str, scid: &str, port: u16) -> Result<()> {
-        Device::cmd_reverse(
+    pub fn reverse_server_port(id: &str, scid: &str, port: u16) -> Result<(), String> {
+        Device::reverse(
             id,
             &format!("localabstract:scrcpy_{}", scid),
             &format!("tcp:{}", port),
@@ -81,8 +78,10 @@ impl ScrcpyClient {
     }
 
     /// spawn a new thread to start scrcpy server
-    pub fn shell_start_server(id: &str, scid: &str, version: &str) -> Result<()> {
-        let mut child = Device::cmd_shell(
+    pub async fn shell_start_server(id: &str, scid: &str, version: &str) {
+        log::info!("Starting scrcpy server...");
+
+        let res = Device::shell_process(
             id,
             &[
                 "CLASSPATH=/data/local/tmp/scrcpy-server.jar",
@@ -95,30 +94,20 @@ impl ScrcpyClient {
                 "video=false",
                 "audio=false",
             ],
-        )?;
-
-        log::info!("Starting scrcpy server...");
-        let out = child.stdout.take().unwrap();
-        let mut out = std::io::BufReader::new(out);
-        let mut s = String::new();
-
-        while let core::result::Result::Ok(_) = out.read_line(&mut s) {
-            // break at the end of program
-            if let core::result::Result::Ok(Some(_)) = child.try_wait() {
-                break;
-            }
-
-            let trimmed = s.trim();
-            if !trimmed.is_empty() {
-                log::info!("{}", trimmed);
-            }
-            
-            // clear string to store new line only
-            s.clear();
-        }
+        )
+        .await;
 
         *share::CLIENT_INFO.lock().unwrap() = None;
         log::info!("Scrcpy server closed");
-        Ok(())
+
+        match res {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
+                log::error!("{}", e);
+            }
+            Err(e) => {
+                log::error!("JoinError: {}", e);
+            }
+        };
     }
 }
