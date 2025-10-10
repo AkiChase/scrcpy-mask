@@ -7,6 +7,7 @@ It provides an intuitive visual interface for configuring mouse and keyboard map
 With millisecond-level response latency, Scrcpy Mask delivers a smooth and natural interaction experience, ideal for scenarios such as controlling Android devices or playing mobile games on your computer.
 
 > Since **v0.7.0**, the project has been fully migrated to the **Bevy game engine**, bringing more powerful and stable features such as **scrcpy screen mirroring**, **combo key mapping**, and a more flexible **built-in scripting system and external control mechanism**.
+>
 > ⚠️ The legacy branch based on **Rust + Tauri + Vue** is no longer maintained.
 
 Special thanks to the developers of **Scrcpy** — a powerful and high-performance open-source tool that lays the solid foundation for remote Android control.
