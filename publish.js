@@ -38,6 +38,7 @@ process.stdin.on("data", function (data) {
     }
   }
   writeFileSync(cargo_path, cargo_lines.join("\n"));
+  execSync("cargo check")
 
   console.log("git commit and tag");
   console.log(

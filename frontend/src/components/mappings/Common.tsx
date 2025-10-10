@@ -37,7 +37,7 @@ import { useAppSelector } from "../../store/store";
 import { useRefreshBackgroundImage } from "../../hooks";
 import { mappingModalDragFactory } from "./tools";
 
-const MOUSE_BUTTONS = ["M-Left", "M-Middle", "M-Right", "M-Forward", "M-Back"];
+const MOUSE_BUTTONS = ["M-Left", "M-Middle", "M-Right", "M-Back", "M-Forward"];
 
 type SettingModalProps = PropsWithChildren<{
   open: boolean;
