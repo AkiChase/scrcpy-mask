@@ -1,6 +1,6 @@
 ---
 name: Bug 报告
-about: 创建一个报告以帮助我们改进
+about: 创建一个问题报告以帮助我们改进
 title: "[Bug] XXX"
 assignees: ''
 
