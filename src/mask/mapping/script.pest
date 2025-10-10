@@ -1,0 +1,65 @@
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+NEWLINE    = _{ "\r\n" | "\n" | "\r" }
+COMMENT    = _{ "//" ~ (!LINE_END ~ ANY)* }
+LINE_END   = _{ NEWLINE | EOI }
+
+program  = { SOI ~ stmt* ~ EOI }
+stmt_end = { ";" }
+
+stmt = { (let_stmt | assign_stmt | if_stmt | while_stmt | expr_stmt) ~ stmt_end }
+
+let_stmt    = { "let" ~ ident ~ "=" ~ expr }
+assign_stmt = { ident ~ "=" ~ expr }
+expr_stmt   = { expr }
+
+if_stmt     = { "if" ~ expr ~ block ~ else_clause? }
+else_clause = _{ "else" ~ (if_stmt | block) }
+block       = { "{" ~ stmt* ~ "}" }
+
+while_stmt = { "while" ~ expr ~ block }
+
+expr = _{ logic_or }
+
+logic_or   =  { logic_and ~ (OR ~ logic_and)* }
+logic_and  =  { equality ~ (AND ~ equality)* }
+equality   =  { comparison ~ ((EQ | NEQ) ~ comparison)* }
+comparison =  { sum ~ ((LTE | LT | GTE | GT) ~ sum)* }
+sum        =  { product ~ ((PLUS | MINUS) ~ product)* }
+product    =  { prefix ~ ((STAR | SLASH | MOD) ~ prefix)* }
+prefix     =  { (PLUS | MINUS | NOT)? ~ atom }
+atom       = _{ string | number | boolean | call | ident | "(" ~ expr ~ ")" }
+
+call     = { ident ~ "(" ~ arg_list? ~ ")" }
+arg_list = { expr ~ ("," ~ expr)* }
+
+ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+// only integer
+number = @{ "-"? ~ ASCII_DIGIT+ }
+
+boolean = { "true" | "false" }
+
+string = @{ "\"" ~ inner* ~ "\"" }
+inner  =  { escape | !("\"") ~ ANY }
+// \" \\ \n \t
+escape = @{
+    "\\\""
+  | "\\\\"
+  | "\\n"
+  | "\\t"
+}
+
+OR    = { "||" }
+AND   = { "&&" }
+EQ    = { "==" }
+NEQ   = { "!=" }
+LTE   = { "<=" }
+LT    = { "<" }
+GTE   = { ">=" }
+GT    = { ">" }
+NOT   = { "!" }
+PLUS  = { "+" }
+MINUS = { "-" }
+STAR  = { "*" }
+SLASH = { "/" }
+MOD   = { "%" }

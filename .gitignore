@@ -1,0 +1,7 @@
+/target
+scrcpy-masker.code-workspace
+.DS_Store
+.vscode
+/local
+assets/web
+ffmpeg-7.1.2

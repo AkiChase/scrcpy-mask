@@ -1,0 +1,81 @@
+[package]
+name = "scrcpy-mask"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = "0.16.1"
+log = { version = "*", features = [
+    "max_level_debug",
+    "release_max_level_info",
+] }
+bevy_ineffable = "0.8.0"
+bevy-tokio-tasks = "0.16.0"
+seq-macro = "0.3"
+paste = "1.0"
+strum = "0.27"
+strum_macros = "0.27"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "net",
+    "macros",
+    "sync",
+    "time",
+] }
+reqwest = { version = "0.12", features = ["json"] }
+semver = "*"
+which = "7"
+adb_client = "*"
+rand = "0.9"
+dirs = "6.0.0"
+tracing-appender = "0.2"
+axum = { version = "0.8.4", features = ["macros", "ws"] }
+opener = "0.8.2"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "cors"] }
+futures-util = { version = "0.3", default-features = false, features = [
+    "sink",
+    "std",
+] }
+crossbeam-channel = "0.5"
+bitflags = "2.9.1"
+half = "2.6.0"
+tokio-util = "0.7.15"
+once_cell = "1.21.3"
+copypasta = "0.10.2"
+pest = "2"
+pest_derive = "2"
+rust-i18n = "3"
+ffmpeg-next = { version = "7.1.0", default-features = false, features = [
+    "format",
+    "software-scaling",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+muda = "0.17"
+
+# Enable a small amount of optimization in the dev profile.
+[profile.dev]
+opt-level = 1
+
+# Enable a large amount of optimization in the dev profile for dependencies.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+
+[package.metadata.bundle]
+name = "scrcpy-mask"
+identifier = "com.akichase.scrcpy-mask"
+icon = [
+    "icons/icon.png",
+    "icons/128x128.png",
+    "icons/128x128@2x.png",
+    "icons/icon.icns",
+    "icons/icon.ico",
+]

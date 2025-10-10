@@ -1,0 +1,297 @@
+{
+  "404": {
+    "title": "看来这个页面已经消失得无影无踪了",
+    "back": "返回主页"
+  },
+  "sider": {
+    "devices": "设备",
+    "mappings": "映射",
+    "settings": "设置"
+  },
+  "welcome": {
+    "main": "欢迎来到 Scrcpy Mask 👏🏻"
+  },
+  "devices": {
+    "adbTools": {
+      "title": "ADB工具",
+      "pair": {
+        "label": "无线配对",
+        "btn": "配对"
+      },
+      "connect": {
+        "label": "无线连接",
+        "btn": "连接"
+      }
+    },
+    "controlledDevices": {
+      "name": "名称",
+      "size": "尺寸",
+      "action": "操作",
+      "title": "受控设备",
+      "mainDevice": "主设备",
+      "actionInfo": "更多信息",
+      "actionClose": "终止控制"
+    },
+    "otherDevices": {
+      "title": "其他设备",
+      "status": "状态",
+      "actionControl": "控制设备",
+      "video": "视频"
+    },
+    "common": {
+      "refresh": "刷新设备"
+    },
+    "actions": {
+      "setDisplayPowerOn": "亮屏",
+      "setDisplayPowerOff": "息屏",
+      "volumeUp": "增大音量",
+      "volumeDown": "减小音量",
+      "back": "返回",
+      "home": "主页",
+      "appSwitch": "切换应用"
+    }
+  },
+  "mappings": {
+    "common": {
+      "bind": {
+        "autoInputPlaceholder": "双击开启按键记录",
+        "settingManual": "手动",
+        "settingAuto": "自动",
+        "settingLabel": "绑定",
+        "manualSelectPlaceholder": "选择绑定按键"
+      },
+      "pointerId": {
+        "label": "触点ID"
+      },
+      "note": {
+        "label": "备注"
+      },
+      "delete": {
+        "label": "删除"
+      },
+      "refreshBackground": "刷新背景",
+      "refreshBgFail": "刷新背景图片失败: {0}",
+      "refreshSuccess": "刷新背景图片成功",
+      "noMainDevice": "未找到受控的主设备，请在设备页面控制设备",
+      "copy": {
+        "label": "复制"
+      }
+    },
+    "singleTap": {
+      "setting": {
+        "title": "映射配置 - 点击",
+        "sync": "同步模式",
+        "duration": "持续时长"
+      },
+      "name": "点击"
+    },
+    "repeatTap": {
+      "setting": {
+        "title": "映射配置 - 连点",
+        "duration": "持续时长",
+        "interval": "重复间隔"
+      },
+      "name": "连点"
+    },
+    "multipleTap": {
+      "setting": {
+        "title": "映射配置 - 多点点击",
+        "keepLastOne": "至少保留一个操作！",
+        "wait": "等待时长",
+        "duration": "持续时长",
+        "delete": "删除",
+        "operations": "操作序列",
+        "operationsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
+        "edit": "编辑",
+        "back": "返回"
+      },
+      "name": "多点点击"
+    },
+    "swipe": {
+      "setting": {
+        "delete": "删除",
+        "keepLastOne": "至少保留一个操作！",
+        "title": "映射配置 - 滑动",
+        "positions": "坐标序列",
+        "positonsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
+        "edit": "编辑",
+        "back": "返回"
+      },
+      "name": "滑动"
+    },
+    "directionPad": {
+      "setting": {
+        "title": "映射配置 - 方向轮盘",
+        "joyStick": "操纵杆",
+        "button": "按键",
+        "xAxis": "X轴",
+        "yAxis": "Y轴",
+        "up": "上",
+        "down": "下",
+        "left": "左",
+        "right": "右",
+        "maxOffset": "最大偏移量",
+        "initDuration": "首次滑动时长"
+      },
+      "name": "方向轮盘"
+    },
+    "mouseCastSpell": {
+      "setting": {
+        "title": "映射配置 - 鼠标施法",
+        "center": "施法中心",
+        "scaleFactor": "缩放因子",
+        "castRadius": "施法范围",
+        "dragRadius": "拖动范围",
+        "releaseMode": {
+          "label": "释放时机",
+          "onPress": "按下",
+          "onRelease": "抬起",
+          "onSecondPress": "二次按下"
+        },
+        "castNoDirection": "无方向施法",
+        "editLabel": "高级编辑",
+        "edit": "编辑",
+        "editHelp": "使用鼠标左键拖动，鼠标右键进行编辑",
+        "setCenter": "中心",
+        "back": "返回"
+      },
+      "name": "鼠标施法"
+    },
+    "padCastSpell": {
+      "setting": {
+        "padBindLabel": "轮盘绑定",
+        "joyStick": "操纵杆",
+        "button": "按键",
+        "title": "映射配置 - 方向轮盘施法",
+        "xAxis": "X轴",
+        "yAxis": "Y轴",
+        "up": "上",
+        "down": "下",
+        "left": "左",
+        "right": "右",
+        "dragRadius": "拖动范围",
+        "block": "屏蔽方向轮盘",
+        "releaseMode": {
+          "label": "释放时机",
+          "onRelease": "抬起",
+          "onSecondPress": "二次按下"
+        }
+      },
+      "name": "方向轮盘施法"
+    },
+    "cancelCast": {
+      "setting": {
+        "title": "映射配置 - 取消施法"
+      },
+      "name": "取消施法"
+    },
+    "observation": {
+      "setting": {
+        "title": "映射配置 - 观察视角",
+        "sensitivity": "灵敏度"
+      },
+      "name": "观察视角"
+    },
+    "fps": {
+      "setting": {
+        "title": "映射配置 - FPS模式",
+        "sensitivity": "灵敏度"
+      },
+      "name": "FPS模式"
+    },
+    "fire": {
+      "setting": {
+        "title": "映射配置 - 开火",
+        "sensitivity": "灵敏度"
+      },
+      "name": "开火"
+    },
+    "rawInput": {
+      "setting": {
+        "title": "映射配置 - 直控模式"
+      },
+      "name": "直控模式"
+    },
+    "home": {
+      "emptyBind": "存在未设置快捷键的按键！",
+      "save": "保存",
+      "restore": "还原",
+      "activate": "启用",
+      "refresh": "刷新",
+      "manage": "管理",
+      "file": "文件",
+      "create": "新建",
+      "edit": "编辑",
+      "action": "操作",
+      "delete": "删除",
+      "duplicate": "复制",
+      "manager": "配置管理",
+      "active": "启用",
+      "migration": "迁移到当前主设备尺寸",
+      "editing": "编辑",
+      "rename": "重命名",
+      "createTitle": "创建新配置",
+      "confirmYes": "是",
+      "confirmNo": "否",
+      "renameTitle": "重命名配置",
+      "fileInputPlaceholder": "请输入新配置名称",
+      "deleteTitle": "删除配置",
+      "deletePrompt": "确定要删除吗？",
+      "migrationTitle": "迁移配置",
+      "size": "尺寸",
+      "differentName": "新配置名不能与当前文件名相同！",
+      "duplicateTitle": "复制配置"
+    },
+    "script": {
+      "setting": {
+        "title": "映射配置 - 脚本",
+        "interval": "按住触发重复间隔",
+        "pressed_script": "按下触发脚本",
+        "pressed_script_placeholder": "按下快捷键时执行一次的脚本",
+        "run_script": "测试脚本运行",
+        "held_script": "按住触发脚本",
+        "held_script_placeholder": "按住快捷键时重复执行的脚本",
+        "released_script": "抬起触发脚本",
+        "released_script_placeholder": "抬起快捷键时执行一次的脚本",
+        "result": "运行结果"
+      },
+      "name": "脚本"
+    }
+  },
+  "settings": {
+    "title": {
+      "header": "设置",
+      "basic": "基本",
+      "mask": "蒙版",
+      "video": "视频",
+      "advance": "高级"
+    },
+    "language": "语言",
+    "webPort": "Web 端口",
+    "controllerPort": "控制服务端口",
+    "adbPath": "Adb 路径",
+    "horizontalMaskWidth": "横屏蒙版宽度",
+    "horizontalMaskPosition": "横屏蒙版位置",
+    "verticalMaskHeight": "竖屏蒙版高度",
+    "verticalMaskPosition": "竖屏蒙版位置",
+    "mappingLabelOpacity": "映射标签不透明度",
+    "clipboardSync": "剪切板同步",
+    "videoCodec": "视频编码",
+    "videoBitRate": "视频码率",
+    "videoMaxSize": "视频最大尺寸",
+    "zeroUnlimitedTip": "设为 0 表示无限制",
+    "videoMaxFps": "视频最大FPS",
+    "alwaysOnTop": "蒙版置顶",
+    "openDataPath": "打开数据目录",
+    "about": {
+      "title": "关于",
+      "intro": "基于 Rust、Bevy 与 React 构建的 Scrcpy 客户端，让你像使用游戏模拟器一样控制安卓设备",
+      "currentVersion": "当前版本",
+      "latestVersion": "最新版本",
+      "checkUpdate": "检查更新",
+      "showUpdateDialog": "更新详情",
+      "download": "下载",
+      "cancel": "取消"
+    }
+  }
+}

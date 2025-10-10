@@ -1,0 +1,297 @@
+{
+  "404": {
+    "title": "Looks like the page has vanished into thin air.",
+    "back": "Back Home"
+  },
+  "sider": {
+    "devices": "Devices",
+    "mappings": "Mappings",
+    "settings": "Settings"
+  },
+  "welcome": {
+    "main": "Welcome to Scrcpy Mask 👏🏻"
+  },
+  "devices": {
+    "adbTools": {
+      "connect": {
+        "label": "Wireless connection",
+        "btn": "Connect"
+      },
+      "title": "ADB Tools",
+      "pair": {
+        "label": "Wireless pairing",
+        "btn": "Pair"
+      }
+    },
+    "controlledDevices": {
+      "name": "Name",
+      "action": "Action",
+      "size": "Size",
+      "title": "Controlled Devices",
+      "mainDevice": "main",
+      "actionInfo": "More information",
+      "actionClose": "Stop control"
+    },
+    "otherDevices": {
+      "title": "Other Devices",
+      "status": "Status",
+      "actionControl": "Control device",
+      "video": "Video"
+    },
+    "common": {
+      "refresh": "Refresh devices"
+    },
+    "actions": {
+      "setDisplayPowerOn": "Screen power on",
+      "setDisplayPowerOff": "Screen power off",
+      "volumeUp": "Volume up",
+      "volumeDown": "Volume down",
+      "back": "Back",
+      "home": "Home",
+      "appSwitch": "App switch"
+    }
+  },
+  "mappings": {
+    "common": {
+      "bind": {
+        "autoInputPlaceholder": "Double click to enable button recording",
+        "settingLabel": "Bind",
+        "settingManual": "Manual",
+        "settingAuto": "Auto",
+        "manualSelectPlaceholder": "Select Bindings"
+      },
+      "pointerId": {
+        "label": "PointerID"
+      },
+      "note": {
+        "label": "Note"
+      },
+      "delete": {
+        "label": "Delete"
+      },
+      "refreshBackground": "Refresh background",
+      "refreshBgFail": "Failed to refresh background image: {0}",
+      "refreshSuccess": "Refresh background image successfully",
+      "noMainDevice": "Main controlled device not found, please control the device on the devices page",
+      "copy": {
+        "label": "Duplicate"
+      }
+    },
+    "singleTap": {
+      "setting": {
+        "title": "Mapping Configuration - SingleTap",
+        "sync": "Sync",
+        "duration": "Duration"
+      },
+      "name": "SingleTap"
+    },
+    "repeatTap": {
+      "setting": {
+        "title": "Mapping Configuration - RepeatTap",
+        "duration": "Duration",
+        "interval": "Interval"
+      },
+      "name": "RepeatTap"
+    },
+    "multipleTap": {
+      "setting": {
+        "title": "Mapping Configuration - MultipleTap",
+        "delete": "Delete",
+        "duration": "Duration",
+        "keepLastOne": "Keep at least one operation!",
+        "wait": "Wait",
+        "edit": "Edit",
+        "operations": "Operation sequence",
+        "operationsHelp": "Drag with the left mouse button and add or edit with the right mouse button",
+        "back": "Back"
+      },
+      "name": "MultipleTap"
+    },
+    "swipe": {
+      "setting": {
+        "keepLastOne": "Keep at least one operation!",
+        "title": "Mapping Configuration - Swipe",
+        "positonsHelp": "Drag with the left mouse button and add or edit with the right mouse button",
+        "edit": "Edit",
+        "delete": "Delete",
+        "positions": "Position sequence",
+        "back": "Back"
+      },
+      "name": "Swipe"
+    },
+    "directionPad": {
+      "setting": {
+        "title": "Mapping Configuration - DirectionPad",
+        "joyStick": "JoyStick",
+        "button": "Button",
+        "xAxis": "X-axis",
+        "yAxis": "Y-axis",
+        "down": "Down",
+        "initDuration": "Initial sliding duration",
+        "left": "Left",
+        "maxOffset": "Maximum offset",
+        "right": "Right",
+        "up": "Up"
+      },
+      "name": "DirectionPad"
+    },
+    "mouseCastSpell": {
+      "setting": {
+        "title": "Mapping Configuration - MouseCastSpell",
+        "center": "Cast center",
+        "scaleFactor": "Scale factors",
+        "castRadius": "Cast range",
+        "dragRadius": "Drag range",
+        "releaseMode": {
+          "label": "Release timing",
+          "onRelease": "OnRelease",
+          "onPress": "OnPress",
+          "onSecondPress": "onSecondPress"
+        },
+        "castNoDirection": "Non-directional cast",
+        "editLabel": "Advanced editing",
+        "edit": "Edit",
+        "editHelp": "Drag with the left mouse button and edit with the right mouse button",
+        "setCenter": "Center",
+        "back": "Back"
+      },
+      "name": "MouseCastSpell"
+    },
+    "padCastSpell": {
+      "setting": {
+        "button": "Button",
+        "down": "Down",
+        "joyStick": "JoyStick",
+        "left": "Left",
+        "padBindLabel": "Pad bind",
+        "right": "Right",
+        "title": "Mapping Configuration - PadCastSpell",
+        "up": "Up",
+        "xAxis": "X-axis",
+        "yAxis": "Y-axis",
+        "dragRadius": "Drag range",
+        "block": "Block direction pad",
+        "releaseMode": {
+          "label": "Release timing",
+          "onRelease": "OnRelease",
+          "onSecondPress": "OnSecondPress"
+        }
+      },
+      "name": "PadCastSpell"
+    },
+    "cancelCast": {
+      "setting": {
+        "title": "Mapping Configuration - CancelCast"
+      },
+      "name": "CancelCast"
+    },
+    "fire": {
+      "setting": {
+        "sensitivity": "Sensitivity",
+        "title": "Mapping Configuration - Fire"
+      },
+      "name": "Fire"
+    },
+    "fps": {
+      "setting": {
+        "sensitivity": "Sensitivity",
+        "title": "Mapping Configuration - FPS"
+      },
+      "name": "Fps"
+    },
+    "observation": {
+      "setting": {
+        "sensitivity": "Sensitivity",
+        "title": "Mapping Configuration - Observation"
+      },
+      "name": "Observation"
+    },
+    "rawInput": {
+      "setting": {
+        "title": "Mapping Configuration - RawInput"
+      },
+      "name": "RawInput"
+    },
+    "home": {
+      "emptyBind": "There are buttons without a bind configuration!",
+      "activate": "Activate",
+      "manage": "Manage",
+      "refresh": "Refresh",
+      "restore": "Restore",
+      "save": "Save",
+      "action": "Action",
+      "active": "Active",
+      "create": "Create",
+      "delete": "Delete",
+      "duplicate": "Duplicate",
+      "edit": "Edit",
+      "file": "File",
+      "manager": "Config manage",
+      "migration": "Migration to current main device size",
+      "editing": "Editing",
+      "rename": "Rename",
+      "confirmNo": "No",
+      "confirmYes": "Yes",
+      "createTitle": "Create a new config",
+      "fileInputPlaceholder": "Please enter the new config name",
+      "renameTitle": "Rename the config",
+      "deletePrompt": "Are you sure you want to delete this?",
+      "deleteTitle": "Delete the config",
+      "migrationTitle": "Migrate the config",
+      "size": "Size",
+      "differentName": "The new config name cannot be the same as the current config!",
+      "duplicateTitle": "Duplicate the config"
+    },
+    "script": {
+      "setting": {
+        "title": "Mapping Configuration - Script",
+        "pressed_script": "Pressed script",
+        "pressed_script_placeholder": "Executed once when the hotkey is pressed",
+        "interval": "Held repeat interval",
+        "run_script": "Test script execution",
+        "held_script": "Held script",
+        "held_script_placeholder": "Repeatedly executed while the hotkey is held down",
+        "released_script": "Released Script",
+        "released_script_placeholder": "Executed once when the hotkey is released",
+        "result": "Running result"
+      },
+      "name": "Script"
+    }
+  },
+  "settings": {
+    "title": {
+      "header": "Settings",
+      "basic": "Basic",
+      "mask": "Mask",
+      "video": "Video",
+      "advance": "Advance"
+    },
+    "language": "Language",
+    "webPort": "Web port",
+    "controllerPort": "Controller port",
+    "adbPath": "Adb path",
+    "horizontalMaskWidth": "Horizontal mask width",
+    "horizontalMaskPosition": "Horizontal mask position",
+    "verticalMaskHeight": "Vertical mask height",
+    "verticalMaskPosition": "Vertical mask position",
+    "mappingLabelOpacity": "Mapping label opacity",
+    "clipboardSync": "Clipboard sync",
+    "videoCodec": "Video codec",
+    "videoBitRate": "Video bit rate",
+    "videoMaxSize": "Video max size",
+    "zeroUnlimitedTip": "Set to 0 for unlimited",
+    "videoMaxFps": "Video max FPS",
+    "alwaysOnTop": "Mask always on top",
+    "openDataPath": "Open data path",
+    "about": {
+      "title": "About",
+      "intro": "A Scrcpy client built with Rust, Bevy, and React that lets you control your Android device as if you were using an game emulator.",
+      "currentVersion": "Current version",
+      "latestVersion": "Latest version",
+      "checkUpdate": "Check update",
+      "showUpdateDialog": "Update details",
+      "download": "Download",
+      "cancel": "Cancel"
+    }
+  }
+}
