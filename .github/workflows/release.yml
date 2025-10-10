@@ -10,8 +10,36 @@ permissions:
   contents: write
 
 jobs:
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout codes
+        uses: actions/checkout@v5.0.0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+        with:
+          version: latest
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Build frontend
+        shell: bash
+        run: |
+          cd frontend
+          pnpm install
+          pnpm build
+      - name: Upload frontend build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-web-assets
+          path: assets/web
+
   windows:
     runs-on: ${{ matrix.os }}
+    needs: build-frontend
     strategy:
       matrix:
         os: [windows-latest]
@@ -22,6 +50,12 @@ jobs:
     steps:
       - name: Checkout codes
         uses: actions/checkout@v5.0.0
+
+      - name: Download frontend build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-web-assets
+          path: assets/web
 
       - name: Setup msys2
         uses: msys2/setup-msys2@v2
@@ -62,23 +96,7 @@ jobs:
               
           make -j$(nproc)
           make install
-    
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
-        with:
-          version: latest
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - name: Build frontend
-        shell: pwsh
-        run: |
-          cd frontend
-          pnpm install
-          pnpm build
-      
+
       - name: Cache Rust dependencies
         uses: actions/cache@v4
         with:
@@ -132,6 +150,7 @@ jobs:
 
   macos:
     runs-on: ${{ matrix.os }}
+    needs: build-frontend
     strategy:
       matrix:
         os: [macos-latest]
@@ -142,6 +161,12 @@ jobs:
     steps:
       - name: Checkout codes
         uses: actions/checkout@v5.0.0
+
+      - name: Download frontend build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-web-assets
+          path: assets/web
 
       - name: Cache FFmpeg build
         id: ffmpeg-cache
@@ -170,22 +195,6 @@ jobs:
               
           make -j$(sysctl -n hw.ncpu)
           make install
-    
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
-        with:
-          version: latest
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - name: Build frontend
-        shell: bash
-        run: |
-          cd frontend
-          pnpm install
-          pnpm build
       
       - name: Cache Rust dependencies
         uses: actions/cache@v4
@@ -265,6 +274,7 @@ jobs:
 
   linux:
     runs-on: ${{ matrix.os }}
+    needs: build-frontend
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -276,6 +286,12 @@ jobs:
       - name: Checkout codes
         uses: actions/checkout@v5.0.0
 
+      - name: Download frontend build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-web-assets
+          path: assets/web
+          
       - name: Cache FFmpeg build
         id: ffmpeg-cache
         uses: actions/cache@v4
@@ -329,22 +345,6 @@ jobs:
               
           make -j$(nproc)
           make install
-    
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
-        with:
-          version: latest
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - name: Build frontend
-        shell: bash
-        run: |
-          cd frontend
-          pnpm install
-          pnpm build
       
       - name: Cache Rust dependencies
         uses: actions/cache@v4
