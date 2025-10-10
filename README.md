@@ -1,6 +1,6 @@
 # Scrcpy Mask
 
-[中文](./README.md)
+[中文](./README-zh.md)
 
 **Scrcpy Mask** is a cross-platform desktop client built with **Rust + Bevy + React**, designed for efficient control of Android devices.
 It provides an intuitive visual interface for configuring mouse and keyboard mappings, enabling multi-touch operations similar to Android emulators.

@@ -105,11 +105,11 @@ const localConfigSlice = createSlice({
     },
     setverticalMaskHeight: (state, action: PayloadAction<number>) => {
       state.verticalMaskHeight = action.payload;
-      updateLocalConfig("vertical_screen_height", action.payload, 1000);
+      updateLocalConfig("vertical_mask_height", action.payload, 1000);
     },
     sethorizontalMaskWidth: (state, action: PayloadAction<number>) => {
       state.horizontalMaskWidth = action.payload;
-      updateLocalConfig("horizontal_screen_width", action.payload, 1000);
+      updateLocalConfig("horizontal_mask_width", action.payload, 1000);
     },
     setVerticalPosition: (state, action: PayloadAction<[number, number]>) => {
       state.verticalPosition = action.payload;
