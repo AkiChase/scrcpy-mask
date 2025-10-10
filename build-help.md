@@ -26,9 +26,10 @@ Since the project relies on FFmpeg, some additional steps are required to ensure
 
 ``` bash
 # cd path/to/scrcpy-mask
-wget https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.bz2
-tar -xjf ffmpeg-7.1.2.tar.bz2
-rm ffmpeg-7.1.2.tar.bz2
+curl -L -o FFmpeg-n7.1.2.tar.gz https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n7.1.2.tar.gz
+tar -xzf FFmpeg-n7.1.2.tar.gz
+rm FFmpeg-n7.1.2.tar.gz
+mv FFmpeg-n7.1.2 ffmpeg-7.1.2
 cd ffmpeg-7.1.2
 ```
 
