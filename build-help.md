@@ -45,7 +45,7 @@ make clean 2>/dev/null || true
 OS="windows-x64"
 ./configure --prefix=./ffmpeg-$OS \
     --disable-all --disable-doc --disable-iconv \
-    --disable-pthreads --enable-w32threads --extra-ldflags="-static -static-libgcc -static-libstdc++" \
+    --extra-ldflags="-static -static-libgcc -static-libstdc++" \
     --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
     --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
     --enable-gpl --disable-static --enable-shared
