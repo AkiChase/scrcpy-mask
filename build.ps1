@@ -1,7 +1,7 @@
 Write-Host "Building for Windows x64"
 $ProjectName = "scrcpy-mask"
-$Prefix = "ffmpeg-windows"
 $OS = "windows-x64"
+$Prefix = "ffmpeg-$OS"
 $FFMpeg = "ffmpeg-7.1.2"
 
 $ScriptDir = Get-Location

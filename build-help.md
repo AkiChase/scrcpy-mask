@@ -35,36 +35,81 @@ cd ffmpeg-7.1.2
 
 ## Build FFMpeg
 
-```bash
-OS="windows"
-# OS="macos"
-# OS="linux"
+### Windows
 
+Please use [MYSYS2-MINGW64](https://www.msys2.org/docs/environments/) for compilation.
+
+```bash
+make clean 2>/dev/null || true
+
+OS="windows-x64"
 ./configure --prefix=./ffmpeg-$OS \
-    --disable-avdevice --disable-postproc \
+    --disable-all --disable-doc --disable-iconv --disable-pthreads \
+    --enable-w32threads --extra-ldflags="-static -static-libgcc -static-libstdc++" \
     --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
-    --enable-swscale --enable-filter=scale \
+    --enable-swscale \
     --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
     --enable-gpl --disable-static --enable-shared
 
 make -j$(nproc)
-# For macOS, use the following command
-# make -j$(sysctl -n hw.ncpu)
-
+rm -rf ./ffmpeg-$OS
 make install
+
+rm -rf ../assets/lib/$OS
+mkdir -p ../assets/lib/$OS
+cp ./ffmpeg-$OS/bin/*.dll ../assets/lib/$OS/
 ```
 
-## Copy Dynamic Library
-
-After a successful compilation, copy the corresponding dynamic link libraries to the appropriate directory under `/assets/lib/<system>` (refer to the directory structure).
-
-For example, if you're targeting Windows, copy the `.dll` files; for macOS, copy the `.dylib` files; and for Linux, copy the `.so` files. This ensures that the system can find and link to the required libraries at runtime.
+### macOS
 
 ```bash
-# Example for copying dynamic libraries (adjust paths as necessary)
-cp /path/to/compiled/libs/*.so.* /assets/lib/linux-x64/
-cp /path/to/compiled/libs/*.dylib /assets/lib/darwin-arm64/
-cp /path/to/compiled/libs/*.dll /assets/lib/windows-x64/
+make clean 2>/dev/null || true
+OS="macos-arm64"
+./configure --prefix=./ffmpeg-$OS \
+    --disable-all --disable-doc --disable-iconv --disable-pthreads \
+    --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
+    --enable-swscale \
+    --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
+    --enable-gpl --disable-static --enable-shared
+
+make -j$(sysctl -n hw.ncpu)
+rm -rf ./ffmpeg-$OS
+make install
+
+rm -rf ../assets/lib/$OS
+mkdir -p ../assets/lib/$OS
+cp ./ffmpeg-$OS/lib/libavcodec.61.dylib \
+   ./ffmpeg-$OS/lib/libavformat.61.dylib \
+   ./ffmpeg-$OS/lib/libavutil.59.dylib \
+   ./ffmpeg-$OS/lib/libswresample.5.dylib \
+   ./ffmpeg-$OS/lib/libswscale.8.dylib \
+   ../assets/lib/$OS/
+```
+
+### Linux
+
+```bash
+make clean 2>/dev/null || true
+OS="linux-x64"
+./configure --prefix=./ffmpeg-$OS \
+    --disable-all --disable-doc --disable-iconv --disable-pthreads \
+    --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
+    --enable-swscale \
+    --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
+    --enable-gpl --disable-static --enable-shared
+
+make -j$(nproc)
+rm -rf ./ffmpeg-$OS
+make install
+
+rm -rf ../assets/lib/$OS
+mkdir -p ../assets/lib/$OS
+cp ./ffmpeg-$OS/lib/libavcodec.so.61 \
+   ./ffmpeg-$OS/lib/libavformat.so.61 \
+   ./ffmpeg-$OS/lib/libavutil.so.59 \
+   ./ffmpeg-$OS/lib/libswresample.so.5 \
+   ./ffmpeg-$OS/lib/libswscale.so.8 \
+   ../assets/lib/$OS/
 ```
 
 ### Note:
