@@ -5,3 +5,4 @@ scrcpy-mask.code-workspace
 /local
 assets/web
 ffmpeg-7.1.2
+assets/lib

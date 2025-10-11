@@ -35,36 +35,56 @@ cd ffmpeg-7.1.2
 
 ## Build FFMpeg
 
-```bash
-OS="windows"
-# OS="macos"
-# OS="linux"
+### Windows
 
+Please use [MYSYS2](https://www.msys2.org/docs/environments/) and [MSVC](https://learn.microsoft.com/zh-cn/cpp/windows/latest-supported-vc-redist?view=msvc-170) for compilation.
+
+```bash
+make clean 2>/dev/null || true
+
+OS="windows-x64"
 ./configure --prefix=./ffmpeg-$OS \
-    --disable-avdevice --disable-postproc \
+    --disable-all --disable-doc --disable-iconv \
+    --toolchain=msvc \
     --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
-    --enable-swscale --enable-filter=scale \
-    --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
-    --enable-gpl --disable-static --enable-shared
+    --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
+    --enable-gpl --enable-static --disable-shared
 
 make -j$(nproc)
-# For macOS, use the following command
-# make -j$(sysctl -n hw.ncpu)
-
+rm -rf ./ffmpeg-$OS
 make install
 ```
 
-## Copy Dynamic Library
-
-After a successful compilation, copy the corresponding dynamic link libraries to the appropriate directory under `/assets/lib/<system>` (refer to the directory structure).
-
-For example, if you're targeting Windows, copy the `.dll` files; for macOS, copy the `.dylib` files; and for Linux, copy the `.so` files. This ensures that the system can find and link to the required libraries at runtime.
+### macOS
 
 ```bash
-# Example for copying dynamic libraries (adjust paths as necessary)
-cp /path/to/compiled/libs/*.so.* /assets/lib/linux-x64/
-cp /path/to/compiled/libs/*.dylib /assets/lib/darwin-arm64/
-cp /path/to/compiled/libs/*.dll /assets/lib/windows-x64/
+make clean 2>/dev/null || true
+OS="macos-arm64"
+./configure --prefix=./ffmpeg-$OS \
+    --disable-all --disable-doc --disable-iconv \
+    --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
+    --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
+    --enable-gpl --enable-static --disable-shared
+
+make -j$(sysctl -n hw.ncpu)
+rm -rf ./ffmpeg-$OS
+make install
+```
+
+### Linux
+
+```bash
+make clean 2>/dev/null || true
+OS="linux-x64"
+./configure --prefix=./ffmpeg-$OS \
+    --disable-all --disable-doc --disable-iconv \
+    --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
+    --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
+    --enable-gpl --enable-static --disable-shared
+
+make -j$(nproc)
+rm -rf ./ffmpeg-$OS
+make install
 ```
 
 ### Note:
@@ -77,13 +97,10 @@ cp /path/to/compiled/libs/*.dll /assets/lib/windows-x64/
 ### Example for Windows
 
 ```pwsh
-$PREFIX = "ffmpeg-windows"
-$DYLIB = "windows-x64"
+$PREFIX = "ffmpeg-windows-x64"
 $SCRIPT_DIR = Get-Location
-
 $env:PKG_CONFIG_PATH = "$SCRIPT_DIR\ffmpeg-7.1.2\$PREFIX\lib\pkgconfig"
 $env:FFMPEG_DIR = "$SCRIPT_DIR\ffmpeg-7.1.2\$PREFIX"
-$env:PATH = "$SCRIPT_DIR\assets\lib\$DYLIB;$env:PATH"
 
 cargo run
 ```
@@ -91,13 +108,10 @@ cargo run
 ### Example for macOS
 
 ```bash
-PREFIX="ffmpeg-macos"
-DYLIB="macos-arm64"
+PREFIX="ffmpeg-macos-arm64"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 export PKG_CONFIG_PATH="$SCRIPT_DIR/ffmpeg-7.1.2/$PREFIX/lib/pkgconfig"
 export FFMPEG_DIR="$SCRIPT_DIR/ffmpeg-7.1.2/$PREFIX"
-export DYLD_LIBRARY_PATH="$SCRIPT_DIR/assets/lib/$DYLIB:$DYLD_LIBRARY_PATH"
 
 cargo run
 ```
@@ -105,13 +119,10 @@ cargo run
 ### Example for Linux
 
 ```bash
-PREFIX="ffmpeg-linux"
-DYLIB="linux-x64"
+PREFIX="ffmpeg-linux-x64"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 export PKG_CONFIG_PATH="$SCRIPT_DIR/ffmpeg-7.1.2/$PREFIX/lib/pkgconfig"
 export FFMPEG_DIR="$SCRIPT_DIR/ffmpeg-7.1.2/$PREFIX"
-export LD_LIBRARY_PATH="$SCRIPT_DIR/assets/lib/$DYLIB:$LD_LIBRARY_PATH"
 
 cargo run
 ```
@@ -123,9 +134,9 @@ To ensure that the `rust-analyzer` extension in VS Code can correctly locate the
 
 ```json
 "rust-analyzer.cargo.extraEnv": {
-    "PKG_CONFIG_PATH": "/path/to/scrcpy-mask/ffmpeg-7.1.2/ffmpeg-macos/lib/pkgconfig",
-    "FFMPEG_DIR": "/path/to/scrcpy-mask/ffmpeg-7.1.2/ffmpeg-macos"
+    "PKG_CONFIG_PATH": "/path/to/scrcpy-mask/ffmpeg-7.1.2/ffmpeg-macos-arm64/lib/pkgconfig",
+    "FFMPEG_DIR": "/path/to/scrcpy-mask/ffmpeg-7.1.2/ffmpeg-macos-arm64"
 }
 ```
 
-Make sure to replace `/path/to/scrcpy-mask/` with the actual path to your local FFmpeg build directory. This configuration sets the necessary environment variables so that Cargo and rust-analyzer can find the FFmpeg libraries and headers during build and analysis.
+Make sure to replace `/path/to/scrcpy-mask/` and `ffmpeg-macos-arm64` with the actual path to your local FFmpeg build directory. This configuration sets the necessary environment variables so that Cargo and rust-analyzer can find the FFmpeg libraries and headers during build and analysis.
