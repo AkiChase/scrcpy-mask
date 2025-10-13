@@ -1,7 +1,7 @@
 Write-Host "Building for Windows x64"
 $ProjectName = "scrcpy-mask"
-$Prefix = "ffmpeg-windows"
 $OS = "windows-x64"
+$Prefix = "ffmpeg-$OS"
 $FFMpeg = "ffmpeg-7.1.2"
 
 $ScriptDir = Get-Location
@@ -34,25 +34,8 @@ if ($args[0] -eq "run") {
     $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
     $AssetsDir = "$ScriptDir\assets"
     
-    $TmpDir = "$ScriptDir\target\tmp"
-    $TmpAssetsDir = "$TmpDir\assets"
-    if (Test-Path $TmpDir) { Remove-Item -Recurse -Force $TmpDir }
-    New-Item -ItemType Directory -Path $TmpAssetsDir | Out-Null
-
-    Get-ChildItem -Path $AssetsDir -Exclude 'lib' | ForEach-Object {
-        Copy-Item -Path $_.FullName -Destination $TmpAssetsDir -Recurse
-    }
-
-    $LibOSFolder = "$AssetsDir\lib\$OS"
-    if (-not (Test-Path $LibOSFolder)) {
-        Write-Error "Required folder not found: $LibOSFolder"
-        exit 1
-    }
-
-    $LibOSItems = Get-ChildItem -Path $LibOSFolder
-    $PathsToCompress = @($BuildTarget, $TmpAssetsDir) + $LibOSItems.FullName
+    $PathsToCompress = @($BuildTarget, $AssetsDir)
     Compress-Archive -Path $PathsToCompress -DestinationPath $OutputZip -Force
-    Remove-Item -Recurse -Force $TmpDir
 
     Write-Host "Package created: $OutputZip"
 } else {

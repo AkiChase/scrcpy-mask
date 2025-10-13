@@ -45,7 +45,7 @@ jobs:
         os: [windows-latest]
         include:
           - os: windows-latest
-            platform: windows
+            platform: windows-x64
             
     steps:
       - name: Checkout codes
@@ -57,24 +57,26 @@ jobs:
           name: frontend-web-assets
           path: assets/web
 
-      - name: Setup msys2
+      - name: Set up msvc
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Set up msys
         uses: msys2/setup-msys2@v2
         with:
           update: true
-          msystem: UCRT64
+          msystem: MINGW64
           install: >-
             make
             diffutils
-            gcc
             yasm
             pkg-config
+          path-type: inherit
 
       - name: Cache FFmpeg build
         id: ffmpeg-cache
         uses: actions/cache@v4
         with:
           path: ffmpeg-7.1.2/ffmpeg-${{ matrix.platform }}
-          key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.2
+          key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.4
 
       - name: Download and build FFmpeg (if not cached)
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
@@ -89,29 +91,26 @@ jobs:
           cd ffmpeg-7.1.2
 
           ./configure --prefix=./ffmpeg-$OS \
-              --disable-avdevice --disable-postproc \
+              --disable-all --disable-doc --disable-iconv \
+              --toolchain=msvc \
               --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
-              --enable-swscale --enable-filter=scale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
-              --enable-gpl --disable-static --enable-shared
-              
+              --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
+              --enable-gpl --enable-static --disable-shared
+
           make -j$(nproc)
           make install
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: cargo-${{ matrix.platform }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ matrix.platform }}
 
       - name: Build scrcpy-mask
         shell: pwsh
         run: |
           $ScriptDir = "${{ github.workspace }}"
-          $Prefix = "ffmpeg-${{ matrix.platform }}"
-          $OS = "windows-x64"
+          $OS = "${{ matrix.platform }}"
+          $Prefix = "ffmpeg-$OS"
           $ProjectName = "scrcpy-mask"
           $FFMpeg = "ffmpeg-7.1.2"
           
@@ -124,19 +123,12 @@ jobs:
           $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
           $AssetsDir = "$ScriptDir\assets"
           
-          $TmpDir = "$ScriptDir\tmp"
-          $TmpAssetsDir = "$TmpDir\assets"
-          if (Test-Path $TmpDir) { Remove-Item -Recurse -Force $TmpDir }
-          New-Item -ItemType Directory -Path $TmpAssetsDir | Out-Null
+          Write-Host "Build successful, creating zip package..."
+          $OutputZip = "$ScriptDir\target\release\$ProjectName-$OS.zip"
+          $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
+          $AssetsDir = "$ScriptDir\assets"
           
-          Get-ChildItem -Path $AssetsDir -Exclude 'lib' | ForEach-Object {
-              Copy-Item -Path $_.FullName -Destination $TmpAssetsDir -Recurse
-          }
-          
-          $LibOSFolder = "$AssetsDir\lib\$OS"
-          
-          $LibOSItems = Get-ChildItem -Path $LibOSFolder
-          $PathsToCompress = @($BuildTarget, $TmpAssetsDir) + $LibOSItems.FullName
+          $PathsToCompress = @($BuildTarget, $AssetsDir)
           Compress-Archive -Path $PathsToCompress -DestinationPath $OutputZip -Force
 
           "OUTPUT_ZIP=$OutputZip"   | Out-File -FilePath $env:GITHUB_ENV -Append
@@ -156,7 +148,7 @@ jobs:
         os: [macos-latest]
         include:
           - os: macos-latest
-            platform: macos
+            platform: macos-arm64
             
     steps:
       - name: Checkout codes
@@ -173,7 +165,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ffmpeg-7.1.2/ffmpeg-${{ matrix.platform }}
-          key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.2
+          key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.4
 
       - name: Download and build FFmpeg (if not cached)
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
@@ -188,30 +180,26 @@ jobs:
           cd ffmpeg-7.1.2
 
           ./configure --prefix=./ffmpeg-$OS \
-              --disable-avdevice --disable-postproc \
+              --disable-all --disable-doc --disable-iconv \
               --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
-              --enable-swscale --enable-filter=scale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
-              --enable-gpl --disable-static --enable-shared
+              --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
+              --enable-gpl --enable-static --disable-shared
               
           make -j$(sysctl -n hw.ncpu)
           make install
-      
+
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: cargo-${{ matrix.platform }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ matrix.platform }}
 
       - name: Build scrcpy-mask
         shell: bash
         run: |
           SCRIPT_DIR="${{ github.workspace }}"
           FFMPEG="ffmpeg-7.1.2"
-          PREFIX="ffmpeg-${{ matrix.platform }}"
-          OS="macos-arm64"
+          OS="${{ matrix.platform }}"
+          PREFIX="ffmpeg-$OS"
           PROJECT_NAME="scrcpy-mask"
           
           export PKG_CONFIG_PATH="$SCRIPT_DIR/$FFMPEG/$PREFIX/lib/pkgconfig"
@@ -220,7 +208,6 @@ jobs:
           cargo build --release
 
           ASSETS_DIR="$SCRIPT_DIR/assets"
-          LIB_OS_FOLDER="$ASSETS_DIR/lib/$OS"
 
           cargo install cargo-bundle
           export CARGO_BUNDLE_SKIP_BUILD="1"
@@ -236,21 +223,13 @@ jobs:
 
           APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-          CMD="cd $APP_DIR && ./$PROJECT_NAME-bin; echo 'Done. Press any key to exit...'; read"
+          CMD="cd $APP_DIR && ./scrcpy-mask-bin; echo 'Done. Press any key to exit...'; read"
 
           osascript -e "tell application \"Terminal\" to do script \"$CMD\""
           osascript -e "tell application \"Terminal\" to activate"
           EOF
-          chmod +x "$APP_BIN_DIR/$PROJECT_NAME"
-
-          BUNDLE_ASSETS_DIR="$APP_BIN_DIR/assets"
-          BUNDLE_LIB_DIR="$APP_BIN_DIR/ffmpeg-macos/lib"
-
-          mkdir -p "$BUNDLE_ASSETS_DIR"
-          mkdir -p "$BUNDLE_LIB_DIR"
-          
-          find "$ASSETS_DIR" -mindepth 1 -maxdepth 1 ! -name 'lib' -exec cp -R {} "$BUNDLE_ASSETS_DIR" \;
-          find "$LIB_OS_FOLDER" -maxdepth 1 -type f -exec cp '{}' "$BUNDLE_LIB_DIR/" \;
+          chmod +x "$APP_BIN_DIR/scrcpy-mask"
+          cp -R "$ASSETS_DIR" "$APP_BIN_DIR/"
 
           rm -f "$DMG_PATH"
           brew install create-dmg
@@ -280,7 +259,7 @@ jobs:
         os: [ubuntu-latest]
         include:
           - os: ubuntu-latest
-            platform: linux
+            platform: linux-x64
             
     steps:
       - name: Checkout codes
@@ -297,7 +276,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ffmpeg-7.1.2/ffmpeg-${{ matrix.platform }}
-          key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.2
+          key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.4
 
       - name: Download and build FFmpeg (if not cached)
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
@@ -305,19 +284,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install \
-            autoconf \
-            automake \
-            build-essential \
-            cmake \
-            git-core \
-            libass-dev \
-            libfreetype6-dev \
-            libgnutls28-dev \
-            libmp3lame-dev \
-            libsdl2-dev \
-            libtool \
-            libva-dev \
-            libvdpau-dev \
+            autoconf automake build-essential cmake git-core \
+            libass-dev libfreetype6-dev libgnutls28-dev libmp3lame-dev libsdl2-dev libtool \
+            libx11-dev libva-dev libvdpau-dev libdrm-dev\
             libvorbis-dev \
             libxcb1-dev \
             libxcb-shm0-dev \
@@ -338,35 +307,28 @@ jobs:
           cd ffmpeg-7.1.2
 
           ./configure --prefix=./ffmpeg-$OS \
-              --disable-avdevice --disable-postproc \
+              --disable-all --disable-doc --disable-iconv \
               --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
-              --enable-swscale --enable-filter=scale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
-              --enable-gpl --disable-static --enable-shared
+              --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
+              --enable-gpl --enable-static --disable-shared
               
           make -j$(nproc)
           make install
       
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: cargo-${{ matrix.platform }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ matrix.platform }}
 
       - name: Build scrcpy-mask
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get -y install \
-            libudev-dev \
-            libasound2-dev
 
           SCRIPT_DIR="${{ github.workspace }}"
           FFMPEG="ffmpeg-7.1.2"
-          PREFIX="ffmpeg-${{ matrix.platform }}"
-          OS="linux-x64"
+          OS="${{ matrix.platform }}"
+          PREFIX="ffmpeg-$OS"
           PROJECT_NAME="scrcpy-mask"
           
           export PKG_CONFIG_PATH="$SCRIPT_DIR/$FFMPEG/$PREFIX/lib/pkgconfig"
@@ -375,18 +337,11 @@ jobs:
           cargo build --release
 
           ASSETS_DIR="$SCRIPT_DIR/assets"
-          LIB_OS_FOLDER="$ASSETS_DIR/lib/$OS"
-
           BUNDLE_DIR="$SCRIPT_DIR/tmp"
-          BUNDLE_ASSETS_DIR="$BUNDLE_DIR/assets"
-          BUNDLE_LIB_DIR="$BUNDLE_DIR/ffmpeg-linux/lib"
-          mkdir -p "$BUNDLE_ASSETS_DIR"
-          mkdir -p "$BUNDLE_LIB_DIR"
-
-          find "$ASSETS_DIR" -mindepth 1 -maxdepth 1 ! -name 'lib' -exec cp -R {} "$BUNDLE_ASSETS_DIR" \;
-          find "$LIB_OS_FOLDER" -maxdepth 1 -type f -exec cp '{}' "$BUNDLE_LIB_DIR/" \;
+          mkdir -p "$BUNDLE_DIR"
+          cp -R "$ASSETS_DIR" "$BUNDLE_DIR/"
           BUILD_TARGET="$SCRIPT_DIR/target/release/$PROJECT_NAME"
-          cp "$BUILD_TARGET" "$BUNDLE_DIR"
+          cp "$BUILD_TARGET" "$BUNDLE_DIR/"
 
           OUTPUT_ZIP="$SCRIPT_DIR/$PROJECT_NAME-$OS.zip"
           rm -f "$OUTPUT_ZIP"

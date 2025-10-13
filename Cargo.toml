@@ -24,7 +24,7 @@ tokio = { version = "1", features = [
     "sync",
     "time",
 ] }
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "http2", "charset"] }
 semver = "*"
 which = "7"
 adb_client = "*"
@@ -55,6 +55,9 @@ ffmpeg-next = { version = "7.1.0", default-features = false, features = [
 
 [target.'cfg(target_os = "macos")'.dependencies]
 muda = "0.17"
+
+[build-dependencies]
+pkg-config = "0.3"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
