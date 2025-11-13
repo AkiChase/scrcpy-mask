@@ -165,11 +165,17 @@ impl Adb {
     }
 
     pub fn new(adb_path: String) -> Adb {
+        let host =
+            std::env::var("ANDROID_ADB_SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+        let ip: Ipv4Addr = host.parse().unwrap_or(Ipv4Addr::new(127, 0, 0, 1));
+        
+        let port = std::env::var("ANDROID_ADB_SERVER_PORT")
+            .ok()
+            .and_then(|val| val.parse::<u16>().ok())
+            .unwrap_or(5037);
+
         Self {
-            server: ADBServer::new_from_path(
-                SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 5037),
-                Some(adb_path.clone()),
-            ),
+            server: ADBServer::new_from_path(SocketAddrV4::new(ip, port), Some(adb_path.clone())),
             adb_path,
         }
     }
