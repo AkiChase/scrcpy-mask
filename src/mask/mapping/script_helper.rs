@@ -104,16 +104,26 @@ impl ScriptAST {
         cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
         original_size: Vec2,
         cursor_pos: Vec2,
+        mask_size: Vec2,
     ) -> Result<(), ScriptError> {
         if self.empty {
             return Ok(());
         }
-
+        let cursor_relative_pos = cursor_pos / mask_size * original_size;
         let mut vars: HashMap<String, Value> = HashMap::new();
-        vars.insert("ORIGINAL_W".to_string(), Value::Int(original_size.x as i64));
+        vars.insert(
+            "ORIGINAL_W".to_string(),
+            Value::Int((original_size.x) as i64),
+        );
         vars.insert("ORIGINAL_H".to_string(), Value::Int(original_size.y as i64));
-        vars.insert("CURSOR_X".to_string(), Value::Int(cursor_pos.x as i64));
-        vars.insert("CURSOR_Y".to_string(), Value::Int(cursor_pos.y as i64));
+        vars.insert(
+            "CURSOR_X".to_string(),
+            Value::Int(cursor_relative_pos.x as i64),
+        );
+        vars.insert(
+            "CURSOR_Y".to_string(),
+            Value::Int(cursor_relative_pos.y as i64),
+        );
 
         let mut funcs: HashMap<
             String,

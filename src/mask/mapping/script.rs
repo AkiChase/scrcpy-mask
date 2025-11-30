@@ -14,13 +14,13 @@ use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    mask::mapping::{
+    mask::{mapping::{
         binding::{ButtonBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
         cursor::CursorPosition,
         script_helper::ScriptAST,
         utils::Position,
-    },
+    }, mask_command::MaskSize},
     utils::ChannelSenderCS,
 };
 
@@ -102,6 +102,7 @@ pub fn handle_script(
     active_mapping: Res<ActiveMappingConfig>,
     cs_tx_res: Res<ChannelSenderCS>,
     cursor_pos_res: Res<CursorPosition>,
+    mask_size_res: Res<MaskSize>,
     runtime: ResMut<TokioTasksRuntime>,
     mut active_map: ResMut<ActiveScriptMap>,
 ) {
@@ -112,13 +113,16 @@ pub fn handle_script(
                 let original_size: Vec2 = active_mapping.original_size.into();
                 let cs_tx = cs_tx_res.0.clone();
                 let cursor_pos = cursor_pos_res.0.clone();
+                let mask_size = mask_size_res.0;
                 let interval = Duration::from_millis(mapping.interval as u64);
 
                 if ineffable.just_activated(action.ineff_continuous()) {
                     if !mapping.pressed_script_ast.empty {
                         let ast = mapping.pressed_script_ast.clone();
                         runtime.spawn_background_task(move |_ctx| async move {
-                            if let Err(e) = ast.eval_script(&cs_tx, original_size, cursor_pos) {
+                            if let Err(e) =
+                                ast.eval_script(&cs_tx, original_size, cursor_pos, mask_size)
+                            {
                                 log::error!(
                                     "{}: {}",
                                     t!("mask.mapping.pressedScriptRuntimeError"),
@@ -148,7 +152,7 @@ pub fn handle_script(
                     if !mapping.released_script_ast.empty {
                         let ast = mapping.released_script_ast.clone();
                         runtime.spawn_background_task(move |_ctx| async move {
-                            if let Err(e) = ast.eval_script(&cs_tx, original_size, cursor_pos) {
+                            if let Err(e) = ast.eval_script(&cs_tx, original_size, cursor_pos, mask_size) {
                                 log::error!(
                                     "{}: {}",
                                     t!("mask.mapping.releasedScriptRuntimeError"),
@@ -177,6 +181,7 @@ pub fn handle_script_trigger(
     mut active_map: ResMut<ActiveScriptMap>,
     cs_tx_res: Res<ChannelSenderCS>,
     cursor_pos_res: Res<CursorPosition>,
+    mask_size_res: Res<MaskSize>,
     runtime: ResMut<TokioTasksRuntime>,
 ) {
     for (_, timer) in active_map.0.iter_mut() {
@@ -184,10 +189,11 @@ pub fn handle_script_trigger(
             let cs_tx = cs_tx_res.0.clone();
             let original_size = timer.original_size;
             let cursor_pos = cursor_pos_res.0;
+            let mask_size = mask_size_res.0;
 
             let ast = timer.held_script_ast.clone();
             runtime.spawn_background_task(move |_ctx| async move {
-                if let Err(e) = ast.eval_script(&cs_tx, original_size, cursor_pos) {
+                if let Err(e) = ast.eval_script(&cs_tx, original_size, cursor_pos, mask_size) {
                     log::error!("{}: {}", t!("mask.mapping.heldScriptRuntimeError"), e);
                 }
             });
