@@ -39,6 +39,6 @@ if ($args[0] -eq "run") {
 
     Write-Host "Package created: $OutputZip"
 } else {
-    Write-Host "Usage: .\script.ps1 {run|release}"
+    Write-Host "Usage: .\build.ps1 {run|release}"
     exit 1
 }
