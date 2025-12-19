@@ -1,2 +1,3 @@
 * text eol=lf
-*.icns binary
+icons/** binary
+assets/scrcpy-mask-server-v2.4 binary
