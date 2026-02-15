@@ -40,6 +40,12 @@ fn log_custom_layer(_app: &mut App) -> Option<BoxedLayer> {
     )
 }
 
+// TODO 1. 检测通信卡死的问题，基于日志确定原因是server还是client
+// TODO 2. 快速重连的功能，作为通信卡死的补救方案
+// TODO 3. 按键编辑时未考虑滚动条的偏移量，导致存在偏移量时长按后按钮位置跳变
+// TODO 4. 王者荣耀的准心感觉还有一点歪，能否在窗口内使用自定义鼠标指针？
+// TODO 5. 王者荣耀尤其是普攻键需要多按一下中心位置再开始移动，需要优化手感
+
 fn main() {
     let default_language = "en-US";
     rust_i18n::set_locale(default_language);
