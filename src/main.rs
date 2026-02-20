@@ -45,6 +45,7 @@ fn log_custom_layer(_app: &mut App) -> Option<BoxedLayer> {
 // TODO 3. 按键编辑时未考虑滚动条的偏移量，导致存在偏移量时长按后按钮位置跳变
 // TODO 4. 王者荣耀的准心感觉还有一点歪，能否在窗口内使用自定义鼠标指针？
 // TODO 5. 王者荣耀尤其是普攻键需要多按一下中心位置再开始移动，需要优化手感
+// TODO 6. 鼠标滚轮要优化，使用节流的方式吧，不要考虑滚动的阈值了
 
 fn main() {
     let default_language = "en-US";
