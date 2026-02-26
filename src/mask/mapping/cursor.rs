@@ -29,21 +29,21 @@ impl Plugin for CursorPlugins {
             .insert_resource(ActiveCursorFpsConfig::default())
             .add_systems(
                 Update,
-                (
-                    handle_cursor_normal.run_if(
-                        not(in_state(MappingState::Stop)).and(in_state(CursorState::Normal)),
-                    ),
-                    handle_cursor_fps.run_if(
-                        in_state(CursorState::Fps)
-                            .and(in_state(MappingState::Normal))
-                            .and(run_if_handle_cursor_fps),
-                    ),
-                ),
+                handle_cursor_normal
+                    .run_if(not(in_state(MappingState::Stop)).and(in_state(CursorState::Normal))),
             )
             .add_systems(
                 Update,
                 handle_normal_left_click
                     .run_if(not(in_state(MappingState::Stop)).and(in_state(CursorState::Normal))),
+            )
+            .add_systems(
+                Update,
+                handle_cursor_fps.run_if(
+                    in_state(CursorState::Fps)
+                        .and(in_state(MappingState::Normal))
+                        .and(run_if_handle_cursor_fps),
+                ),
             )
             .add_systems(OnEnter(CursorState::Fps), on_enter_cursor_fps)
             .add_systems(OnExit(CursorState::Fps), on_exit_cursor_fps);
@@ -248,9 +248,7 @@ fn handle_normal_left_click(
             cursor_pos.0,
         );
         return;
-    }
-
-    if mouse_button_input.pressed(MouseButton::Left) {
+    } else if mouse_button_input.pressed(MouseButton::Left) {
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,
             MotionEventAction::Move,
@@ -259,9 +257,7 @@ fn handle_normal_left_click(
             cursor_pos.0,
         );
         return;
-    }
-
-    if mouse_button_input.just_released(MouseButton::Left) {
+    } else if mouse_button_input.just_released(MouseButton::Left) {
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,
             MotionEventAction::Up,

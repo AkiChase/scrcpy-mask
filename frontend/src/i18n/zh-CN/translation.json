@@ -30,7 +30,8 @@
       "title": "受控设备",
       "mainDevice": "主设备",
       "actionInfo": "更多信息",
-      "actionClose": "终止控制"
+      "actionClose": "终止控制",
+      "actionReconnect": "重新连接设备"
     },
     "otherDevices": {
       "title": "其他设备",

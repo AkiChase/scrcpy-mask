@@ -56,6 +56,7 @@
       "removingDeviceAfterExit": "scrcpy has exited, removing corresponding device",
       "tryStartingScrcpy": "Trying to start scrcpy app",
       "decontrolDevice": "Decontrol device",
+      "reconnectDevice": "Reconnect device",
       "deviceNotFound": "Device not found",
       "adbConnect": "Adb connect %{address} successfully",
       "adbConnectFailed": "Adb connect %{address} failed",
