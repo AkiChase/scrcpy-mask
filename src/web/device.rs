@@ -339,9 +339,26 @@ async fn adb_screenshot(
 ) -> Result<impl IntoResponse, WebServerError> {
     let src = "/data/local/tmp/_screenshot_scrcpy_mask.png";
 
+    let mut display_id_info = Vec::new();
     Device::shell(
         &payload.id,
-        ["screencap", "-p", src],
+        ["dumpsys", "SurfaceFlinger", "--display-id"],
+        &mut display_id_info,
+    )
+    .map_err(|e| WebServerError::bad_request(format!("failed get display id: {}", e)))?;
+    let text = String::from_utf8_lossy(&display_id_info);
+    let first_line = text
+        .lines()
+        .next()
+        .ok_or_else(|| WebServerError::bad_request("no display found"))?;
+    let display_id = first_line
+        .split_whitespace()
+        .nth(1)
+        .ok_or_else(|| WebServerError::bad_request("invalid display line"))?;
+
+    Device::shell(
+        &payload.id,
+        ["screencap", "-p", "-d", display_id, src],
         &mut std::io::stdout(),
     )
     .map_err(|e| {
