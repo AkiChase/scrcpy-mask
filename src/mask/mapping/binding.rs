@@ -43,10 +43,10 @@ impl From<MergedButton> for BinaryInput {
     fn from(input: MergedButton) -> Self {
         match input {
             MergedButton::ScrollDown => {
-                BinaryInput::Axis(AnalogInput::ScrollWheelY, Threshold::preset_down())
+                BinaryInput::Axis(AnalogInput::ScrollWheelY, Threshold::new(-0.1))
             }
             MergedButton::ScrollUp => {
-                BinaryInput::Axis(AnalogInput::ScrollWheelY, Threshold::preset_up())
+                BinaryInput::Axis(AnalogInput::ScrollWheelY, Threshold::new(0.1))
             }
             MergedButton::Mouse(mouse_button) => BinaryInput::MouseButton(mouse_button),
             MergedButton::Keyboard(key_code) => BinaryInput::Key(key_code),

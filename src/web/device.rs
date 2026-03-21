@@ -45,6 +45,7 @@ pub fn routers(
         .route("/device_list", get(device_list))
         .route("/control_device", post(control_device))
         .route("/decontrol_device", post(decontrol_device))
+        .route("/reconnect_device", post(reconnect_device))
         .route("/adb_connect", post(adb_connect))
         .route("/adb_pair", post(adb_pair))
         .route("/adb_screenshot", post(adb_screenshot))
@@ -85,14 +86,13 @@ struct PostDataControlDevice {
     video: bool,
 }
 
-async fn control_device(
-    State(state): State<AppStateDevice>,
-    Json(payload): Json<PostDataControlDevice>,
+async fn _control_device(
+    device_id: &str,
+    display_id: i32,
+    video: bool,
+    d_tx: &UnboundedSender<ControllerCommand>,
 ) -> Result<JsonResponse, WebServerError> {
-    let device_id = payload.device_id;
-    let video = payload.video;
-    let display_id = payload.display_id;
-
+    let device_id = device_id.to_string();
     let local_config = LocalConfig::get();
 
     let device_list = ControlledDevice::get_device_list().await;
@@ -179,7 +179,7 @@ async fn control_device(
     ControlledDevice::add_device(device_id.clone(), scid.clone(), main, socket_id).await;
     // send command to controller server
     for cmd in commands {
-        state.d_tx.send(cmd).unwrap();
+        d_tx.send(cmd).unwrap();
     }
 
     // run scrcpy app
@@ -201,30 +201,64 @@ async fn control_device(
     ))
 }
 
-#[derive(Deserialize)]
-struct PostDataDeControlDevice {
-    device_id: String,
+async fn control_device(
+    State(state): State<AppStateDevice>,
+    Json(payload): Json<PostDataControlDevice>,
+) -> Result<JsonResponse, WebServerError> {
+    let device_id = payload.device_id;
+    let video = payload.video;
+    let display_id = payload.display_id;
+
+    _control_device(&device_id, display_id, video, &state.d_tx).await
 }
 
-async fn decontrol_device(
+#[derive(Deserialize)]
+struct PostDataReconnectDevice {
+    device_id: String,
+    display_id: i32,
+    video: bool,
+}
+
+async fn reconnect_device(
     State(state): State<AppStateDevice>,
-    Json(payload): Json<PostDataDeControlDevice>,
+    Json(payload): Json<PostDataReconnectDevice>,
 ) -> Result<JsonResponse, WebServerError> {
     let device_id = payload.device_id;
     let device_list = ControlledDevice::get_device_list().await;
     for device in device_list {
         if device.device_id == device_id {
+            _decontrol_device(&device_id, &state.d_tx).await?;
+            _control_device(&device_id, payload.display_id, payload.video, &state.d_tx).await?;
+            return Ok(JsonResponse::success(
+                format!("{}: {}", t!("web.device.reconnectDevice"), device_id),
+                None,
+            ));
+        }
+    }
+    Err(WebServerError::bad_request(format!(
+        "{}: {}",
+        t!("web.device.deviceNotFound"),
+        device_id
+    )))
+}
+
+#[derive(Deserialize)]
+struct PostDataDeControlDevice {
+    device_id: String,
+}
+
+async fn _decontrol_device(
+    device_id: &str,
+    d_tx: &UnboundedSender<ControllerCommand>,
+) -> Result<JsonResponse, WebServerError> {
+    let device_list = ControlledDevice::get_device_list().await;
+    for device in device_list {
+        if device.device_id == device_id {
             let scid = device.scid.clone();
             if device.main {
-                state
-                    .d_tx
-                    .send(ControllerCommand::ShutdownMain(scid))
-                    .unwrap();
+                d_tx.send(ControllerCommand::ShutdownMain(scid)).unwrap();
             } else {
-                state
-                    .d_tx
-                    .send(ControllerCommand::ShutdownSub(scid))
-                    .unwrap();
+                d_tx.send(ControllerCommand::ShutdownSub(scid)).unwrap();
             }
             ControlledDevice::remove_device(&device.scid).await;
             return Ok(JsonResponse::success(
@@ -238,6 +272,14 @@ async fn decontrol_device(
         t!("web.device.deviceNotFound"),
         device_id
     )))
+}
+
+async fn decontrol_device(
+    State(state): State<AppStateDevice>,
+    Json(payload): Json<PostDataDeControlDevice>,
+) -> Result<JsonResponse, WebServerError> {
+    let device_id = payload.device_id;
+    _decontrol_device(&device_id, &state.d_tx).await
 }
 
 #[derive(Deserialize)]
@@ -297,9 +339,26 @@ async fn adb_screenshot(
 ) -> Result<impl IntoResponse, WebServerError> {
     let src = "/data/local/tmp/_screenshot_scrcpy_mask.png";
 
+    let mut display_id_info = Vec::new();
     Device::shell(
         &payload.id,
-        ["screencap", "-p", src],
+        ["dumpsys", "SurfaceFlinger", "--display-id"],
+        &mut display_id_info,
+    )
+    .map_err(|e| WebServerError::bad_request(format!("failed get display id: {}", e)))?;
+    let text = String::from_utf8_lossy(&display_id_info);
+    let first_line = text
+        .lines()
+        .next()
+        .ok_or_else(|| WebServerError::bad_request("no display found"))?;
+    let display_id = first_line
+        .split_whitespace()
+        .nth(1)
+        .ok_or_else(|| WebServerError::bad_request("invalid display line"))?;
+
+    Device::shell(
+        &payload.id,
+        ["screencap", "-p", "-d", display_id, src],
         &mut std::io::stdout(),
     )
     .map_err(|e| {

@@ -16,6 +16,7 @@ import {
   SettingPointerId,
 } from "./Common";
 import { useTranslation } from "react-i18next";
+import { IconFont } from "../../hooks";
 
 const PRESET_STYLE = mappingButtonPresetStyle(52);
 
@@ -35,7 +36,7 @@ export default function ButtonFire({
   onConfigCopy: () => void;
 }) {
   const id = `mapping-single-tap-${index}`;
-  const bindText = config.bind.join("+");
+  const bindText = config.bind.length > 0 ? config.bind.join("+") : "???";
   const className =
     "rounded-full absolute box-border border-solid border-2 color-text " +
     (config.bind.length > 0
@@ -106,12 +107,14 @@ export default function ButtonFire({
         onContextMenu={handleSetting}
         justify="center"
         align="center"
+        vertical
       >
         <Tooltip trigger="click" title={`${config.type}: ${bindText}`}>
           <Typography.Text ellipsis={true} className="text-2.5 font-bold">
             {bindText}
           </Typography.Text>
         </Tooltip>
+        <IconFont type="icon-fire" className="text-4" />
       </Flex>
     </>
   );

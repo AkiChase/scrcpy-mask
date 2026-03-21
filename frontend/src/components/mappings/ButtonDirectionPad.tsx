@@ -31,6 +31,7 @@ import {
 } from "./Common";
 import { useTranslation } from "react-i18next";
 import { AXIS_NAMES } from "./keyCode";
+import { IconFont } from "../../hooks";
 
 type DirectionPadContentProps = {
   bind: DirectionBinding;
@@ -62,6 +63,7 @@ function DirectionPadContent({ bind }: DirectionPadContentProps) {
         </Flex>
         <Flex className="w-full" justify="space-around" align="center">
           <BindText text={bindTexts.left} />
+          <IconFont type="icon-move" />
           <BindText text={bindTexts.right} />
         </Flex>
         <Flex className="flex-1" align="center">

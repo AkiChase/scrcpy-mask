@@ -29,6 +29,7 @@ import {
   EnterOutlined,
   InfoCircleOutlined,
   LinkOutlined,
+  ReloadOutlined,
   SwitcherOutlined,
   SyncOutlined,
   UnorderedListOutlined,
@@ -42,18 +43,26 @@ import { useMessageContext } from "../hooks";
 import { useAppDispatch, useAppSelector } from "../store/store";
 import { useLocation } from "react-router-dom";
 
-function ControlledDevices({ refresh }: { refresh: () => void }) {
+function ControlledDevices({
+  refresh,
+  displayID,
+  isVideo,
+}: {
+  refresh: () => void;
+  displayID: number;
+  isVideo: boolean;
+}) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const messageApi = useMessageContext();
   const controlledDevices = useAppSelector(
-    (state) => state.other.controlledDevices
+    (state) => state.other.controlledDevices,
   );
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
 
   const handleMenuOpenChange: DropdownProps["onOpenChange"] = (
     nextOpen,
-    info
+    info,
   ) => {
     if (info.source === "trigger" || nextOpen) {
       setActionMenuOpen(nextOpen);
@@ -65,6 +74,22 @@ function ControlledDevices({ refresh }: { refresh: () => void }) {
     try {
       const res = await requestPost("/api/device/decontrol_device", {
         device_id,
+      });
+      messageApi?.success(res.message);
+      setTimeout(refresh, 1000);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
+
+  async function reconnectDevice(device_id: string) {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/device/reconnect_device", {
+        device_id,
+        display_id: displayID,
+        video: isVideo,
       });
       messageApi?.success(res.message);
       setTimeout(refresh, 1000);
@@ -122,7 +147,7 @@ function ControlledDevices({ refresh }: { refresh: () => void }) {
                         "/api/device/control/set_display_power",
                         {
                           mode: false,
-                        }
+                        },
                       );
                     } catch (error) {
                       messageApi?.error(error as string);
@@ -134,7 +159,7 @@ function ControlledDevices({ refresh }: { refresh: () => void }) {
                         "/api/device/control/set_display_power",
                         {
                           mode: true,
-                        }
+                        },
                       );
                     } catch (error) {
                       messageApi?.error(error as string);
@@ -279,6 +304,13 @@ function ControlledDevices({ refresh }: { refresh: () => void }) {
             />
           </Popover>
           <IconButton
+            tooltip={t("devices.controlledDevices.actionReconnect")}
+            size={18}
+            color="warning"
+            icon={<ReloadOutlined />}
+            onClick={() => reconnectDevice(record.device_id)}
+          />
+          <IconButton
             tooltip={t("devices.controlledDevices.actionClose")}
             size={18}
             color="primary"
@@ -303,16 +335,20 @@ function ControlledDevices({ refresh }: { refresh: () => void }) {
 function OtherDevices({
   otherDevices,
   refresh,
+  videoState,
+  displayIDState,
 }: {
   otherDevices: AdbDevice[];
   refresh: () => void;
+  videoState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
+  displayIDState: [number, React.Dispatch<React.SetStateAction<number>>];
 }) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const messageApi = useMessageContext();
 
-  const [isVideo, setIsVideo] = useState(false);
-  const [displayID, setDisplayID] = useState(0);
+  const [isVideo, setIsVideo] = videoState;
+  const [displayID, setDisplayID] = displayIDState;
 
   async function controlDevice(device: AdbDevice) {
     dispatch(setIsLoading(true));
@@ -402,6 +438,8 @@ export default function Devices() {
   const [pairCode, setPairCode] = useState("");
 
   const [otherDevices, setOtherDevices] = useState<AdbDevice[]>([]);
+  const videoState = useState(false);
+  const displayIDState = useState(0);
 
   useEffect(() => {
     if (location.pathname === "/devices") refreshDevices();
@@ -416,12 +454,12 @@ export default function Devices() {
       }>("/api/device/device_list");
       dispatch(setControlledDevices(res.data.controlled_devices));
       const controlled_id_set = new Set(
-        res.data.controlled_devices.map((device) => device.device_id)
+        res.data.controlled_devices.map((device) => device.device_id),
       );
       setOtherDevices(
         res.data.adb_devices.filter(
-          (device) => !(device.id in controlled_id_set)
-        )
+          (device) => !(device.id in controlled_id_set),
+        ),
       );
       messageApi?.success(res.message);
     } catch (error) {
@@ -508,11 +546,20 @@ export default function Devices() {
             {t("devices.common.refresh")}
           </Button>
         </Flex>
-        <ControlledDevices refresh={refreshDevices} />
+        <ControlledDevices
+          refresh={refreshDevices}
+          displayID={displayIDState[0]}
+          isVideo={videoState[0]}
+        />
       </section>
       <section className="mt-4">
         <h2 className="title-with-line">{t("devices.otherDevices.title")}</h2>
-        <OtherDevices otherDevices={otherDevices} refresh={refreshDevices} />
+        <OtherDevices
+          otherDevices={otherDevices}
+          refresh={refreshDevices}
+          videoState={videoState}
+          displayIDState={displayIDState}
+        />
       </section>
     </div>
   );

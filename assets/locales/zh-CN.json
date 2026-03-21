@@ -55,6 +55,7 @@
       "reverseSuccess": "成功将 %{remote} 反向转发到 %{local} ",
       "removingDeviceAfterExit": " scrcpy 已退出，移除相应设备",
       "tryStartingScrcpy": "正在尝试启动 scrcpy 应用",
+      "reconnectDevice": "重新连接设备",
       "decontrolDevice": "解除设备控制",
       "deviceNotFound": "未找到设备",
       "adbConnect": "Adb 连接 %{address} 成功",

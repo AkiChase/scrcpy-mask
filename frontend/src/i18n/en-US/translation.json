@@ -30,7 +30,8 @@
       "title": "Controlled Devices",
       "mainDevice": "main",
       "actionInfo": "More information",
-      "actionClose": "Stop control"
+      "actionClose": "Stop control",
+      "actionReconnect": "Reconnect device"
     },
     "otherDevices": {
       "title": "Other Devices",

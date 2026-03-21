@@ -137,22 +137,22 @@ function Manager({
   onDeleteAction: (file: string) => void;
   onCreateAction: (
     file: string,
-    size: { width: number; height: number }
+    size: { width: number; height: number },
   ) => void;
   onRenameAction: (file: string, newFile: string) => void;
   onMigrateAction: (
     file: string,
     newFile: string,
-    size: { width: number; height: number }
+    size: { width: number; height: number },
   ) => void;
 }) {
   const { t } = useTranslation();
   const messageApi = useMessageContext();
   const activeMappingFile = useAppSelector(
-    (state) => state.localConfig.activeMappingFile
+    (state) => state.localConfig.activeMappingFile,
   );
   const controlledDevices = useAppSelector(
-    (state) => state.other.controlledDevices
+    (state) => state.other.controlledDevices,
   );
 
   const [newSize, setNewSize] = useState<{ width: number; height: number }>({
@@ -423,7 +423,7 @@ const mappingConstructorMap: any = Object.fromEntries(
   buttonTypes.map((key) => [
     key,
     MappingConstructor[`new${key}` as keyof typeof MappingConstructor],
-  ])
+  ]),
 );
 
 const menuItems = buttonTypes.map((key) => [
@@ -458,7 +458,7 @@ function Displayer({
           height: rect.height - 2,
           left: rect.left + 1,
           top: rect.top + 1,
-        })
+        }),
       );
     });
     observer.observe(displayerElement);
@@ -480,7 +480,7 @@ function Displayer({
 
   function updateMapping(
     index: number,
-    updater: MappingType | ((prev: any) => any)
+    updater: MappingType | ((prev: any) => any),
   ) {
     setState((prev) => {
       if (prev === null) return null;
@@ -524,7 +524,7 @@ function Displayer({
         e.clientY,
         maskArea,
         state.current.original_size.width,
-        state.current.original_size.height
+        state.current.original_size.height,
       );
       cursorPosRef.current.innerText = `(${x},${y})`;
     }
@@ -559,7 +559,7 @@ function Displayer({
                   {
                     x: originalSize.width / 2,
                     y: Math.round(originalSize.height * 0.566),
-                  }
+                  },
                 );
               } else {
                 config = mappingConstructorMap[key](contextMenuPosRef.current);
@@ -578,7 +578,7 @@ function Displayer({
                 e.clientY,
                 maskArea,
                 originalSize.width,
-                originalSize.height
+                originalSize.height,
               );
             }}
             className="w-full h-full absolute bg-transparent"
@@ -611,7 +611,7 @@ function Displayer({
 export default function Mappings() {
   const messageApi = useMessageContext();
   const activeMappingFile = useAppSelector(
-    (state) => state.localConfig.activeMappingFile
+    (state) => state.localConfig.activeMappingFile,
   );
   const refreshBackground = useRefreshBackgroundImage();
   const dispatch = useAppDispatch();
@@ -661,7 +661,7 @@ export default function Mappings() {
       // current displayed file is not in the list
       if (
         res.data.mapping_list.findIndex(
-          (file) => file === displayedMappingFile
+          (file) => file === displayedMappingFile,
         ) == -1
       ) {
         setDisplayedMappingFile(res.data.active_mapping);
@@ -680,7 +680,7 @@ export default function Mappings() {
         "/api/mapping/read_mapping",
         {
           file,
-        }
+        },
       );
       const mappingConfig = res.data.mapping_config;
       setDisplayedMappingFile(file);
@@ -811,7 +811,7 @@ export default function Mappings() {
 
   async function createMappingFile(
     file: string,
-    size: { width: number; height: number }
+    size: { width: number; height: number },
   ) {
     dispatch(setIsLoading(true));
     try {
@@ -852,7 +852,7 @@ export default function Mappings() {
     size: {
       width: number;
       height: number;
-    }
+    },
   ) {
     dispatch(setIsLoading(true));
     try {
@@ -871,7 +871,12 @@ export default function Mappings() {
   }
 
   return (
-    <Flex vertical gap={32} className="page-container hide-scrollbar">
+    <Flex
+      vertical
+      gap={32}
+      id="mappings-container"
+      className="page-container hide-scrollbar"
+    >
       <Manager
         open={isManagerOpen}
         onCancel={() => setIsManagerOpen(false)}

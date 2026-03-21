@@ -40,6 +40,10 @@ fn log_custom_layer(_app: &mut App) -> Option<BoxedLayer> {
     )
 }
 
+// TODO down up的起点和终点随机偏移：dx,dy有个全局共享的阈值范围来random确定目标坐标
+// TODO 封装拖拽的move：move要在起点和终点时分别有个加速和减速，并且微小的随机弧线移动（起点画弧的dy和dx要最终在终点抵消掉）；如果中间距离小于阈值就直接跳过（否则加几个中间点）
+// TODO 所有按键都考虑一下即可（连点和多点：每次都random；方向轮盘：拖拽的dy和dx可以略大一点）
+
 fn main() {
     let default_language = "en-US";
     rust_i18n::set_locale(default_language);

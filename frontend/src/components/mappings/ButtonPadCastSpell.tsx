@@ -24,6 +24,7 @@ import {
 } from "./Common";
 import { useTranslation } from "react-i18next";
 import { AXIS_NAMES } from "./keyCode";
+import { IconFont } from "../../hooks";
 
 type PadCastSpellContentProps = {
   padBind: DirectionBinding;
@@ -60,7 +61,10 @@ function PadCastSpellContent({ padBind, bind }: PadCastSpellContentProps) {
         </Flex>
         <Flex className="w-full" justify="space-around" align="center">
           <BindText text={padBindTexts.left} />
-          <BindText text={bindText} />
+          <Flex vertical align="center" justify="center">
+            <BindText text={bindText} />
+            <IconFont type="icon-lightning" className="text-2.5" />
+          </Flex>
           <BindText text={padBindTexts.right} />
         </Flex>
         <Flex className="flex-1" align="center">
@@ -133,7 +137,7 @@ export default function ButtonPadCastSpell({
       element.style.transform = mappingButtonTransformStyle(
         config.position.x,
         config.position.y,
-        scale
+        scale,
       );
     }
   }, [index, config, scale]);
@@ -142,9 +146,9 @@ export default function ButtonPadCastSpell({
     () =>
       mappingButtonPresetStyle(
         Math.round(config.drag_radius * scale.y),
-        Math.round(config.drag_radius * scale.y)
+        Math.round(config.drag_radius * scale.y),
       ),
-    [config.drag_radius, scale]
+    [config.drag_radius, scale],
   );
 
   const handleDrag = mappingButtonDragFactory(
@@ -158,7 +162,7 @@ export default function ButtonPadCastSpell({
           y,
         },
       });
-    }
+    },
   );
 
   const handleSetting = (e: React.MouseEvent) => {
@@ -240,7 +244,7 @@ function Setting({
             right: ["KeyD"],
           },
           JoyStick: config.pad_bind,
-        }
+        },
   );
 
   function toggleBindMode(toJoyStick: boolean) {
@@ -253,7 +257,7 @@ function Setting({
 
   function handlePadBindChange(
     type: "up" | "down" | "left" | "right" | "x" | "y",
-    value: string | string[]
+    value: string | string[],
   ) {
     if (type === "x" || type === "y") {
       padBindValueRef.current.JoyStick[type] = value as string;
@@ -373,7 +377,7 @@ function Setting({
               },
               {
                 label: t(
-                  "mappings.padCastSpell.setting.releaseMode.onSecondPress"
+                  "mappings.padCastSpell.setting.releaseMode.onSecondPress",
                 ),
                 value: "OnSecondPress",
               },

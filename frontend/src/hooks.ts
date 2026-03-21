@@ -4,9 +4,14 @@ import { useAppDispatch, useAppSelector } from "./store/store";
 import { setBackgroundImage, setIsLoading } from "./store/other";
 import { useTranslation } from "react-i18next";
 import { requestPost } from "./utils";
+import { createFromIconfontCN } from "@ant-design/icons";
 
 export const MessageContext = createContext<MessageInstance | null>(null);
 export const useMessageContext = () => useContext(MessageContext);
+
+export const IconFont = createFromIconfontCN({
+  scriptUrl: new URL("./assets/iconfont.js", import.meta.url).href,
+});
 
 export function useRefreshBackgroundImage() {
   const dispatch = useAppDispatch();

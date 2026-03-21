@@ -1,13 +1,11 @@
 import { Flex, Menu, Layout } from "antd";
 import { useState } from "react";
 import logo from "../assets/128x128.png";
-import { createFromIconfontCN, SettingFilled } from "@ant-design/icons";
+import { SettingFilled } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
+import { IconFont } from "../hooks";
 
-const IconFont = createFromIconfontCN({
-  scriptUrl: new URL("../assets/iconfont.js", import.meta.url).href,
-});
 
 export default function Sider() {
   const { t } = useTranslation();

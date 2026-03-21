@@ -31,7 +31,7 @@ import {
   SettingPointerId,
 } from "./Common";
 import { useTranslation } from "react-i18next";
-import { useMessageContext } from "../../hooks";
+import { IconFont, useMessageContext } from "../../hooks";
 import { RollbackOutlined } from "@ant-design/icons";
 import { throttle } from "../../utils";
 
@@ -53,7 +53,7 @@ export default function ButtonMouseCastSpell({
   onConfigCopy: () => void;
 }) {
   const id = `mapping-mouse-cast-spell-${index}`;
-  const bindText = config.bind.join("+");
+  const bindText = config.bind.length > 0 ? config.bind.join("+") : "???";
   const className =
     "rounded-full absolute box-border border-solid border-2 color-text " +
     (config.bind.length > 0
@@ -76,7 +76,7 @@ export default function ButtonMouseCastSpell({
       element.style.transform = mappingButtonTransformStyle(
         config.position.x,
         config.position.y,
-        scale
+        scale,
       );
     }
   }, [index, config, scale]);
@@ -92,7 +92,7 @@ export default function ButtonMouseCastSpell({
           y,
         },
       });
-    }
+    },
   );
 
   const handleSetting = (e: React.MouseEvent) => {
@@ -125,12 +125,15 @@ export default function ButtonMouseCastSpell({
         onContextMenu={handleSetting}
         justify="center"
         align="center"
+        vertical
+        gap={4}
       >
         <Tooltip trigger="click" title={`${config.type}: ${bindText}`}>
           <Typography.Text ellipsis={true} className="text-2.5 font-bold">
             {bindText}
           </Typography.Text>
         </Tooltip>
+        <IconFont type="icon-lightning" />
       </Flex>
     </>
   );
@@ -166,7 +169,7 @@ function CastCenter({
     (pos) => {
       onCenterChange(pos);
     },
-    200
+    200,
   );
 
   const maxRadius = Math.min(center.x, center.y);
@@ -323,7 +326,7 @@ function SkillButton({
     (pos) => {
       onPositionChange(pos);
     },
-    200
+    200,
   );
 
   const scale = {
@@ -391,7 +394,7 @@ function SkillEditor({
         e.clientY,
         maskArea,
         originalSize.width,
-        originalSize.height
+        originalSize.height,
       );
       cursorPosRef.current.innerText = `(${x},${y})`;
     }
@@ -509,7 +512,7 @@ function Setting({
             options={[
               {
                 label: t(
-                  "mappings.mouseCastSpell.setting.releaseMode.onRelease"
+                  "mappings.mouseCastSpell.setting.releaseMode.onRelease",
                 ),
                 value: "OnRelease",
               },
@@ -519,7 +522,7 @@ function Setting({
               },
               {
                 label: t(
-                  "mappings.mouseCastSpell.setting.releaseMode.onSecondPress"
+                  "mappings.mouseCastSpell.setting.releaseMode.onSecondPress",
                 ),
                 value: "OnSecondPress",
               },
