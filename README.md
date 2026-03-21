@@ -28,6 +28,10 @@ To better support the interaction between **Scrcpy Mask** and Android devices, w
 * [ ] External control — see [External Control](https://github.com/AkiChase/scrcpy-mask-external-control) (in progress)
 * [ ] Documentation
 
+## Video Tutorial
+
+- [“像模拟器一样控制安卓设备玩手游” Scrcpy Mask 重要版本更替说明与教程](https://www.bilibili.com/video/BV1ynkWBLEza/?share_source=copy_web&vd_source=36923115230d8a46ae8b587fc5348e6e)
+
 ## Screenshots
 
 * **Devices**
