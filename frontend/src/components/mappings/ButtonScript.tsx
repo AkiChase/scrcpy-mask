@@ -20,7 +20,7 @@ import { PlayCircleOutlined } from "@ant-design/icons";
 import { useDispatch } from "react-redux";
 import { setIsLoading } from "../../store/other";
 import { requestPost } from "../../utils";
-import { useMessageContext } from "../../hooks";
+import { IconFont, useMessageContext } from "../../hooks";
 
 const PRESET_STYLE = mappingButtonPresetStyle(52);
 
@@ -40,7 +40,7 @@ export default function ButtonScript({
   onConfigCopy: () => void;
 }) {
   const id = `mapping-single-tap-${index}`;
-  const bindText = config.bind.join("+");
+  const bindText = config.bind.length > 0 ? config.bind.join("+") : "???";
   const className =
     "rounded-full absolute box-border border-solid border-2 color-text " +
     (config.bind.length > 0
@@ -63,7 +63,7 @@ export default function ButtonScript({
       element.style.transform = mappingButtonTransformStyle(
         config.position.x,
         config.position.y,
-        scale
+        scale,
       );
     }
   }, [index, config, scale]);
@@ -79,7 +79,7 @@ export default function ButtonScript({
           y,
         },
       });
-    }
+    },
   );
 
   const handleSetting = (e: React.MouseEvent) => {
@@ -111,12 +111,14 @@ export default function ButtonScript({
         onContextMenu={handleSetting}
         justify="center"
         align="center"
+        vertical
       >
         <Tooltip trigger="click" title={`${config.type}: ${bindText}`}>
           <Typography.Text ellipsis={true} className="text-2.5 font-bold">
             {bindText}
           </Typography.Text>
         </Tooltip>
+        <IconFont type="icon-code" className="text-4"/>
       </Flex>
     </>
   );
@@ -202,7 +204,7 @@ function Setting({
             className="w-full font-mono"
             value={config.pressed_script}
             placeholder={t(
-              "mappings.script.setting.pressed_script_placeholder"
+              "mappings.script.setting.pressed_script_placeholder",
             )}
             autoSize={{ minRows: 1, maxRows: 10 }}
             onChange={(e) =>
@@ -248,7 +250,7 @@ function Setting({
             className="w-full font-mono"
             value={config.released_script}
             placeholder={t(
-              "mappings.script.setting.released_script_placeholder"
+              "mappings.script.setting.released_script_placeholder",
             )}
             autoSize={{ minRows: 1, maxRows: 10 }}
             onChange={(e) =>

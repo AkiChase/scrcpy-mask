@@ -52,7 +52,7 @@ export default function ButtonMultipleTap({
   onConfigCopy: () => void;
 }) {
   const id = `mapping-multiple-tap-${index}`;
-  const bindText = config.bind.join("+");
+  const bindText = config.bind.length > 0 ? config.bind.join("+") : "???";
   const className =
     "rounded-full absolute box-border border-solid border-2 color-text " +
     (config.bind.length > 0
