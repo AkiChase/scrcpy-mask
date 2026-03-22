@@ -6,3 +6,5 @@ scrcpy-mask.code-workspace
 assets/web
 ffmpeg-7.1.2
 assets/lib
+.claude
+.codex
