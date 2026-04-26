@@ -25,7 +25,7 @@ use crate::{
 };
 
 pub fn init_observation(mut commands: Commands) {
-    commands.insert_resource(ActiveObservation::default());
+    commands.insert_resource(ActiveObservationMap::default());
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -66,7 +66,7 @@ pub struct MappingObservation {
 impl ValidateMappingConfig for MappingObservation {}
 
 #[derive(Resource, Default)]
-pub struct ActiveObservation(HashMap<String, ObservationItem>);
+pub struct ActiveObservationMap(HashMap<String, ObservationItem>);
 
 struct ObservationItem {
     start_cursor_pos: Vec2,
@@ -79,7 +79,7 @@ pub fn handle_observation_trigger(
     cs_tx_res: Res<ChannelSenderCS>,
     mask_size: Res<MaskSize>,
     cursor_pos: Res<CursorPosition>,
-    mut active_map: ResMut<ActiveObservation>,
+    mut active_map: ResMut<ActiveObservationMap>,
 ) {
     for (_, item) in active_map.0.iter_mut() {
         let delta = (cursor_pos.0 - item.start_cursor_pos) * item.sensitivity;
@@ -99,7 +99,7 @@ pub fn handle_observation(
     cs_tx_res: Res<ChannelSenderCS>,
     mask_size: Res<MaskSize>,
     cursor_pos: Res<CursorPosition>,
-    mut active_map: ResMut<ActiveObservation>,
+    mut active_map: ResMut<ActiveObservationMap>,
 ) {
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {

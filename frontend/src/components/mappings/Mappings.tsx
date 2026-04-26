@@ -2,6 +2,7 @@ import {
   type DirectionBinding,
   type MappingConfig,
   type MappingType,
+  normalizeMappingConfig,
 } from "./mapping";
 import * as MappingConstructor from "./mapping";
 
@@ -682,7 +683,7 @@ export default function Mappings() {
           file,
         },
       );
-      const mappingConfig = res.data.mapping_config;
+      const mappingConfig = normalizeMappingConfig(res.data.mapping_config);
       setDisplayedMappingFile(file);
       setEditState({
         file,

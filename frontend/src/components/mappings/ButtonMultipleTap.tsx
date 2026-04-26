@@ -431,6 +431,26 @@ function Setting({
             {t("mappings.multipleTap.setting.edit")}
           </Button>
         </ItemBox>
+        <ItemBox label={t("mappings.common.randomOffsetX")}>
+          <InputNumber
+            className="w-full"
+            value={config.random_offset_x}
+            min={0}
+            onChange={(v) =>
+              v !== null && onConfigChange({ ...config, random_offset_x: v })
+            }
+          />
+        </ItemBox>
+        <ItemBox label={t("mappings.common.randomOffsetY")}>
+          <InputNumber
+            className="w-full"
+            value={config.random_offset_y}
+            min={0}
+            onChange={(v) =>
+              v !== null && onConfigChange({ ...config, random_offset_y: v })
+            }
+          />
+        </ItemBox>
         <SettingNote
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}

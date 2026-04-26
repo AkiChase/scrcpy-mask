@@ -76,7 +76,9 @@
       "noMainDevice": "Main controlled device not found, please control the device on the devices page",
       "copy": {
         "label": "Duplicate"
-      }
+      },
+      "randomOffsetX": "Random offset X",
+      "randomOffsetY": "Random offset Y"
     },
     "singleTap": {
       "setting": {

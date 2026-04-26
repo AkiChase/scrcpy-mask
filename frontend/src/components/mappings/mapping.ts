@@ -1,3 +1,5 @@
+import { default_random_offset } from "../../utils";
+
 export interface MappingConfig {
   version: string;
   original_size: {
@@ -35,6 +37,8 @@ export interface SingleTapConfig {
   note: string;
   pointer_id: number;
   position: Position;
+  random_offset_x: number;
+  random_offset_y: number;
   sync: boolean;
   type: "SingleTap";
 }
@@ -46,6 +50,8 @@ export function newSingleTap(position: Position): SingleTapConfig {
     note: "",
     pointer_id: 1,
     position,
+    random_offset_x: default_random_offset,
+    random_offset_y: default_random_offset,
     sync: false,
     type: "SingleTap",
   };
@@ -58,6 +64,8 @@ export interface RepeatTapConfig {
   note: string;
   pointer_id: number;
   position: Position;
+  random_offset_x: number;
+  random_offset_y: number;
   type: "RepeatTap";
 }
 
@@ -69,6 +77,8 @@ export function newRepeatTap(position: Position): RepeatTapConfig {
     note: "",
     pointer_id: 1,
     position,
+    random_offset_x: default_random_offset,
+    random_offset_y: default_random_offset,
     type: "RepeatTap",
   };
 }
@@ -84,6 +94,8 @@ export interface MultipleTapConfig {
   items: MultipleTapItem[];
   note: string;
   pointer_id: number;
+  random_offset_x: number;
+  random_offset_y: number;
   type: "MultipleTap";
 }
 
@@ -99,6 +111,8 @@ export function newMultipleTap(position: Position): MultipleTapConfig {
     ],
     note: "",
     pointer_id: 1,
+    random_offset_x: default_random_offset,
+    random_offset_y: default_random_offset,
     type: "MultipleTap",
   };
 }
@@ -365,3 +379,37 @@ export function newScript(position: Position): ScriptConfig {
 }
 
 export type MappingUpdater<T> = (updater: T | ((pre: T) => T)) => void;
+
+function withDefaultRandomOffset(value?: number): number {
+  return value ?? default_random_offset;
+}
+
+export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
+  return {
+    ...config,
+    mappings: config.mappings.map((mapping) => {
+      switch (mapping.type) {
+        case "SingleTap":
+          return {
+            ...mapping,
+            random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
+            random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+          };
+        case "RepeatTap":
+          return {
+            ...mapping,
+            random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
+            random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+          };
+        case "MultipleTap":
+          return {
+            ...mapping,
+            random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
+            random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+          };
+        default:
+          return mapping;
+      }
+    }),
+  };
+}
