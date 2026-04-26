@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use bevy::{
     ecs::{
-        event::EventReader,
+        message::MessageReader,
         resource::Resource,
         system::{Commands, Res, ResMut},
     },
@@ -235,7 +235,7 @@ fn get_keycode(key_code: KeyCode) -> Option<constant::Keycode> {
 pub fn on_enter_raw_input_mode(
     mut repeat_count_map: ResMut<RepeatCountMap>,
     mut right_hold_instant: ResMut<RightMouseHoldInstant>,
-    mut key_evnts: EventReader<KeyboardInput>,
+    mut key_evnts: MessageReader<KeyboardInput>,
 ) {
     key_evnts.clear();
     repeat_count_map.0.clear();
@@ -278,7 +278,7 @@ pub fn handle_exit_raw_input_mode(
 pub struct RepeatCountMap(HashMap<KeyCode, u32>);
 
 pub fn handle_raw_input_trigger(
-    mut key_evnts: EventReader<KeyboardInput>,
+    mut key_evnts: MessageReader<KeyboardInput>,
     mut repeat_count_map: ResMut<RepeatCountMap>,
     button_input: Res<ButtonInput<KeyCode>>,
     cs_tx_res: Res<ChannelSenderCS>,

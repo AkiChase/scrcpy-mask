@@ -40,7 +40,7 @@ fn init_label_opacity(mut commands: Commands) {
 
 fn redraw_raw_input_label(
     mut commands: Commands,
-    query: Query<(Entity, &Label)>,
+    query: Query<(Entity, &MappingLabel)>,
     mask_size: Res<MaskSize>,
     mut redraw_mapping_label: ResMut<RedrawMappingLabel>,
 ) {
@@ -57,7 +57,7 @@ pub struct RedrawMappingLabel(u32);
 
 fn redraw_normal_mapping_label(
     mut commands: Commands,
-    query: Query<(Entity, &Label)>,
+    query: Query<(Entity, &MappingLabel)>,
     active_mapping: Res<ActiveMappingConfig>,
     mut redraw_mapping_label: ResMut<RedrawMappingLabel>,
 ) {
@@ -110,7 +110,7 @@ fn update_labels(
     opacity: Res<LabelOpacity>,
     window: Single<&Window>,
     mut query: Query<(
-        &Label,
+        &MappingLabel,
         &mut BackgroundColor,
         &mut Node,
         &ComputedNode,
@@ -159,15 +159,23 @@ fn update_labels(
 pub struct LabelOpacity(f32);
 
 #[derive(Component)]
-struct Label {
+struct MappingLabel {
     original_pos: Vec2,
     original_size: Vec2,
 }
 
 #[derive(Component)]
-enum LabelType {
+enum MappingLabelType {
     Simple,
     Pad,
+}
+
+#[derive(Bundle)]
+struct MappingLabelBundle {
+    label: MappingLabel,
+    label_type: MappingLabelType,
+    node: Node,
+    background_color: BackgroundColor,
 }
 
 fn create_simple_label(
@@ -177,18 +185,20 @@ fn create_simple_label(
     original_size: Vec2,
 ) {
     commands.spawn((
-        Label {
-            original_pos,
-            original_size,
+        MappingLabelBundle {
+            label: MappingLabel {
+                original_pos,
+                original_size,
+            },
+            label_type: MappingLabelType::Simple,
+            node: Node {
+                position_type: PositionType::Absolute,
+                padding: UiRect::px(5., 5., 3., 3.),
+                border_radius: BorderRadius::all(Val::Px(3.)),
+                ..default()
+            },
+            background_color: BackgroundColor(Color::BLACK),
         },
-        LabelType::Simple,
-        Node {
-            position_type: PositionType::Absolute,
-            padding: UiRect::px(5., 5., 3., 3.),
-            ..default()
-        },
-        BorderRadius::all(Val::Px(3.)),
-        BackgroundColor(Color::BLACK),
         children![(
             Text::new(binding),
             TextFont {
@@ -227,6 +237,7 @@ fn create_pad_label(
         flex_direction: FlexDirection::Column,
         justify_content: JustifyContent::Center,
         align_items: AlignItems::Center,
+        border_radius: BorderRadius::all(Val::Percent(50.)),
         ..default()
     };
 
@@ -247,16 +258,15 @@ fn create_pad_label(
     };
 
     commands
-        .spawn((
-            Label {
+        .spawn(MappingLabelBundle {
+            label: MappingLabel {
                 original_pos,
                 original_size,
             },
-            LabelType::Pad,
-            pad_node,
-            BorderRadius::all(Val::Percent(50.)),
-            BackgroundColor(Color::BLACK),
-        ))
+            label_type: MappingLabelType::Pad,
+            node: pad_node,
+            background_color: BackgroundColor(Color::BLACK),
+        })
         .with_children(|parent| {
             match children.len() {
                 4 => {

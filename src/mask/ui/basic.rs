@@ -39,6 +39,6 @@ fn border(mut commands: Commands) {
             ..default()
         },
         BackgroundColor(Color::NONE),
-        BorderColor(border_color),
+        BorderColor::all(border_color),
     ));
 }

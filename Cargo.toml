@@ -4,13 +4,13 @@ version = "0.7.3"
 edition = "2024"
 
 [dependencies]
-bevy = "0.16.1"
+bevy = "0.18"
 log = { version = "*", features = [
     "max_level_debug",
     "release_max_level_info",
 ] }
-bevy_ineffable = "0.8.0"
-bevy-tokio-tasks = "0.16.0"
+bevy_ineffable = { git = "https://github.com/AkiChase/bevy_ineffable", branch = "main" }
+bevy-tokio-tasks = "0.18"
 seq-macro = "0.3"
 paste = "1.0"
 strum = "0.27"
@@ -55,6 +55,9 @@ ffmpeg-next = { version = "7.1.0", default-features = false, features = [
 
 [target.'cfg(target_os = "macos")'.dependencies]
 muda = "0.17"
+
+[profile.dev.package.objc2]
+debug-assertions = false
 
 [build-dependencies]
 pkg-config = "0.3"
