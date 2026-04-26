@@ -25,7 +25,7 @@ use crate::{
         },
         cursor::{CursorPlugins, CursorState},
     },
-    utils::{relate_to_data_path},
+    utils::relate_to_data_path,
 };
 
 #[derive(States, Clone, Copy, Default, Eq, PartialEq, Hash, Debug)]

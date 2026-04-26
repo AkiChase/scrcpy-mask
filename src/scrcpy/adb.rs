@@ -168,7 +168,7 @@ impl Adb {
         let host =
             std::env::var("ANDROID_ADB_SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
         let ip: Ipv4Addr = host.parse().unwrap_or(Ipv4Addr::new(127, 0, 0, 1));
-        
+
         let port = std::env::var("ANDROID_ADB_SERVER_PORT")
             .ok()
             .and_then(|val| val.parse::<u16>().ok())

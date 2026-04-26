@@ -76,7 +76,9 @@
       "noMainDevice": "未找到受控的主设备，请在设备页面控制设备",
       "copy": {
         "label": "复制"
-      }
+      },
+      "randomOffsetX": "随机偏移 X",
+      "randomOffsetY": "随机偏移 Y"
     },
     "singleTap": {
       "setting": {

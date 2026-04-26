@@ -306,9 +306,11 @@ pub fn default_mapping_config() -> MappingConfig {
     }
 }
 
+// Validate mapping config:
 pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), String> {
     let mut validate_errors = Vec::<String>::new();
 
+    // 1. Check mapping action count
     let mut mapping_type_map = HashMap::<String, u32>::new();
     for mapping in mapping_config.mappings.iter() {
         let name = mapping.as_ref();
@@ -373,7 +375,6 @@ pub fn load_mapping_config(
         .map_err(|e| format!("{}: {}", t!("web.mapping.cannotReadMappingConfig"), e))?;
     let mapping_config: MappingConfig = serde_json::from_str(&config_string)
         .map_err(|e| format!("{}: {}", t!("web.mapping.cannotDeserializeConfig"), e))?;
-
     validate_mapping_config(&mapping_config)?;
 
     let bind_mapping_config: BindMappingConfig = mapping_config.into();

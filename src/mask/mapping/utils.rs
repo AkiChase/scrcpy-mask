@@ -9,6 +9,7 @@ use crate::scrcpy::{
     control_msg::ScrcpyControlMsg,
 };
 
+// TODO 移除这个常量（只需要使用 build_swipe_intermediate_points 来生成路径）
 pub const MIN_MOVE_STEP_LENGTH: f32 = 25.; // px
 pub const MIN_MOVE_STEP_INTERVAL: u64 = 25; // ms
 
@@ -153,19 +154,45 @@ pub struct SwipePointStep {
     pub wait_ms: u64,
 }
 
-// Apply a random offset within the max x/y range.
-pub fn random_offset_vec2(pos: Vec2, max_offset: Vec2) -> Vec2 {
-    let x_offset = (rand::random::<f32>() * 2.0 - 1.0) * max_offset.x.abs();
-    let y_offset = (rand::random::<f32>() * 2.0 - 1.0) * max_offset.y.abs();
+pub fn default_random_offset() -> f32 {
+    10.0
+}
+
+// Apply a random offset within a fixed human-touch error range.
+pub fn random_offset_vec2(pos: Vec2, offset: Vec2) -> Vec2 {
+    if offset == Vec2::ZERO {
+        return pos;
+    }
+    let x_offset = (rand::random::<f32>() * 2.0 - 1.0) * offset.x;
+    let y_offset = (rand::random::<f32>() * 2.0 - 1.0) * offset.y;
     pos + Vec2::new(x_offset, y_offset)
 }
 
-// Build a human-like swipe path between start and end, excluding both endpoints.
-pub fn build_swipe_intermediate_points(start: Vec2, end: Vec2) -> Vec<SwipePointStep> {
+// Build a human-like (or linear) swipe path between start and end, excluding both endpoints.
+pub fn build_swipe_intermediate_points(
+    start: Vec2,
+    end: Vec2,
+    no_randomization: bool,
+) -> Vec<SwipePointStep> {
     let delta = end - start;
     let distance = delta.length();
     if distance <= 1.0 {
         return vec![];
+    }
+
+    // If no_randomization is set, generate a simple linear path with fixed timing for testing or precise control.
+    if no_randomization {
+        // Simple linear path with fixed timing for testing or precise control.
+        let point_count = ((distance / 14.0).round() as usize).clamp(10, 34);
+        let mut points = Vec::with_capacity(point_count.saturating_sub(1));
+        for step in 1..point_count {
+            let t = step as f32 / point_count as f32;
+            points.push(SwipePointStep {
+                pos: start + delta * t,
+                wait_ms: 20,
+            })
+        }
+        return points;
     }
 
     let direction = delta / distance;

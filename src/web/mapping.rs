@@ -676,11 +676,17 @@ async fn migrate_mapping(
         .for_each(|mapping| match mapping {
             MappingType::SingleTap(m) => {
                 m.position *= scale;
+                m.random_offset_x *= scale.x;
+                m.random_offset_y *= scale.y;
             }
             MappingType::RepeatTap(m) => {
                 m.position *= scale;
+                m.random_offset_x *= scale.x;
+                m.random_offset_y *= scale.y;
             }
             MappingType::MultipleTap(m) => {
+                m.random_offset_x *= scale.x;
+                m.random_offset_y *= scale.y;
                 m.items.iter_mut().for_each(|item| {
                     item.position *= scale;
                 });

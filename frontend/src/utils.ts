@@ -1,7 +1,7 @@
 import axios, { type AxiosResponse, type ResponseType } from "axios";
 
 async function handleRequest<D = any>(
-  req: () => Promise<AxiosResponse>
+  req: () => Promise<AxiosResponse>,
 ): Promise<{ message: string; data: D }> {
   try {
     const res = await req();
@@ -33,7 +33,7 @@ async function handleRequest<D = any>(
 export async function requestGet<D = any>(
   url: string,
   params?: Record<string, string | number>,
-  responseType?: ResponseType
+  responseType?: ResponseType,
 ): Promise<{ message: string; data: D }> {
   return await handleRequest(() => {
     const opt: any = { params };
@@ -48,7 +48,7 @@ export async function requestPost<D = any>(
   url: string,
   data?: Record<string, any>,
   params?: Record<string, string | number>,
-  responseType?: ResponseType
+  responseType?: ResponseType,
 ): Promise<{ message: string; data: D }> {
   return await handleRequest(() => {
     const opt: any = { params };
@@ -127,7 +127,7 @@ export function deepClone<T>(value: T, cache = new WeakMap()): T {
 
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
-  delay: number
+  delay: number,
 ) {
   let lastCall = 0;
   let timeout: ReturnType<typeof setTimeout> | null = null;
@@ -156,7 +156,7 @@ export function throttle<T extends (...args: any[]) => any>(
 
 export function debounce<T extends (...args: any[]) => void>(
   fn: T,
-  delay: number
+  delay: number,
 ): (...args: Parameters<T>) => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -174,3 +174,5 @@ export function debounce<T extends (...args: any[]) => void>(
 export function toCamelCase(str: string): string {
   return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 }
+
+export const default_random_offset = 10;

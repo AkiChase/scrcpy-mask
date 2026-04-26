@@ -14,13 +14,16 @@ use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    mask::{mapping::{
-        binding::{ButtonBinding, ValidateMappingConfig},
-        config::ActiveMappingConfig,
-        cursor::CursorPosition,
-        script_helper::ScriptAST,
-        utils::Position,
-    }, mask_command::MaskSize},
+    mask::{
+        mapping::{
+            binding::{ButtonBinding, ValidateMappingConfig},
+            config::ActiveMappingConfig,
+            cursor::CursorPosition,
+            script_helper::ScriptAST,
+            utils::Position,
+        },
+        mask_command::MaskSize,
+    },
     utils::ChannelSenderCS,
 };
 
@@ -152,7 +155,9 @@ pub fn handle_script(
                     if !mapping.released_script_ast.empty {
                         let ast = mapping.released_script_ast.clone();
                         runtime.spawn_background_task(move |_ctx| async move {
-                            if let Err(e) = ast.eval_script(&cs_tx, original_size, cursor_pos, mask_size) {
+                            if let Err(e) =
+                                ast.eval_script(&cs_tx, original_size, cursor_pos, mask_size)
+                            {
                                 log::error!(
                                     "{}: {}",
                                     t!("mask.mapping.releasedScriptRuntimeError"),

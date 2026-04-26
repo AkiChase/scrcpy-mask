@@ -154,7 +154,7 @@ pub fn handle_mask_command(
                         &cs_tx_res.0,
                         mapping_config.original_size.into(),
                         cursor_pos.0,
-                        mask_size.0
+                        mask_size.0,
                     ) {
                         Err(e) => {
                             oneshot_tx.send(Err(e.to_string())).unwrap();
