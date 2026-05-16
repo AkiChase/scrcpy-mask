@@ -119,7 +119,8 @@ export function newMultipleTap(position: Position): MultipleTapConfig {
 
 export interface SwipeConfig {
   bind: ButtonBinding;
-  interval: number;
+  enable_randomization: boolean;
+  duration: number;
   note: string;
   pointer_id: number;
   positions: Position[];
@@ -129,7 +130,8 @@ export interface SwipeConfig {
 export function newSwipe(position: Position): SwipeConfig {
   return {
     bind: [],
-    interval: 100,
+    enable_randomization: false,
+    duration: 100,
     note: "",
     pointer_id: 1,
     positions: [position],

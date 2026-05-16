@@ -112,10 +112,12 @@
     },
     "swipe": {
       "setting": {
+        "duration": "滑动耗时",
         "delete": "删除",
         "keepLastOne": "至少保留一个操作！",
         "title": "映射配置 - 滑动",
         "positions": "坐标序列",
+        "enableRandomization": "启用轨迹随机化",
         "positonsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
         "edit": "编辑",
         "back": "返回"

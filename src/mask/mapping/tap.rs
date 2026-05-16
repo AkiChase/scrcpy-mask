@@ -14,12 +14,10 @@ use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 
 use crate::{
-    mask::{
-        mapping::{
-            binding::{ButtonBinding, ValidateMappingConfig},
-            config::ActiveMappingConfig,
-            utils::{ControlMsgHelper, Position, default_random_offset, random_offset_vec2},
-        },
+    mask::mapping::{
+        binding::{ButtonBinding, ValidateMappingConfig},
+        config::ActiveMappingConfig,
+        utils::{ControlMsgHelper, Position, default_random_offset, random_offset_vec2},
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,

@@ -13,7 +13,7 @@ use crate::{
     mask::mapping::{
         binding::{ButtonBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
-        utils::{ControlMsgHelper, MIN_MOVE_STEP_INTERVAL, Position, ease_sigmoid_like},
+        utils::{ControlMsgHelper, Position, build_swipe_intermediate_points},
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
@@ -24,7 +24,8 @@ pub struct BindMappingSwipe {
     pub note: String,
     pub pointer_id: u64,
     pub positions: Vec<Position>,
-    pub interval: u64,
+    pub duration: u64,
+    pub enable_randomization: bool,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
 }
@@ -35,7 +36,8 @@ impl From<MappingSwipe> for BindMappingSwipe {
             note: value.note,
             pointer_id: value.pointer_id,
             positions: value.positions,
-            interval: value.interval,
+            duration: value.duration,
+            enable_randomization: value.enable_randomization,
             bind: value.bind.clone(),
             input_binding: PulseBinding::just_pressed(value.bind).0,
         }
@@ -47,7 +49,9 @@ pub struct MappingSwipe {
     pub note: String,
     pub pointer_id: u64,
     pub positions: Vec<Position>,
-    pub interval: u64,
+    pub duration: u64,
+    #[serde(default)]
+    pub enable_randomization: bool,
     pub bind: ButtonBinding,
 }
 
@@ -75,7 +79,8 @@ pub fn handle_swipe(
                     let cs_tx = cs_tx_res.0.clone();
                     let pointer_id = mapping.pointer_id;
                     let points = mapping.positions.clone();
-                    let interval = mapping.interval;
+                    let enable_randomization = mapping.enable_randomization;
+                    let duration = mapping.duration;
                     runtime.spawn_background_task(move |_ctx| async move {
                         ControlMsgHelper::send_touch(
                             &cs_tx,
@@ -87,25 +92,29 @@ pub fn handle_swipe(
                         let mut cur_pos: Vec2 = points[0].into();
                         for i in 1..points.len() {
                             let next_pos: Vec2 = points[i].into();
-
-                            let delta = next_pos - cur_pos;
-                            let steps = std::cmp::max(1, interval / MIN_MOVE_STEP_INTERVAL);
-                            let step_duration = interval / steps;
-
-                            for step in 1..=steps {
-                                let linear_t = step as f32 / steps as f32;
-                                let eased_t = ease_sigmoid_like(linear_t);
-                                let interp = cur_pos + delta * eased_t;
+                            for step in build_swipe_intermediate_points(
+                                cur_pos,
+                                next_pos,
+                                !enable_randomization,
+                                duration,
+                            ) {
                                 ControlMsgHelper::send_touch(
                                     &cs_tx,
                                     MotionEventAction::Move,
                                     pointer_id,
                                     original_size,
-                                    interp.into(),
+                                    step.pos,
                                 );
-                                sleep(Duration::from_millis(step_duration as u64)).await;
+                                sleep(Duration::from_millis(step.wait_ms)).await;
                             }
 
+                            ControlMsgHelper::send_touch(
+                                &cs_tx,
+                                MotionEventAction::Move,
+                                pointer_id,
+                                original_size,
+                                next_pos,
+                            );
                             cur_pos = next_pos;
                         }
                         ControlMsgHelper::send_touch(

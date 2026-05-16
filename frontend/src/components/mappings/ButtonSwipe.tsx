@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MappingUpdater, SwipeConfig } from "./mapping";
-import { Button, Flex, Popover, Space, Tooltip, Typography } from "antd";
+import { Button, Flex, InputNumber, Popover, Space, Switch, Tooltip, Typography } from "antd";
 import {
   clientPositionToMappingPosition,
   mappingButtonDragFactory,
@@ -474,6 +474,24 @@ function Setting({
           >
             {t("mappings.swipe.setting.edit")}
           </Button>
+        </ItemBox>
+        <ItemBox label={t("mappings.swipe.setting.duration")}>
+          <InputNumber
+            className="w-full"
+            value={config.duration}
+            min={0}
+            onChange={(v) =>
+              v !== null && onConfigChange({ ...config, duration: v })
+            }
+          />
+        </ItemBox>
+        <ItemBox label={t("mappings.swipe.setting.enableRandomization")}>
+          <Switch
+            checked={config.enable_randomization}
+            onChange={(enable_randomization) =>
+              onConfigChange({ ...config, enable_randomization })
+            }
+          />
         </ItemBox>
         <SettingNote
           note={config.note}

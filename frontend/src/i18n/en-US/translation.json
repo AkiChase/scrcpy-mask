@@ -114,7 +114,9 @@
       "setting": {
         "keepLastOne": "Keep at least one operation!",
         "title": "Mapping Configuration - Swipe",
+        "enableRandomization": "Enable path randomization",
         "positonsHelp": "Drag with the left mouse button and add or edit with the right mouse button",
+        "duration": "Duration",
         "edit": "Edit",
         "delete": "Delete",
         "positions": "Position sequence",
