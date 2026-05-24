@@ -13,7 +13,10 @@ use crate::{
     mask::mapping::{
         binding::{ButtonBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
-        utils::{ControlMsgHelper, Position, SwipeStrategy, build_swipe_intermediate_points},
+        utils::{
+                build_multisegment_swipe_intermediate_points,
+                build_single_swipe_intermediate_points, ControlMsgHelper, Position, SwipeStrategy,
+            },
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
@@ -33,12 +36,10 @@ pub struct BindMappingSwipe {
 
 impl From<MappingSwipe> for BindMappingSwipe {
     fn from(value: MappingSwipe) -> Self {
-        // Backward compat: if old config had enable_randomization=true but no
-        // explicit strategy, map to ArcWithCubicEasing.
-        let strategy = if value.strategy == SwipeStrategy::default() && value.enable_randomization {
+        let strategy = if value.enable_randomization {
             SwipeStrategy::ArcWithCubicEasing
         } else {
-            value.strategy
+            SwipeStrategy::Linear
         };
         Self {
             note: value.note,
@@ -61,8 +62,6 @@ pub struct MappingSwipe {
     pub duration: u64,
     #[serde(default)]
     pub enable_randomization: bool,
-    #[serde(default)]
-    pub strategy: SwipeStrategy,
     pub bind: ButtonBinding,
 }
 
@@ -101,11 +100,11 @@ pub fn handle_swipe(
                             points[0].into(),
                         );
                         let mut cur_pos: Vec2 = points[0].into();
-                        for i in 1..points.len() {
-                            let next_pos: Vec2 = points[i].into();
-                            for step in build_swipe_intermediate_points(
-                                cur_pos,
-                                next_pos,
+                        if points.len() > 2 {
+                            let waypoints: Vec<Vec2> =
+                                points.iter().map(|&p| Vec2::from(p)).collect();
+                            for step in build_multisegment_swipe_intermediate_points(
+                                &waypoints,
                                 strategy,
                                 duration,
                             ) {
@@ -118,15 +117,35 @@ pub fn handle_swipe(
                                 );
                                 sleep(Duration::from_millis(step.wait_ms)).await;
                             }
+                            cur_pos = (*points.last().unwrap()).into();
+                        } else {
+                            for i in 1..points.len() {
+                                let next_pos: Vec2 = points[i].into();
+                                for step in build_single_swipe_intermediate_points(
+                                    cur_pos,
+                                    next_pos,
+                                    strategy,
+                                    duration,
+                                ) {
+                                    ControlMsgHelper::send_touch(
+                                        &cs_tx,
+                                        MotionEventAction::Move,
+                                        pointer_id,
+                                        original_size,
+                                        step.pos,
+                                    );
+                                    sleep(Duration::from_millis(step.wait_ms)).await;
+                                }
 
-                            ControlMsgHelper::send_touch(
-                                &cs_tx,
-                                MotionEventAction::Move,
-                                pointer_id,
-                                original_size,
-                                next_pos,
-                            );
-                            cur_pos = next_pos;
+                                ControlMsgHelper::send_touch(
+                                    &cs_tx,
+                                    MotionEventAction::Move,
+                                    pointer_id,
+                                    original_size,
+                                    next_pos,
+                                );
+                                cur_pos = next_pos;
+                            }
                         }
                         ControlMsgHelper::send_touch(
                             &cs_tx,
