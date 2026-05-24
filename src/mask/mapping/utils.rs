@@ -142,6 +142,26 @@ fn smoothstep(t: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
+/// Selects both path shape and timing curve for swipe generation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum SwipeStrategy {
+    /// Straight line from start to end, constant speed, no curvature.
+    ///
+    /// Best for testing, precise drag-and-drop, or any scenario where
+    /// deterministic, predictable motion is preferred over realism.
+    #[default]
+    Linear,
+
+    /// Curved path with a randomized arc near the start that cancels near
+    /// the end, plus a subtle midpoint drift. Timing follows a cubic
+    /// polynomial modelling finger touch-down: fast initial contact,
+    /// friction cruise through the middle, mild lift-off acceleration.
+    ///
+    /// Produces the most natural-looking swipes. The arc direction and
+    /// strength are randomized on each call.
+    ArcWithCubicEasing,
+}
+
 // Gaussian-like weight for local arc shaping.
 fn bell_curve(t: f32, center: f32, width: f32) -> f32 {
     let normalized = (t - center) / width.max(0.001);
@@ -168,12 +188,11 @@ pub fn random_offset_vec2(pos: Vec2, offset: Vec2) -> Vec2 {
     pos + Vec2::new(x_offset, y_offset)
 }
 
-// Build a human-like (or linear) swipe path between start and end, excluding both endpoints.
-// `duration_ms`: 0 = auto-calculate from distance, >0 = user-specified total time for this segment.
+// `duration_ms`: 0 = auto-calculate from distance, >0 = user-specified.
 pub fn build_swipe_intermediate_points(
     start: Vec2,
     end: Vec2,
-    no_randomization: bool,
+    strategy: SwipeStrategy,
     duration_ms: u64,
 ) -> Vec<SwipePointStep> {
     let delta = end - start;
@@ -182,48 +201,72 @@ pub fn build_swipe_intermediate_points(
         return vec![];
     }
 
-    // If no_randomization is set, generate a simple linear path with fixed timing for testing or precise control.
-    if no_randomization {
-        let point_count = ((distance / 14.0).round() as usize).clamp(10, 34);
-        let steps = point_count.saturating_sub(1);
-        if steps == 0 {
-            return vec![];
-        }
-        let per_step_wait = if duration_ms > 0 {
-            (duration_ms as f32 / steps as f32).round() as u64
-        } else {
-            20
-        };
-        let mut points = Vec::with_capacity(steps);
-        for step in 1..=steps {
-            let t = step as f32 / point_count as f32;
-            points.push(SwipePointStep {
-                pos: start + delta * t,
-                wait_ms: per_step_wait,
-            })
-        }
-        return points;
+    let point_count = ((distance / 14.0).round() as usize).clamp(10, 34);
+    let steps = point_count.saturating_sub(1);
+    if steps == 0 {
+        return vec![];
     }
 
-    let direction = delta / distance;
-    let normal = Vec2::new(-direction.y, direction.x);
+    match strategy {
+        SwipeStrategy::Linear => {
+            build_linear_path(start, delta, point_count, steps, duration_ms)
+        }
+        SwipeStrategy::ArcWithCubicEasing => build_arc_with_cubic_easing_path(
+            start,
+            delta,
+            distance,
+            point_count,
+            steps,
+            duration_ms,
+        ),
+    }
+}
 
-    // Derive gesture duration and point density from travel distance or user override.
-    let travel_ms = if duration_ms > 0 {
+fn build_linear_path(
+    start: Vec2,
+    delta: Vec2,
+    point_count: usize,
+    steps: usize,
+    duration_ms: u64,
+) -> Vec<SwipePointStep> {
+    let per_step_wait = if duration_ms > 0 {
+        (duration_ms as f32 / steps as f32).round().max(1.0) as u64
+    } else {
+        20
+    };
+    let mut points = Vec::with_capacity(steps);
+    for step in 1..=steps {
+        let t = step as f32 / point_count as f32;
+        points.push(SwipePointStep {
+            pos: start + delta * t,
+            wait_ms: per_step_wait,
+        });
+    }
+    points
+}
+
+fn build_arc_with_cubic_easing_path(
+    start: Vec2,
+    delta: Vec2,
+    distance: f32,
+    point_count: usize,
+    steps: usize,
+    duration_ms: u64,
+) -> Vec<SwipePointStep> {
+    let user_duration = duration_ms > 0;
+    let travel_ms = if user_duration {
         duration_ms as f32
     } else {
         (distance * 0.55).clamp(110.0, 420.0)
     };
-    let point_count = ((distance / 14.0).round() as usize).clamp(10, 34);
-    if point_count <= 1 {
-        return vec![];
-    }
 
-    // Add a small random arc near the start and cancel it near the end.
-    let start_arc_sign = if rand::random::<bool>() { 1.0 } else { -1.0 };
+    let direction = delta / distance;
+    let normal = Vec2::new(-direction.y, direction.x);
+
     let arc_scale = (distance * 0.035).clamp(1.5, 10.0);
-    let start_arc_strength = arc_scale * (0.6 + rand::random::<f32>() * 0.4) * start_arc_sign;
-    let end_arc_strength = -start_arc_strength * (0.85 + rand::random::<f32>() * 0.3);
+    let sign = if rand::random::<bool>() { 1.0 } else { -1.0 };
+    let start_arc = arc_scale * (0.6 + rand::random::<f32>() * 0.4) * sign;
+    let end_arc = -start_arc * (0.85 + rand::random::<f32>() * 0.3);
     let mid_drift = arc_scale * 0.35 * (rand::random::<f32>() * 2.0 - 1.0);
 
     let mut samples = Vec::with_capacity(point_count + 1);
@@ -233,16 +276,11 @@ pub fn build_swipe_intermediate_points(
 
     for i in 1..=point_count {
         let t = i as f32 / point_count as f32;
-        // Accelerate early and decelerate late.
         let progress = smoothstep(t);
-        let base = start + delta * progress;
-
-        let start_arc = bell_curve(t, 0.12, 0.09) * start_arc_strength;
-        let end_arc = bell_curve(t, 0.88, 0.09) * end_arc_strength;
-        let drift = bell_curve(t, 0.5, 0.22) * mid_drift;
-        let lateral_offset = start_arc + end_arc + drift;
-
-        let pos = base + normal * lateral_offset;
+        let lateral = bell_curve(t, 0.12, 0.09) * start_arc
+            + bell_curve(t, 0.88, 0.09) * end_arc
+            + bell_curve(t, 0.5, 0.22) * mid_drift;
+        let pos = start + delta * progress + normal * lateral;
         cumulative_length += pos.distance(prev_pos);
         samples.push((cumulative_length, pos));
         prev_pos = pos;
@@ -252,29 +290,27 @@ pub fn build_swipe_intermediate_points(
         return vec![];
     }
 
-    let mut points = Vec::with_capacity(point_count.saturating_sub(1));
+    let mut points = Vec::with_capacity(steps);
     let mut prev_target = start;
     let mut prev_time = 0.0;
-    let user_duration = duration_ms > 0;
 
     for step in 1..point_count {
         // Resample by arc length so point spacing follows the curved path.
         let target_distance = cumulative_length * (step as f32 / point_count as f32);
-        let sample_index = samples.partition_point(|(length, _)| *length < target_distance);
-        let (left_length, left_pos) = samples[sample_index.saturating_sub(1)];
-        let (right_length, right_pos) = samples[sample_index.min(samples.len() - 1)];
-        let segment_length = (right_length - left_length).max(0.0001);
-        let segment_t = clamp01((target_distance - left_length) / segment_length);
-        let pos = left_pos.lerp(right_pos, segment_t);
+        let idx = samples.partition_point(|(len, _)| *len < target_distance);
+        let (l_len, l_pos) = samples[idx.saturating_sub(1)];
+        let (r_len, r_pos) = samples[idx.min(samples.len() - 1)];
+        let seg_len = (r_len - l_len).max(0.0001);
+        let seg_t = clamp01((target_distance - l_len) / seg_len);
+        let pos = l_pos.lerp(r_pos, seg_t);
 
         let progress = step as f32 / point_count as f32;
-        let time_t = smoothstep(progress);
+        let t = clamp01(progress);
+        let time_t = -1.08 * t * t * t + 1.78 * t * t + 0.30 * t;
         let target_time = travel_ms * time_t;
         let spacing = pos.distance(prev_target);
 
-        // Wait time follows both eased timing and local point spacing.
         let base_wait = if user_duration {
-            // Honor user-specified duration: no floor, linear distribution is fine.
             (target_time - prev_time).max(0.0)
         } else {
             (target_time - prev_time).max(4.0)
@@ -291,7 +327,6 @@ pub fn build_swipe_intermediate_points(
         prev_time = target_time;
     }
 
-    // Normalize so total wait equals the user-specified duration.
     if user_duration {
         let raw_total: u64 = points.iter().map(|p| p.wait_ms).sum();
         if raw_total > 0 && raw_total != duration_ms {

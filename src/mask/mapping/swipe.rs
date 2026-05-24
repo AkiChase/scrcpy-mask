@@ -13,7 +13,7 @@ use crate::{
     mask::mapping::{
         binding::{ButtonBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
-        utils::{ControlMsgHelper, Position, build_swipe_intermediate_points},
+        utils::{ControlMsgHelper, Position, SwipeStrategy, build_swipe_intermediate_points},
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
@@ -26,18 +26,27 @@ pub struct BindMappingSwipe {
     pub positions: Vec<Position>,
     pub duration: u64,
     pub enable_randomization: bool,
+    pub strategy: SwipeStrategy,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
 }
 
 impl From<MappingSwipe> for BindMappingSwipe {
     fn from(value: MappingSwipe) -> Self {
+        // Backward compat: if old config had enable_randomization=true but no
+        // explicit strategy, map to ArcWithCubicEasing.
+        let strategy = if value.strategy == SwipeStrategy::default() && value.enable_randomization {
+            SwipeStrategy::ArcWithCubicEasing
+        } else {
+            value.strategy
+        };
         Self {
             note: value.note,
             pointer_id: value.pointer_id,
             positions: value.positions,
             duration: value.duration,
             enable_randomization: value.enable_randomization,
+            strategy,
             bind: value.bind.clone(),
             input_binding: PulseBinding::just_pressed(value.bind).0,
         }
@@ -52,6 +61,8 @@ pub struct MappingSwipe {
     pub duration: u64,
     #[serde(default)]
     pub enable_randomization: bool,
+    #[serde(default)]
+    pub strategy: SwipeStrategy,
     pub bind: ButtonBinding,
 }
 
@@ -79,8 +90,8 @@ pub fn handle_swipe(
                     let cs_tx = cs_tx_res.0.clone();
                     let pointer_id = mapping.pointer_id;
                     let points = mapping.positions.clone();
-                    let enable_randomization = mapping.enable_randomization;
                     let duration = mapping.duration;
+                    let strategy = mapping.strategy;
                     runtime.spawn_background_task(move |_ctx| async move {
                         ControlMsgHelper::send_touch(
                             &cs_tx,
@@ -95,7 +106,7 @@ pub fn handle_swipe(
                             for step in build_swipe_intermediate_points(
                                 cur_pos,
                                 next_pos,
-                                !enable_randomization,
+                                strategy,
                                 duration,
                             ) {
                                 ControlMsgHelper::send_touch(
