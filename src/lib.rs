@@ -4,6 +4,9 @@ pub mod scrcpy;
 pub mod utils;
 pub mod web;
 
+#[cfg(target_os = "windows")]
+pub mod window_alpha;
+
 rust_i18n::i18n!(
     "assets/locales",
     fallback = "en-US",

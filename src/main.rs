@@ -103,6 +103,13 @@ fn main() {
             .add_systems(Startup, macos_menu);
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        use scrcpy_mask::window_alpha;
+        app.add_systems(Startup, window_alpha::detect_alpha_mode);
+        app.add_systems(PostStartup, window_alpha::apply_alpha_mode);
+    }
+
     app.run();
 }
 

@@ -53,6 +53,10 @@ ffmpeg-next = { version = "7.1.0", default-features = false, features = [
     "software-scaling",
 ] }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+wgpu = "27"
+pollster = "0.4"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 muda = "0.17"
 
