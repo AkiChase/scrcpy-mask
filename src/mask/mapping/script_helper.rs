@@ -8,7 +8,9 @@ use pest_derive::Parser;
 use rust_i18n::t;
 use tokio::sync::broadcast;
 
-use crate::mask::mapping::utils::{ControlMsgHelper, MIN_MOVE_STEP_INTERVAL, ease_sigmoid_like};
+use crate::mask::mapping::utils::{
+    ControlMsgHelper, SingleSwipeStrategy, build_single_segment_swipe_intermediate_points,
+};
 use crate::scrcpy::constant::{KeyEventAction, Keycode, MetaState, MotionEventAction};
 use crate::scrcpy::control_msg::ScrcpyControlMsg;
 
@@ -1041,24 +1043,22 @@ fn swipe_func(
     );
     for i in 1..points.len() {
         let next_pos = points[i];
-        let delta = next_pos - cur_pos;
-        let steps = std::cmp::max(1, interval / MIN_MOVE_STEP_INTERVAL);
-        let step_duration = interval / steps;
-
-        for step in 1..=steps {
-            let linear_t = step as f32 / steps as f32;
-            let eased_t = ease_sigmoid_like(linear_t);
-            let interp = cur_pos + delta * eased_t;
+        let steps = build_single_segment_swipe_intermediate_points(
+            cur_pos,
+            next_pos,
+            SingleSwipeStrategy::Linear,
+            interval,
+        );
+        for step in steps {
             ControlMsgHelper::send_touch(
                 &cs_tx,
                 MotionEventAction::Move,
                 pointer_id,
                 original_size,
-                interp,
+                step.pos,
             );
-            std::thread::sleep(std::time::Duration::from_millis(step_duration));
+            std::thread::sleep(std::time::Duration::from_millis(step.wait_ms));
         }
-
         cur_pos = next_pos;
     }
     ControlMsgHelper::send_touch(

@@ -159,6 +159,7 @@ export type DirectionBinding =
 
 export interface DirectionPadConfig {
   bind: DirectionBinding;
+  enable_randomization: boolean;
   initial_duration: number;
   max_offset_x: number;
   max_offset_y: number;
@@ -177,6 +178,7 @@ export function newDirectionPad(position: Position): DirectionPadConfig {
       left: [],
       right: [],
     },
+    enable_randomization: false,
     initial_duration: 0,
     max_offset_x: 200,
     max_offset_y: 200,

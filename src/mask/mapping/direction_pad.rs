@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    sync::{atomic::{AtomicU64, Ordering}, Arc},
     time::{Duration, Instant},
 };
 
@@ -19,7 +20,11 @@ use crate::{
     mask::mapping::{
         binding::{DirectionBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
-        utils::{ControlMsgHelper, MIN_MOVE_STEP_INTERVAL, Position, ease_sigmoid_like},
+        utils::{
+            build_single_segment_swipe_intermediate_points, ControlMsgHelper,
+            DEFAULT_SWIPE_DURATION, Position, SingleSwipeStrategy,
+            random_offset_vec2,
+        },
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
@@ -38,6 +43,7 @@ pub struct BindMappingDirectionPad {
     pub initial_duration: u64,
     pub max_offset_x: f32,
     pub max_offset_y: f32,
+    pub enable_randomization: bool,
     pub bind: DirectionBinding,
     pub input_binding: InputBinding,
 }
@@ -51,6 +57,7 @@ impl From<MappingDirectionPad> for BindMappingDirectionPad {
             initial_duration: value.initial_duration,
             max_offset_x: value.max_offset_x,
             max_offset_y: value.max_offset_y,
+            enable_randomization: value.enable_randomization,
             bind: value.bind.clone(),
             input_binding: value.bind.into(),
         }
@@ -65,6 +72,8 @@ pub struct MappingDirectionPad {
     pub initial_duration: u64,
     pub max_offset_x: f32,
     pub max_offset_y: f32,
+    #[serde(default)]
+    pub enable_randomization: bool,
     pub bind: DirectionBinding,
 }
 
@@ -78,7 +87,14 @@ pub struct DirectionPadItem {
     pub pointer_id: u64,
     pub original_size: Vec2,
     pub original_pos: Vec2,
+    pub random_anchor: Vec2,
     pub last_state: Vec2,
+    pub last_state_actual: Vec2,
+    pub next_jitter_at: Instant,
+    pub current_jitter: Vec2,
+    pub enable_randomization: bool,
+    pub random_offset: Vec2,
+    pub move_gen: Arc<AtomicU64>,
 }
 
 fn scale_direction_2d_state(d_state: Vec2, mapping: &BindMappingDirectionPad) -> Vec2 {
@@ -114,6 +130,40 @@ fn scale_direction_2d_state(d_state: Vec2, mapping: &BindMappingDirectionPad) ->
 #[derive(Resource, Default)]
 pub struct BlockDirectionPad(pub bool);
 
+fn anchor_random_offset(max_offset_x: f32, max_offset_y: f32) -> Vec2 {
+    if max_offset_x >= max_offset_y {
+        let x_rand = 10.0_f32.min(max_offset_x * 0.1);
+        let ratio = if max_offset_x > 0.0 {
+            max_offset_y / max_offset_x
+        } else {
+            1.0
+        };
+        Vec2::new(x_rand, x_rand * ratio)
+    } else {
+        let y_rand = 10.0_f32.min(max_offset_y * 0.1);
+        let ratio = if max_offset_y > 0.0 {
+            max_offset_x / max_offset_y
+        } else {
+            1.0
+        };
+        Vec2::new(y_rand * ratio, y_rand)
+    }
+}
+
+fn micro_jitter(offset: Vec2) -> Vec2 {
+    if offset == Vec2::ZERO {
+        return Vec2::ZERO;
+    }
+    let s = 0.15;
+    let x = (rand::random::<f32>() * 2.0 - 1.0) * offset.x * s;
+    let y = (rand::random::<f32>() * 2.0 - 1.0) * offset.y * s;
+    Vec2::new(x, y)
+}
+
+fn next_jitter_deadline() -> Instant {
+    Instant::now() + Duration::from_millis(80 + rand::random::<u64>() % 41)
+}
+
 pub fn handle_direction_pad(
     ineffable: Res<Ineffable>,
     active_mapping: Res<ActiveMappingConfig>,
@@ -139,80 +189,186 @@ pub fn handle_direction_pad(
                 if direction_pad_map.0.contains_key(&key) {
                     let item = direction_pad_map.0.get_mut(&key).unwrap();
                     if item.enable_instant > Instant::now() {
-                        // wait for initial duration
                         continue;
                     }
                     let original_pos: Vec2 = mapping.position.into();
                     if state.x == 0.0 && state.y == 0.0 {
-                        // touch up and remove state
+                        // touch up
+                        let last_pos = if item.enable_randomization {
+                            item.random_anchor + item.last_state + item.current_jitter
+                        } else {
+                            original_pos + item.last_state
+                        };
                         ControlMsgHelper::send_touch(
                             &cs_tx_res.0,
                             MotionEventAction::Up,
                             mapping.pointer_id,
                             original_size,
-                            original_pos + item.last_state,
+                            last_pos,
                         );
                         direction_pad_map.0.remove(&key);
                     } else if state != item.last_state {
-                        // record new state
+                        let old_state = item.last_state_actual;
                         item.last_state = state;
-                        // move to new state
+                        item.last_state_actual = state;
+
+                        if item.enable_randomization {
+                            let cur = item.random_anchor + old_state + item.current_jitter;
+                            let target = item.random_anchor + state;
+                            let dist = cur.distance(target);
+                            if dist > 2.0 {
+                                let duration = DEFAULT_SWIPE_DURATION;
+                                let points = build_single_segment_swipe_intermediate_points(
+                                    cur,
+                                    target,
+                                    SingleSwipeStrategy::ArcWithEaseInOut,
+                                    duration,
+                                );
+                                let cs_tx = cs_tx_res.0.clone();
+                                let pointer_id = mapping.pointer_id;
+                                let expected_gen = item.move_gen.fetch_add(1, Ordering::SeqCst) + 1;
+                                let move_gen = item.move_gen.clone();
+                                runtime.spawn_background_task(move |_ctx| async move {
+                                    for point in points {
+                                        if move_gen.load(Ordering::Relaxed) != expected_gen {
+                                            return;
+                                        }
+                                        ControlMsgHelper::send_touch(
+                                            &cs_tx,
+                                            MotionEventAction::Move,
+                                            pointer_id,
+                                            original_size,
+                                            point.pos,
+                                        );
+                                        sleep(Duration::from_millis(point.wait_ms))
+                                            .await;
+                                    }
+                                });
+                            } else {
+                                ControlMsgHelper::send_touch(
+                                    &cs_tx_res.0,
+                                    MotionEventAction::Move,
+                                    mapping.pointer_id,
+                                    original_size,
+                                    target,
+                                );
+                            }
+                            item.current_jitter = Vec2::ZERO;
+                            item.next_jitter_at = next_jitter_deadline();
+                        } else {
+                            ControlMsgHelper::send_touch(
+                                &cs_tx_res.0,
+                                MotionEventAction::Move,
+                                mapping.pointer_id,
+                                original_size,
+                                original_pos + state,
+                            );
+                        }
+                    } else if item.enable_randomization
+                        && Instant::now() > item.next_jitter_at
+                    {
+                        let jitter = micro_jitter(item.random_offset);
                         ControlMsgHelper::send_touch(
                             &cs_tx_res.0,
                             MotionEventAction::Move,
                             mapping.pointer_id,
                             original_size,
-                            original_pos + state,
+                            item.random_anchor + state + jitter,
                         );
+                        item.current_jitter = jitter;
+                        item.next_jitter_at = next_jitter_deadline();
                     }
                 } else if state.x != 0.0 || state.y != 0.0 {
                     let pointer_id = mapping.pointer_id;
                     let original_size: Vec2 = active_mapping.original_size.into();
                     let original_pos: Vec2 = mapping.position.into();
 
-                    let enable_instant = Instant::now()
-                        + Duration::from_millis(mapping.initial_duration + MIN_MOVE_STEP_INTERVAL);
+                    let random_offset =
+                        anchor_random_offset(mapping.max_offset_x, mapping.max_offset_y);
+                    let random_anchor = if mapping.enable_randomization {
+                        random_offset_vec2(original_pos, random_offset)
+                    } else {
+                        original_pos
+                    };
 
-                    // record new item
+                    let enable_instant = Instant::now()
+                        + Duration::from_millis(
+                            mapping.initial_duration + DEFAULT_SWIPE_DURATION,
+                        );
+
                     direction_pad_map.0.insert(
                         key,
                         DirectionPadItem {
                             enable_instant,
                             pointer_id,
                             original_size,
-                            original_pos: original_pos,
+                            original_pos,
+                            random_anchor,
                             last_state: state,
+                            last_state_actual: state,
+                            next_jitter_at: next_jitter_deadline(),
+                            current_jitter: Vec2::ZERO,
+                            enable_randomization: mapping.enable_randomization,
+                            random_offset,
+                            move_gen: Arc::new(AtomicU64::new(0)),
                         },
                     );
+
                     // touch down
-                    let cs_tx = cs_tx_res.0.clone();
                     ControlMsgHelper::send_touch(
-                        &cs_tx,
+                        &cs_tx_res.0,
                         MotionEventAction::Down,
                         pointer_id,
                         original_size,
-                        original_pos,
+                        random_anchor,
                     );
-                    // move to state with initial_duration
-                    let delta = state;
-                    let steps: u64 =
-                        std::cmp::max(1, mapping.initial_duration / MIN_MOVE_STEP_INTERVAL);
 
-                    runtime.spawn_background_task(move |_ctx| async move {
-                        for step in 1..=steps {
-                            let linear_t = step as f32 / steps as f32;
-                            let eased_t = ease_sigmoid_like(linear_t);
-                            let interp = original_pos + delta * eased_t;
-                            ControlMsgHelper::send_touch(
-                                &cs_tx,
-                                MotionEventAction::Move,
-                                pointer_id,
-                                original_size,
-                                interp,
-                            );
-                            sleep(Duration::from_millis(MIN_MOVE_STEP_INTERVAL)).await;
-                        }
-                    });
+                    // initial slide
+                    if mapping.enable_randomization {
+                        let points = build_single_segment_swipe_intermediate_points(
+                            random_anchor,
+                            random_anchor + state,
+                            SingleSwipeStrategy::ArcWithEaseOut,
+                            DEFAULT_SWIPE_DURATION,
+                        );
+                        let cs_tx = cs_tx_res.0.clone();
+                        let initial_duration = mapping.initial_duration;
+                        runtime.spawn_background_task(move |_ctx| async move {
+                            sleep(Duration::from_millis(initial_duration)).await;
+                            for point in points {
+                                ControlMsgHelper::send_touch(
+                                    &cs_tx,
+                                    MotionEventAction::Move,
+                                    pointer_id,
+                                    original_size,
+                                    point.pos,
+                                );
+                                sleep(Duration::from_millis(point.wait_ms)).await;
+                            }
+                        });
+                    } else {
+                        let points = build_single_segment_swipe_intermediate_points(
+                            original_pos,
+                            original_pos + state,
+                            SingleSwipeStrategy::Linear,
+                            DEFAULT_SWIPE_DURATION,
+                        );
+                        let cs_tx = cs_tx_res.0.clone();
+                        let initial_duration = mapping.initial_duration;
+                        runtime.spawn_background_task(move |_ctx| async move {
+                            sleep(Duration::from_millis(initial_duration)).await;
+                            for point in points {
+                                ControlMsgHelper::send_touch(
+                                    &cs_tx,
+                                    MotionEventAction::Move,
+                                    pointer_id,
+                                    original_size,
+                                    point.pos,
+                                );
+                                sleep(Duration::from_millis(point.wait_ms)).await;
+                            }
+                        });
+                    }
                 }
             }
         }

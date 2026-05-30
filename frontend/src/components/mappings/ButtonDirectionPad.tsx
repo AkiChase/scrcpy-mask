@@ -373,6 +373,14 @@ function Setting({
             }
           />
         </ItemBox>
+        <ItemBox label={t("mappings.swipe.setting.enableRandomization")}>
+          <Switch
+            checked={config.enable_randomization}
+            onChange={(enable_randomization) =>
+              onConfigChange({ ...config, enable_randomization })
+            }
+          />
+        </ItemBox>
         <SettingNote
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}

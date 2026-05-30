@@ -15,7 +15,8 @@ use crate::{
         config::ActiveMappingConfig,
         utils::{
                 build_multisegment_swipe_intermediate_points,
-                build_single_swipe_intermediate_points, ControlMsgHelper, Position, SwipeStrategy,
+                build_single_segment_swipe_intermediate_points, ControlMsgHelper,
+                MultiSwipeStrategy, Position, SingleSwipeStrategy,
             },
     },
     scrcpy::constant::MotionEventAction,
@@ -29,7 +30,7 @@ pub struct BindMappingSwipe {
     pub positions: Vec<Position>,
     pub duration: u64,
     pub enable_randomization: bool,
-    pub strategy: SwipeStrategy,
+    pub strategy: SingleSwipeStrategy,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
 }
@@ -37,9 +38,9 @@ pub struct BindMappingSwipe {
 impl From<MappingSwipe> for BindMappingSwipe {
     fn from(value: MappingSwipe) -> Self {
         let strategy = if value.enable_randomization {
-            SwipeStrategy::ArcWithCubicEasing
+            SingleSwipeStrategy::ArcWithCubicEasing
         } else {
-            SwipeStrategy::Linear
+            SingleSwipeStrategy::Linear
         };
         Self {
             note: value.note,
@@ -105,7 +106,7 @@ pub fn handle_swipe(
                                 points.iter().map(|&p| Vec2::from(p)).collect();
                             for step in build_multisegment_swipe_intermediate_points(
                                 &waypoints,
-                                strategy,
+                                MultiSwipeStrategy::from(strategy),
                                 duration,
                             ) {
                                 ControlMsgHelper::send_touch(
@@ -121,7 +122,7 @@ pub fn handle_swipe(
                         } else {
                             for i in 1..points.len() {
                                 let next_pos: Vec2 = points[i].into();
-                                for step in build_single_swipe_intermediate_points(
+                                for step in build_single_segment_swipe_intermediate_points(
                                     cur_pos,
                                     next_pos,
                                     strategy,

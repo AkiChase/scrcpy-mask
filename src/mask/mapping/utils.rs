@@ -9,9 +9,10 @@ use crate::scrcpy::{
     control_msg::ScrcpyControlMsg,
 };
 
-// TODO 移除这个常量（只需要使用 build_swipe_intermediate_points 来生成路径）
+// TODO 移除这个常量, 后续应该用更合理的
 pub const MIN_MOVE_STEP_LENGTH: f32 = 25.; // px
-pub const MIN_MOVE_STEP_INTERVAL: u64 = 25; // ms
+
+pub const DEFAULT_SWIPE_DURATION: u64 = 25; // ms
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Copy)]
 pub struct Size {
@@ -129,10 +130,6 @@ impl ControlMsgHelper {
     }
 }
 
-pub fn ease_sigmoid_like(t: f32) -> f32 {
-    1.0 / (1.0 + (-12.0 * (t - 0.5)).exp())
-}
-
 fn clamp01(v: f32) -> f32 {
     v.clamp(0.0, 1.0)
 }
@@ -142,24 +139,60 @@ fn smoothstep(t: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
-/// Selects both path shape and timing curve for swipe generation.
+// Timing functions for arc path strategies.
+fn cubic_easing_timing(t: f32) -> f32 {
+    -1.08 * t * t * t + 1.78 * t * t + 0.30 * t
+}
+fn ease_out_timing(t: f32) -> f32 {
+    1.0 - (1.0 - t).powi(3)
+}
+fn ease_in_out_timing(t: f32) -> f32 {
+    if t < 0.5 {
+        4.0 * t * t * t
+    } else {
+        1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
+    }
+}
+
+/// Selects both path shape and timing curve for single-segment swipe generation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub enum SwipeStrategy {
+pub enum SingleSwipeStrategy {
     /// Straight line from start to end, constant speed, no curvature.
-    ///
-    /// Best for testing, precise drag-and-drop, or any scenario where
-    /// deterministic, predictable motion is preferred over realism.
     #[default]
     Linear,
 
-    /// Curved path with a randomized arc near the start that cancels near
-    /// the end, plus a subtle midpoint drift. Timing follows a cubic
-    /// polynomial modelling finger touch-down: fast initial contact,
-    /// friction cruise through the middle, mild lift-off acceleration.
-    ///
-    /// Produces the most natural-looking swipes. The arc direction and
-    /// strength are randomized on each call.
+    /// Curved path with cubic polynomial timing (fast initial contact,
+    /// friction cruise, mild lift-off acceleration). Best for finger
+    /// swipes that end with the finger lifting off the screen.
     ArcWithCubicEasing,
+
+    /// Curved path with ease-out timing (fast start, gradual deceleration
+    /// to a stop). Best for directional pad initial slides where the
+    /// finger comes to rest at the target.
+    ArcWithEaseOut,
+
+    /// Curved path with ease-in-out timing (gentle start, speed up, then
+    /// decelerate to a stop). Best for directional pad direction changes
+    /// where the finger is already touching the screen.
+    ArcWithEaseInOut,
+}
+
+/// Selects both path shape and timing curve for multi-segment swipe generation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MultiSwipeStrategy {
+    Linear,
+    ArcWithCubicEasing,
+}
+
+impl From<SingleSwipeStrategy> for MultiSwipeStrategy {
+    fn from(s: SingleSwipeStrategy) -> Self {
+        match s {
+            SingleSwipeStrategy::Linear => MultiSwipeStrategy::Linear,
+            SingleSwipeStrategy::ArcWithCubicEasing
+            | SingleSwipeStrategy::ArcWithEaseOut
+            | SingleSwipeStrategy::ArcWithEaseInOut => MultiSwipeStrategy::ArcWithCubicEasing,
+        }
+    }
 }
 
 // Gaussian-like weight for local arc shaping.
@@ -190,7 +223,7 @@ pub fn random_offset_vec2(pos: Vec2, offset: Vec2) -> Vec2 {
 
 pub fn build_multisegment_swipe_intermediate_points(
     waypoints: &[Vec2],
-    strategy: SwipeStrategy,
+    strategy: MultiSwipeStrategy,
     duration_ms: u64,
 ) -> Vec<SwipePointStep> {
     if waypoints.len() < 2 {
@@ -198,18 +231,18 @@ pub fn build_multisegment_swipe_intermediate_points(
     }
 
     match strategy {
-        SwipeStrategy::Linear => build_multisegment_linear(waypoints, duration_ms),
-        SwipeStrategy::ArcWithCubicEasing => {
-            build_multisegment_arc_cubic(waypoints, duration_ms)
+        MultiSwipeStrategy::Linear => build_multisegment_linear(waypoints, duration_ms),
+        MultiSwipeStrategy::ArcWithCubicEasing => {
+            build_multisegment_arc_cubic(waypoints, duration_ms, cubic_easing_timing)
         }
     }
 }
 
 // `duration_ms`: 0 = auto-calculate from distance, >0 = user-specified.
-pub fn build_single_swipe_intermediate_points(
+pub fn build_single_segment_swipe_intermediate_points(
     start: Vec2,
     end: Vec2,
-    strategy: SwipeStrategy,
+    strategy: SingleSwipeStrategy,
     duration_ms: u64,
 ) -> Vec<SwipePointStep> {
     let delta = end - start;
@@ -225,16 +258,17 @@ pub fn build_single_swipe_intermediate_points(
     }
 
     match strategy {
-        SwipeStrategy::Linear => {
+        SingleSwipeStrategy::Linear => {
             build_linear_path(start, delta, point_count, steps, duration_ms)
         }
-        SwipeStrategy::ArcWithCubicEasing => build_arc_with_cubic_easing_path(
-            start,
-            delta,
-            distance,
-            point_count,
-            steps,
-            duration_ms,
+        SingleSwipeStrategy::ArcWithCubicEasing => build_arc_path(
+            start, delta, distance, point_count, steps, duration_ms, cubic_easing_timing,
+        ),
+        SingleSwipeStrategy::ArcWithEaseOut => build_arc_path(
+            start, delta, distance, point_count, steps, duration_ms, ease_out_timing,
+        ),
+        SingleSwipeStrategy::ArcWithEaseInOut => build_arc_path(
+            start, delta, distance, point_count, steps, duration_ms, ease_in_out_timing,
         ),
     }
 }
@@ -262,13 +296,14 @@ fn build_linear_path(
     points
 }
 
-fn build_arc_with_cubic_easing_path(
+fn build_arc_path(
     start: Vec2,
     delta: Vec2,
     distance: f32,
     point_count: usize,
     steps: usize,
     duration_ms: u64,
+    timing_fn: fn(f32) -> f32,
 ) -> Vec<SwipePointStep> {
     let user_duration = duration_ms > 0;
     let travel_ms = if user_duration {
@@ -312,7 +347,6 @@ fn build_arc_with_cubic_easing_path(
     let mut prev_time = 0.0;
 
     for step in 1..point_count {
-        // Resample by arc length so point spacing follows the curved path.
         let target_distance = cumulative_length * (step as f32 / point_count as f32);
         let idx = samples.partition_point(|(len, _)| *len < target_distance);
         let (l_len, l_pos) = samples[idx.saturating_sub(1)];
@@ -323,7 +357,7 @@ fn build_arc_with_cubic_easing_path(
 
         let progress = step as f32 / point_count as f32;
         let t = clamp01(progress);
-        let time_t = -1.08 * t * t * t + 1.78 * t * t + 0.30 * t;
+        let time_t = timing_fn(t);
         let target_time = travel_ms * time_t;
         let spacing = pos.distance(prev_target);
 
@@ -417,6 +451,7 @@ fn build_multisegment_linear(
 fn build_multisegment_arc_cubic(
     waypoints: &[Vec2],
     duration_ms: u64,
+    timing_fn: fn(f32) -> f32,
 ) -> Vec<SwipePointStep> {
     let n_segments = waypoints.len() - 1;
     let user_duration = duration_ms > 0;
@@ -560,7 +595,7 @@ fn build_multisegment_arc_cubic(
 
         let progress = step as f32 / total_point_count as f32;
         let t = clamp01(progress);
-        let time_t = -1.08 * t * t * t + 1.78 * t * t + 0.30 * t;
+        let time_t = timing_fn(t);
         let target_time = travel_ms * time_t;
         let spacing = pos.distance(prev_target);
 
