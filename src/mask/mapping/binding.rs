@@ -4,6 +4,7 @@ use bevy::input::{
     gamepad::{GamepadAxis, GamepadButton},
     keyboard::{KeyCode, NativeKeyCode},
     mouse::MouseButton,
+    ButtonInput,
 };
 use bevy_ineffable::{
     bindings::{AnalogInput, BinaryInput, ChordLike, Threshold},
@@ -284,6 +285,18 @@ impl ButtonBinding {
     pub fn new(buttons: Vec<MergedButton>) -> Self {
         ButtonBinding(buttons)
     }
+
+    pub fn is_any_key_pressed(&self, key_input: &ButtonInput<KeyCode>) -> bool {
+        self.0
+            .iter()
+            .any(|btn| matches!(btn, MergedButton::Keyboard(k) if key_input.pressed(*k)))
+    }
+
+    pub fn is_any_mouse_pressed(&self, mouse_input: &ButtonInput<MouseButton>) -> bool {
+        self.0
+            .iter()
+            .any(|btn| matches!(btn, MergedButton::Mouse(b) if mouse_input.pressed(*b)))
+    }
 }
 
 impl ToString for ButtonBinding {
@@ -402,6 +415,27 @@ impl DirectionBinding {
                     vec![x[0..x.len() - 1].to_string()]
                 }
             }
+        }
+    }
+
+    /// Returns true if any direction input (keyboard key or mouse button) is currently
+    /// physically pressed. Used to distinguish "opposite directions cancel to zero" from
+    /// "all directions released".
+    pub fn is_any_direction_active(
+        &self,
+        key_input: &ButtonInput<KeyCode>,
+        mouse_input: &ButtonInput<MouseButton>,
+    ) -> bool {
+        match self {
+            DirectionBinding::Button {
+                up,
+                down,
+                left,
+                right,
+            } => [up, down, left, right]
+                .iter()
+                .any(|b| b.is_any_key_pressed(key_input) || b.is_any_mouse_pressed(mouse_input)),
+            DirectionBinding::JoyStick { .. } => false,
         }
     }
 }

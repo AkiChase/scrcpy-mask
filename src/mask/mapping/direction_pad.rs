@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{atomic::{AtomicU64, Ordering}, Arc},
+    sync::{atomic::AtomicU64, Arc},
     time::{Duration, Instant},
 };
 
@@ -9,6 +9,7 @@ use bevy::{
         resource::Resource,
         system::{Commands, Res, ResMut},
     },
+    input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     math::Vec2,
 };
 use bevy_ineffable::prelude::{Ineffable, InputBinding};
@@ -23,7 +24,8 @@ use crate::{
         utils::{
             anchor_random_offset, build_single_segment_swipe_intermediate_points,
             ControlMsgHelper, DEFAULT_SWIPE_DURATION, Position, SingleSwipeStrategy,
-            micro_jitter, next_jitter_deadline, random_offset_vec2,
+            handle_direction_jitter, handle_direction_move_randomized,
+            next_jitter_deadline, random_offset_vec2,
         },
     },
     scrcpy::constant::MotionEventAction,
@@ -138,6 +140,8 @@ pub fn handle_direction_pad(
     runtime: ResMut<TokioTasksRuntime>,
     block: Res<BlockDirectionPad>,
     mut direction_pad_map: ResMut<DirectionPadMap>,
+    key_input: Res<ButtonInput<KeyCode>>,
+    mouse_input: Res<ButtonInput<MouseButton>>,
 ) {
     if block.0 {
         return;
@@ -160,68 +164,70 @@ pub fn handle_direction_pad(
                     }
                     let original_pos: Vec2 = mapping.position.into();
                     if state.x == 0.0 && state.y == 0.0 {
-                        // touch up
-                        let last_pos = if item.enable_randomization {
-                            item.random_anchor + item.last_state + item.current_jitter
-                        } else {
-                            original_pos + item.last_state
-                        };
-                        ControlMsgHelper::send_touch(
-                            &cs_tx_res.0,
-                            MotionEventAction::Up,
-                            mapping.pointer_id,
-                            original_size,
-                            last_pos,
-                        );
-                        direction_pad_map.0.remove(&key);
-                    } else if state != item.last_state {
-                        let old_state = item.last_state_actual;
-                        item.last_state = state;
-                        item.last_state_actual = state;
+                        if mapping.bind.is_any_direction_active(&key_input, &mouse_input) {
+                            // Opposite directions canceled — move back to center, don't lift.
+                            let old_state = item.last_state_actual;
+                            item.last_state = state;
+                            item.last_state_actual = state;
 
-                        if item.enable_randomization {
-                            let cur = item.random_anchor + old_state + item.current_jitter;
-                            let target = item.random_anchor + state;
-                            let dist = cur.distance(target);
-                            if dist > 2.0 {
-                                let duration = DEFAULT_SWIPE_DURATION;
-                                let points = build_single_segment_swipe_intermediate_points(
-                                    cur,
-                                    target,
+                            if item.enable_randomization {
+                                handle_direction_move_randomized(
+                                    old_state,
+                                    state,
+                                    item.random_anchor,
+                                    &mut item.current_jitter,
+                                    &mut item.next_jitter_at,
+                                    &item.move_gen,
+                                    mapping.pointer_id,
+                                    original_size,
+                                    &cs_tx_res.0,
+                                    &runtime,
                                     SingleSwipeStrategy::ArcWithEaseInOut,
-                                    duration,
                                 );
-                                let cs_tx = cs_tx_res.0.clone();
-                                let pointer_id = mapping.pointer_id;
-                                let expected_gen = item.move_gen.fetch_add(1, Ordering::SeqCst) + 1;
-                                let move_gen = item.move_gen.clone();
-                                runtime.spawn_background_task(move |_ctx| async move {
-                                    for point in points {
-                                        if move_gen.load(Ordering::Relaxed) != expected_gen {
-                                            return;
-                                        }
-                                        ControlMsgHelper::send_touch(
-                                            &cs_tx,
-                                            MotionEventAction::Move,
-                                            pointer_id,
-                                            original_size,
-                                            point.pos,
-                                        );
-                                        sleep(Duration::from_millis(point.wait_ms))
-                                            .await;
-                                    }
-                                });
                             } else {
                                 ControlMsgHelper::send_touch(
                                     &cs_tx_res.0,
                                     MotionEventAction::Move,
                                     mapping.pointer_id,
                                     original_size,
-                                    target,
+                                    original_pos + state,
                                 );
                             }
-                            item.current_jitter = Vec2::ZERO;
-                            item.next_jitter_at = next_jitter_deadline();
+                        } else {
+                            // Genuine release: all keys up.
+                            let last_pos = if item.enable_randomization {
+                                item.random_anchor + item.last_state + item.current_jitter
+                            } else {
+                                original_pos + item.last_state
+                            };
+                            ControlMsgHelper::send_touch(
+                                &cs_tx_res.0,
+                                MotionEventAction::Up,
+                                mapping.pointer_id,
+                                original_size,
+                                last_pos,
+                            );
+                            direction_pad_map.0.remove(&key);
+                        }
+                    } else if state != item.last_state {
+                        let old_state = item.last_state_actual;
+                        item.last_state = state;
+                        item.last_state_actual = state;
+
+                        if item.enable_randomization {
+                            handle_direction_move_randomized(
+                                old_state,
+                                state,
+                                item.random_anchor,
+                                &mut item.current_jitter,
+                                &mut item.next_jitter_at,
+                                &item.move_gen,
+                                mapping.pointer_id,
+                                original_size,
+                                &cs_tx_res.0,
+                                &runtime,
+                                SingleSwipeStrategy::ArcWithEaseInOut,
+                            );
                         } else {
                             ControlMsgHelper::send_touch(
                                 &cs_tx_res.0,
@@ -234,16 +240,16 @@ pub fn handle_direction_pad(
                     } else if item.enable_randomization
                         && Instant::now() > item.next_jitter_at
                     {
-                        let jitter = micro_jitter(item.random_offset);
-                        ControlMsgHelper::send_touch(
-                            &cs_tx_res.0,
-                            MotionEventAction::Move,
+                        handle_direction_jitter(
+                            state,
+                            item.random_anchor,
+                            &mut item.current_jitter,
+                            &mut item.next_jitter_at,
+                            item.random_offset,
                             mapping.pointer_id,
                             original_size,
-                            item.random_anchor + state + jitter,
+                            &cs_tx_res.0,
                         );
-                        item.current_jitter = jitter;
-                        item.next_jitter_at = next_jitter_deadline();
                     }
                 } else if state.x != 0.0 || state.y != 0.0 {
                     let pointer_id = mapping.pointer_id;

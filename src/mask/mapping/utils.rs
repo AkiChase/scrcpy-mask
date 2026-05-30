@@ -1,11 +1,16 @@
 use std::{
     ops::MulAssign,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
     time::{Duration, Instant},
 };
 
 use bevy::math::Vec2;
+use bevy_tokio_tasks::TokioTasksRuntime;
 use serde::{Deserialize, Serialize};
-use tokio::sync::broadcast;
+use tokio::{sync::broadcast, time::sleep};
 
 use crate::scrcpy::{
     constant::{self, MotionEventAction, MotionEventButtons},
@@ -678,4 +683,81 @@ pub fn micro_jitter(offset: Vec2) -> Vec2 {
 
 pub fn next_jitter_deadline() -> Instant {
     Instant::now() + Duration::from_millis(80 + rand::random::<u64>() % 41)
+}
+
+/// Handle a direction change with randomized swipe movement.
+/// Returns true if a move was sent (either via background task or directly).
+pub fn handle_direction_move_randomized(
+    old_state: Vec2,
+    new_state: Vec2,
+    target_base: Vec2,
+    current_jitter: &mut Vec2,
+    next_jitter_at: &mut Instant,
+    move_gen: &Arc<AtomicU64>,
+    pointer_id: u64,
+    original_size: Vec2,
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    runtime: &TokioTasksRuntime,
+    strategy: SingleSwipeStrategy,
+) {
+    let cur = target_base + old_state + *current_jitter;
+    let target = target_base + new_state;
+    let dist = cur.distance(target);
+
+    if dist > 2.0 {
+        let points = build_single_segment_swipe_intermediate_points(
+            cur, target, strategy, DEFAULT_SWIPE_DURATION,
+        );
+        let cs_tx = cs_tx.clone();
+        let expected_gen = move_gen.fetch_add(1, Ordering::SeqCst) + 1;
+        let move_gen = move_gen.clone();
+        runtime.spawn_background_task(move |_ctx| async move {
+            for point in points {
+                if move_gen.load(Ordering::Relaxed) != expected_gen {
+                    return;
+                }
+                ControlMsgHelper::send_touch(
+                    &cs_tx,
+                    MotionEventAction::Move,
+                    pointer_id,
+                    original_size,
+                    point.pos,
+                );
+                sleep(Duration::from_millis(point.wait_ms)).await;
+            }
+        });
+    } else {
+        ControlMsgHelper::send_touch(
+            cs_tx,
+            MotionEventAction::Move,
+            pointer_id,
+            original_size,
+            target,
+        );
+    }
+    *current_jitter = Vec2::ZERO;
+    *next_jitter_at = next_jitter_deadline();
+}
+
+/// Apply micro-jitter to the current touch position for randomization.
+pub fn handle_direction_jitter(
+    state: Vec2,
+    target_base: Vec2,
+    current_jitter: &mut Vec2,
+    next_jitter_at: &mut Instant,
+    random_offset: Vec2,
+    pointer_id: u64,
+    original_size: Vec2,
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+) {
+    let jitter = micro_jitter(random_offset);
+    ControlMsgHelper::send_touch(
+        cs_tx,
+        MotionEventAction::Move,
+        pointer_id,
+        original_size,
+        target_base + state + jitter,
+    );
+    *current_jitter = jitter;
+    *next_jitter_at = next_jitter_deadline();
 }

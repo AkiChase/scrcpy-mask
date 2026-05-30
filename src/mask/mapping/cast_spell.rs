@@ -1,6 +1,6 @@
 use std::{
     sync::{
-        atomic::{AtomicU64, Ordering},
+        atomic::AtomicU64,
         Arc,
     },
     time::{Duration, Instant},
@@ -28,7 +28,8 @@ use crate::{
             utils::{
                 anchor_random_offset, build_single_segment_swipe_intermediate_points,
                 ControlMsgHelper, DEFAULT_SWIPE_DURATION, MIN_MOVE_STEP_LENGTH, Position,
-                SingleSwipeStrategy, default_random_offset, micro_jitter, next_jitter_deadline,
+                SingleSwipeStrategy, default_random_offset,
+                handle_direction_jitter, handle_direction_move_randomized,
                 random_offset_vec2,
             },
         },
@@ -596,55 +597,20 @@ pub fn handle_pad_cast_spell_trigger(
             let old_state = active_cast.last_state;
 
             if active_cast.enable_randomization {
-                let base = active_cast.random_anchor;
-                let cur = base + old_state + active_cast.current_jitter;
-                let target = base + state;
-                let dist = cur.distance(target);
-
-                if dist > 2.0 {
-                    let points = build_single_segment_swipe_intermediate_points(
-                        cur,
-                        target,
-                        SingleSwipeStrategy::ArcWithEaseInOut,
-                        DEFAULT_SWIPE_DURATION,
-                    );
-                    let cs_tx = cs_tx_res.0.clone();
-                    let pointer_id = active_cast.pointer_id;
-                    let original_size = active_cast.original_size;
-                    let expected_gen =
-                        active_cast.move_gen.fetch_add(1, Ordering::SeqCst) + 1;
-                    let move_gen = active_cast.move_gen.clone();
-                    runtime.spawn_background_task(move |_ctx| async move {
-                        for point in points {
-                            if move_gen.load(Ordering::Relaxed) != expected_gen {
-                                return;
-                            }
-                            ControlMsgHelper::send_touch(
-                                &cs_tx,
-                                MotionEventAction::Move,
-                                pointer_id,
-                                original_size,
-                                point.pos,
-                            );
-                            sleep(Duration::from_millis(point.wait_ms)).await;
-                        }
-                    });
-                    active_cast.last_state = state;
-                    active_cast.current_jitter = Vec2::ZERO;
-                    active_cast.next_jitter_at = next_jitter_deadline();
-                    return;
-                }
-                // small distance: direct move
-                ControlMsgHelper::send_touch(
-                    &cs_tx_res.0,
-                    MotionEventAction::Move,
+                handle_direction_move_randomized(
+                    old_state,
+                    state,
+                    active_cast.random_anchor,
+                    &mut active_cast.current_jitter,
+                    &mut active_cast.next_jitter_at,
+                    &active_cast.move_gen,
                     active_cast.pointer_id,
                     active_cast.original_size,
-                    target,
+                    &cs_tx_res.0,
+                    &runtime,
+                    SingleSwipeStrategy::ArcWithEaseInOut,
                 );
                 active_cast.last_state = state;
-                active_cast.current_jitter = Vec2::ZERO;
-                active_cast.next_jitter_at = next_jitter_deadline();
             } else {
                 ControlMsgHelper::send_touch(
                     &cs_tx_res.0,
@@ -658,16 +624,16 @@ pub fn handle_pad_cast_spell_trigger(
         } else if active_cast.enable_randomization
             && Instant::now() > active_cast.next_jitter_at
         {
-            let jitter = micro_jitter(active_cast.random_offset);
-            ControlMsgHelper::send_touch(
-                &cs_tx_res.0,
-                MotionEventAction::Move,
+            handle_direction_jitter(
+                state,
+                active_cast.random_anchor,
+                &mut active_cast.current_jitter,
+                &mut active_cast.next_jitter_at,
+                active_cast.random_offset,
                 active_cast.pointer_id,
                 active_cast.original_size,
-                active_cast.random_anchor + state + jitter,
+                &cs_tx_res.0,
             );
-            active_cast.current_jitter = jitter;
-            active_cast.next_jitter_at = next_jitter_deadline();
         }
     }
 }
