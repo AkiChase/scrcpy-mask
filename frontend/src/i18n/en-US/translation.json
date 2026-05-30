@@ -132,7 +132,7 @@
         "xAxis": "X-axis",
         "yAxis": "Y-axis",
         "down": "Down",
-        "initDuration": "Initial sliding duration",
+        "initDuration": "Initial slide delay",
         "left": "Left",
         "maxOffset": "Maximum offset",
         "right": "Right",

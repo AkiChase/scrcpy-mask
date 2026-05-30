@@ -136,7 +136,7 @@
         "left": "左",
         "right": "右",
         "maxOffset": "最大偏移量",
-        "initDuration": "首次滑动时长"
+        "initDuration": "首次滑动延迟"
       },
       "name": "方向轮盘"
     },

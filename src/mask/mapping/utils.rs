@@ -1,4 +1,7 @@
-use std::ops::MulAssign;
+use std::{
+    ops::MulAssign,
+    time::{Duration, Instant},
+};
 
 use bevy::math::Vec2;
 use serde::{Deserialize, Serialize};
@@ -641,4 +644,38 @@ fn build_multisegment_arc_cubic(
     }
 
     points
+}
+
+pub fn anchor_random_offset(max_offset_x: f32, max_offset_y: f32) -> Vec2 {
+    if max_offset_x >= max_offset_y {
+        let x_rand = 10.0_f32.min(max_offset_x * 0.1);
+        let ratio = if max_offset_x > 0.0 {
+            max_offset_y / max_offset_x
+        } else {
+            1.0
+        };
+        Vec2::new(x_rand, x_rand * ratio)
+    } else {
+        let y_rand = 10.0_f32.min(max_offset_y * 0.1);
+        let ratio = if max_offset_y > 0.0 {
+            max_offset_x / max_offset_y
+        } else {
+            1.0
+        };
+        Vec2::new(y_rand * ratio, y_rand)
+    }
+}
+
+pub fn micro_jitter(offset: Vec2) -> Vec2 {
+    if offset == Vec2::ZERO {
+        return Vec2::ZERO;
+    }
+    let s = 0.15;
+    let x = (rand::random::<f32>() * 2.0 - 1.0) * offset.x * s;
+    let y = (rand::random::<f32>() * 2.0 - 1.0) * offset.y * s;
+    Vec2::new(x, y)
+}
+
+pub fn next_jitter_deadline() -> Instant {
+    Instant::now() + Duration::from_millis(80 + rand::random::<u64>() % 41)
 }

@@ -1,4 +1,10 @@
-use std::time::{Duration, Instant};
+use std::{
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+    time::{Duration, Instant},
+};
 
 use bevy::{
     ecs::{
@@ -19,7 +25,12 @@ use crate::{
             config::{ActiveMappingConfig, MappingAction},
             cursor::CursorPosition,
             direction_pad::{BlockDirectionPad, DirectionPadMap},
-            utils::{ControlMsgHelper, MIN_MOVE_STEP_LENGTH, Position, default_random_offset, random_offset_vec2},
+            utils::{
+                anchor_random_offset, build_single_segment_swipe_intermediate_points,
+                ControlMsgHelper, DEFAULT_SWIPE_DURATION, MIN_MOVE_STEP_LENGTH, Position,
+                SingleSwipeStrategy, default_random_offset, micro_jitter, next_jitter_deadline,
+                random_offset_vec2,
+            },
         },
         mask_command::MaskSize,
     },
@@ -55,6 +66,13 @@ struct ActiveCastSpellItem {
     pad_action: Option<MappingAction>,
     last_state: Vec2,
     block_direction_pad: bool,
+    // randomization
+    enable_randomization: bool,
+    random_anchor: Vec2,
+    random_offset: Vec2,
+    current_jitter: Vec2,
+    next_jitter_at: Instant,
+    move_gen: Arc<AtomicU64>,
 }
 
 impl ActiveCastSpellItem {
@@ -89,6 +107,12 @@ impl ActiveCastSpellItem {
             pad_action: None,
             last_state: Vec2::ZERO,
             block_direction_pad: false,
+            enable_randomization: false,
+            random_anchor: Vec2::ZERO,
+            random_offset: Vec2::ZERO,
+            current_jitter: Vec2::ZERO,
+            next_jitter_at: Instant::now(),
+            move_gen: Arc::new(AtomicU64::new(0)),
         }
     }
 
@@ -102,6 +126,9 @@ impl ActiveCastSpellItem {
         enable_instant: Instant,
         block_direction_pad: bool,
         pad_action: MappingAction,
+        enable_randomization: bool,
+        random_anchor: Vec2,
+        random_offset: Vec2,
     ) -> Self {
         Self {
             mouse_flag: false,
@@ -120,6 +147,12 @@ impl ActiveCastSpellItem {
             pad_action: Some(pad_action),
             last_state: Vec2::ZERO,
             block_direction_pad,
+            enable_randomization,
+            random_anchor,
+            random_offset,
+            current_jitter: Vec2::ZERO,
+            next_jitter_at: Instant::now(),
+            move_gen: Arc::new(AtomicU64::new(0)),
         }
     }
 }
@@ -480,8 +513,10 @@ pub struct BindMappingPadCastSpell {
     pub pad_input_binding: InputBinding,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
+    pub initial_duration: u64,
     pub random_offset_x: f32,
     pub random_offset_y: f32,
+    pub enable_randomization: bool,
 }
 
 impl From<MappingPadCastSpell> for BindMappingPadCastSpell {
@@ -498,8 +533,10 @@ impl From<MappingPadCastSpell> for BindMappingPadCastSpell {
             pad_input_binding: value.pad_bind.into(),
             bind: value.bind.clone(),
             input_binding: ContinuousBinding::hold(value.bind).0,
+            initial_duration: value.initial_duration,
             random_offset_x: value.random_offset_x,
             random_offset_y: value.random_offset_y,
+            enable_randomization: value.enable_randomization,
         }
     }
 }
@@ -514,10 +551,14 @@ pub struct MappingPadCastSpell {
     pub block_direction_pad: bool,
     pub pad_bind: DirectionBinding,
     pub bind: ButtonBinding,
+    #[serde(default)]
+    pub initial_duration: u64,
     #[serde(default = "default_random_offset")]
     pub random_offset_x: f32,
     #[serde(default = "default_random_offset")]
     pub random_offset_y: f32,
+    #[serde(default)]
+    pub enable_randomization: bool,
 }
 
 impl ValidateMappingConfig for MappingPadCastSpell {}
@@ -538,6 +579,7 @@ fn scale_direction_2d_state(d_state: Vec2, drag_radius: f32) -> Vec2 {
 pub fn handle_pad_cast_spell_trigger(
     ineffable: Res<Ineffable>,
     cs_tx_res: Res<ChannelSenderCS>,
+    runtime: ResMut<TokioTasksRuntime>,
     mut active_cast: ResMut<ActiveCastSpell>,
 ) {
     if let Some(active_cast) = active_cast.0.as_mut() {
@@ -551,16 +593,81 @@ pub fn handle_pad_cast_spell_trigger(
         );
 
         if state != active_cast.last_state {
-            // move to new state
+            let old_state = active_cast.last_state;
+
+            if active_cast.enable_randomization {
+                let base = active_cast.random_anchor;
+                let cur = base + old_state + active_cast.current_jitter;
+                let target = base + state;
+                let dist = cur.distance(target);
+
+                if dist > 2.0 {
+                    let points = build_single_segment_swipe_intermediate_points(
+                        cur,
+                        target,
+                        SingleSwipeStrategy::ArcWithEaseInOut,
+                        DEFAULT_SWIPE_DURATION,
+                    );
+                    let cs_tx = cs_tx_res.0.clone();
+                    let pointer_id = active_cast.pointer_id;
+                    let original_size = active_cast.original_size;
+                    let expected_gen =
+                        active_cast.move_gen.fetch_add(1, Ordering::SeqCst) + 1;
+                    let move_gen = active_cast.move_gen.clone();
+                    runtime.spawn_background_task(move |_ctx| async move {
+                        for point in points {
+                            if move_gen.load(Ordering::Relaxed) != expected_gen {
+                                return;
+                            }
+                            ControlMsgHelper::send_touch(
+                                &cs_tx,
+                                MotionEventAction::Move,
+                                pointer_id,
+                                original_size,
+                                point.pos,
+                            );
+                            sleep(Duration::from_millis(point.wait_ms)).await;
+                        }
+                    });
+                    active_cast.last_state = state;
+                    active_cast.current_jitter = Vec2::ZERO;
+                    active_cast.next_jitter_at = next_jitter_deadline();
+                    return;
+                }
+                // small distance: direct move
+                ControlMsgHelper::send_touch(
+                    &cs_tx_res.0,
+                    MotionEventAction::Move,
+                    active_cast.pointer_id,
+                    active_cast.original_size,
+                    target,
+                );
+                active_cast.last_state = state;
+                active_cast.current_jitter = Vec2::ZERO;
+                active_cast.next_jitter_at = next_jitter_deadline();
+            } else {
+                ControlMsgHelper::send_touch(
+                    &cs_tx_res.0,
+                    MotionEventAction::Move,
+                    active_cast.pointer_id,
+                    active_cast.original_size,
+                    active_cast.cast_pos + state,
+                );
+                active_cast.last_state = state;
+            }
+        } else if active_cast.enable_randomization
+            && Instant::now() > active_cast.next_jitter_at
+        {
+            let jitter = micro_jitter(active_cast.random_offset);
             ControlMsgHelper::send_touch(
                 &cs_tx_res.0,
                 MotionEventAction::Move,
                 active_cast.pointer_id,
                 active_cast.original_size,
-                active_cast.cast_pos + state,
+                active_cast.random_anchor + state + jitter,
             );
-            // record last state
-            active_cast.last_state = state;
+            active_cast.current_jitter = jitter;
+            active_cast.next_jitter_at = next_jitter_deadline();
         }
     }
 }
@@ -570,6 +677,7 @@ pub fn handle_pad_cast_spell(
     active_mapping: Res<ActiveMappingConfig>,
     cs_tx_res: Res<ChannelSenderCS>,
     mask_size: Res<MaskSize>,
+    runtime: ResMut<TokioTasksRuntime>,
     mut active_cast: ResMut<ActiveCastSpell>,
     mut direction_pad_map: ResMut<DirectionPadMap>,
     mut block_direction_pad: ResMut<BlockDirectionPad>,
@@ -622,7 +730,18 @@ pub fn handle_pad_cast_spell(
                         Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
                     );
                     let current_pos = original_pos / original_size * mask_size.0;
-                    let enable_instant = Instant::now() + Duration::from_millis(CAST_SPELL_DELAY);
+                    let enable_instant = Instant::now()
+                        + Duration::from_millis(
+                            CAST_SPELL_DELAY + mapping.initial_duration + DEFAULT_SWIPE_DURATION,
+                        );
+
+                    let (random_anchor, random_offset) = if mapping.enable_randomization {
+                        let offset = anchor_random_offset(mapping.drag_radius, mapping.drag_radius);
+                        let anchor = random_offset_vec2(original_pos, offset);
+                        (anchor, offset)
+                    } else {
+                        (Vec2::ZERO, Vec2::ZERO)
+                    };
 
                     // set active
                     active_cast.0 = Some(ActiveCastSpellItem::new_pad_item(
@@ -635,6 +754,9 @@ pub fn handle_pad_cast_spell(
                         enable_instant,
                         mapping.block_direction_pad,
                         mapping.pad_action.clone(),
+                        mapping.enable_randomization,
+                        random_anchor,
+                        random_offset,
                     ));
 
                     // touch down new cast
@@ -645,18 +767,44 @@ pub fn handle_pad_cast_spell(
                         mask_size.0,
                         current_pos,
                     );
-                    // touch move around current_pos
-                    let steps: u64 = 5;
-                    let mut delta = Vec2::new(0., 0.);
-                    for _ in 0..steps {
-                        ControlMsgHelper::send_touch(
-                            &cs_tx_res.0,
-                            MotionEventAction::Move,
-                            pointer_id,
-                            mask_size.0,
-                            current_pos + delta,
-                        );
-                        delta += Vec2::new(1., -1.);
+
+                    // initial slide
+                    let initial_state = Vec2::ZERO;
+                    let slide_start = if mapping.enable_randomization {
+                        random_anchor / original_size * mask_size.0
+                    } else {
+                        current_pos
+                    };
+                    let slide_end = slide_start + initial_state;
+
+                    let strategy = if mapping.enable_randomization {
+                        SingleSwipeStrategy::ArcWithEaseOut
+                    } else {
+                        SingleSwipeStrategy::Linear
+                    };
+                    let points = build_single_segment_swipe_intermediate_points(
+                        slide_start,
+                        slide_end,
+                        strategy,
+                        DEFAULT_SWIPE_DURATION,
+                    );
+                    if !points.is_empty() {
+                        let cs_tx = cs_tx_res.0.clone();
+                        let cur_mask_size = mask_size.0;
+                        let initial_duration = mapping.initial_duration;
+                        runtime.spawn_background_task(move |_ctx| async move {
+                            sleep(Duration::from_millis(initial_duration)).await;
+                            for point in points {
+                                ControlMsgHelper::send_touch(
+                                    &cs_tx,
+                                    MotionEventAction::Move,
+                                    pointer_id,
+                                    cur_mask_size,
+                                    point.pos,
+                                );
+                                sleep(Duration::from_millis(point.wait_ms)).await;
+                            }
+                        });
                     }
                 } else if ineffable.just_deactivated(action.ineff_continuous()) {
                     if let PadCastReleaseMode::OnRelease = mapping.release_mode {

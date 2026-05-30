@@ -377,12 +377,30 @@ function Setting({
             }
           />
         </ItemBox>
+        <ItemBox label={t("mappings.directionPad.setting.initDuration")}>
+          <InputNumber
+            className="w-full"
+            value={config.initial_duration}
+            min={0}
+            onChange={(v) =>
+              v !== null && onConfigChange({ ...config, initial_duration: v })
+            }
+          />
+        </ItemBox>
         <ItemBox label={t("mappings.padCastSpell.setting.block")}>
           <Switch
             checked={config.block_direction_pad}
             onChange={(v) => {
               onConfigChange({ ...config, block_direction_pad: v });
             }}
+          />
+        </ItemBox>
+        <ItemBox label={t("mappings.swipe.setting.enableRandomization")}>
+          <Switch
+            checked={config.enable_randomization}
+            onChange={(enable_randomization) =>
+              onConfigChange({ ...config, enable_randomization })
+            }
           />
         </ItemBox>
         <ItemBox label={t("mappings.padCastSpell.setting.releaseMode.label")}>

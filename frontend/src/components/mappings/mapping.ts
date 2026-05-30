@@ -236,6 +236,8 @@ export interface PadCastSpellConfig {
   bind: ButtonBinding;
   block_direction_pad: boolean;
   drag_radius: number;
+  enable_randomization: boolean;
+  initial_duration: number;
   note: string;
   pad_bind: DirectionBinding;
   pointer_id: number;
@@ -251,6 +253,8 @@ export function newPadCastSpell(position: Position): PadCastSpellConfig {
     bind: [],
     block_direction_pad: false,
     drag_radius: 150,
+    enable_randomization: false,
+    initial_duration: 0,
     note: "",
     pad_bind: {
       type: "Button",
@@ -448,6 +452,8 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
         case "PadCastSpell":
           return {
             ...mapping,
+            enable_randomization: mapping.enable_randomization ?? false,
+            initial_duration: mapping.initial_duration ?? 0,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
           };
