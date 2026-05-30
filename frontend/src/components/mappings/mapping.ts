@@ -198,12 +198,14 @@ export interface MouseCastSpellConfig {
   center: Position;
   drag_radius: number;
   horizontal_scale_factor: number;
-  vertical_scale_factor: number;
   note: string;
   pointer_id: number;
   position: Position;
+  random_offset_x: number;
+  random_offset_y: number;
   release_mode: MouseCastReleaseMode;
   type: "MouseCastSpell";
+  vertical_scale_factor: number;
 }
 
 export function newMouseCastSpell(
@@ -217,12 +219,14 @@ export function newMouseCastSpell(
     center,
     drag_radius: 150,
     horizontal_scale_factor: 7,
-    vertical_scale_factor: 10,
     note: "",
     pointer_id: 3,
     position,
+    random_offset_x: default_random_offset,
+    random_offset_y: default_random_offset,
     release_mode: "OnRelease",
     type: "MouseCastSpell",
+    vertical_scale_factor: 10,
   };
 }
 
@@ -236,6 +240,8 @@ export interface PadCastSpellConfig {
   pad_bind: DirectionBinding;
   pointer_id: number;
   position: Position;
+  random_offset_x: number;
+  random_offset_y: number;
   release_mode: PadCastReleaseMode;
   type: "PadCastSpell";
 }
@@ -255,6 +261,8 @@ export function newPadCastSpell(position: Position): PadCastSpellConfig {
     },
     pointer_id: 3,
     position,
+    random_offset_x: default_random_offset,
+    random_offset_y: default_random_offset,
     release_mode: "OnRelease",
     type: "PadCastSpell",
   };
@@ -281,6 +289,8 @@ export interface ObservationConfig {
   note: string;
   pointer_id: number;
   position: Position;
+  random_offset_x: number;
+  random_offset_y: number;
   sensitivity_x: number;
   sensitivity_y: number;
   type: "Observation";
@@ -292,6 +302,8 @@ export function newObservation(position: Position): ObservationConfig {
     note: "",
     pointer_id: 4,
     position,
+    random_offset_x: default_random_offset,
+    random_offset_y: default_random_offset,
     sensitivity_x: 1,
     sensitivity_y: 1,
     type: "Observation",
@@ -325,6 +337,8 @@ export interface FireConfig {
   note: string;
   pointer_id: number;
   position: Position;
+  random_offset_x: number;
+  random_offset_y: number;
   sensitivity_x: number;
   sensitivity_y: number;
   type: "Fire";
@@ -336,6 +350,8 @@ export function newFire(position: Position): FireConfig {
     note: "",
     pointer_id: 0,
     position,
+    random_offset_x: default_random_offset,
+    random_offset_y: default_random_offset,
     sensitivity_x: 1,
     sensitivity_y: 1,
     type: "Fire",
@@ -406,6 +422,30 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
           };
         case "MultipleTap":
+          return {
+            ...mapping,
+            random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
+            random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+          };
+        case "Fire":
+          return {
+            ...mapping,
+            random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
+            random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+          };
+        case "Observation":
+          return {
+            ...mapping,
+            random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
+            random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+          };
+        case "MouseCastSpell":
+          return {
+            ...mapping,
+            random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
+            random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+          };
+        case "PadCastSpell":
           return {
             ...mapping,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),

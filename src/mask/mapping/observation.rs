@@ -16,7 +16,7 @@ use crate::{
             binding::{ButtonBinding, ValidateMappingConfig},
             config::ActiveMappingConfig,
             cursor::CursorPosition,
-            utils::{ControlMsgHelper, Position},
+            utils::{ControlMsgHelper, Position, default_random_offset, random_offset_vec2},
         },
         mask_command::MaskSize,
     },
@@ -37,6 +37,8 @@ pub struct BindMappingObservation {
     pub sensitivity_y: f32,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
+    pub random_offset_x: f32,
+    pub random_offset_y: f32,
 }
 
 impl From<MappingObservation> for BindMappingObservation {
@@ -49,6 +51,8 @@ impl From<MappingObservation> for BindMappingObservation {
             sensitivity_y: value.sensitivity_y,
             bind: value.bind.clone(),
             input_binding: ContinuousBinding::hold(value.bind).0,
+            random_offset_x: value.random_offset_x,
+            random_offset_y: value.random_offset_y,
         }
     }
 }
@@ -61,6 +65,10 @@ pub struct MappingObservation {
     pub sensitivity_x: f32,
     pub sensitivity_y: f32,
     pub bind: ButtonBinding,
+    #[serde(default = "default_random_offset")]
+    pub random_offset_x: f32,
+    #[serde(default = "default_random_offset")]
+    pub random_offset_y: f32,
 }
 
 impl ValidateMappingConfig for MappingObservation {}
@@ -108,6 +116,10 @@ pub fn handle_observation(
                 if ineffable.just_activated(action.ineff_continuous()) {
                     let original_size: Vec2 = active_mapping.original_size.into();
                     let original_pos: Vec2 = mapping.position.into();
+                    let original_pos = random_offset_vec2(
+                        original_pos,
+                        Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
+                    );
                     let sensitivity: Vec2 = (mapping.sensitivity_x, mapping.sensitivity_y).into();
                     let pointer_id = mapping.pointer_id;
                     let mask_pos = original_pos / original_size * mask_size.0;

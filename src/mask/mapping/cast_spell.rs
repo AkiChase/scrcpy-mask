@@ -19,7 +19,7 @@ use crate::{
             config::{ActiveMappingConfig, MappingAction},
             cursor::CursorPosition,
             direction_pad::{BlockDirectionPad, DirectionPadMap},
-            utils::{ControlMsgHelper, MIN_MOVE_STEP_LENGTH, Position},
+            utils::{ControlMsgHelper, MIN_MOVE_STEP_LENGTH, Position, default_random_offset, random_offset_vec2},
         },
         mask_command::MaskSize,
     },
@@ -145,6 +145,8 @@ pub struct BindMappingMouseCastSpell {
     pub cast_no_direction: bool,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
+    pub random_offset_x: f32,
+    pub random_offset_y: f32,
 }
 
 impl From<MappingMouseCastSpell> for BindMappingMouseCastSpell {
@@ -162,6 +164,8 @@ impl From<MappingMouseCastSpell> for BindMappingMouseCastSpell {
             cast_no_direction: value.cast_no_direction,
             bind: value.bind.clone(),
             input_binding: ContinuousBinding::hold(value.bind).0,
+            random_offset_x: value.random_offset_x,
+            random_offset_y: value.random_offset_y,
         }
     }
 }
@@ -179,6 +183,10 @@ pub struct MappingMouseCastSpell {
     pub release_mode: MouseCastReleaseMode,
     pub cast_no_direction: bool,
     pub bind: ButtonBinding,
+    #[serde(default = "default_random_offset")]
+    pub random_offset_x: f32,
+    #[serde(default = "default_random_offset")]
+    pub random_offset_y: f32,
 }
 
 impl ValidateMappingConfig for MappingMouseCastSpell {}
@@ -301,6 +309,10 @@ pub fn handle_mouse_cast_spell(
                     let original_size: Vec2 = active_mapping.original_size.into();
                     let pointer_id = mapping.pointer_id;
                     let original_pos: Vec2 = mapping.position.into();
+                    let original_pos = random_offset_vec2(
+                        original_pos,
+                        Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
+                    );
                     let center_pos: Vec2 = mapping.center.into();
                     let release_mode = mapping.release_mode.clone();
                     let cast_no_direction = mapping.cast_no_direction;
@@ -468,6 +480,8 @@ pub struct BindMappingPadCastSpell {
     pub pad_input_binding: InputBinding,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
+    pub random_offset_x: f32,
+    pub random_offset_y: f32,
 }
 
 impl From<MappingPadCastSpell> for BindMappingPadCastSpell {
@@ -484,6 +498,8 @@ impl From<MappingPadCastSpell> for BindMappingPadCastSpell {
             pad_input_binding: value.pad_bind.into(),
             bind: value.bind.clone(),
             input_binding: ContinuousBinding::hold(value.bind).0,
+            random_offset_x: value.random_offset_x,
+            random_offset_y: value.random_offset_y,
         }
     }
 }
@@ -498,6 +514,10 @@ pub struct MappingPadCastSpell {
     pub block_direction_pad: bool,
     pub pad_bind: DirectionBinding,
     pub bind: ButtonBinding,
+    #[serde(default = "default_random_offset")]
+    pub random_offset_x: f32,
+    #[serde(default = "default_random_offset")]
+    pub random_offset_y: f32,
 }
 
 impl ValidateMappingConfig for MappingPadCastSpell {}
@@ -597,6 +617,10 @@ pub fn handle_pad_cast_spell(
                     let original_size: Vec2 = active_mapping.original_size.into();
                     let pointer_id = mapping.pointer_id;
                     let original_pos: Vec2 = mapping.position.into();
+                    let original_pos = random_offset_vec2(
+                        original_pos,
+                        Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
+                    );
                     let current_pos = original_pos / original_size * mask_size.0;
                     let enable_instant = Instant::now() + Duration::from_millis(CAST_SPELL_DELAY);
 

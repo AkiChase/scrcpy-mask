@@ -19,7 +19,7 @@ use crate::{
             binding::{ButtonBinding, ValidateMappingConfig},
             config::ActiveMappingConfig,
             cursor::{ActiveCursorFpsConfig, CursorPosition, CursorState, FPS_MARGIN},
-            utils::{ControlMsgHelper, Position},
+            utils::{ControlMsgHelper, Position, default_random_offset, random_offset_vec2},
         },
         mask_command::MaskSize,
     },
@@ -146,6 +146,8 @@ pub struct BindMappingFire {
     pub sensitivity_y: f32,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
+    pub random_offset_x: f32,
+    pub random_offset_y: f32,
 }
 
 impl From<MappingFire> for BindMappingFire {
@@ -158,6 +160,8 @@ impl From<MappingFire> for BindMappingFire {
             sensitivity_y: value.sensitivity_y,
             bind: value.bind.clone(),
             input_binding: ContinuousBinding::hold(value.bind).0,
+            random_offset_x: value.random_offset_x,
+            random_offset_y: value.random_offset_y,
         }
     }
 }
@@ -170,6 +174,10 @@ pub struct MappingFire {
     pub sensitivity_x: f32,
     pub sensitivity_y: f32,
     pub bind: ButtonBinding,
+    #[serde(default = "default_random_offset")]
+    pub random_offset_x: f32,
+    #[serde(default = "default_random_offset")]
+    pub random_offset_y: f32,
 }
 
 impl ValidateMappingConfig for MappingFire {}
@@ -233,16 +241,20 @@ pub fn handle_fire(
                     );
                     let original_size: Vec2 = active_mapping.original_size.into();
                     let original_pos: Vec2 = mapping.position.into();
+                    let random_pos = random_offset_vec2(
+                        original_pos,
+                        Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
+                    );
                     let sensitivity: Vec2 = (mapping.sensitivity_x, mapping.sensitivity_y).into();
                     let pointer_id = mapping.pointer_id;
-                    let current_pos = original_pos / original_size * mask_size.0;
+                    let current_pos = random_pos / original_size * mask_size.0;
                     // touch down fire
                     ControlMsgHelper::send_touch(
                         &cs_tx_res.0,
                         MotionEventAction::Down,
                         pointer_id,
                         original_size,
-                        original_pos,
+                        random_pos,
                     );
                     // add to active_map
                     active_map.0.insert(
