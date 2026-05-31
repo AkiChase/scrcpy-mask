@@ -68,17 +68,20 @@ type SettingBindProps = {
   bind: ButtonBinding;
   onBindChange: (bind: ButtonBinding) => void;
   label?: string;
+  tooltip?: string;
 };
 
-export function SettingBind({ bind, onBindChange, label }: SettingBindProps) {
+export function SettingBind({ bind, onBindChange, label, tooltip }: SettingBindProps) {
   const { t } = useTranslation();
   const [isManualInput, setIsManualInput] = useState(false);
 
   label = label ?? t("mappings.common.bind.settingLabel");
+  tooltip = tooltip ?? t("mappings.common.bind.hint");
 
   return (
     <ItemBox
       label={label}
+      tooltip={tooltip}
       extra={
         <Switch
           size="small"
@@ -110,7 +113,7 @@ export function SettingPointerId({
   const { t } = useTranslation();
 
   return (
-    <ItemBox label={t("mappings.common.pointerId.label")}>
+    <ItemBox label={t("mappings.common.pointerId.label")} tooltip={t("mappings.common.pointerId.hint")}>
       <InputNumber
         className="w-full"
         value={pointerId}

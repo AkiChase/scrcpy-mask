@@ -347,7 +347,7 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t("mappings.common.randomOffsetX")}>
+        <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.common.randomOffsetXHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_x}
@@ -357,7 +357,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.common.randomOffsetY")}>
+        <ItemBox label={t("mappings.common.randomOffsetY")} tooltip={t("mappings.common.randomOffsetYHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_y}
@@ -367,7 +367,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.padCastSpell.setting.dragRadius")}>
+        <ItemBox label={t("mappings.padCastSpell.setting.dragRadius")} tooltip={t("mappings.padCastSpell.setting.dragRadiusHint")}>
           <InputNumber
             className="w-full"
             value={config.drag_radius}
@@ -377,7 +377,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.directionPad.setting.initDuration")}>
+        <ItemBox label={t("mappings.directionPad.setting.initDuration")} tooltip={t("mappings.directionPad.setting.initDurationHint")}>
           <InputNumber
             className="w-full"
             value={config.initial_duration}
@@ -387,7 +387,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.padCastSpell.setting.block")}>
+        <ItemBox label={t("mappings.padCastSpell.setting.block")} tooltip={t("mappings.padCastSpell.setting.blockHint")}>
           <Switch
             checked={config.block_direction_pad}
             onChange={(v) => {
@@ -395,7 +395,7 @@ function Setting({
             }}
           />
         </ItemBox>
-        <ItemBox label={t("mappings.swipe.setting.enableRandomization")}>
+        <ItemBox label={t("mappings.swipe.setting.enableRandomization")} tooltip={t("mappings.padCastSpell.setting.enableRandomizationHint")}>
           <Switch
             checked={config.enable_randomization}
             onChange={(enable_randomization) =>
@@ -403,7 +403,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.padCastSpell.setting.releaseMode.label")}>
+        <ItemBox label={t("mappings.padCastSpell.setting.releaseMode.label")} tooltip={t("mappings.padCastSpell.setting.releaseMode.hint")}>
           <Select
             className="w-full"
             value={config.release_mode}

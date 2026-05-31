@@ -59,10 +59,12 @@
         "settingManual": "手动",
         "settingAuto": "自动",
         "settingLabel": "绑定",
-        "manualSelectPlaceholder": "选择绑定按键"
+        "manualSelectPlaceholder": "选择绑定按键",
+        "hint": "多个映射可共享同一快捷键并同时触发。额外按键不会阻止触发，但更长的组合优先匹配。"
       },
       "pointerId": {
-        "label": "触点ID"
+        "label": "触点ID",
+        "hint": "每个触点ID对应唯一一根虚拟手指，同一时刻只能触摸一个坐标。共用相同触点ID的按键若同时按下会产生冲突，可能同时按下的按键必须分配不同的触点ID。"
       },
       "note": {
         "label": "备注"
@@ -78,13 +80,17 @@
         "label": "复制"
       },
       "randomOffsetX": "随机偏移 X",
-      "randomOffsetY": "随机偏移 Y"
+      "randomOffsetY": "随机偏移 Y",
+      "randomOffsetXHint": "每次激活时对触摸坐标施加的水平随机偏移，在 [-偏移, +偏移] 内随机取值。设为 0 禁用。",
+      "randomOffsetYHint": "每次激活时对触摸坐标施加的垂直随机偏移，在 [-偏移, +偏移] 内随机取值。设为 0 禁用。"
     },
     "singleTap": {
       "setting": {
         "title": "映射配置 - 点击",
         "sync": "同步模式",
-        "duration": "持续时长"
+        "syncHint": "开启后触摸持续到快捷键抬起，无视持续时长设置。",
+        "duration": "持续时长",
+        "durationHint": "触摸后自动抬起的持续时长（毫秒）。进行中的点击不会因再次按下快捷键而中断。"
       },
       "name": "点击"
     },
@@ -92,7 +98,11 @@
       "setting": {
         "title": "映射配置 - 连点",
         "duration": "持续时长",
-        "interval": "重复间隔"
+        "durationHint": "每次触摸持续时间（毫秒）。应当小于重复间隔。",
+        "interval": "重复间隔",
+        "intervalHint": "两次触摸操作之间的间隔时间（毫秒）。持续时长应当小于重复间隔。",
+        "randomOffsetXHint": "每次重复触摸时重新随机取值，使得每次连点的水平坐标略有不同。",
+        "randomOffsetYHint": "每次重复触摸时重新随机取值，使得每次连点的垂直坐标略有不同。"
       },
       "name": "连点"
     },
@@ -101,9 +111,12 @@
         "title": "映射配置 - 多点点击",
         "keepLastOne": "至少保留一个操作！",
         "wait": "等待时长",
+        "waitHint": "当前触摸操作前的等待时长（毫秒）。",
         "duration": "持续时长",
+        "durationHint": "当前触摸的持续时间（毫秒）。",
         "delete": "删除",
         "operations": "操作序列",
+        "operationsHint": "依次执行的操作序列：等待 → 触摸 → 持续 → 抬起。在可视化编辑器中编辑坐标位置。",
         "operationsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
         "edit": "编辑",
         "back": "返回"
@@ -113,11 +126,13 @@
     "swipe": {
       "setting": {
         "duration": "滑动耗时",
+        "durationHint": "完成整个滑动动作的总耗时（毫秒）。",
         "delete": "删除",
         "keepLastOne": "至少保留一个操作！",
         "title": "映射配置 - 滑动",
         "positions": "坐标序列",
         "enableRandomization": "启用轨迹随机化",
+        "enableRandomizationHint": "将直线路径替换为带随机弧线的平滑曲线，使每次滑动轨迹略有不同。",
         "positonsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
         "edit": "编辑",
         "back": "返回"
@@ -133,12 +148,17 @@
         "yAxis": "Y轴",
         "up": "上",
         "upBoostKey": "向上延长",
+        "upBoostKeyHint": "按住此修饰键时，按下向上快捷键可突破最大偏移量限制，获得额外的移动范围。",
         "upBoostScale": "向上延长倍率",
+        "upBoostScaleHint": "按住延长键时向上偏移量的放大倍率，例如 2.0 表示向上移动距离翻倍。",
         "down": "下",
         "left": "左",
         "right": "右",
         "maxOffset": "最大偏移量",
-        "initDuration": "首次滑动延迟"
+        "maxOffsetHint": "虚拟手指从轮盘中心沿水平和垂直方向的最大拖动距离。",
+        "initDuration": "首次滑动延迟",
+        "initDurationHint": "轮盘响应前的初始滑动时长（毫秒）。用于规避部分游戏无法识别初始触摸的问题。",
+        "enableRandomizationHint": "添加随机锚点偏移、弧形滑动路径和持续微抖，模拟手指自然移动。"
       },
       "name": "方向轮盘"
     },
@@ -146,16 +166,22 @@
       "setting": {
         "title": "映射配置 - 鼠标施法",
         "center": "施法中心",
+        "centerHint": "施法指向的参考中心点，一般为角色在屏幕中的位置。如果角色因透视投影而不在屏幕中心，可调整此参数校准。",
         "scaleFactor": "缩放因子",
+        "scaleFactorHint": "控制施法指向水平和垂直的缩放比例。用于校准因游戏透视投影导致的鼠标指向偏差（如王者荣耀推荐 X=7, Y=10）。",
         "castRadius": "施法范围",
+        "castRadiusHint": "鼠标超出此范围时拖至最大半径，范围内时按比例缩放拖动距离。",
         "dragRadius": "拖动范围",
+        "dragRadiusHint": "游戏中施法按键的拖动范围半径。",
         "releaseMode": {
           "label": "释放时机",
+          "hint": "抬起：按下激活、抬起释放。按下：按下立即释放。二次按下：首次激活、再次释放。",
           "onPress": "按下",
           "onRelease": "抬起",
           "onSecondPress": "二次按下"
         },
         "castNoDirection": "无方向施法",
+        "castNoDirectionHint": "无视方向设置，仅点击施法坐标。类似点击但支持取消施法。",
         "editLabel": "高级编辑",
         "edit": "编辑",
         "editHelp": "使用鼠标左键拖动，鼠标右键进行编辑",
@@ -177,9 +203,13 @@
         "left": "左",
         "right": "右",
         "dragRadius": "拖动范围",
+        "dragRadiusHint": "游戏中施法按键的拖动范围半径。",
         "block": "屏蔽方向轮盘",
+        "blockHint": "施法激活时屏蔽方向轮盘快捷键，避免输入冲突。",
+        "enableRandomizationHint": "添加随机锚点偏移、弧形滑动路径和持续微抖，模拟手指自然移动。",
         "releaseMode": {
           "label": "释放时机",
+          "hint": "抬起：按下激活、抬起释放。二次按下：首次激活、再次释放。",
           "onRelease": "抬起",
           "onSecondPress": "二次按下"
         }
@@ -196,21 +226,25 @@
       "setting": {
         "title": "映射配置 - 观察视角",
         "sensitivity": "灵敏度",
-        "maxRadius": "最大范围"
+        "sensitivityHint": "视角拖动相对鼠标移动的倍率。数值越大越快。",
+        "maxRadius": "最大范围",
+        "maxRadiusHint": "从起始位置的最大拖动距离。设为 0 不限制。"
       },
       "name": "观察视角"
     },
     "fps": {
       "setting": {
         "title": "映射配置 - FPS模式",
-        "sensitivity": "灵敏度"
+        "sensitivity": "灵敏度",
+        "sensitivityHint": "视角旋转相对鼠标移动的倍率。触及屏幕边缘时手指自动回中继续追踪。"
       },
       "name": "FPS模式"
     },
     "fire": {
       "setting": {
         "title": "映射配置 - 开火",
-        "sensitivity": "灵敏度"
+        "sensitivity": "灵敏度",
+        "sensitivityHint": "仅在 FPS 模式下生效。开火按钮相对鼠标移动的拖动倍率，独立于 FPS 灵敏度。"
       },
       "name": "开火"
     },
@@ -254,13 +288,17 @@
       "setting": {
         "title": "映射配置 - 脚本",
         "interval": "按住触发重复间隔",
+        "intervalHint": "按住时脚本重复执行的间隔（毫秒）。脚本执行时间应小于此间隔。",
         "pressed_script": "按下触发脚本",
         "pressed_script_placeholder": "按下快捷键时执行一次的脚本",
+        "pressedScriptHint": "按下时执行一次。支持完整脚本 DSL。",
         "run_script": "测试脚本运行",
         "held_script": "按住触发脚本",
         "held_script_placeholder": "按住快捷键时重复执行的脚本",
+        "heldScriptHint": "按住时按指定间隔重复执行。执行时间应小于间隔。",
         "released_script": "抬起触发脚本",
         "released_script_placeholder": "抬起快捷键时执行一次的脚本",
+        "releasedScriptHint": "抬起时执行一次。支持完整脚本 DSL。",
         "result": "运行结果"
       },
       "name": "脚本"

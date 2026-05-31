@@ -59,10 +59,12 @@
         "settingLabel": "Bind",
         "settingManual": "Manual",
         "settingAuto": "Auto",
-        "manualSelectPlaceholder": "Select Bindings"
+        "manualSelectPlaceholder": "Select Bindings",
+        "hint": "Multiple mappings can share the same shortcut and trigger together. Extra keys won't block a combo, but a longer matching combo takes priority."
       },
       "pointerId": {
-        "label": "PointerID"
+        "label": "PointerID",
+        "hint": "Each PointerID represents a single virtual finger, which can only touch one coordinate at a time. Buttons sharing the same PointerID will conflict if pressed simultaneously — assign different PointerIDs to any buttons that may be pressed together."
       },
       "note": {
         "label": "Note"
@@ -78,13 +80,17 @@
         "label": "Duplicate"
       },
       "randomOffsetX": "Random offset X",
-      "randomOffsetY": "Random offset Y"
+      "randomOffsetY": "Random offset Y",
+      "randomOffsetXHint": "Random horizontal offset applied each activation, picked from [-offset, +offset]. Set to 0 to disable.",
+      "randomOffsetYHint": "Random vertical offset applied each activation, picked from [-offset, +offset]. Set to 0 to disable."
     },
     "singleTap": {
       "setting": {
         "title": "Mapping Configuration - SingleTap",
         "sync": "Sync",
-        "duration": "Duration"
+        "syncHint": "When enabled, the touch lasts as long as the shortcut is held, ignoring the duration setting.",
+        "duration": "Duration",
+        "durationHint": "Touch duration before auto-release (ms). An ongoing tap won't be interrupted by pressing the shortcut again."
       },
       "name": "SingleTap"
     },
@@ -92,7 +98,11 @@
       "setting": {
         "title": "Mapping Configuration - RepeatTap",
         "duration": "Duration",
-        "interval": "Interval"
+        "durationHint": "How long each touch lasts (ms). Should be shorter than the repeat interval.",
+        "interval": "Interval",
+        "intervalHint": "Time between the start of consecutive touches (ms). The duration should be shorter than this interval.",
+        "randomOffsetXHint": "Random offset is recalculated for each repeat tap, so every tap lands at a slightly different X coordinate.",
+        "randomOffsetYHint": "Random offset is recalculated for each repeat tap, so every tap lands at a slightly different Y coordinate."
       },
       "name": "RepeatTap"
     },
@@ -101,10 +111,13 @@
         "title": "Mapping Configuration - MultipleTap",
         "delete": "Delete",
         "duration": "Duration",
+        "durationHint": "How long this touch is held before release (ms).",
         "keepLastOne": "Keep at least one operation!",
         "wait": "Wait",
+        "waitHint": "Wait time before this touch operation begins (ms).",
         "edit": "Edit",
         "operations": "Operation sequence",
+        "operationsHint": "Sequence of touch operations executed in order: wait → touch → hold for duration → release. Edit positions in the visual editor.",
         "operationsHelp": "Drag with the left mouse button and add or edit with the right mouse button",
         "back": "Back"
       },
@@ -115,8 +128,10 @@
         "keepLastOne": "Keep at least one operation!",
         "title": "Mapping Configuration - Swipe",
         "enableRandomization": "Enable path randomization",
+        "enableRandomizationHint": "Replaces straight line segments with smooth curves that have random arc curvature, making each swipe trajectory slightly different.",
         "positonsHelp": "Drag with the left mouse button and add or edit with the right mouse button",
         "duration": "Duration",
+        "durationHint": "Total time to complete the entire swipe motion (ms).",
         "edit": "Edit",
         "delete": "Delete",
         "positions": "Position sequence",
@@ -133,12 +148,17 @@
         "yAxis": "Y-axis",
         "down": "Down",
         "initDuration": "Initial slide delay",
+        "initDurationHint": "Initial slide duration before the pad responds (ms). Helps work around games that miss the initial touch.",
         "left": "Left",
         "maxOffset": "Maximum offset",
+        "maxOffsetHint": "Maximum drag distance of the virtual finger from the pad center along the horizontal and vertical axes.",
         "right": "Right",
         "up": "Up",
         "upBoostKey": "Up boost",
-        "upBoostScale": "Up boost scale"
+        "upBoostKeyHint": "While this modifier key is held, pressing the up key can extend beyond the normal maximum offset range.",
+        "upBoostScale": "Up boost scale",
+        "upBoostScaleHint": "Multiplier applied to the upward offset while the boost key is held. E.g., 2.0 doubles the upward reach.",
+        "enableRandomizationHint": "Adds random anchor offset, arc-shaped slide paths, and continuous micro-jitter to simulate natural finger movement."
       },
       "name": "DirectionPad"
     },
@@ -146,16 +166,22 @@
       "setting": {
         "title": "Mapping Configuration - MouseCastSpell",
         "center": "Cast center",
+        "centerHint": "Reference point for cast direction calculation, typically the character's position on screen. Adjust if the character is not centered due to perspective projection.",
         "scaleFactor": "Scale factors",
+        "scaleFactorHint": "Controls horizontal/vertical scaling of the cast direction mapping. Use to calibrate mouse-to-game direction when the game has perspective distortion (e.g. Honor of Kings: X=7, Y=10).",
         "castRadius": "Cast range",
+        "castRadiusHint": "Mouse distance beyond this range drags the skill button to max radius; below it, distance scales proportionally.",
         "dragRadius": "Drag range",
+        "dragRadiusHint": "The maximum drag radius of the skill button in the game UI.",
         "releaseMode": {
           "label": "Release timing",
+          "hint": "OnRelease: activates on press, releases on release. OnPress: releases immediately on press. OnSecondPress: first press activates, second press releases.",
           "onRelease": "OnRelease",
           "onPress": "OnPress",
           "onSecondPress": "onSecondPress"
         },
         "castNoDirection": "Non-directional cast",
+        "castNoDirectionHint": "Ignores direction settings and simply taps at the cast position. Similar to SingleTap but cancelable.",
         "editLabel": "Advanced editing",
         "edit": "Edit",
         "editHelp": "Drag with the left mouse button and edit with the right mouse button",
@@ -177,9 +203,13 @@
         "xAxis": "X-axis",
         "yAxis": "Y-axis",
         "dragRadius": "Drag range",
+        "dragRadiusHint": "The maximum drag radius of the skill button in the game UI.",
         "block": "Block direction pad",
+        "blockHint": "Blocks direction pad shortcuts while casting to prevent input conflicts.",
+        "enableRandomizationHint": "Adds random anchor offset, arc-shaped slide paths, and continuous micro-jitter to simulate natural finger movement.",
         "releaseMode": {
           "label": "Release timing",
+          "hint": "OnRelease: activates on press, releases on release. OnSecondPress: first press activates, second press releases.",
           "onRelease": "OnRelease",
           "onSecondPress": "OnSecondPress"
         }
@@ -195,6 +225,7 @@
     "fire": {
       "setting": {
         "sensitivity": "Sensitivity",
+        "sensitivityHint": "Only active in FPS mode. Fire button drag speed relative to mouse movement, independent from FPS sensitivity.",
         "title": "Mapping Configuration - Fire"
       },
       "name": "Fire"
@@ -202,6 +233,7 @@
     "fps": {
       "setting": {
         "sensitivity": "Sensitivity",
+        "sensitivityHint": "View rotation speed relative to mouse movement. At screen edges, the finger auto-recenters to continue tracking.",
         "title": "Mapping Configuration - FPS"
       },
       "name": "Fps"
@@ -209,8 +241,10 @@
     "observation": {
       "setting": {
         "sensitivity": "Sensitivity",
+        "sensitivityHint": "View drag speed relative to mouse movement. Higher = faster.",
         "title": "Mapping Configuration - Observation",
-        "maxRadius": "Max Radius"
+        "maxRadius": "Max Radius",
+        "maxRadiusHint": "Max drag distance from the start position. Set to 0 for no limit."
       },
       "name": "Observation"
     },
@@ -255,12 +289,16 @@
         "title": "Mapping Configuration - Script",
         "pressed_script": "Pressed script",
         "pressed_script_placeholder": "Executed once when the hotkey is pressed",
+        "pressedScriptHint": "Runs once on press. Supports the full scripting DSL.",
         "interval": "Held repeat interval",
+        "intervalHint": "Interval between script repeats while holding (ms). Script execution time should be less than this interval.",
         "run_script": "Test script execution",
         "held_script": "Held script",
         "held_script_placeholder": "Repeatedly executed while the hotkey is held down",
+        "heldScriptHint": "Runs repeatedly at the specified interval while held. Execution time should be less than the interval.",
         "released_script": "Released Script",
         "released_script_placeholder": "Executed once when the hotkey is released",
+        "releasedScriptHint": "Runs once on release. Supports the full scripting DSL.",
         "result": "Running result"
       },
       "name": "Script"

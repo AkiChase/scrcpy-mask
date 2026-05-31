@@ -146,7 +146,7 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t("mappings.repeatTap.setting.duration")}>
+        <ItemBox label={t("mappings.repeatTap.setting.duration")} tooltip={t("mappings.repeatTap.setting.durationHint")}>
           <InputNumber
             className="w-full"
             value={config.duration}
@@ -156,7 +156,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.repeatTap.setting.interval")}>
+        <ItemBox label={t("mappings.repeatTap.setting.interval")} tooltip={t("mappings.repeatTap.setting.intervalHint")}>
           <InputNumber
             className="w-full"
             value={config.interval}
@@ -166,7 +166,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.common.randomOffsetX")}>
+        <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.repeatTap.setting.randomOffsetXHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_x}
@@ -176,7 +176,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.common.randomOffsetY")}>
+        <ItemBox label={t("mappings.common.randomOffsetY")} tooltip={t("mappings.repeatTap.setting.randomOffsetYHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_y}

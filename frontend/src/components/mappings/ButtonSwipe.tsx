@@ -475,7 +475,7 @@ function Setting({
             {t("mappings.swipe.setting.edit")}
           </Button>
         </ItemBox>
-        <ItemBox label={t("mappings.swipe.setting.duration")}>
+        <ItemBox label={t("mappings.swipe.setting.duration")} tooltip={t("mappings.swipe.setting.durationHint")}>
           <InputNumber
             className="w-full"
             value={config.duration}
@@ -485,7 +485,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.swipe.setting.enableRandomization")}>
+        <ItemBox label={t("mappings.swipe.setting.enableRandomization")} tooltip={t("mappings.swipe.setting.enableRandomizationHint")}>
           <Switch
             checked={config.enable_randomization}
             onChange={(enable_randomization) =>

@@ -149,7 +149,7 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t("mappings.common.randomOffsetX")}>
+        <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.common.randomOffsetXHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_x}
@@ -159,7 +159,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.common.randomOffsetY")}>
+        <ItemBox label={t("mappings.common.randomOffsetY")} tooltip={t("mappings.common.randomOffsetYHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_y}
@@ -169,7 +169,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.observation.setting.maxRadius")}>
+        <ItemBox label={t("mappings.observation.setting.maxRadius")} tooltip={t("mappings.observation.setting.maxRadiusHint")}>
           <InputNumber
             className="w-full"
             value={config.max_radius ?? 0}
@@ -179,7 +179,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.observation.setting.sensitivity")}>
+        <ItemBox label={t("mappings.observation.setting.sensitivity")} tooltip={t("mappings.observation.setting.sensitivityHint")}>
           <Space.Compact className="w-full">
             <InputNumber
               className="w-full"

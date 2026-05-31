@@ -147,7 +147,7 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t("mappings.fps.setting.sensitivity")}>
+        <ItemBox label={t("mappings.fps.setting.sensitivity")} tooltip={t("mappings.fps.setting.sensitivityHint")}>
           <Space.Compact className="w-full">
             <InputNumber
               className="w-full"

@@ -146,7 +146,7 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t("mappings.singleTap.setting.sync")}>
+        <ItemBox label={t("mappings.singleTap.setting.sync")} tooltip={t("mappings.singleTap.setting.syncHint")}>
           <Switch
             checked={config.sync}
             onChange={(v) => {
@@ -155,7 +155,7 @@ function Setting({
           />
         </ItemBox>
         {!config.sync && (
-          <ItemBox label={t("mappings.singleTap.setting.duration")}>
+          <ItemBox label={t("mappings.singleTap.setting.duration")} tooltip={t("mappings.singleTap.setting.durationHint")}>
             <InputNumber
               className="w-full"
               value={config.duration}
@@ -166,7 +166,7 @@ function Setting({
             />
           </ItemBox>
         )}
-        <ItemBox label={t("mappings.common.randomOffsetX")}>
+        <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.common.randomOffsetXHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_x}
@@ -176,7 +176,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.common.randomOffsetY")}>
+        <ItemBox label={t("mappings.common.randomOffsetY")} tooltip={t("mappings.common.randomOffsetYHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_y}

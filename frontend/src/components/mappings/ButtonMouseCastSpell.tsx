@@ -212,7 +212,7 @@ function CastCenter({
       trigger="contextMenu"
       content={
         <ItemBoxContainer>
-          <ItemBox label={t("mappings.mouseCastSpell.setting.center")}>
+          <ItemBox label={t("mappings.mouseCastSpell.setting.center")} tooltip={t("mappings.mouseCastSpell.setting.centerHint")}>
             <Space.Compact className="w-full">
               <InputNumber
                 className="w-full"
@@ -253,7 +253,7 @@ function CastCenter({
               </Button>
             </Space.Compact>
           </ItemBox>
-          <ItemBox label={t("mappings.mouseCastSpell.setting.scaleFactor")}>
+          <ItemBox label={t("mappings.mouseCastSpell.setting.scaleFactor")} tooltip={t("mappings.mouseCastSpell.setting.scaleFactorHint")}>
             <Space.Compact className="w-full">
               <InputNumber
                 className="w-full"
@@ -271,7 +271,7 @@ function CastCenter({
               />
             </Space.Compact>
           </ItemBox>
-          <ItemBox label={t("mappings.mouseCastSpell.setting.castRadius")}>
+          <ItemBox label={t("mappings.mouseCastSpell.setting.castRadius")} tooltip={t("mappings.mouseCastSpell.setting.castRadiusHint")}>
             <Slider
               min={0}
               max={maxRadius}
@@ -341,7 +341,7 @@ function SkillButton({
       trigger="contextMenu"
       content={
         <ItemBoxContainer>
-          <ItemBox label={t("mappings.mouseCastSpell.setting.dragRadius")}>
+          <ItemBox label={t("mappings.mouseCastSpell.setting.dragRadius")} tooltip={t("mappings.mouseCastSpell.setting.dragRadiusHint")}>
             <InputNumber
               className="w-full"
               value={radius}
@@ -504,7 +504,7 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t("mappings.common.randomOffsetX")}>
+        <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.common.randomOffsetXHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_x}
@@ -514,7 +514,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.common.randomOffsetY")}>
+        <ItemBox label={t("mappings.common.randomOffsetY")} tooltip={t("mappings.common.randomOffsetYHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_y}
@@ -524,7 +524,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.mouseCastSpell.setting.releaseMode.label")}>
+        <ItemBox label={t("mappings.mouseCastSpell.setting.releaseMode.label")} tooltip={t("mappings.mouseCastSpell.setting.releaseMode.hint")}>
           <Select
             className="w-full"
             value={config.release_mode}
@@ -549,7 +549,7 @@ function Setting({
             ]}
           />
         </ItemBox>
-        <ItemBox label={t("mappings.mouseCastSpell.setting.castNoDirection")}>
+        <ItemBox label={t("mappings.mouseCastSpell.setting.castNoDirection")} tooltip={t("mappings.mouseCastSpell.setting.castNoDirectionHint")}>
           <Switch
             checked={config.cast_no_direction}
             onChange={(v) => {

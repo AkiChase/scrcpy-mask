@@ -232,7 +232,7 @@ function PositonEditorItem({
       onOpenChange={(open) => setOpen(open)}
       content={
         <ItemBoxContainer gap={12}>
-          <ItemBox label={t("mappings.multipleTap.setting.wait")}>
+          <ItemBox label={t("mappings.multipleTap.setting.wait")} tooltip={t("mappings.multipleTap.setting.waitHint")}>
             <InputNumber
               className="w-full"
               value={item.wait}
@@ -242,7 +242,7 @@ function PositonEditorItem({
               }
             />
           </ItemBox>
-          <ItemBox label={t("mappings.multipleTap.setting.duration")}>
+          <ItemBox label={t("mappings.multipleTap.setting.duration")} tooltip={t("mappings.multipleTap.setting.durationHint")}>
             <InputNumber
               className="w-full"
               value={item.duration}
@@ -418,7 +418,7 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t("mappings.multipleTap.setting.operations")}>
+        <ItemBox label={t("mappings.multipleTap.setting.operations")} tooltip={t("mappings.multipleTap.setting.operationsHint")}>
           <Button
             type="dashed"
             onClick={() => {
@@ -431,7 +431,7 @@ function Setting({
             {t("mappings.multipleTap.setting.edit")}
           </Button>
         </ItemBox>
-        <ItemBox label={t("mappings.common.randomOffsetX")}>
+        <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.common.randomOffsetXHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_x}
@@ -441,7 +441,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.common.randomOffsetY")}>
+        <ItemBox label={t("mappings.common.randomOffsetY")} tooltip={t("mappings.common.randomOffsetYHint")}>
           <InputNumber
             className="w-full"
             value={config.random_offset_y}

@@ -339,7 +339,7 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t("mappings.directionPad.setting.maxOffset")}>
+        <ItemBox label={t("mappings.directionPad.setting.maxOffset")} tooltip={t("mappings.directionPad.setting.maxOffsetHint")}>
           <Space.Compact className="w-full">
             <InputNumber
               className="w-full"
@@ -361,7 +361,7 @@ function Setting({
             />
           </Space.Compact>
         </ItemBox>
-        <ItemBox label={t("mappings.directionPad.setting.initDuration")}>
+        <ItemBox label={t("mappings.directionPad.setting.initDuration")} tooltip={t("mappings.directionPad.setting.initDurationHint")}>
           <InputNumber
             className="w-full"
             value={config.initial_duration}
@@ -371,7 +371,7 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.swipe.setting.enableRandomization")}>
+        <ItemBox label={t("mappings.swipe.setting.enableRandomization")} tooltip={t("mappings.directionPad.setting.enableRandomizationHint")}>
           <Switch
             checked={config.enable_randomization}
             onChange={(enable_randomization) =>
@@ -381,6 +381,7 @@ function Setting({
         </ItemBox>
         <ItemBox
           label={t("mappings.directionPad.setting.upBoostKey")}
+          tooltip={t("mappings.directionPad.setting.upBoostKeyHint")}
           extra={
             <Switch
               size="small"
@@ -409,6 +410,7 @@ function Setting({
         {config.up_boost_key !== null && (
           <ItemBox
               label={t("mappings.directionPad.setting.upBoostScale")}
+              tooltip={t("mappings.directionPad.setting.upBoostScaleHint")}
             >
             <InputNumber
               className="w-full"

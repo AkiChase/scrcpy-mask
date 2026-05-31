@@ -178,7 +178,7 @@ function Setting({
           bind={config.bind}
           onBindChange={(bind) => onConfigChange((pre) => ({ ...pre, bind }))}
         />
-        <ItemBox label={t("mappings.script.setting.interval")}>
+        <ItemBox label={t("mappings.script.setting.interval")} tooltip={t("mappings.script.setting.intervalHint")}>
           <InputNumber
             className="w-full"
             value={config.interval}
@@ -199,6 +199,7 @@ function Setting({
               />
             </Flex>
           }
+          tooltip={t("mappings.script.setting.pressedScriptHint")}
         >
           <Input.TextArea
             className="w-full font-mono"
@@ -223,6 +224,7 @@ function Setting({
               />
             </Flex>
           }
+          tooltip={t("mappings.script.setting.heldScriptHint")}
         >
           <Input.TextArea
             className="w-full font-mono"
@@ -245,6 +247,7 @@ function Setting({
               />
             </Flex>
           }
+          tooltip={t("mappings.script.setting.releasedScriptHint")}
         >
           <Input.TextArea
             className="w-full font-mono"
