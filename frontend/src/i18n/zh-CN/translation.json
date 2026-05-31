@@ -328,6 +328,7 @@
     "zeroUnlimitedTip": "设为 0 表示无限制",
     "videoMaxFps": "视频最大FPS",
     "alwaysOnTop": "蒙版置顶",
+    "titlebarVisible": "显示标题栏",
     "openDataPath": "打开数据目录",
     "about": {
       "title": "关于",

@@ -30,6 +30,7 @@ import {
   setVideoMaxSize,
   setVideoMaxFps,
   setAlwaysOnTop,
+  setTitlebarVisible,
 } from "../store/localConfig";
 import {
   setIsLoading,
@@ -158,6 +159,12 @@ export default function Settings() {
             <Switch
               checked={localConfig.alwaysOnTop}
               onChange={(v) => dispatch(setAlwaysOnTop(v))}
+            />
+          </ItemBox>
+          <ItemBox label={t("settings.titlebarVisible")}>
+            <Switch
+              checked={localConfig.titlebarVisible}
+              onChange={(v) => dispatch(setTitlebarVisible(v))}
             />
           </ItemBox>
           <ItemBox label={t("settings.mappingLabelOpacity")}>

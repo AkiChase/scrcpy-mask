@@ -111,7 +111,8 @@
       "openDataPathFailed": "打开数据目录失败",
       "openDataPathSuccess": "成功打开数据目录",
       "getUpdateInfoSuccess": "成功获取更新信息",
-      "alwaysOnTopMustBeBool": "蒙版置顶必须为 bool"
+      "alwaysOnTopMustBeBool": "蒙版置顶必须为 bool",
+      "titlebarVisibleMustBeBool": "标题栏可见必须为 bool"
     }
   },
   "utils": {
@@ -182,7 +183,7 @@
     "pairFailed": "与设备配对失败"
   },
   "mask": {
-    "windowMovedAndResized": "窗口移动到（%{left},%{top}）并调整为 %{width}x%{height}",
+    "windowMovedAndResized": "蒙版区域移动到（%{left}, %{top}），尺寸 %{width}x%{height}",
     "enterNormalMappingMode": "进入普通映射模式",
     "mainDeviceConnected": "主设备已连接",
     "mainDeviceDisconnected": "主设备连接已断开",

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
 
 use crate::scrcpy::media::VideoMsg;
-use crate::{mask::ui::basic::BORDER_THICKNESS, utils::ChannelReceiverV};
+use crate::utils::ChannelReceiverV;
 
 #[derive(Resource, Default)]
 pub struct VideoAttributes {
@@ -44,22 +44,6 @@ impl VideoAttributes {
 
 #[derive(Component)]
 pub struct VideoPlayer;
-
-pub fn init_video(mut commands: Commands) {
-    commands.spawn((
-        Node {
-            width: Val::Percent(100.),
-            height: Val::Percent(100.),
-            padding: UiRect::all(Val::Px(BORDER_THICKNESS)),
-            box_sizing: BoxSizing::BorderBox,
-            ..default()
-        },
-        ZIndex(-1),
-        BackgroundColor(Color::NONE),
-        ImageNode::default(),
-        VideoPlayer,
-    ));
-}
 
 pub fn handle_video_msg(
     v_rx: Res<ChannelReceiverV>,

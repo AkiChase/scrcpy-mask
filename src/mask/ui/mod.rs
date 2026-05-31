@@ -1,6 +1,7 @@
 pub mod basic;
 pub mod mapping_label;
 
+pub use basic::{MaskContentEntity, MaskContentMarker, TITLEBAR_HEIGHT};
 use basic::BasicPlugin;
 use bevy::app::{App, Plugin};
 

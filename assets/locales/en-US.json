@@ -109,6 +109,7 @@
       "setVideoMaxFpsSuccess": "Successfully set video_max_fps (takes effect on next connection)",
       "videoMaxFpsTypeError": "The video_max_fps must be u32",
       "alwaysOnTopMustBeBool": "The always_on_top must be bool",
+      "titlebarVisibleMustBeBool": "The titlebar_visible must be bool",
       "openDataPathFailed": "Failed to open data path",
       "openDataPathSuccess": "Successfully open data path",
       "getUpdateInfoSuccess": "Successfully get update info"
@@ -182,7 +183,7 @@
     "pairFailed": "Failed to pair with device"
   },
   "mask": {
-    "windowMovedAndResized": "Window moved to (%{left},%{top}) and resize to %{width}x%{height}",
+    "windowMovedAndResized": "Mask area moved to (%{left}, %{top}), size %{width}x%{height}",
     "enterNormalMappingMode": "Enter normal mapping mode",
     "mainDeviceConnected": "Main device connected",
     "mainDeviceDisconnected": "Main device connection disconnected",

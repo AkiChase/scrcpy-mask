@@ -9,6 +9,7 @@ use crate::{
             config::{ActiveMappingConfig, BindMappingType},
         },
         mask_command::MaskSize,
+        ui::basic::MaskContentEntity,
     },
 };
 
@@ -42,13 +43,20 @@ fn redraw_raw_input_label(
     mut commands: Commands,
     query: Query<(Entity, &MappingLabel)>,
     mask_size: Res<MaskSize>,
+    mask_content: Res<MaskContentEntity>,
     mut redraw_mapping_label: ResMut<RedrawMappingLabel>,
 ) {
     for (entity, _) in query.iter() {
         commands.entity(entity).despawn();
     }
 
-    create_simple_label(&mut commands, "M-Right", (25., 25.).into(), mask_size.0);
+    create_simple_label(
+        &mut commands,
+        "M-Right",
+        (25., 25.).into(),
+        mask_size.0,
+        mask_content.0,
+    );
     redraw_mapping_label.0 += 1;
 }
 
@@ -59,6 +67,7 @@ fn redraw_normal_mapping_label(
     mut commands: Commands,
     query: Query<(Entity, &MappingLabel)>,
     active_mapping: Res<ActiveMappingConfig>,
+    mask_content: Res<MaskContentEntity>,
     mut redraw_mapping_label: ResMut<RedrawMappingLabel>,
 ) {
     for (entity, _) in query.iter() {
@@ -83,6 +92,7 @@ fn redraw_normal_mapping_label(
                                     .collect(),
                                 pos,
                                 size,
+                                mask_content.0,
                             );
                         }
                         BindMappingType::PadCastSpell(mapping_pad_cast_spell) => {
@@ -93,12 +103,13 @@ fn redraw_normal_mapping_label(
                                 bindings.iter().map(|s| s.as_ref()).collect(),
                                 pos,
                                 size,
+                                mask_content.0,
                             )
                         }
                         _ => {}
                     }
                 } else {
-                    create_simple_label(&mut commands, &binding, pos, size);
+                    create_simple_label(&mut commands, &binding, pos, size, mask_content.0);
                 }
             });
         redraw_mapping_label.0 += 1;
@@ -183,31 +194,34 @@ fn create_simple_label(
     binding: &str,
     original_pos: Vec2,
     original_size: Vec2,
+    parent_entity: Entity,
 ) {
-    commands.spawn((
-        MappingLabelBundle {
-            label: MappingLabel {
-                original_pos,
-                original_size,
+    commands.entity(parent_entity).with_children(|parent| {
+        parent.spawn((
+            MappingLabelBundle {
+                label: MappingLabel {
+                    original_pos,
+                    original_size,
+                },
+                label_type: MappingLabelType::Simple,
+                node: Node {
+                    position_type: PositionType::Absolute,
+                    padding: UiRect::px(5., 5., 3., 3.),
+                    border_radius: BorderRadius::all(Val::Px(3.)),
+                    ..default()
+                },
+                background_color: BackgroundColor(Color::BLACK),
             },
-            label_type: MappingLabelType::Simple,
-            node: Node {
-                position_type: PositionType::Absolute,
-                padding: UiRect::px(5., 5., 3., 3.),
-                border_radius: BorderRadius::all(Val::Px(3.)),
-                ..default()
-            },
-            background_color: BackgroundColor(Color::BLACK),
-        },
-        children![(
-            Text::new(binding),
-            TextFont {
-                font_size: 12.,
-                ..default()
-            },
-            TextColor(Color::WHITE),
-        )],
-    ));
+            children![(
+                Text::new(binding),
+                TextFont {
+                    font_size: 12.,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+            )],
+        ));
+    });
 }
 
 fn text_node(binding: &str) -> (Text, TextFont, TextColor) {
@@ -226,6 +240,7 @@ fn create_pad_label(
     bindings: Vec<&str>,
     original_pos: Vec2,
     original_size: Vec2,
+    parent_entity: Entity,
 ) {
     let mut pad_node = Node {
         position_type: PositionType::Absolute,
@@ -257,8 +272,9 @@ fn create_pad_label(
         ),
     };
 
-    commands
-        .spawn(MappingLabelBundle {
+    commands.entity(parent_entity).with_children(|parent| {
+        parent
+            .spawn(MappingLabelBundle {
             label: MappingLabel {
                 original_pos,
                 original_size,
@@ -330,4 +346,5 @@ fn create_pad_label(
                 }
             };
         });
+    });
 }

@@ -7,7 +7,7 @@ use bevy::{
 use crate::{
     mask::{
         mapping::{MappingState, utils::ControlMsgHelper},
-        mask_command::MaskSize,
+        mask_command::{MaskSize, TitlebarState},
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
@@ -67,10 +67,11 @@ fn handle_cursor_normal(
     accumulated_motion: Res<AccumulatedMouseMotion>,
     window: Single<&Window>,
     mut cursor_pos: ResMut<CursorPosition>,
+    titlebar_state: Res<TitlebarState>,
 ) {
     let mut new_pos = cursor_pos.0;
     if let Some(pos) = window.cursor_position() {
-        new_pos = pos;
+        new_pos = pos - Vec2::new(0., titlebar_state.offset());
     } else {
         new_pos += accumulated_motion.delta;
     }
@@ -85,6 +86,7 @@ fn on_enter_cursor_fps(
     mut ignore_first_motion: ResMut<IgnoreFirstMotion>,
     fps_config: Res<ActiveCursorFpsConfig>,
     mask_size: Res<MaskSize>,
+    titlebar_state: Res<TitlebarState>,
 ) {
     let center_pos = fps_config.original_pos / fps_config.original_size * mask_size.0;
     let (mut window, mut cursor_options) = window.into_inner();
@@ -93,7 +95,7 @@ fn on_enter_cursor_fps(
     cursor_options.visible = false;
 
     if window.cursor_position().is_none() {
-        window.set_cursor_position(Some(center_pos));
+        window.set_cursor_position(Some(center_pos + Vec2::new(0., titlebar_state.offset())));
         ignore_first_motion.0 = true;
     }
 
@@ -105,11 +107,12 @@ fn on_exit_cursor_fps(
     mut cursor_pos: ResMut<CursorPosition>,
     fps_config: Res<ActiveCursorFpsConfig>,
     mask_size: Res<MaskSize>,
+    titlebar_state: Res<TitlebarState>,
 ) {
     let center_pos = fps_config.original_pos / fps_config.original_size * mask_size.0;
     let (mut window, mut cursor_options) = window.into_inner();
 
-    window.set_cursor_position(Some(center_pos));
+    window.set_cursor_position(Some(center_pos + Vec2::new(0., titlebar_state.offset())));
     cursor_pos.0 = center_pos;
     cursor_options.grab_mode = CursorGrabMode::None;
     cursor_options.visible = true;

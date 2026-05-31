@@ -328,6 +328,7 @@
     "zeroUnlimitedTip": "Set to 0 for unlimited",
     "videoMaxFps": "Video max FPS",
     "alwaysOnTop": "Mask always on top",
+    "titlebarVisible": "Show titlebar",
     "openDataPath": "Open data path",
     "about": {
       "title": "About",

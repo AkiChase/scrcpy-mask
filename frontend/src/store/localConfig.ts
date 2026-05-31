@@ -38,6 +38,7 @@ export interface LocalConfigState {
   adbPath: string;
   // mask area
   alwaysOnTop: boolean;
+  titlebarVisible: boolean;
   verticalMaskHeight: number;
   horizontalMaskWidth: number;
   verticalPosition: [number, number];
@@ -61,6 +62,7 @@ const initialState: LocalConfigState = {
   controllerPort: 0,
   adbPath: "",
   alwaysOnTop: true,
+  titlebarVisible: true,
   verticalMaskHeight: 0,
   horizontalMaskWidth: 0,
   verticalPosition: [0, 0],
@@ -102,6 +104,10 @@ const localConfigSlice = createSlice({
     setAlwaysOnTop: (state, action: PayloadAction<boolean>) => {
       state.alwaysOnTop = action.payload;
       updateLocalConfig("always_on_top", action.payload);
+    },
+    setTitlebarVisible: (state, action: PayloadAction<boolean>) => {
+      state.titlebarVisible = action.payload;
+      updateLocalConfig("titlebar_visible", action.payload);
     },
     setverticalMaskHeight: (state, action: PayloadAction<number>) => {
       state.verticalMaskHeight = action.payload;
@@ -161,6 +167,7 @@ export const {
   setControllerPort,
   setAdbPath,
   setAlwaysOnTop,
+  setTitlebarVisible,
   setverticalMaskHeight,
   sethorizontalMaskWidth,
   setVerticalPosition,

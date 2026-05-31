@@ -25,6 +25,7 @@ pub struct LocalConfig {
     pub adb_path: String,
     // mask
     pub always_on_top: bool,
+    pub titlebar_visible: bool,
     pub vertical_mask_height: u32,
     pub horizontal_mask_width: u32,
     pub vertical_position: (i32, i32),
@@ -50,6 +51,7 @@ impl Default for LocalConfig {
             web_port: 27799,
             controller_port: 27798,
             always_on_top: true,
+            titlebar_visible: true,
             vertical_mask_height: 720,
             horizontal_mask_width: 1280,
             vertical_position: (100, 100),
@@ -125,6 +127,7 @@ impl LocalConfig {
         (controller_port, u16),
         (adb_path, String),
         (always_on_top, bool),
+        (titlebar_visible, bool),
         (vertical_mask_height, u32),
         (horizontal_mask_width, u32),
         (vertical_position, (i32, i32)),

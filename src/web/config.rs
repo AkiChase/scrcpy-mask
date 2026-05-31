@@ -181,6 +181,22 @@ async fn update_config(
                 )));
             }
         }
+        "titlebar_visible" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_titlebar_visible(value);
+                let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+                state
+                    .m_tx
+                    .send((MaskCommand::ToggleTitlebar, oneshot_tx))
+                    .unwrap();
+                let msg = oneshot_rx.await.unwrap().unwrap();
+                return Ok(JsonResponse::success(msg, None));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.titlebarVisibleMustBeBool"
+                )));
+            }
+        }
         "vertical_mask_height" => {
             if let Some(value) = payload.value.as_u64() {
                 LocalConfig::set_vertical_mask_height(value as u32);
