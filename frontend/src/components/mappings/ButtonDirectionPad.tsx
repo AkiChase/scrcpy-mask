@@ -278,17 +278,15 @@ function Setting({
       </h1>
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <ItemBox
-          label={
-            <Flex className="w-full" align="center" justify="space-between">
-              <span>{t("mappings.common.bind.settingLabel")}</span>
-              <Switch
-                size="small"
-                checkedChildren={t("mappings.directionPad.setting.joyStick")}
-                unCheckedChildren={t("mappings.directionPad.setting.button")}
-                checked={isJoyStick}
-                onChange={toggleBindMode}
-              />
-            </Flex>
+          label={t("mappings.common.bind.settingLabel")}
+          extra={
+            <Switch
+              size="small"
+              checkedChildren={t("mappings.directionPad.setting.joyStick")}
+              unCheckedChildren={t("mappings.directionPad.setting.button")}
+              checked={isJoyStick}
+              onChange={toggleBindMode}
+            />
           }
         >
           {isJoyStick ? (
@@ -382,20 +380,18 @@ function Setting({
           />
         </ItemBox>
         <ItemBox
-          label={
-            <Flex align="center" justify="space-between">
-              <span>{t("mappings.directionPad.setting.upBoostKey")}</span>
-              <Switch
-                size="small"
-                checked={config.up_boost_key !== null}
-                onChange={(checked) =>
-                  onConfigChange({
-                    ...config,
-                    up_boost_key: checked ? [] : null,
-                  })
-                }
-              />
-            </Flex>
+          label={t("mappings.directionPad.setting.upBoostKey")}
+          extra={
+            <Switch
+              size="small"
+              checked={config.up_boost_key !== null}
+              onChange={(checked) =>
+                onConfigChange({
+                  ...config,
+                  up_boost_key: checked ? [] : null,
+                })
+              }
+            />
           }
         >
           {config.up_boost_key !== null && (
@@ -411,7 +407,9 @@ function Setting({
           )}
         </ItemBox>
         {config.up_boost_key !== null && (
-          <ItemBox label={t("mappings.directionPad.setting.upBoostScale")}>
+          <ItemBox
+              label={t("mappings.directionPad.setting.upBoostScale")}
+            >
             <InputNumber
               className="w-full"
               value={config.up_boost_scale}

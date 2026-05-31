@@ -78,17 +78,15 @@ export function SettingBind({ bind, onBindChange, label }: SettingBindProps) {
 
   return (
     <ItemBox
-      label={
-        <Flex className="w-full" align="center" justify="space-between">
-          <span>{label}</span>
-          <Switch
-            size="small"
-            checkedChildren={t("mappings.common.bind.settingManual")}
-            unCheckedChildren={t("mappings.common.bind.settingAuto")}
-            checked={isManualInput}
-            onChange={(checked) => setIsManualInput(checked)}
-          />
-        </Flex>
+      label={label}
+      extra={
+        <Switch
+          size="small"
+          checkedChildren={t("mappings.common.bind.settingManual")}
+          unCheckedChildren={t("mappings.common.bind.settingAuto")}
+          checked={isManualInput}
+          onChange={(checked) => setIsManualInput(checked)}
+        />
       }
     >
       <InputBinding

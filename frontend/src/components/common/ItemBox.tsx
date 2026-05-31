@@ -24,24 +24,33 @@ export function ItemBoxContainer({
 type ItemBoxProps = PropsWithChildren<{
   label?: ReactNode;
   tooltip?: ReactNode;
+  extra?: ReactNode;
 }> &
   ComponentProps<"div">;
 
-export function ItemBox({ label, tooltip, children, ...rest }: ItemBoxProps) {
+export function ItemBox({
+  label,
+  tooltip,
+  extra,
+  children,
+  ...rest
+}: ItemBoxProps) {
   return (
     <div {...rest}>
       {label && (
         <Flex
           align="center"
           gap="small"
-          className="color-text font-bold pb-2 pl-1 pr-1"
+          className="color-text font-bold pb-2 pl-1 pr-1 w-full"
         >
-          <div className="w-full">{label}</div>
+          <div>{label}</div>
           {tooltip && (
             <Tooltip title={tooltip}>
-              <QuestionCircleOutlined />
+              <QuestionCircleOutlined className="cursor-help" />
             </Tooltip>
           )}
+          <div className="flex-1" />
+          {extra}
         </Flex>
       )}
       <div>{children}</div>
