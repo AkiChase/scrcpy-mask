@@ -1,7 +1,7 @@
 use std::{
     sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::Instant,
 };
@@ -25,9 +25,9 @@ use crate::{
             cursor::CursorPosition,
             direction_pad::{BlockDirectionPad, DirectionPadMap},
             utils::{
-                anchor_random_offset, ControlMsgHelper, DEFAULT_SWIPE_DURATION,
-                MIN_MOVE_STEP_LENGTH, Position, SingleSwipeStrategy, default_random_offset,
-                handle_direction_jitter, handle_direction_move_randomized,
+                ControlMsgHelper, DEFAULT_SWIPE_DURATION, Position, SingleSwipeStrategy,
+                anchor_random_offset, build_single_segment_swipe_intermediate_points,
+                default_random_offset, handle_direction_jitter, handle_direction_move_randomized,
                 random_offset_vec2, spawn_initial_swipe,
             },
         },
@@ -223,9 +223,15 @@ pub struct MappingMouseCastSpell {
     #[serde(default)]
     pub initial_duration: u64,
     pub bind: ButtonBinding,
-    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
+    #[serde(
+        default = "default_random_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
     pub random_offset_x: f32,
-    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
+    #[serde(
+        default = "default_random_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
     pub random_offset_y: f32,
 }
 
@@ -518,9 +524,15 @@ pub struct MappingPadCastSpell {
     pub block_direction_pad: bool,
     pub pad_bind: DirectionBinding,
     pub bind: ButtonBinding,
-    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
+    #[serde(
+        default = "default_random_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
     pub random_offset_x: f32,
-    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
+    #[serde(
+        default = "default_random_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
     pub random_offset_y: f32,
     #[serde(default)]
     pub enable_randomization: bool,
@@ -585,9 +597,7 @@ pub fn handle_pad_cast_spell_trigger(
                 );
                 active_cast.last_state = state;
             }
-        } else if active_cast.enable_randomization
-            && Instant::now() > active_cast.next_jitter_at
-        {
+        } else if active_cast.enable_randomization && Instant::now() > active_cast.next_jitter_at {
             handle_direction_jitter(
                 state,
                 active_cast.random_anchor,
@@ -696,7 +706,7 @@ pub fn handle_pad_cast_spell(
                         mask_size.0,
                         slide_start,
                         slide_start, // target = start (shown direction by handle_pad_cast_spell_trigger)
-                        0, // no initial wait: the activate button itself signals intent
+                        0,           // no initial wait: the activate button itself signals intent
                         DEFAULT_SWIPE_DURATION,
                         strategy,
                     );
@@ -794,11 +804,7 @@ pub fn handle_cancel_cast(
                         let current_pos = cast.current_pos;
 
                         cancel_pos = cancel_pos / original_size * cur_mask_size; // relative to mask
-                        let delta = cancel_pos - current_pos;
-                        let steps = std::cmp::min(
-                            5, // at most 5 steps
-                            (delta.length() / MIN_MOVE_STEP_LENGTH).ceil() as i32,
-                        );
+
                         let cs_tx = cs_tx_res.0.clone();
                         let pointer_id = cast.pointer_id;
                         let cast_block_direction_pad = cast.block_direction_pad;
@@ -807,20 +813,24 @@ pub fn handle_cancel_cast(
                             while !cast_initial_swipe_done.load(Ordering::Relaxed) {
                                 tokio::time::sleep(std::time::Duration::from_millis(5)).await;
                             }
-
+                            let move_points = build_single_segment_swipe_intermediate_points(
+                                current_pos,
+                                cancel_pos,
+                                SingleSwipeStrategy::Linear,
+                                0,
+                            );
                             let mut end_pos = current_pos;
-
-                            for step in 1..=steps {
-                                let linear_t = step as f32 / steps as f32;
-                                let interp = current_pos + delta * linear_t;
+                            for point in move_points {
                                 ControlMsgHelper::send_touch(
                                     &cs_tx,
                                     MotionEventAction::Move,
                                     pointer_id,
                                     cur_mask_size,
-                                    interp,
+                                    point.pos,
                                 );
-                                end_pos = interp;
+                                tokio::time::sleep(std::time::Duration::from_millis(point.wait_ms))
+                                    .await;
+                                end_pos = point.pos;
                             }
 
                             // stay at the end
@@ -835,7 +845,8 @@ pub fn handle_cancel_cast(
                                     cur_mask_size,
                                     end_pos,
                                 );
-                                tokio::time::sleep(std::time::Duration::from_millis(step_interval)).await;
+                                tokio::time::sleep(std::time::Duration::from_millis(step_interval))
+                                    .await;
                             }
 
                             ControlMsgHelper::send_touch(
