@@ -26,7 +26,7 @@ use crate::{
         controller::ControllerCommand,
     },
     utils::{relate_to_root_path, share::ControlledDevice},
-    web::{JsonResponse, WebServerError},
+    web::{JsonResponse, WebServerError, ws::WebSocketNotification},
 };
 
 #[derive(Debug, Clone)]
@@ -34,12 +34,14 @@ pub struct AppStateDevice {
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
     m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+    ws_tx: broadcast::Sender<WebSocketNotification>,
 }
 
 pub fn routers(
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
     m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+    ws_tx: broadcast::Sender<WebSocketNotification>,
 ) -> Router {
     Router::new()
         .route("/device_list", get(device_list))
@@ -52,7 +54,7 @@ pub fn routers(
         .route("/control/set_display_power", post(set_display_power))
         .route("/control/send_key", post(send_key))
         .route("/control/eval_script", post(eval_script))
-        .with_state(AppStateDevice { cs_tx, d_tx, m_tx })
+        .with_state(AppStateDevice { cs_tx, d_tx, m_tx, ws_tx })
 }
 
 async fn device_list() -> Result<JsonResponse, WebServerError> {
@@ -91,6 +93,7 @@ async fn _control_device(
     display_id: i32,
     video: bool,
     d_tx: &UnboundedSender<ControllerCommand>,
+    ws_tx: &broadcast::Sender<WebSocketNotification>,
 ) -> Result<JsonResponse, WebServerError> {
     let device_id = device_id.to_string();
     let local_config = LocalConfig::get();
@@ -189,10 +192,18 @@ async fn _control_device(
     let h = Device::shell_process(&device_id, args);
 
     let scid_copy = scid.clone();
+    let ws_tx_copy = ws_tx.clone();
     tokio::spawn(async move {
         h.await.unwrap().unwrap();
         log::info!("[WebServe] {}", t!("web.device.removingDeviceAfterExit"));
         ControlledDevice::remove_device(&scid_copy).await;
+        ws_tx_copy
+            .send(WebSocketNotification::ScrcpyDeviceConnection {
+                scid: scid_copy,
+                main,
+                connected: false,
+            })
+            .ok();
     });
 
     Ok(JsonResponse::success(
@@ -209,7 +220,7 @@ async fn control_device(
     let video = payload.video;
     let display_id = payload.display_id;
 
-    _control_device(&device_id, display_id, video, &state.d_tx).await
+    _control_device(&device_id, display_id, video, &state.d_tx, &state.ws_tx).await
 }
 
 #[derive(Deserialize)]
@@ -228,7 +239,7 @@ async fn reconnect_device(
     for device in device_list {
         if device.device_id == device_id {
             _decontrol_device(&device_id, &state.d_tx).await?;
-            _control_device(&device_id, payload.display_id, payload.video, &state.d_tx).await?;
+            _control_device(&device_id, payload.display_id, payload.video, &state.d_tx, &state.ws_tx).await?;
             return Ok(JsonResponse::success(
                 format!("{}: {}", t!("web.device.reconnectDevice"), device_id),
                 None,

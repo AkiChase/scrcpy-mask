@@ -193,6 +193,13 @@ impl Controller {
                                     t!("scrcpy.errorAcceptingConnection"),
                                     e
                                 );
+                                ws_tx
+                                    .send(WebSocketNotification::ScrcpyDeviceConnection {
+                                        scid: scid.clone(),
+                                        main: true,
+                                        connected: false,
+                                    })
+                                    .ok();
                                 ControlledDevice::remove_device(&scid).await;
                                 signal_map.remove(&socket_id);
                             }
@@ -230,6 +237,13 @@ impl Controller {
                                     t!("scrcpy.errorAcceptingConnection"),
                                     e
                                 );
+                                ws_tx
+                                    .send(WebSocketNotification::ScrcpyDeviceConnection {
+                                        scid: scid.clone(),
+                                        main: true,
+                                        connected: false,
+                                    })
+                                    .ok();
                                 ControlledDevice::remove_device(&scid).await;
                                 signal_map.remove(&socket_id);
                             }
@@ -281,6 +295,13 @@ impl Controller {
                                     t!("scrcpy.errorAcceptingConnection"),
                                     e
                                 );
+                                ws_tx
+                                    .send(WebSocketNotification::ScrcpyDeviceConnection {
+                                        scid: scid.clone(),
+                                        main: true,
+                                        connected: false,
+                                    })
+                                    .ok();
                                 ControlledDevice::remove_device(&scid).await;
                                 signal_map.remove(&socket_id);
                             }

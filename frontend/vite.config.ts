@@ -11,7 +11,10 @@ export default defineConfig({
   server: {
     proxy: {
       // /api/* -> http://localhost:27799/api/*
-      "/api": "http://localhost:27799",
+      "/api": {
+        target: "http://localhost:27799",
+        ws: true,
+      },
     },
   },
 });

@@ -1,6 +1,6 @@
 import "./App.scss";
 import { Layout, message, Spin } from "antd";
-import { MessageContext } from "./hooks";
+import { MessageContext, useDeviceWebSocket } from "./hooks";
 import { staticStore, useAppDispatch, useAppSelector } from "./store/store";
 import { forceSetLocalConfig } from "./store/localConfig";
 import { useEffect } from "react";
@@ -24,6 +24,8 @@ function App() {
   const isLoading = useAppSelector((state) => state.other.isLoading);
   const location = useLocation();
   const aliveRef = useKeepAliveRef();
+
+  useDeviceWebSocket();
 
   const outlet = useOutlet();
 

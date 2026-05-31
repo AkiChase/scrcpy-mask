@@ -89,7 +89,7 @@ impl Server {
             )
             .nest(
                 "/api/device",
-                device::routers(cs_tx.clone(), d_tx, m_tx.clone()),
+                device::routers(cs_tx.clone(), d_tx, m_tx.clone(), ws_tx.clone()),
             )
             .nest("/api/mapping", mapping::routers(m_tx.clone()))
             .nest("/api/config", config::routers(m_tx.clone()))

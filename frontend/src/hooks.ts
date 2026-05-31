@@ -1,9 +1,9 @@
 import type { MessageInstance } from "antd/es/message/interface";
-import { createContext, useContext } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "./store/store";
-import { setBackgroundImage, setIsLoading } from "./store/other";
+import { setAdbDevices, setBackgroundImage, setControlledDevices, setIsLoading } from "./store/other";
 import { useTranslation } from "react-i18next";
-import { requestPost } from "./utils";
+import { requestGet, requestPost } from "./utils";
 import { createFromIconfontCN } from "@ant-design/icons";
 
 export const MessageContext = createContext<MessageInstance | null>(null);
@@ -59,4 +59,67 @@ export function useRefreshBackgroundImage() {
     }
     if (!silent) messageApi?.error(t("mappings.common.noMainDevice"));
   };
+}
+
+export function useDeviceWebSocket() {
+  const dispatch = useAppDispatch();
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await requestGet<{
+        controlled_devices: Array<{
+          device_id: string;
+          device_size: [number, number];
+          main: boolean;
+          name: string;
+          scid: string;
+          socket_ids: string[];
+        }>;
+        adb_devices: Array<{ id: string; status: string }>;
+      }>("/api/device/device_list");
+      dispatch(setControlledDevices(res.data.controlled_devices));
+      dispatch(setAdbDevices(res.data.adb_devices));
+    } catch {
+      // silent refresh on ws trigger
+    }
+  }, [dispatch]);
+
+  const connect = useCallback(() => {
+    if (!mountedRef.current) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${protocol}//${window.location.host}/api/ws/connect`);
+
+    ws.onmessage = () => {
+      refresh();
+    };
+
+    ws.onclose = () => {
+      if (mountedRef.current) {
+        reconnectTimerRef.current = setTimeout(connect, 3000);
+      }
+    };
+
+    ws.onerror = () => {
+      ws.close();
+    };
+
+    wsRef.current = ws;
+  }, [refresh]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    connect();
+
+    return () => {
+      mountedRef.current = false;
+      if (reconnectTimerRef.current !== null) {
+        clearTimeout(reconnectTimerRef.current);
+      }
+      wsRef.current?.close();
+    };
+  }, [connect]);
 }

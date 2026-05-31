@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { ControlledDevice } from "../utils";
+import type { AdbDevice, ControlledDevice } from "../utils";
 
 export interface OtherState {
   isLoading: boolean;
@@ -11,6 +11,7 @@ export interface OtherState {
   };
   backgroundImage: string;
   controlledDevices: ControlledDevice[];
+  adbDevices: AdbDevice[];
   updateInfo: {
     hasUpdate: boolean;
     currentVersion: string;
@@ -32,6 +33,7 @@ const initialState: OtherState = {
   },
   backgroundImage: "",
   controlledDevices: [],
+  adbDevices: [],
   updateInfo: {
     hasUpdate: false,
     currentVersion: "Unknown",
@@ -68,6 +70,9 @@ const otherSlice = createSlice({
     ) => {
       state.controlledDevices = action.payload;
     },
+    setAdbDevices: (state, action: PayloadAction<OtherState["adbDevices"]>) => {
+      state.adbDevices = action.payload;
+    },
     setUpdateInfo: (state, action: PayloadAction<OtherState["updateInfo"]>) => {
       state.updateInfo = action.payload;
     },
@@ -85,6 +90,7 @@ export const {
   setMaskArea,
   setBackgroundImage,
   setControlledDevices,
+  setAdbDevices,
   setUpdateInfo,
   setShowUpdateDialog,
 } = otherSlice.actions;

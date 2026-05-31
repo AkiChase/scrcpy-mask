@@ -36,19 +36,17 @@ import {
   UpOutlined,
 } from "@ant-design/icons";
 import IconButton from "./common/IconButton";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ItemBox, ItemBoxContainer } from "./common/ItemBox";
-import { setControlledDevices, setIsLoading } from "../store/other";
+import { setAdbDevices, setControlledDevices, setIsLoading } from "../store/other";
 import { useMessageContext } from "../hooks";
 import { useAppDispatch, useAppSelector } from "../store/store";
 import { useLocation } from "react-router-dom";
 
 function ControlledDevices({
-  refresh,
   displayID,
   isVideo,
 }: {
-  refresh: () => void;
   displayID: number;
   isVideo: boolean;
 }) {
@@ -76,7 +74,6 @@ function ControlledDevices({
         device_id,
       });
       messageApi?.success(res.message);
-      setTimeout(refresh, 1000);
     } catch (error) {
       messageApi?.error(error as string);
     }
@@ -92,7 +89,6 @@ function ControlledDevices({
         video: isVideo,
       });
       messageApi?.success(res.message);
-      setTimeout(refresh, 1000);
     } catch (error) {
       messageApi?.error(error as string);
     }
@@ -334,12 +330,10 @@ function ControlledDevices({
 
 function OtherDevices({
   otherDevices,
-  refresh,
   videoState,
   displayIDState,
 }: {
   otherDevices: AdbDevice[];
-  refresh: () => void;
   videoState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
   displayIDState: [number, React.Dispatch<React.SetStateAction<number>>];
 }) {
@@ -359,7 +353,6 @@ function OtherDevices({
         video: isVideo,
       });
       messageApi?.success(res.message);
-      setTimeout(refresh, 1000);
     } catch (error) {
       messageApi?.error(error as string);
     }
@@ -437,7 +430,15 @@ export default function Devices() {
   const [pairAddr, setPairAddr] = useState("");
   const [pairCode, setPairCode] = useState("");
 
-  const [otherDevices, setOtherDevices] = useState<AdbDevice[]>([]);
+  const controlledDevices = useAppSelector(
+    (state) => state.other.controlledDevices,
+  );
+  const adbDevices = useAppSelector((state) => state.other.adbDevices);
+  const otherDevices = useMemo(() => {
+    const controlledIdSet = new Set(controlledDevices.map((d) => d.device_id));
+    return adbDevices.filter((d) => !controlledIdSet.has(d.id));
+  }, [controlledDevices, adbDevices]);
+
   const videoState = useState(false);
   const displayIDState = useState(0);
 
@@ -453,14 +454,7 @@ export default function Devices() {
         adb_devices: AdbDevice[];
       }>("/api/device/device_list");
       dispatch(setControlledDevices(res.data.controlled_devices));
-      const controlled_id_set = new Set(
-        res.data.controlled_devices.map((device) => device.device_id),
-      );
-      setOtherDevices(
-        res.data.adb_devices.filter(
-          (device) => !(device.id in controlled_id_set),
-        ),
-      );
+      dispatch(setAdbDevices(res.data.adb_devices));
       messageApi?.success(res.message);
     } catch (error) {
       messageApi?.error(error as string);
@@ -547,7 +541,6 @@ export default function Devices() {
           </Button>
         </Flex>
         <ControlledDevices
-          refresh={refreshDevices}
           displayID={displayIDState[0]}
           isVideo={videoState[0]}
         />
@@ -556,7 +549,6 @@ export default function Devices() {
         <h2 className="title-with-line">{t("devices.otherDevices.title")}</h2>
         <OtherDevices
           otherDevices={otherDevices}
-          refresh={refreshDevices}
           videoState={videoState}
           displayIDState={displayIDState}
         />
