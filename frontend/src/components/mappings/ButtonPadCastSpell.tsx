@@ -298,7 +298,7 @@ function Setting({
           }
         >
           {isJoyStick ? (
-            <ItemBoxContainer gap={12} className="pl-8">
+            <ItemBoxContainer gap={12} className="pr-6 pl-6">
               <ItemBox label={t("mappings.padCastSpell.setting.xAxis")}>
                 <Select
                   className="w-full"
@@ -317,7 +317,7 @@ function Setting({
               </ItemBox>
             </ItemBoxContainer>
           ) : (
-            <ItemBoxContainer gap={12} className="pl-8">
+            <ItemBoxContainer gap={12} className="pr-6 pl-6">
               <SettingBind
                 label={t("mappings.padCastSpell.setting.up")}
                 bind={(config.pad_bind as DirectionButtonBinding).up}

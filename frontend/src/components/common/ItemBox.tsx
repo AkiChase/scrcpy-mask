@@ -36,7 +36,7 @@ export function ItemBox({ label, tooltip, children, ...rest }: ItemBoxProps) {
           gap="small"
           className="color-text font-bold pb-2 pl-1 pr-1"
         >
-          <div>{label}</div>
+          <div className="w-full">{label}</div>
           {tooltip && (
             <Tooltip title={tooltip}>
               <QuestionCircleOutlined />

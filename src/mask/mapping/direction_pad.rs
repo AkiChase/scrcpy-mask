@@ -19,7 +19,7 @@ use tokio::time::sleep;
 
 use crate::{
     mask::mapping::{
-        binding::{DirectionBinding, ValidateMappingConfig},
+        binding::{ButtonBinding, DirectionBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
         utils::{
             anchor_random_offset, build_single_segment_swipe_intermediate_points,
@@ -46,6 +46,8 @@ pub struct BindMappingDirectionPad {
     pub max_offset_x: f32,
     pub max_offset_y: f32,
     pub enable_randomization: bool,
+    pub up_boost_key: Option<ButtonBinding>,
+    pub up_boost_scale: f32,
     pub bind: DirectionBinding,
     pub input_binding: InputBinding,
 }
@@ -60,6 +62,8 @@ impl From<MappingDirectionPad> for BindMappingDirectionPad {
             max_offset_x: value.max_offset_x,
             max_offset_y: value.max_offset_y,
             enable_randomization: value.enable_randomization,
+            up_boost_key: value.up_boost_key,
+            up_boost_scale: value.up_boost_scale,
             bind: value.bind.clone(),
             input_binding: value.bind.into(),
         }
@@ -76,7 +80,15 @@ pub struct MappingDirectionPad {
     pub max_offset_y: f32,
     #[serde(default)]
     pub enable_randomization: bool,
+    #[serde(default)]
+    pub up_boost_key: Option<ButtonBinding>,
+    #[serde(default = "default_up_boost_scale")]
+    pub up_boost_scale: f32,
     pub bind: DirectionBinding,
+}
+
+fn default_up_boost_scale() -> f32 {
+    1.4
 }
 
 impl ValidateMappingConfig for MappingDirectionPad {}
@@ -153,10 +165,18 @@ pub fn handle_direction_pad(
                 let mapping = mapping.as_ref_directionpad();
                 let key = action.to_string();
                 let original_size: Vec2 = active_mapping.original_size.into();
-                let state = scale_direction_2d_state(
+                let mut state = scale_direction_2d_state(
                     ineffable.direction_2d(action.ineff_dual_axis()),
                     mapping,
                 );
+                if state.y < 0.0
+                    && mapping
+                        .up_boost_key
+                        .as_ref()
+                        .is_some_and(|b| b.is_any_key_pressed(&key_input) || b.is_any_mouse_pressed(&mouse_input))
+                {
+                    state.y *= mapping.up_boost_scale;
+                }
                 if direction_pad_map.0.contains_key(&key) {
                     let item = direction_pad_map.0.get_mut(&key).unwrap();
                     if item.enable_instant > Instant::now() {

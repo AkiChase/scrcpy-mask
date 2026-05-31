@@ -292,7 +292,7 @@ function Setting({
           }
         >
           {isJoyStick ? (
-            <ItemBoxContainer gap={12} className="pl-8">
+            <ItemBoxContainer gap={12} className="pr-6 pl-6">
               <ItemBox label={t("mappings.directionPad.setting.xAxis")}>
                 <Select
                   className="w-full"
@@ -311,7 +311,7 @@ function Setting({
               </ItemBox>
             </ItemBoxContainer>
           ) : (
-            <ItemBoxContainer gap={12} className="pl-8">
+            <ItemBoxContainer gap={12} className="pr-6 pl-6">
               <SettingBind
                 label={t("mappings.directionPad.setting.up")}
                 bind={(config.bind as DirectionButtonBinding).up}
@@ -381,6 +381,48 @@ function Setting({
             }
           />
         </ItemBox>
+        <ItemBox
+          label={
+            <Flex align="center" justify="space-between">
+              <span>{t("mappings.directionPad.setting.upBoostKey")}</span>
+              <Switch
+                size="small"
+                checked={config.up_boost_key !== null}
+                onChange={(checked) =>
+                  onConfigChange({
+                    ...config,
+                    up_boost_key: checked ? [] : null,
+                  })
+                }
+              />
+            </Flex>
+          }
+        >
+          {config.up_boost_key !== null && (
+            <SettingBind
+              bind={config.up_boost_key}
+              onBindChange={(up_boost_key) =>
+                onConfigChange({
+                  ...config,
+                  up_boost_key: up_boost_key.length > 0 ? up_boost_key : [],
+                })
+              }
+            />
+          )}
+        </ItemBox>
+        {config.up_boost_key !== null && (
+          <ItemBox label={t("mappings.directionPad.setting.upBoostScale")}>
+            <InputNumber
+              className="w-full"
+              value={config.up_boost_scale}
+              min={1.0}
+              step={0.1}
+              onChange={(v) =>
+                v !== null && onConfigChange({ ...config, up_boost_scale: v })
+              }
+            />
+          </ItemBox>
+        )}
         <SettingNote
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
