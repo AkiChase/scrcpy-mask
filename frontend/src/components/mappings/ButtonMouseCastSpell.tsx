@@ -504,6 +504,16 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
+        <ItemBox label={t("mappings.directionPad.setting.initDuration")} tooltip={t("mappings.directionPad.setting.initDurationHint")}>
+          <InputNumber
+            className="w-full"
+            value={config.initial_duration}
+            min={0}
+            onChange={(v) =>
+              v !== null && onConfigChange({ ...config, initial_duration: v })
+            }
+          />
+        </ItemBox>
         <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.common.randomOffsetXHint")}>
           <InputNumber
             className="w-full"

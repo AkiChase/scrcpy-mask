@@ -202,6 +202,7 @@ export interface MouseCastSpellConfig {
   center: Position;
   drag_radius: number;
   horizontal_scale_factor: number;
+  initial_duration: number;
   note: string;
   pointer_id: number;
   position: Position;
@@ -228,6 +229,7 @@ export function newMouseCastSpell(
     position,
     random_offset_x: default_random_offset,
     random_offset_y: default_random_offset,
+    initial_duration: 0,
     release_mode: "OnRelease",
     type: "MouseCastSpell",
     vertical_scale_factor: 10,
@@ -241,7 +243,6 @@ export interface PadCastSpellConfig {
   block_direction_pad: boolean;
   drag_radius: number;
   enable_randomization: boolean;
-  initial_duration: number;
   note: string;
   pad_bind: DirectionBinding;
   pointer_id: number;
@@ -258,7 +259,6 @@ export function newPadCastSpell(position: Position): PadCastSpellConfig {
     block_direction_pad: false,
     drag_radius: 150,
     enable_randomization: false,
-    initial_duration: 0,
     note: "",
     pad_bind: {
       type: "Button",
@@ -452,6 +452,7 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
         case "MouseCastSpell":
           return {
             ...mapping,
+            initial_duration: mapping.initial_duration ?? 0,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
           };
@@ -465,7 +466,6 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
           return {
             ...mapping,
             enable_randomization: mapping.enable_randomization ?? false,
-            initial_duration: mapping.initial_duration ?? 0,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
           };

@@ -1,9 +1,9 @@
 use std::{
     sync::{
-        atomic::AtomicU64,
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
     },
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use bevy::{
@@ -16,7 +16,6 @@ use bevy::{
 use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding, PulseBinding};
 use bevy_tokio_tasks::TokioTasksRuntime;
 use serde::{Deserialize, Serialize};
-use tokio::time::sleep;
 
 use crate::{
     mask::{
@@ -26,11 +25,10 @@ use crate::{
             cursor::CursorPosition,
             direction_pad::{BlockDirectionPad, DirectionPadMap},
             utils::{
-                anchor_random_offset, build_single_segment_swipe_intermediate_points,
-                ControlMsgHelper, DEFAULT_SWIPE_DURATION, MIN_MOVE_STEP_LENGTH, Position,
-                SingleSwipeStrategy, default_random_offset,
+                anchor_random_offset, ControlMsgHelper, DEFAULT_SWIPE_DURATION,
+                MIN_MOVE_STEP_LENGTH, Position, SingleSwipeStrategy, default_random_offset,
                 handle_direction_jitter, handle_direction_move_randomized,
-                random_offset_vec2,
+                random_offset_vec2, spawn_initial_swipe,
             },
         },
         mask_command::MaskSize,
@@ -55,7 +53,7 @@ struct ActiveCastSpellItem {
     original_size: Vec2,
     cast_pos: Vec2,
     drag_radius: f32,
-    enable_instant: Instant,
+    initial_swipe_done: Arc<AtomicBool>,
     // for mouse cast spell
     mouse_flag: bool,
     center_pos: Vec2,
@@ -84,7 +82,7 @@ impl ActiveCastSpellItem {
         original_size: Vec2,
         cast_pos: Vec2,
         drag_radius: f32,
-        enable_instant: Instant,
+        initial_swipe_done: Arc<AtomicBool>,
         center_pos: Vec2,
         cast_radius: f32,
         horizontal_scale_factor: f32,
@@ -99,7 +97,7 @@ impl ActiveCastSpellItem {
             original_size,
             cast_pos,
             drag_radius,
-            enable_instant,
+            initial_swipe_done,
             center_pos,
             cast_radius,
             horizontal_scale_factor,
@@ -124,7 +122,7 @@ impl ActiveCastSpellItem {
         original_size: Vec2,
         cast_pos: Vec2,
         drag_radius: f32,
-        enable_instant: Instant,
+        initial_swipe_done: Arc<AtomicBool>,
         block_direction_pad: bool,
         pad_action: MappingAction,
         enable_randomization: bool,
@@ -139,7 +137,7 @@ impl ActiveCastSpellItem {
             original_size,
             cast_pos,
             drag_radius,
-            enable_instant,
+            initial_swipe_done,
             center_pos: Vec2::ZERO,
             cast_radius: 0.,
             horizontal_scale_factor: 0.,
@@ -177,6 +175,7 @@ pub struct BindMappingMouseCastSpell {
     pub cast_radius: f32,
     pub release_mode: MouseCastReleaseMode,
     pub cast_no_direction: bool,
+    pub initial_duration: u64,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
     pub random_offset_x: f32,
@@ -196,6 +195,7 @@ impl From<MappingMouseCastSpell> for BindMappingMouseCastSpell {
             cast_radius: value.cast_radius,
             release_mode: value.release_mode,
             cast_no_direction: value.cast_no_direction,
+            initial_duration: value.initial_duration,
             bind: value.bind.clone(),
             input_binding: ContinuousBinding::hold(value.bind).0,
             random_offset_x: value.random_offset_x,
@@ -220,6 +220,8 @@ pub struct MappingMouseCastSpell {
     pub cast_radius: f32,
     pub release_mode: MouseCastReleaseMode,
     pub cast_no_direction: bool,
+    #[serde(default)]
+    pub initial_duration: u64,
     pub bind: ButtonBinding,
     #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_x: f32,
@@ -279,7 +281,7 @@ pub fn handle_mouse_cast_spell_trigger(
     if let Some(active_cast) = active_cast.0.as_mut() {
         if active_cast.cast_no_direction
             || !active_cast.mouse_flag
-            || active_cast.enable_instant > Instant::now()
+            || !active_cast.initial_swipe_done.load(Ordering::Relaxed)
         {
             return;
         }
@@ -358,44 +360,7 @@ pub fn handle_mouse_cast_spell(
                     let drag_radius = mapping.drag_radius;
                     let horizontal_scale_factor = mapping.horizontal_scale_factor;
                     let vertical_scale_factor = mapping.vertical_scale_factor;
-                    let mut current_pos = original_pos / original_size * cur_mask_size;
-
-                    if !matches!(mapping.release_mode, MouseCastReleaseMode::OnPress) {
-                        // set active
-                        let enable_instant =
-                            Instant::now() + Duration::from_millis(CAST_SPELL_DELAY * 2);
-
-                        let record_current_pos = if !cast_no_direction {
-                            cal_mouse_cast_spell_current_pos(
-                                cur_cursor_pos,
-                                center_pos,
-                                original_pos,
-                                cast_radius,
-                                drag_radius,
-                                cur_mask_size,
-                                original_size,
-                                horizontal_scale_factor,
-                                vertical_scale_factor,
-                            )
-                        } else {
-                            current_pos
-                        };
-
-                        active_cast.0 = Some(ActiveCastSpellItem::new_mouse_item(
-                            action.to_string(),
-                            pointer_id,
-                            record_current_pos,
-                            original_size,
-                            original_pos,
-                            mapping.drag_radius,
-                            enable_instant,
-                            center_pos,
-                            mapping.cast_radius,
-                            mapping.horizontal_scale_factor,
-                            mapping.vertical_scale_factor,
-                            mapping.cast_no_direction,
-                        ))
-                    }
+                    let current_pos = original_pos / original_size * cur_mask_size;
 
                     // touch down new cast
                     ControlMsgHelper::send_touch(
@@ -406,69 +371,67 @@ pub fn handle_mouse_cast_spell(
                         current_pos,
                     );
 
-                    let cs_tx = cs_tx_res.0.clone();
-                    runtime.spawn_background_task(move |_ctx| async move {
-                        // stay at the center
-                        let steps: u64 = 5;
-                        let step_interval = CAST_SPELL_DELAY / steps;
-                        let mut delta = Vec2::new(0., 0.);
-                        for _ in 0..steps {
-                            ControlMsgHelper::send_touch(
-                                &cs_tx,
-                                MotionEventAction::Move,
-                                pointer_id,
-                                cur_mask_size,
-                                current_pos + delta,
-                            );
-                            delta += Vec2::new(1., -1.);
-                            sleep(Duration::from_millis(step_interval)).await;
-                        }
+                    let target_pos = if !cast_no_direction {
+                        cal_mouse_cast_spell_current_pos(
+                            cur_cursor_pos,
+                            center_pos,
+                            original_pos,
+                            cast_radius,
+                            drag_radius,
+                            cur_mask_size,
+                            original_size,
+                            horizontal_scale_factor,
+                            vertical_scale_factor,
+                        )
+                    } else {
+                        current_pos
+                    };
 
-                        if !cast_no_direction {
-                            // move to direction
-                            let new_pos = cal_mouse_cast_spell_current_pos(
-                                cur_cursor_pos,
-                                center_pos,
-                                original_pos,
-                                cast_radius,
-                                drag_radius,
-                                cur_mask_size,
-                                original_size,
-                                horizontal_scale_factor,
-                                vertical_scale_factor,
-                            );
-                            let delta = new_pos - current_pos;
-                            let steps = std::cmp::max(
-                                2, // at least 2 steps
-                                (delta.length() / MIN_MOVE_STEP_LENGTH).ceil() as i32,
-                            );
-                            for step in 1..=steps {
-                                let linear_t = step as f32 / steps as f32;
-                                let interp = current_pos + delta * linear_t;
-                                ControlMsgHelper::send_touch(
-                                    &cs_tx,
-                                    MotionEventAction::Move,
-                                    pointer_id,
-                                    cur_mask_size,
-                                    interp,
-                                );
+                    let initial_swipe_done = spawn_initial_swipe(
+                        &runtime,
+                        &cs_tx_res.0,
+                        pointer_id,
+                        mask_size.0,
+                        current_pos,
+                        target_pos,
+                        mapping.initial_duration,
+                        DEFAULT_SWIPE_DURATION,
+                        SingleSwipeStrategy::ArcWithEaseOut,
+                    );
+
+                    if matches!(release_mode, MouseCastReleaseMode::OnPress) {
+                        // OnPress: self-contained, touch up after initial animation
+                        let cs_tx = cs_tx_res.0.clone();
+                        let cur_mask_size = mask_size.0;
+                        runtime.spawn_background_task(move |_ctx| async move {
+                            // wait for initial swipe to finish
+                            while !initial_swipe_done.load(Ordering::Relaxed) {
+                                tokio::time::sleep(std::time::Duration::from_millis(5)).await;
                             }
-                            current_pos = new_pos;
-                        }
-
-                        // for OnPress cast, touch up here
-                        if matches!(release_mode, MouseCastReleaseMode::OnPress) {
-                            sleep(Duration::from_millis(CAST_SPELL_DELAY)).await;
-
                             ControlMsgHelper::send_touch(
                                 &cs_tx,
                                 MotionEventAction::Up,
                                 pointer_id,
                                 cur_mask_size,
-                                current_pos,
+                                target_pos,
                             );
-                        }
-                    });
+                        });
+                    } else {
+                        active_cast.0 = Some(ActiveCastSpellItem::new_mouse_item(
+                            action.to_string(),
+                            pointer_id,
+                            target_pos,
+                            original_size,
+                            original_pos,
+                            mapping.drag_radius,
+                            initial_swipe_done,
+                            center_pos,
+                            mapping.cast_radius,
+                            mapping.horizontal_scale_factor,
+                            mapping.vertical_scale_factor,
+                            mapping.cast_no_direction,
+                        ));
+                    }
                 } else if ineffable.just_deactivated(action.ineff_continuous()) {
                     if let MouseCastReleaseMode::OnRelease = mapping.release_mode {
                         let Some(cast) = &active_cast.0 else {
@@ -518,7 +481,6 @@ pub struct BindMappingPadCastSpell {
     pub pad_input_binding: InputBinding,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
-    pub initial_duration: u64,
     pub random_offset_x: f32,
     pub random_offset_y: f32,
     pub enable_randomization: bool,
@@ -538,7 +500,6 @@ impl From<MappingPadCastSpell> for BindMappingPadCastSpell {
             pad_input_binding: value.pad_bind.into(),
             bind: value.bind.clone(),
             input_binding: ContinuousBinding::hold(value.bind).0,
-            initial_duration: value.initial_duration,
             random_offset_x: value.random_offset_x,
             random_offset_y: value.random_offset_y,
             enable_randomization: value.enable_randomization,
@@ -557,8 +518,6 @@ pub struct MappingPadCastSpell {
     pub block_direction_pad: bool,
     pub pad_bind: DirectionBinding,
     pub bind: ButtonBinding,
-    #[serde(default)]
-    pub initial_duration: u64,
     #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_x: f32,
     #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
@@ -589,7 +548,7 @@ pub fn handle_pad_cast_spell_trigger(
     mut active_cast: ResMut<ActiveCastSpell>,
 ) {
     if let Some(active_cast) = active_cast.0.as_mut() {
-        if active_cast.mouse_flag || active_cast.enable_instant > Instant::now() {
+        if active_cast.mouse_flag || !active_cast.initial_swipe_done.load(Ordering::Relaxed) {
             return;
         }
 
@@ -701,11 +660,6 @@ pub fn handle_pad_cast_spell(
                         Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
                     );
                     let current_pos = original_pos / original_size * mask_size.0;
-                    let enable_instant = Instant::now()
-                        + Duration::from_millis(
-                            CAST_SPELL_DELAY + mapping.initial_duration + DEFAULT_SWIPE_DURATION,
-                        );
-
                     let (random_anchor, random_offset) = if mapping.enable_randomization {
                         let offset = anchor_random_offset(mapping.drag_radius, mapping.drag_radius);
                         let anchor = random_offset_vec2(original_pos, offset);
@@ -713,22 +667,6 @@ pub fn handle_pad_cast_spell(
                     } else {
                         (Vec2::ZERO, Vec2::ZERO)
                     };
-
-                    // set active
-                    active_cast.0 = Some(ActiveCastSpellItem::new_pad_item(
-                        action.to_string(),
-                        pointer_id,
-                        current_pos,
-                        original_size,
-                        original_pos,
-                        mapping.drag_radius,
-                        enable_instant,
-                        mapping.block_direction_pad,
-                        mapping.pad_action.clone(),
-                        mapping.enable_randomization,
-                        random_anchor,
-                        random_offset,
-                    ));
 
                     // touch down new cast
                     ControlMsgHelper::send_touch(
@@ -739,44 +677,45 @@ pub fn handle_pad_cast_spell(
                         current_pos,
                     );
 
-                    // initial slide
-                    let initial_state = Vec2::ZERO;
+                    // initial animation (jitter at start during initial_duration, then a
+                    // zero-length swipe — the completion signal unlocks subsequent input)
                     let slide_start = if mapping.enable_randomization {
                         random_anchor / original_size * mask_size.0
                     } else {
                         current_pos
                     };
-                    let slide_end = slide_start + initial_state;
-
                     let strategy = if mapping.enable_randomization {
                         SingleSwipeStrategy::ArcWithEaseOut
                     } else {
                         SingleSwipeStrategy::Linear
                     };
-                    let points = build_single_segment_swipe_intermediate_points(
+                    let initial_swipe_done = spawn_initial_swipe(
+                        &runtime,
+                        &cs_tx_res.0,
+                        pointer_id,
+                        mask_size.0,
                         slide_start,
-                        slide_end,
-                        strategy,
+                        slide_start, // target = start (shown direction by handle_pad_cast_spell_trigger)
+                        0, // no initial wait: the activate button itself signals intent
                         DEFAULT_SWIPE_DURATION,
+                        strategy,
                     );
-                    if !points.is_empty() {
-                        let cs_tx = cs_tx_res.0.clone();
-                        let cur_mask_size = mask_size.0;
-                        let initial_duration = mapping.initial_duration;
-                        runtime.spawn_background_task(move |_ctx| async move {
-                            sleep(Duration::from_millis(initial_duration)).await;
-                            for point in points {
-                                ControlMsgHelper::send_touch(
-                                    &cs_tx,
-                                    MotionEventAction::Move,
-                                    pointer_id,
-                                    cur_mask_size,
-                                    point.pos,
-                                );
-                                sleep(Duration::from_millis(point.wait_ms)).await;
-                            }
-                        });
-                    }
+
+                    // set active
+                    active_cast.0 = Some(ActiveCastSpellItem::new_pad_item(
+                        action.to_string(),
+                        pointer_id,
+                        current_pos,
+                        original_size,
+                        original_pos,
+                        mapping.drag_radius,
+                        initial_swipe_done,
+                        mapping.block_direction_pad,
+                        mapping.pad_action.clone(),
+                        mapping.enable_randomization,
+                        random_anchor,
+                        random_offset,
+                    ));
                 } else if ineffable.just_deactivated(action.ineff_continuous()) {
                     if let PadCastReleaseMode::OnRelease = mapping.release_mode {
                         let Some(cast) = &active_cast.0 else {
@@ -863,11 +802,10 @@ pub fn handle_cancel_cast(
                         let cs_tx = cs_tx_res.0.clone();
                         let pointer_id = cast.pointer_id;
                         let cast_block_direction_pad = cast.block_direction_pad;
-                        let cast_enable_instant = cast.enable_instant;
+                        let cast_initial_swipe_done = cast.initial_swipe_done.clone();
                         runtime.spawn_background_task(move |mut ctx| async move {
-                            let now = Instant::now();
-                            if cast_enable_instant > now {
-                                sleep(cast_enable_instant - now).await;
+                            while !cast_initial_swipe_done.load(Ordering::Relaxed) {
+                                tokio::time::sleep(std::time::Duration::from_millis(5)).await;
                             }
 
                             let mut end_pos = current_pos;
@@ -897,7 +835,7 @@ pub fn handle_cancel_cast(
                                     cur_mask_size,
                                     end_pos,
                                 );
-                                sleep(Duration::from_millis(step_interval)).await;
+                                tokio::time::sleep(std::time::Duration::from_millis(step_interval)).await;
                             }
 
                             ControlMsgHelper::send_touch(

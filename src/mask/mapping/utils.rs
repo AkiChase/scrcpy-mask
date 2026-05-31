@@ -1,7 +1,7 @@
 use std::{
     ops::MulAssign,
     sync::{
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
     },
     time::{Duration, Instant},
@@ -215,6 +215,72 @@ pub struct SwipePointStep {
     pub wait_ms: u64,
 }
 
+/// Spawns a background task that performs micro-jitter during `initial_duration_ms`,
+/// then swipes from `start` to `target` over `swipe_duration_ms`.
+/// Returns a flag set to true when both phases complete.
+pub fn spawn_initial_swipe(
+    runtime: &TokioTasksRuntime,
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    pointer_id: u64,
+    original_size: Vec2,
+    start: Vec2,
+    target: Vec2,
+    initial_duration_ms: u64,
+    swipe_duration_ms: u64,
+    swipe_strategy: SingleSwipeStrategy,
+) -> Arc<AtomicBool> {
+    let done = Arc::new(AtomicBool::new(false));
+    let done_clone = done.clone();
+    let cs_tx = cs_tx.clone();
+
+    runtime.spawn_background_task(move |_ctx| async move {
+        if initial_duration_ms > 0 {
+            let jitter_count = ((initial_duration_ms as f32 / 16.0).round() as usize).max(2);
+            let jitter_interval = initial_duration_ms / jitter_count as u64;
+            for _ in 0..jitter_count {
+                let offset = Vec2::new(
+                    (rand::random::<f32>() - 0.5) * 4.0,
+                    (rand::random::<f32>() - 0.5) * 4.0,
+                );
+                ControlMsgHelper::send_touch(
+                    &cs_tx,
+                    MotionEventAction::Move,
+                    pointer_id,
+                    original_size,
+                    start + offset,
+                );
+                sleep(Duration::from_millis(jitter_interval)).await;
+            }
+            // return to start before the swipe
+            ControlMsgHelper::send_touch(
+                &cs_tx,
+                MotionEventAction::Move,
+                pointer_id,
+                original_size,
+                start,
+            );
+        }
+
+        let points = build_single_segment_swipe_intermediate_points(
+            start, target, swipe_strategy, swipe_duration_ms,
+        );
+        for point in points {
+            ControlMsgHelper::send_touch(
+                &cs_tx,
+                MotionEventAction::Move,
+                pointer_id,
+                original_size,
+                point.pos,
+            );
+            sleep(Duration::from_millis(point.wait_ms)).await;
+        }
+
+        done_clone.store(true, Ordering::Relaxed);
+    });
+
+    done
+}
+
 pub fn default_random_offset() -> f32 {
     10.0
 }
@@ -288,17 +354,32 @@ fn build_linear_path(
     steps: usize,
     duration_ms: u64,
 ) -> Vec<SwipePointStep> {
-    let per_step_wait = if duration_ms > 0 {
-        (duration_ms as f32 / steps as f32).round().max(1.0) as u64
+    let per_step_wait: u64;
+    let rem: usize;
+    if duration_ms > 0 {
+        let d = duration_ms as usize;
+        if d < steps {
+            per_step_wait = 1;
+            rem = 0;
+        } else {
+            per_step_wait = (d / steps) as u64;
+            rem = d % steps;
+        }
     } else {
-        20
+        per_step_wait = 20;
+        rem = 0;
     };
     let mut points = Vec::with_capacity(steps);
     for step in 1..=steps {
         let t = step as f32 / point_count as f32;
+        let wait_ms = if step <= rem {
+            per_step_wait + 1
+        } else {
+            per_step_wait
+        };
         points.push(SwipePointStep {
             pos: start + delta * t,
-            wait_ms: per_step_wait,
+            wait_ms,
         });
     }
     points
@@ -353,6 +434,8 @@ fn build_arc_path(
     let mut points = Vec::with_capacity(steps);
     let mut prev_target = start;
     let mut prev_time = 0.0;
+    // buffer pos/weight for user_duration path so we can normalize after the loop
+    let mut user_steps: Vec<(Vec2, f32)> = Vec::with_capacity(steps);
 
     for step in 1..point_count {
         let target_distance = cumulative_length * (step as f32 / point_count as f32);
@@ -375,23 +458,46 @@ fn build_arc_path(
             (target_time - prev_time).max(4.0)
         };
         let spacing_bias = (spacing / 18.0).clamp(0.7, 1.35);
-        let wait_ms = if user_duration {
-            (base_wait * spacing_bias).round().max(1.0)
-        } else {
-            (base_wait * spacing_bias).round().clamp(4.0, 28.0)
-        } as u64;
 
-        points.push(SwipePointStep { pos, wait_ms });
+        if user_duration {
+            user_steps.push((pos, base_wait * spacing_bias));
+        } else {
+            let wait_ms = (base_wait * spacing_bias).round().clamp(4.0, 28.0) as u64;
+            points.push(SwipePointStep { pos, wait_ms });
+        }
+
         prev_target = pos;
         prev_time = target_time;
     }
 
     if user_duration {
-        let raw_total: u64 = points.iter().map(|p| p.wait_ms).sum();
-        if raw_total > 0 && raw_total != duration_ms {
-            let scale = duration_ms as f64 / raw_total as f64;
-            for p in &mut points {
-                p.wait_ms = (p.wait_ms as f64 * scale).round().max(1.0) as u64;
+        let total_weight: f32 = user_steps.iter().map(|(_, w)| w).sum();
+        if total_weight > 0.0 {
+            for (pos, weight) in &user_steps {
+                let wait_ms = (weight / total_weight * travel_ms).round().max(1.0) as u64;
+                points.push(SwipePointStep { pos: *pos, wait_ms });
+            }
+            // correct integer rounding overshoot/undershoot
+            let total: u64 = points.iter().map(|p| p.wait_ms).sum();
+            if total > duration_ms {
+                let mut excess = total - duration_ms;
+                for p in points.iter_mut().rev() {
+                    if excess == 0 {
+                        break;
+                    }
+                    let remove = (p.wait_ms - 1).min(excess);
+                    p.wait_ms -= remove;
+                    excess -= remove;
+                }
+            } else if total < duration_ms {
+                let mut shortfall = duration_ms - total;
+                for p in points.iter_mut().rev() {
+                    if shortfall == 0 {
+                        break;
+                    }
+                    p.wait_ms += 1;
+                    shortfall -= 1;
+                }
             }
         }
     }
@@ -644,6 +750,28 @@ fn build_multisegment_arc_cubic(
             let scale = duration_ms as f64 / raw_total as f64;
             for p in &mut points {
                 p.wait_ms = (p.wait_ms as f64 * scale).round().max(1.0) as u64;
+            }
+        }
+        // correct integer rounding overshoot/undershoot
+        let total: u64 = points.iter().map(|p| p.wait_ms).sum();
+        if total > duration_ms {
+            let mut excess = total - duration_ms;
+            for p in points.iter_mut().rev() {
+                if excess == 0 {
+                    break;
+                }
+                let remove = (p.wait_ms - 1).min(excess);
+                p.wait_ms -= remove;
+                excess -= remove;
+            }
+        } else if total < duration_ms {
+            let mut shortfall = duration_ms - total;
+            for p in points.iter_mut().rev() {
+                if shortfall == 0 {
+                    break;
+                }
+                p.wait_ms += 1;
+                shortfall -= 1;
             }
         }
     }

@@ -1,7 +1,8 @@
 use std::{
     collections::HashMap,
-    sync::{atomic::AtomicU64, Arc},
-    time::{Duration, Instant},
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
+    sync::Arc,
+    time::Instant,
 };
 
 use bevy::{
@@ -15,17 +16,14 @@ use bevy::{
 use bevy_ineffable::prelude::{Ineffable, InputBinding};
 use bevy_tokio_tasks::TokioTasksRuntime;
 use serde::{Deserialize, Serialize};
-use tokio::time::sleep;
-
 use crate::{
     mask::mapping::{
         binding::{ButtonBinding, DirectionBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
         utils::{
-            anchor_random_offset, build_single_segment_swipe_intermediate_points,
-            ControlMsgHelper, DEFAULT_SWIPE_DURATION, Position, SingleSwipeStrategy,
-            handle_direction_jitter, handle_direction_move_randomized,
-            next_jitter_deadline, random_offset_vec2,
+            anchor_random_offset, ControlMsgHelper, DEFAULT_SWIPE_DURATION, Position,
+            SingleSwipeStrategy, handle_direction_jitter, handle_direction_move_randomized,
+            next_jitter_deadline, random_offset_vec2, spawn_initial_swipe,
         },
     },
     scrcpy::constant::MotionEventAction,
@@ -99,7 +97,7 @@ impl ValidateMappingConfig for MappingDirectionPad {}
 pub struct DirectionPadMap(pub HashMap<String, DirectionPadItem>);
 
 pub struct DirectionPadItem {
-    pub enable_instant: Instant,
+    pub initial_swipe_done: Arc<AtomicBool>,
     pub pointer_id: u64,
     pub original_size: Vec2,
     pub original_pos: Vec2,
@@ -181,7 +179,7 @@ pub fn handle_direction_pad(
                 }
                 if direction_pad_map.0.contains_key(&key) {
                     let item = direction_pad_map.0.get_mut(&key).unwrap();
-                    if item.enable_instant > Instant::now() {
+                    if !item.initial_swipe_done.load(Ordering::Relaxed) {
                         continue;
                     }
                     let original_pos: Vec2 = mapping.position.into();
@@ -286,15 +284,42 @@ pub fn handle_direction_pad(
                         original_pos
                     };
 
-                    let enable_instant = Instant::now()
-                        + Duration::from_millis(
-                            mapping.initial_duration + DEFAULT_SWIPE_DURATION,
-                        );
+                    // touch down
+                    ControlMsgHelper::send_touch(
+                        &cs_tx_res.0,
+                        MotionEventAction::Down,
+                        pointer_id,
+                        original_size,
+                        random_anchor,
+                    );
+
+                    // initial swipe (jitter during initial_duration, then slide to target)
+                    let strategy = if mapping.enable_randomization {
+                        SingleSwipeStrategy::ArcWithEaseOut
+                    } else {
+                        SingleSwipeStrategy::Linear
+                    };
+                    let swipe_start = if mapping.enable_randomization {
+                        random_anchor
+                    } else {
+                        original_pos
+                    };
+                    let initial_swipe_done = spawn_initial_swipe(
+                        &runtime,
+                        &cs_tx_res.0,
+                        pointer_id,
+                        original_size,
+                        swipe_start,
+                        swipe_start + state,
+                        mapping.initial_duration,
+                        DEFAULT_SWIPE_DURATION,
+                        strategy,
+                    );
 
                     direction_pad_map.0.insert(
                         key,
                         DirectionPadItem {
-                            enable_instant,
+                            initial_swipe_done,
                             pointer_id,
                             original_size,
                             original_pos,
@@ -308,62 +333,6 @@ pub fn handle_direction_pad(
                             move_gen: Arc::new(AtomicU64::new(0)),
                         },
                     );
-
-                    // touch down
-                    ControlMsgHelper::send_touch(
-                        &cs_tx_res.0,
-                        MotionEventAction::Down,
-                        pointer_id,
-                        original_size,
-                        random_anchor,
-                    );
-
-                    // initial slide
-                    if mapping.enable_randomization {
-                        let points = build_single_segment_swipe_intermediate_points(
-                            random_anchor,
-                            random_anchor + state,
-                            SingleSwipeStrategy::ArcWithEaseOut,
-                            DEFAULT_SWIPE_DURATION,
-                        );
-                        let cs_tx = cs_tx_res.0.clone();
-                        let initial_duration = mapping.initial_duration;
-                        runtime.spawn_background_task(move |_ctx| async move {
-                            sleep(Duration::from_millis(initial_duration)).await;
-                            for point in points {
-                                ControlMsgHelper::send_touch(
-                                    &cs_tx,
-                                    MotionEventAction::Move,
-                                    pointer_id,
-                                    original_size,
-                                    point.pos,
-                                );
-                                sleep(Duration::from_millis(point.wait_ms)).await;
-                            }
-                        });
-                    } else {
-                        let points = build_single_segment_swipe_intermediate_points(
-                            original_pos,
-                            original_pos + state,
-                            SingleSwipeStrategy::Linear,
-                            DEFAULT_SWIPE_DURATION,
-                        );
-                        let cs_tx = cs_tx_res.0.clone();
-                        let initial_duration = mapping.initial_duration;
-                        runtime.spawn_background_task(move |_ctx| async move {
-                            sleep(Duration::from_millis(initial_duration)).await;
-                            for point in points {
-                                ControlMsgHelper::send_touch(
-                                    &cs_tx,
-                                    MotionEventAction::Move,
-                                    pointer_id,
-                                    original_size,
-                                    point.pos,
-                                );
-                                sleep(Duration::from_millis(point.wait_ms)).await;
-                            }
-                        });
-                    }
                 }
             }
         }

@@ -377,16 +377,6 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.directionPad.setting.initDuration")} tooltip={t("mappings.directionPad.setting.initDurationHint")}>
-          <InputNumber
-            className="w-full"
-            value={config.initial_duration}
-            min={0}
-            onChange={(v) =>
-              v !== null && onConfigChange({ ...config, initial_duration: v })
-            }
-          />
-        </ItemBox>
         <ItemBox label={t("mappings.padCastSpell.setting.block")} tooltip={t("mappings.padCastSpell.setting.blockHint")}>
           <Switch
             checked={config.block_direction_pad}
