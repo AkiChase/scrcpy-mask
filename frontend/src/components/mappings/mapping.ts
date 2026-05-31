@@ -314,8 +314,8 @@ export function newObservation(position: Position): ObservationConfig {
     position,
     random_offset_x: default_random_offset,
     random_offset_y: default_random_offset,
-    sensitivity_x: 1,
-    sensitivity_y: 1,
+    sensitivity_x: 0.8,
+    sensitivity_y: 0.8,
     type: "Observation",
   };
 }
@@ -336,8 +336,8 @@ export function newFps(position: Position): FpsConfig {
     note: "",
     pointer_id: 0,
     position,
-    sensitivity_x: 1,
-    sensitivity_y: 1,
+    sensitivity_x: 0.8,
+    sensitivity_y: 0.8,
     type: "Fps",
   };
 }
@@ -362,8 +362,8 @@ export function newFire(position: Position): FireConfig {
     position,
     random_offset_x: default_random_offset,
     random_offset_y: default_random_offset,
-    sensitivity_x: 1,
-    sensitivity_y: 1,
+    sensitivity_x: 0.8,
+    sensitivity_y: 0.8,
     type: "Fire",
   };
 }
