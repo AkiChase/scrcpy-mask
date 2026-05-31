@@ -716,6 +716,7 @@ async fn migrate_mapping(
             }
             MappingType::Observation(m) => {
                 m.position *= scale;
+                m.max_radius *= scale.y;
             }
             MappingType::Fps(m) => {
                 m.position *= scale;

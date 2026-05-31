@@ -136,7 +136,9 @@
         "left": "Left",
         "maxOffset": "Maximum offset",
         "right": "Right",
-        "up": "Up"
+        "up": "Up",
+        "upBoostKey": "Up boost",
+        "upBoostScale": "Up boost scale"
       },
       "name": "DirectionPad"
     },
@@ -207,7 +209,8 @@
     "observation": {
       "setting": {
         "sensitivity": "Sensitivity",
-        "title": "Mapping Configuration - Observation"
+        "title": "Mapping Configuration - Observation",
+        "maxRadius": "Max Radius"
       },
       "name": "Observation"
     },

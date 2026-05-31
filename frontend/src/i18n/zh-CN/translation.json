@@ -132,6 +132,8 @@
         "xAxis": "X轴",
         "yAxis": "Y轴",
         "up": "上",
+        "upBoostKey": "向上延长",
+        "upBoostScale": "向上延长倍率",
         "down": "下",
         "left": "左",
         "right": "右",
@@ -193,7 +195,8 @@
     "observation": {
       "setting": {
         "title": "映射配置 - 观察视角",
-        "sensitivity": "灵敏度"
+        "sensitivity": "灵敏度",
+        "maxRadius": "最大范围"
       },
       "name": "观察视角"
     },

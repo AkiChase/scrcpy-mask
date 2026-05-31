@@ -169,6 +169,16 @@ function Setting({
             }
           />
         </ItemBox>
+        <ItemBox label={t("mappings.observation.setting.maxRadius")}>
+          <InputNumber
+            className="w-full"
+            value={config.max_radius ?? 0}
+            min={0}
+            onChange={(v) =>
+              v !== null && onConfigChange({ ...config, max_radius: v })
+            }
+          />
+        </ItemBox>
         <ItemBox label={t("mappings.observation.setting.sensitivity")}>
           <Space.Compact className="w-full">
             <InputNumber

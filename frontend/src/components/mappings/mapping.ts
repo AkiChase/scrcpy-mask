@@ -167,6 +167,8 @@ export interface DirectionPadConfig {
   pointer_id: number;
   position: Position;
   type: "DirectionPad";
+  up_boost_key: ButtonBinding | null;
+  up_boost_scale: number;
 }
 
 export function newDirectionPad(position: Position): DirectionPadConfig {
@@ -186,6 +188,8 @@ export function newDirectionPad(position: Position): DirectionPadConfig {
     pointer_id: 2,
     position,
     type: "DirectionPad",
+    up_boost_key: null,
+    up_boost_scale: 2.0,
   };
 }
 
@@ -290,6 +294,7 @@ export function newCancelCast(position: Position): CancelCastConfig {
 
 export interface ObservationConfig {
   bind: ButtonBinding;
+  max_radius: number;
   note: string;
   pointer_id: number;
   position: Position;
@@ -303,6 +308,7 @@ export interface ObservationConfig {
 export function newObservation(position: Position): ObservationConfig {
   return {
     bind: [],
+    max_radius: 0,
     note: "",
     pointer_id: 4,
     position,
@@ -448,6 +454,12 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             ...mapping,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+          };
+        case "DirectionPad":
+          return {
+            ...mapping,
+            up_boost_key: mapping.up_boost_key ?? null,
+            up_boost_scale: mapping.up_boost_scale ?? 1.0,
           };
         case "PadCastSpell":
           return {

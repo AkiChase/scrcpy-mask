@@ -39,6 +39,8 @@ pub struct BindMappingObservation {
     pub input_binding: InputBinding,
     pub random_offset_x: f32,
     pub random_offset_y: f32,
+    #[serde(default)]
+    pub max_radius: f32,
 }
 
 impl From<MappingObservation> for BindMappingObservation {
@@ -53,6 +55,7 @@ impl From<MappingObservation> for BindMappingObservation {
             input_binding: ContinuousBinding::hold(value.bind).0,
             random_offset_x: value.random_offset_x,
             random_offset_y: value.random_offset_y,
+            max_radius: value.max_radius,
         }
     }
 }
@@ -69,6 +72,8 @@ pub struct MappingObservation {
     pub random_offset_x: f32,
     #[serde(default = "default_random_offset")]
     pub random_offset_y: f32,
+    #[serde(default)]
+    pub max_radius: f32,
 }
 
 impl ValidateMappingConfig for MappingObservation {}
@@ -81,6 +86,7 @@ struct ObservationItem {
     mask_pos: Vec2,
     pointer_id: u64,
     sensitivity: Vec2,
+    max_radius: f32,
 }
 
 pub fn handle_observation_trigger(
@@ -90,7 +96,13 @@ pub fn handle_observation_trigger(
     mut active_map: ResMut<ActiveObservationMap>,
 ) {
     for (_, item) in active_map.0.iter_mut() {
-        let delta = (cursor_pos.0 - item.start_cursor_pos) * item.sensitivity;
+        let mut delta = (cursor_pos.0 - item.start_cursor_pos) * item.sensitivity;
+        if item.max_radius > 0.0 {
+            let len = delta.length();
+            if len > item.max_radius {
+                delta = delta / len * item.max_radius;
+            }
+        }
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,
             MotionEventAction::Move,
@@ -139,12 +151,19 @@ pub fn handle_observation(
                             mask_pos,
                             pointer_id,
                             sensitivity,
+                            max_radius: mapping.max_radius,
                         },
                     );
                 } else if ineffable.just_deactivated(action.ineff_continuous()) {
                     if let Some(item) = active_map.0.remove(action.as_ref()) {
                         // touch up
-                        let delta = (cursor_pos.0 - item.start_cursor_pos) * item.sensitivity;
+                        let mut delta = (cursor_pos.0 - item.start_cursor_pos) * item.sensitivity;
+                        if item.max_radius > 0.0 {
+                            let len = delta.length();
+                            if len > item.max_radius {
+                                delta = delta / len * item.max_radius;
+                            }
+                        }
                         ControlMsgHelper::send_touch(
                             &cs_tx_res.0,
                             MotionEventAction::Up,
