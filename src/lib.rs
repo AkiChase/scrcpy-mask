@@ -4,7 +4,7 @@ pub mod scrcpy;
 pub mod utils;
 pub mod web;
 
-#[cfg(target_os = "windows")]
+#[cfg(not(target_os = "macos"))]
 pub mod window_alpha;
 
 rust_i18n::i18n!(

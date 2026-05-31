@@ -86,8 +86,6 @@ fn main() {
                     },
                     #[cfg(target_os = "macos")]
                     composite_alpha_mode: bevy::window::CompositeAlphaMode::PostMultiplied,
-                    #[cfg(target_os = "linux")]
-                    composite_alpha_mode: bevy::window::CompositeAlphaMode::PreMultiplied,
                     ..default()
                 }),
                 ..default()
@@ -103,7 +101,7 @@ fn main() {
             .add_systems(Startup, macos_menu);
     }
 
-    #[cfg(target_os = "windows")]
+    #[cfg(not(target_os = "macos"))]
     {
         use scrcpy_mask::window_alpha;
         app.add_systems(Startup, window_alpha::detect_alpha_mode);

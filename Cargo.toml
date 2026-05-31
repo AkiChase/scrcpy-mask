@@ -40,6 +40,8 @@ futures-util = { version = "0.3", default-features = false, features = [
     "std",
 ] }
 crossbeam-channel = "0.5"
+wgpu = "27"
+pollster = "0.4"
 bitflags = "2.9.1"
 half = "2.6.0"
 tokio-util = "0.7.15"
@@ -52,10 +54,6 @@ ffmpeg-next = { version = "7.1.0", default-features = false, features = [
     "format",
     "software-scaling",
 ] }
-
-[target.'cfg(target_os = "windows")'.dependencies]
-wgpu = "27"
-pollster = "0.4"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 muda = "0.17"
