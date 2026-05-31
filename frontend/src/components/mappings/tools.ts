@@ -19,8 +19,11 @@ export function clientPositionToMappingPosition(
   oW: number,
   oH: number,
 ) {
-  const mX = Math.max(0, Math.min(maskArea.width, cX - maskArea.left));
-  const mY = Math.max(0, Math.min(maskArea.height, cY - maskArea.top));
+  const mappingContainer = document.getElementById("mappings-container") as HTMLElement;
+  const scrollX = mappingContainer?.scrollLeft ?? 0;
+  const scrollY = mappingContainer?.scrollTop ?? 0;
+  const mX = Math.max(0, Math.min(maskArea.width, cX + scrollX - maskArea.left));
+  const mY = Math.max(0, Math.min(maskArea.height, cY + scrollY - maskArea.top));
   return {
     x: Math.round((mX / maskArea.width) * oW),
     y: Math.round((mY / maskArea.height) * oH),
