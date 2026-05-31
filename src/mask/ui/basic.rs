@@ -30,7 +30,7 @@ impl Plugin for BasicPlugin {
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_millis(100)),
             })
             .add_systems(Startup, setup_ui)
-            .add_systems(Update, sync_titlebar_visibility);
+            .add_systems(Update, (handle_titlebar_drag, sync_titlebar_visibility));
     }
 }
 
@@ -73,6 +73,7 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>) {
             },
             BackgroundColor(titlebar_bg),
             TitlebarMarker,
+            Interaction::default(),
         ))
         .id();
 
@@ -135,6 +136,15 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>) {
             BorderColor::all(border_color),
         ));
     });
+}
+
+fn handle_titlebar_drag(
+    mut window: Single<&mut Window>,
+    interaction_query: Query<&Interaction, (With<TitlebarMarker>, Changed<Interaction>)>,
+) {
+    if interaction_query.iter().any(|i| *i == Interaction::Pressed) {
+        window.start_drag_move();
+    }
 }
 
 fn sync_titlebar_visibility(
