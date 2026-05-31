@@ -210,16 +210,20 @@ pub struct MappingMouseCastSpell {
     pub pointer_id: u64,
     pub position: Position,
     pub center: Position,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub horizontal_scale_factor: f32,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub vertical_scale_factor: f32,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub drag_radius: f32,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub cast_radius: f32,
     pub release_mode: MouseCastReleaseMode,
     pub cast_no_direction: bool,
     pub bind: ButtonBinding,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_x: f32,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_y: f32,
 }
 
@@ -548,15 +552,16 @@ pub struct MappingPadCastSpell {
     pub pointer_id: u64,
     pub position: Position,
     pub release_mode: PadCastReleaseMode,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub drag_radius: f32,
     pub block_direction_pad: bool,
     pub pad_bind: DirectionBinding,
     pub bind: ButtonBinding,
     #[serde(default)]
     pub initial_duration: u64,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_x: f32,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_y: f32,
     #[serde(default)]
     pub enable_randomization: bool,

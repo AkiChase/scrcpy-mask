@@ -8,6 +8,7 @@ pub mod observation;
 pub mod raw_input;
 pub mod script;
 pub mod script_helper;
+pub mod serde_float;
 pub mod swipe;
 pub mod tap;
 pub mod utils;

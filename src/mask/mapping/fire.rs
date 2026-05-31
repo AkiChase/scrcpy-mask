@@ -61,7 +61,9 @@ pub struct MappingFps {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub sensitivity_x: f32,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub sensitivity_y: f32,
     pub bind: ButtonBinding,
 }
@@ -171,12 +173,14 @@ pub struct MappingFire {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub sensitivity_x: f32,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub sensitivity_y: f32,
     pub bind: ButtonBinding,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_x: f32,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_y: f32,
 }
 

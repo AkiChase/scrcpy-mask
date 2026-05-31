@@ -65,9 +65,9 @@ pub struct MappingSingleTap {
     pub duration: u64,
     pub sync: bool,
     pub bind: ButtonBinding,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_x: f32,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_y: f32,
 }
 
@@ -186,9 +186,9 @@ pub struct MappingRepeatTap {
     pub duration: u64,
     pub interval: u32,
     pub bind: ButtonBinding,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_x: f32,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_y: f32,
 }
 
@@ -316,9 +316,9 @@ pub struct MappingMultipleTap {
     pub pointer_id: u64,
     pub items: Vec<MappingMultipleTapItem>,
     pub bind: ButtonBinding,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_x: f32,
-    #[serde(default = "default_random_offset")]
+    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub random_offset_y: f32,
 }
 

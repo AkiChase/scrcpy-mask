@@ -76,13 +76,15 @@ pub struct MappingDirectionPad {
     pub pointer_id: u64,
     pub position: Position,
     pub initial_duration: u64,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub max_offset_x: f32,
+    #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub max_offset_y: f32,
     #[serde(default)]
     pub enable_randomization: bool,
     #[serde(default)]
     pub up_boost_key: Option<ButtonBinding>,
-    #[serde(default = "default_up_boost_scale")]
+    #[serde(default = "default_up_boost_scale", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub up_boost_scale: f32,
     pub bind: DirectionBinding,
 }
