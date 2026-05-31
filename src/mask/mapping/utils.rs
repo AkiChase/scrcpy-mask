@@ -322,7 +322,7 @@ pub fn build_single_segment_swipe_intermediate_points(
         return vec![];
     }
 
-    let point_count = ((distance / 14.0).round() as usize).clamp(10, 34);
+    let point_count = ((distance / 14.0).round() as usize).clamp(5, 25);
     let steps = point_count.saturating_sub(1);
     if steps == 0 {
         return vec![];
@@ -585,7 +585,7 @@ fn build_multisegment_arc_cubic(
             continue;
         }
 
-        let point_count = ((distance / 14.0).round() as usize).clamp(10, 34);
+        let point_count = ((distance / 14.0).round() as usize).clamp(5, 25);
         let direction = delta / distance;
         let normal = Vec2::new(-direction.y, direction.x);
         let arc_scale = (distance * 0.035).clamp(1.5, 10.0);

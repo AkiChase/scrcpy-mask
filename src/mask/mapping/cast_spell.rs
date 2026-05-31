@@ -817,7 +817,7 @@ pub fn handle_cancel_cast(
                                 current_pos,
                                 cancel_pos,
                                 SingleSwipeStrategy::Linear,
-                                0,
+                            DEFAULT_SWIPE_DURATION,
                             );
                             let mut end_pos = current_pos;
                             for point in move_points {
