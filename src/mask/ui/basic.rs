@@ -1,14 +1,26 @@
 use std::time::Duration;
 
-use bevy::{prelude::*, winit::{UpdateMode, WinitSettings}};
+use bevy::{
+    math::CompassOctant,
+    prelude::*,
+    winit::{UpdateMode, WinitSettings},
+};
 
 use crate::{
     config::LocalConfig,
     mask::{mask_command::TitlebarState, video::VideoPlayer},
+    scrcpy::controller::ControllerCommand,
+    utils::{ChannelSenderD, DeviceOrientation, share::ControlledDevice},
 };
 
 pub const BORDER_THICKNESS: f32 = 1.0;
 pub const TITLEBAR_HEIGHT: f32 = 30.0;
+
+const EDGE_HANDLE_SIZE: f32 = 6.0;
+const CORNER_HANDLE_SIZE: f32 = 12.0;
+
+#[derive(Component)]
+struct ResizeHandle(CompassOctant);
 
 #[derive(Component)]
 pub struct MaskContentMarker;
@@ -16,6 +28,11 @@ pub struct MaskContentMarker;
 #[derive(Component)]
 pub struct TitlebarMarker;
 
+#[derive(Component)]
+struct MinimizeButton;
+
+#[derive(Component)]
+struct CloseButton;
 
 #[derive(Resource)]
 pub struct MaskContentEntity(pub Entity);
@@ -30,7 +47,7 @@ impl Plugin for BasicPlugin {
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_millis(100)),
             })
             .add_systems(Startup, setup_ui)
-            .add_systems(Update, (handle_titlebar_drag, sync_titlebar_visibility));
+            .add_systems(Update, (button_interaction, handle_titlebar_buttons, handle_titlebar_drag, handle_resize, sync_titlebar_visibility));
     }
 }
 
@@ -86,6 +103,60 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>) {
             },
             TextColor(Color::srgb(0.8, 0.8, 0.8)),
         ));
+
+        // Button container (right side)
+        titlebar
+            .spawn(Node {
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Center,
+                column_gap: Val::Px(6.),
+                ..default()
+            })
+            .with_children(|buttons| {
+                buttons
+                    .spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(20.),
+                            height: Val::Px(20.),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(NORMAL_BG),
+                        MinimizeButton,
+                    ))
+                    .with_child((
+                        Text::new("-"),
+                        TextFont {
+                            font_size: 10.,
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.85, 0.85, 0.85)),
+                    ));
+
+                buttons
+                    .spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(20.),
+                            height: Val::Px(20.),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(CLOSE_NORMAL_BG),
+                        CloseButton,
+                    ))
+                    .with_child((
+                        Text::new("x"),
+                        TextFont {
+                            font_size: 12.,
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.85, 0.85, 0.85)),
+                    ));
+            });
     });
 
     // Mask content container
@@ -135,15 +206,228 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>) {
             BackgroundColor(Color::NONE),
             BorderColor::all(border_color),
         ));
+
+        // Resize handles (invisible, layered on top of border)
+        let edge_z = ZIndex(10);
+        let corner_z = ZIndex(11);
+
+        // Edge handles
+        content.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(0.),
+                left: Val::Px(0.),
+                width: Val::Percent(100.),
+                height: Val::Px(EDGE_HANDLE_SIZE),
+                ..default()
+            },
+            edge_z,
+            BackgroundColor(Color::NONE),
+            Interaction::default(),
+            ResizeHandle(CompassOctant::North),
+        ));
+        content.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(0.),
+                left: Val::Px(0.),
+                width: Val::Percent(100.),
+                height: Val::Px(EDGE_HANDLE_SIZE),
+                ..default()
+            },
+            edge_z,
+            BackgroundColor(Color::NONE),
+            Interaction::default(),
+            ResizeHandle(CompassOctant::South),
+        ));
+        content.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(0.),
+                left: Val::Px(0.),
+                width: Val::Px(EDGE_HANDLE_SIZE),
+                height: Val::Percent(100.),
+                ..default()
+            },
+            edge_z,
+            BackgroundColor(Color::NONE),
+            Interaction::default(),
+            ResizeHandle(CompassOctant::West),
+        ));
+        content.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(0.),
+                right: Val::Px(0.),
+                width: Val::Px(EDGE_HANDLE_SIZE),
+                height: Val::Percent(100.),
+                ..default()
+            },
+            edge_z,
+            BackgroundColor(Color::NONE),
+            Interaction::default(),
+            ResizeHandle(CompassOctant::East),
+        ));
+
+        // Corner handles (higher z-index to capture clicks over edges)
+        content.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(0.),
+                left: Val::Px(0.),
+                width: Val::Px(CORNER_HANDLE_SIZE),
+                height: Val::Px(CORNER_HANDLE_SIZE),
+                ..default()
+            },
+            corner_z,
+            BackgroundColor(Color::NONE),
+            Interaction::default(),
+            ResizeHandle(CompassOctant::NorthWest),
+        ));
+        content.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(0.),
+                right: Val::Px(0.),
+                width: Val::Px(CORNER_HANDLE_SIZE),
+                height: Val::Px(CORNER_HANDLE_SIZE),
+                ..default()
+            },
+            corner_z,
+            BackgroundColor(Color::NONE),
+            Interaction::default(),
+            ResizeHandle(CompassOctant::NorthEast),
+        ));
+        content.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(0.),
+                left: Val::Px(0.),
+                width: Val::Px(CORNER_HANDLE_SIZE),
+                height: Val::Px(CORNER_HANDLE_SIZE),
+                ..default()
+            },
+            corner_z,
+            BackgroundColor(Color::NONE),
+            Interaction::default(),
+            ResizeHandle(CompassOctant::SouthWest),
+        ));
+        content.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(0.),
+                right: Val::Px(0.),
+                width: Val::Px(CORNER_HANDLE_SIZE),
+                height: Val::Px(CORNER_HANDLE_SIZE),
+                ..default()
+            },
+            corner_z,
+            BackgroundColor(Color::NONE),
+            Interaction::default(),
+            ResizeHandle(CompassOctant::SouthEast),
+        ));
     });
 }
 
 fn handle_titlebar_drag(
     mut window: Single<&mut Window>,
     interaction_query: Query<&Interaction, (With<TitlebarMarker>, Changed<Interaction>)>,
+    button_query: Query<&Interaction, Or<(With<MinimizeButton>, With<CloseButton>)>>,
 ) {
-    if interaction_query.iter().any(|i| *i == Interaction::Pressed) {
+    let button_pressed = button_query.iter().any(|i| *i == Interaction::Pressed);
+    if !button_pressed && interaction_query.iter().any(|i| *i == Interaction::Pressed) {
         window.start_drag_move();
+    }
+}
+
+fn handle_titlebar_buttons(
+    mut window: Single<&mut Window>,
+    minimize_query: Query<&Interaction, (With<MinimizeButton>, Changed<Interaction>)>,
+    close_query: Query<&Interaction, (With<CloseButton>, Changed<Interaction>)>,
+    d_tx: Res<ChannelSenderD>,
+) {
+    for interaction in minimize_query.iter() {
+        if *interaction == Interaction::Pressed {
+            window.set_minimized(true);
+        }
+    }
+    for interaction in close_query.iter() {
+        if *interaction == Interaction::Pressed {
+            if let Some(device) = ControlledDevice::get_main_device_blocking() {
+                let _ = d_tx.0.send(ControllerCommand::ShutdownMain(device.scid.clone()));
+            }
+        }
+    }
+}
+
+const NORMAL_BG: Color = Color::srgba(0.25, 0.25, 0.25, 0.6);
+const HOVERED_BG: Color = Color::srgba(0.38, 0.38, 0.38, 0.7);
+const PRESSED_BG: Color = Color::srgba(0.15, 0.15, 0.15, 0.85);
+const CLOSE_NORMAL_BG: Color = Color::srgba(0.82, 0.25, 0.2, 0.7);
+const CLOSE_HOVER_BG: Color = Color::srgba(0.95, 0.3, 0.25, 0.85);
+const CLOSE_PRESSED_BG: Color = Color::srgba(0.65, 0.12, 0.08, 0.9);
+
+fn button_interaction(
+    minimize_query: Query<(Entity, &Interaction), (With<MinimizeButton>, Changed<Interaction>)>,
+    close_query: Query<(Entity, &Interaction), (With<CloseButton>, Changed<Interaction>)>,
+    mut bg_query: Query<&mut BackgroundColor>,
+) {
+    for (entity, interaction) in minimize_query.iter() {
+        if let Ok(mut bg) = bg_query.get_mut(entity) {
+            *bg = match *interaction {
+                Interaction::Pressed => PRESSED_BG,
+                Interaction::Hovered => HOVERED_BG,
+                Interaction::None => NORMAL_BG,
+            }
+            .into();
+        }
+    }
+    for (entity, interaction) in close_query.iter() {
+        if let Ok(mut bg) = bg_query.get_mut(entity) {
+            *bg = match *interaction {
+                Interaction::Pressed => CLOSE_PRESSED_BG,
+                Interaction::Hovered => CLOSE_HOVER_BG,
+                Interaction::None => CLOSE_NORMAL_BG,
+            }
+            .into();
+        }
+    }
+}
+
+fn map_handle_for_device(handle: CompassOctant, orientation: DeviceOrientation) -> Option<CompassOctant> {
+    match orientation {
+        DeviceOrientation::Landscape => match handle {
+            CompassOctant::NorthWest | CompassOctant::West | CompassOctant::SouthWest => Some(CompassOctant::West),
+            CompassOctant::NorthEast | CompassOctant::East | CompassOctant::SouthEast => Some(CompassOctant::East),
+            CompassOctant::North | CompassOctant::South => None,
+        },
+        DeviceOrientation::Portrait => match handle {
+            CompassOctant::NorthWest | CompassOctant::North | CompassOctant::NorthEast => Some(CompassOctant::North),
+            CompassOctant::SouthWest | CompassOctant::South | CompassOctant::SouthEast => Some(CompassOctant::South),
+            CompassOctant::East | CompassOctant::West => None,
+        },
+    }
+}
+
+fn handle_resize(
+    mut window: Single<&mut Window>,
+    query: Query<(&ResizeHandle, &Interaction), Changed<Interaction>>,
+) {
+    let device = ControlledDevice::get_main_device_blocking();
+
+    for (handle, interaction) in query.iter() {
+        if *interaction == Interaction::Pressed {
+            let direction = match &device {
+                Some(dev) if dev.device_size.0 > 0 && dev.device_size.1 > 0 => {
+                    let orientation = DeviceOrientation::from_size(dev.device_size.0, dev.device_size.1);
+                    map_handle_for_device(handle.0, orientation)
+                }
+                _ => None, // no device or unknown size: block resize
+            };
+            if let Some(dir) = direction {
+                window.start_drag_resize(dir);
+            }
+        }
     }
 }
 

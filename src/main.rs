@@ -15,7 +15,8 @@ use scrcpy_mask::{
         media::VideoMsg,
     },
     utils::{
-        ChannelReceiverM, ChannelReceiverV, ChannelSenderCS, check_for_update, relate_to_data_path,
+        ChannelReceiverM, ChannelReceiverV, ChannelSenderCS, ChannelSenderD,
+        check_for_update, relate_to_data_path,
     },
     web::{self, ws::WebSocketNotification},
 };
@@ -78,8 +79,8 @@ fn main() {
                     transparent: true, // for windows: https://github.com/bevyengine/bevy/issues/7544
                     decorations: false,
                     present_mode: PresentMode::AutoVsync,
-                    resizable: true,
-                    visible: true,
+                    resizable: false,
+                    visible: false,
                     window_level: if local_config.always_on_top {
                         WindowLevel::AlwaysOnTop
                     } else {
@@ -144,6 +145,7 @@ fn start_servers(mut commands: Commands) {
     commands.insert_resource(ChannelSenderCS(cs_tx.clone()));
     commands.insert_resource(ChannelReceiverV(v_rx));
     commands.insert_resource(ChannelReceiverM(m_rx));
+    commands.insert_resource(ChannelSenderD(d_tx.clone()));
     web::Server::start(web_addr, cs_tx.clone(), d_tx, m_tx.clone(), ws_tx.clone());
     controller::Controller::start(controller_addr, cs_tx, v_tx, d_rx, m_tx, ws_tx);
 }

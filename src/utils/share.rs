@@ -58,6 +58,13 @@ impl ControlledDevice {
             }
         }
     }
+
+    // Blocking variants for use from sync contexts (e.g. Bevy systems)
+
+    pub fn get_main_device_blocking() -> Option<ScrcpyDevice> {
+        let device_list = CONTROLLED_DEVICES.blocking_read();
+        device_list.iter().find(|device| device.main).cloned()
+    }
 }
 
 #[derive(Clone, Serialize)]

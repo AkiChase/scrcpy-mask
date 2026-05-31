@@ -8,6 +8,7 @@ use crate::{
     mask::{
         mapping::{MappingState, utils::ControlMsgHelper},
         mask_command::{MaskSize, TitlebarState},
+        ui::basic::TITLEBAR_HEIGHT,
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
@@ -247,7 +248,11 @@ fn handle_normal_left_click(
     cursor_pos: Res<CursorPosition>,
     cs_tx_res: Res<ChannelSenderCS>,
     mask_size: Res<MaskSize>,
+    titlebar_state: Res<TitlebarState>,
 ) {
+    if titlebar_state.visible && cursor_pos.0.y < 0. && cursor_pos.0.y >= -TITLEBAR_HEIGHT {
+        return;
+    }
     if mouse_button_input.just_pressed(MouseButton::Left) {
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,

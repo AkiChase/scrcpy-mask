@@ -16,7 +16,11 @@ use tokio::sync::{broadcast, oneshot};
 use crate::{
     config::LocalConfig,
     mask::mask_command::MaskCommand,
-    scrcpy::{control_msg::ScrcpyControlMsg, media::VideoMsg},
+    scrcpy::{
+        control_msg::ScrcpyControlMsg,
+        controller::ControllerCommand,
+        media::VideoMsg,
+    },
     utils::share::UpdateInfo,
 };
 
@@ -81,6 +85,21 @@ pub struct ChannelReceiverM(
     pub crossbeam_channel::Receiver<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
 );
 
+#[derive(Resource)]
+pub struct ChannelSenderD(pub tokio::sync::mpsc::UnboundedSender<ControllerCommand>);
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum DeviceOrientation {
+    Landscape,
+    Portrait,
+}
+
+impl DeviceOrientation {
+    pub fn from_size(w: u32, h: u32) -> Self {
+        if w >= h { Self::Landscape } else { Self::Portrait }
+    }
+}
+
 pub async fn mask_win_move_helper(
     device_w: u32,
     device_h: u32,
@@ -88,20 +107,21 @@ pub async fn mask_win_move_helper(
 ) -> String {
     let config = LocalConfig::get();
     let (left, top, right, bottom) = {
-        if device_w >= device_h {
-            // horizontal
-            let left = config.horizontal_position.0;
-            let top = config.horizontal_position.1;
-            let mask_w = config.horizontal_mask_width;
-            let mask_h = ((device_h as f32) * (mask_w as f32) / (device_w as f32)).round() as u32;
-            (left, top, left + mask_w as i32, top + mask_h as i32)
-        } else {
-            // vertical
-            let left = config.vertical_position.0;
-            let top = config.vertical_position.1;
-            let mask_h = config.vertical_mask_height;
-            let mask_w = ((device_w as f32) * (mask_h as f32) / (device_h as f32)).round() as u32;
-            (left, top, left + mask_w as i32, top + mask_h as i32)
+        match DeviceOrientation::from_size(device_w, device_h) {
+            DeviceOrientation::Landscape => {
+                let left = config.horizontal_position.0;
+                let top = config.horizontal_position.1;
+                let mask_w = config.horizontal_mask_width;
+                let mask_h = ((device_h as f32) * (mask_w as f32) / (device_w as f32)).round() as u32;
+                (left, top, left + mask_w as i32, top + mask_h as i32)
+            }
+            DeviceOrientation::Portrait => {
+                let left = config.vertical_position.0;
+                let top = config.vertical_position.1;
+                let mask_h = config.vertical_mask_height;
+                let mask_w = ((device_w as f32) * (mask_h as f32) / (device_h as f32)).round() as u32;
+                (left, top, left + mask_w as i32, top + mask_h as i32)
+            }
         }
     };
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();

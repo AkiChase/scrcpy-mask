@@ -119,12 +119,14 @@ pub fn handle_mask_command(
                     next_mapping_state.set(MappingState::Normal);
                     log::info!("[Mapping] {}", t!("mask.enterNormalMappingMode"));
                     window.visible = true;
+                    window.resizable = true;
                     t!("mask.mainDeviceConnected").to_string()
                 } else {
                     next_cursor_state.set(CursorState::Normal);
                     next_mapping_state.set(MappingState::Stop);
                     log::info!("[Mapping] {}", t!("mask.exitStopMappingMode"));
                     window.visible = false;
+                    window.resizable = false;
                     t!("mask.mainDeviceDisconnected").to_string()
                 };
                 log::info!("[Mask] {}", msg);
