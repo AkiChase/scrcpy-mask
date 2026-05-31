@@ -17,9 +17,6 @@ use crate::scrcpy::{
     control_msg::ScrcpyControlMsg,
 };
 
-// TODO 移除这个常量, 后续应该用更合理的
-pub const MIN_MOVE_STEP_LENGTH: f32 = 25.; // px
-
 pub const DEFAULT_SWIPE_DURATION: u64 = 25; // ms
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Copy)]
@@ -84,19 +81,19 @@ impl ControlMsgHelper {
         size: Vec2,
         pos: Vec2,
     ) {
-        cs_tx
-            .send(ScrcpyControlMsg::InjectTouchEvent {
-                action,
-                pointer_id,
-                x: pos.x as i32,
-                y: pos.y as i32,
-                w: size.x as u16,
-                h: size.y as u16,
-                pressure: half::f16::from_f32_const(1.0),
-                action_button: MotionEventButtons::PRIMARY,
-                buttons: MotionEventButtons::PRIMARY,
-            })
-            .unwrap();
+        if let Err(e) = cs_tx.send(ScrcpyControlMsg::InjectTouchEvent {
+            action,
+            pointer_id,
+            x: pos.x as i32,
+            y: pos.y as i32,
+            w: size.x as u16,
+            h: size.y as u16,
+            pressure: half::f16::from_f32_const(1.0),
+            action_button: MotionEventButtons::PRIMARY,
+            buttons: MotionEventButtons::PRIMARY,
+        }) {
+            log::warn!("[Mapping] send_touch failed: {}", e);
+        }
     }
 
     pub fn send_keycode(
@@ -111,14 +108,14 @@ impl ControlMsgHelper {
         } else {
             constant::KeyEventAction::Up
         };
-        cs_tx
-            .send(ScrcpyControlMsg::InjectKeycode {
-                action,
-                keycode,
-                repeat,
-                metastate,
-            })
-            .unwrap();
+        if let Err(e) = cs_tx.send(ScrcpyControlMsg::InjectKeycode {
+            action,
+            keycode,
+            repeat,
+            metastate,
+        }) {
+            log::warn!("[Mapping] send_keycode failed: {}", e);
+        }
     }
 
     pub fn set_clipboard(
@@ -128,13 +125,13 @@ impl ControlMsgHelper {
         paste: bool,
     ) {
         let sequence = sequence.unwrap_or_else(|| rand::random());
-        cs_tx
-            .send(ScrcpyControlMsg::SetClipboard {
-                sequence,
-                paste,
-                text,
-            })
-            .unwrap();
+        if let Err(e) = cs_tx.send(ScrcpyControlMsg::SetClipboard {
+            sequence,
+            paste,
+            text,
+        }) {
+            log::warn!("[Mapping] set_clipboard failed: {}", e);
+        }
     }
 }
 

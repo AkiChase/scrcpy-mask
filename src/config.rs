@@ -13,8 +13,6 @@ use serde_json::to_string_pretty;
 
 static CONFIG: Lazy<RwLock<LocalConfig>> = Lazy::new(|| RwLock::default());
 
-// TODO 单独写外部脚本来捕获特定窗口，发送Post消息来设置蒙版相关配置（宽度>=高度则设置横屏相关配置，否则设置竖屏）
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LocalConfig {
