@@ -1,10 +1,12 @@
 import type { MessageInstance } from "antd/es/message/interface";
 import { createContext, useCallback, useContext, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "./store/store";
-import { setAdbDevices, setBackgroundImage, setControlledDevices, setIsLoading } from "./store/other";
+import { setAdbDevices, setBackgroundImage, setControlledDevices, setDeviceRotation, setIsLoading } from "./store/other";
+import { forceSetLocalConfig } from "./store/localConfig";
 import { useTranslation } from "react-i18next";
 import { requestGet, requestPost } from "./utils";
 import { createFromIconfontCN } from "@ant-design/icons";
+import i18n from "./i18n";
 
 export const MessageContext = createContext<MessageInstance | null>(null);
 export const useMessageContext = () => useContext(MessageContext);
@@ -67,7 +69,7 @@ export function useDeviceWebSocket() {
   const reconnectTimerRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
 
-  const refresh = useCallback(async () => {
+  const refreshDevices = useCallback(async () => {
     try {
       const res = await requestGet<{
         controlled_devices: Array<{
@@ -87,14 +89,49 @@ export function useDeviceWebSocket() {
     }
   }, [dispatch]);
 
+  const refreshConfig = useCallback(async () => {
+    try {
+      const res = await requestGet<Record<string, any>>("/api/config/get_config");
+      dispatch(forceSetLocalConfig(res.data));
+      i18n.changeLanguage(res.data.language);
+    } catch {
+      // silent refresh on ws trigger
+    }
+  }, [dispatch]);
+
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(`${protocol}//${window.location.host}/api/ws/connect`);
 
-    ws.onmessage = () => {
-      refresh();
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        switch (msg.type) {
+          case "ScrcpyDeviceList":
+            dispatch(setControlledDevices(msg.devices));
+            break;
+          case "ScrcpyDeviceConnection":
+            refreshDevices();
+            break;
+          case "ScrcpyDeviceRotation":
+            dispatch(setDeviceRotation({
+              scid: msg.scid,
+              rotation: msg.rotation,
+              width: msg.width,
+              height: msg.height,
+            }));
+            break;
+          case "ConfigChanged":
+            refreshConfig();
+            break;
+          default:
+            refreshDevices();
+        }
+      } catch {
+        // ignore malformed messages
+      }
     };
 
     ws.onclose = () => {
@@ -108,7 +145,7 @@ export function useDeviceWebSocket() {
     };
 
     wsRef.current = ws;
-  }, [refresh]);
+  }, [refreshDevices, refreshConfig]);
 
   useEffect(() => {
     mountedRef.current = true;

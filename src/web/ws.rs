@@ -37,6 +37,9 @@ pub enum WebSocketNotification {
     ScrcpyDeviceList {
         devices: Vec<ScrcpyDevice>,
     },
+    ConfigChanged {
+        keys: Vec<String>,
+    },
 }
 
 impl From<WebSocketNotification> for Message {

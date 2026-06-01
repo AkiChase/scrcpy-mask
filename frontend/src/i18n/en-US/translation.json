@@ -31,7 +31,10 @@
       "mainDevice": "main",
       "actionInfo": "More information",
       "actionClose": "Stop control",
-      "actionReconnect": "Reconnect device"
+      "actionReconnect": "Reconnect device",
+      "rotation": "Rotation",
+      "landscape": "Landscape",
+      "portrait": "Portrait"
     },
     "otherDevices": {
       "title": "Other Devices",

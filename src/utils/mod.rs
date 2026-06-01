@@ -22,6 +22,7 @@ use crate::{
         media::VideoMsg,
     },
     utils::share::UpdateInfo,
+    web::ws::WebSocketNotification,
 };
 
 pub const IDENTIFIER: &str = "com.akichase.scrcpy-mask";
@@ -87,6 +88,9 @@ pub struct ChannelReceiverM(
 
 #[derive(Resource)]
 pub struct ChannelSenderD(pub tokio::sync::mpsc::UnboundedSender<ControllerCommand>);
+
+#[derive(Resource)]
+pub struct ChannelSenderWS(pub broadcast::Sender<WebSocketNotification>);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum DeviceOrientation {

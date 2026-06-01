@@ -1,6 +1,12 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { AdbDevice, ControlledDevice } from "../utils";
 
+export interface DeviceRotation {
+  rotation: number;
+  width: number;
+  height: number;
+}
+
 export interface OtherState {
   isLoading: boolean;
   maskArea: {
@@ -12,6 +18,7 @@ export interface OtherState {
   backgroundImage: string;
   controlledDevices: ControlledDevice[];
   adbDevices: AdbDevice[];
+  deviceRotations: Record<string, DeviceRotation>;
   updateInfo: {
     hasUpdate: boolean;
     currentVersion: string;
@@ -34,6 +41,7 @@ const initialState: OtherState = {
   backgroundImage: "",
   controlledDevices: [],
   adbDevices: [],
+  deviceRotations: {},
   updateInfo: {
     hasUpdate: false,
     currentVersion: "Unknown",
@@ -82,6 +90,17 @@ const otherSlice = createSlice({
     ) => {
       state.showUpdateDialog = action.payload;
     },
+    setDeviceRotation: (
+      state,
+      action: PayloadAction<{ scid: string } & DeviceRotation>
+    ) => {
+      const { scid, rotation, width, height } = action.payload;
+      state.deviceRotations[scid] = { rotation, width, height };
+      const device = state.controlledDevices.find((d) => d.scid === scid);
+      if (device) {
+        device.device_size = [width, height];
+      }
+    },
   },
 });
 
@@ -91,6 +110,7 @@ export const {
   setBackgroundImage,
   setControlledDevices,
   setAdbDevices,
+  setDeviceRotation,
   setUpdateInfo,
   setShowUpdateDialog,
 } = otherSlice.actions;

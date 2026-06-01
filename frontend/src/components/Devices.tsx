@@ -10,6 +10,7 @@ import {
   Popover,
   Space,
   Table,
+  Tag,
   type DropdownProps,
   type TableProps,
 } from "antd";
@@ -55,6 +56,9 @@ function ControlledDevices({
   const messageApi = useMessageContext();
   const controlledDevices = useAppSelector(
     (state) => state.other.controlledDevices,
+  );
+  const deviceRotations = useAppSelector(
+    (state) => state.other.deviceRotations,
   );
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
 
@@ -123,6 +127,23 @@ function ControlledDevices({
       key: "device_size",
       render: (device_size) => {
         return `${device_size[0]}x${device_size[1]}`;
+      },
+    },
+    {
+      title: t("devices.controlledDevices.rotation"),
+      key: "rotation",
+      align: "center",
+      render: (_, record) => {
+        const rot = deviceRotations[record.scid];
+        if (!rot) return null;
+        const isLandscape = rot.rotation === 1 || rot.rotation === 3;
+        return (
+          <Tag color={isLandscape ? "green" : "blue"}>
+            {isLandscape
+              ? t("devices.controlledDevices.landscape")
+              : t("devices.controlledDevices.portrait")}
+          </Tag>
+        );
       },
     },
     {

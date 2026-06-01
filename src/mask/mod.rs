@@ -23,7 +23,8 @@ use crate::{
         ui::basic::TITLEBAR_HEIGHT,
         video::{VideoAttributes, handle_video_msg},
     },
-    utils::{DeviceOrientation, share::ControlledDevice},
+    utils::{ChannelSenderWS, DeviceOrientation, share::ControlledDevice},
+    web::ws::WebSocketNotification,
 };
 
 pub struct MaskPlugins;
@@ -99,6 +100,7 @@ fn sync_mask_size(
     mut window: Single<&mut Window>,
     time: Res<Time>,
     mut debounce: Local<ResizeDebounce>,
+    ws_tx: Res<ChannelSenderWS>,
 ) {
     debounce.ensure_init();
 
@@ -161,10 +163,22 @@ fn sync_mask_size(
                     DeviceOrientation::Landscape => {
                         LocalConfig::set_horizontal_mask_width(content_w);
                         LocalConfig::set_horizontal_position((content_left, content_top));
+                        let _ = ws_tx.0.send(WebSocketNotification::ConfigChanged {
+                            keys: vec![
+                                "horizontal_mask_width".into(),
+                                "horizontal_position".into(),
+                            ],
+                        });
                     }
                     DeviceOrientation::Portrait => {
                         LocalConfig::set_vertical_mask_height(content_h);
                         LocalConfig::set_vertical_position((content_left, content_top));
+                        let _ = ws_tx.0.send(WebSocketNotification::ConfigChanged {
+                            keys: vec![
+                                "vertical_mask_height".into(),
+                                "vertical_position".into(),
+                            ],
+                        });
                     }
                 }
             }
@@ -178,6 +192,7 @@ fn sync_mask_position(
     titlebar_state: Res<TitlebarState>,
     time: Res<Time>,
     mut debounce: Local<MoveDebounce>,
+    ws_tx: Res<ChannelSenderWS>,
 ) {
     debounce.ensure_init();
 
@@ -210,9 +225,15 @@ fn sync_mask_position(
                 match DeviceOrientation::from_size(dw, dh) {
                     DeviceOrientation::Landscape => {
                         LocalConfig::set_horizontal_position((content_left, content_top));
+                        let _ = ws_tx.0.send(WebSocketNotification::ConfigChanged {
+                            keys: vec!["horizontal_position".into()],
+                        });
                     }
                     DeviceOrientation::Portrait => {
                         LocalConfig::set_vertical_position((content_left, content_top));
+                        let _ = ws_tx.0.send(WebSocketNotification::ConfigChanged {
+                            keys: vec!["vertical_position".into()],
+                        });
                     }
                 }
             }
