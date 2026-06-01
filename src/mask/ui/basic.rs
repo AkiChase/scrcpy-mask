@@ -3,6 +3,7 @@ use std::time::Duration;
 use bevy::{
     math::CompassOctant,
     prelude::*,
+    window::WindowLevel,
     winit::{UpdateMode, WinitSettings},
 };
 
@@ -34,6 +35,9 @@ struct MinimizeButton;
 #[derive(Component)]
 struct CloseButton;
 
+#[derive(Component)]
+struct PushpinButton;
+
 #[derive(Resource)]
 pub struct MaskContentEntity(pub Entity);
 
@@ -47,11 +51,11 @@ impl Plugin for BasicPlugin {
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_millis(100)),
             })
             .add_systems(Startup, setup_ui)
-            .add_systems(Update, (button_interaction, handle_titlebar_buttons, handle_titlebar_drag, handle_resize, sync_titlebar_visibility));
+            .add_systems(Update, (button_interaction, handle_titlebar_buttons, handle_titlebar_drag, handle_resize, sync_titlebar_visibility, sync_pushpin_style));
     }
 }
 
-fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>) {
+fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>, asset_server: Res<AssetServer>) {
     let config = LocalConfig::get();
     let win_h = if config.titlebar_visible {
         600. + TITLEBAR_HEIGHT
@@ -64,6 +68,16 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>) {
 
     let titlebar_bg = Color::srgba(0.05, 0.05, 0.05, 0.85);
     let border_color = Color::srgba_u8(183, 42, 32, 255);
+
+    let minimize_icon: Handle<Image> = asset_server.load("icons/minus.png");
+    let pushpin_icon: Handle<Image> = asset_server.load("icons/pushpin.png");
+    let close_icon: Handle<Image> = asset_server.load("icons/close.png");
+
+    let initial_pin_bg = if config.always_on_top {
+        PIN_NORMAL_BG
+    } else {
+        NORMAL_BG
+    };
 
     // Root container
     let root_entity = commands
@@ -127,12 +141,34 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>) {
                         MinimizeButton,
                     ))
                     .with_child((
-                        Text::new("-"),
-                        TextFont {
-                            font_size: 10.,
+                        Node {
+                            width: Val::Px(14.),
+                            height: Val::Px(14.),
                             ..default()
                         },
-                        TextColor(Color::srgb(0.85, 0.85, 0.85)),
+                        ImageNode::new(minimize_icon),
+                    ));
+
+                buttons
+                    .spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(20.),
+                            height: Val::Px(20.),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(initial_pin_bg),
+                        PushpinButton,
+                    ))
+                    .with_child((
+                        Node {
+                            width: Val::Px(14.),
+                            height: Val::Px(14.),
+                            ..default()
+                        },
+                        ImageNode::new(pushpin_icon),
                     ));
 
                 buttons
@@ -149,12 +185,12 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>) {
                         CloseButton,
                     ))
                     .with_child((
-                        Text::new("x"),
-                        TextFont {
-                            font_size: 12.,
+                        Node {
+                            width: Val::Px(14.),
+                            height: Val::Px(14.),
                             ..default()
                         },
-                        TextColor(Color::srgb(0.85, 0.85, 0.85)),
+                        ImageNode::new(close_icon),
                     ));
             });
     });
@@ -332,7 +368,7 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>) {
 fn handle_titlebar_drag(
     mut window: Single<&mut Window>,
     interaction_query: Query<&Interaction, (With<TitlebarMarker>, Changed<Interaction>)>,
-    button_query: Query<&Interaction, Or<(With<MinimizeButton>, With<CloseButton>)>>,
+    button_query: Query<&Interaction, Or<(With<MinimizeButton>, With<PushpinButton>, With<CloseButton>)>>,
 ) {
     let button_pressed = button_query.iter().any(|i| *i == Interaction::Pressed);
     if !button_pressed && interaction_query.iter().any(|i| *i == Interaction::Pressed) {
@@ -343,12 +379,24 @@ fn handle_titlebar_drag(
 fn handle_titlebar_buttons(
     mut window: Single<&mut Window>,
     minimize_query: Query<&Interaction, (With<MinimizeButton>, Changed<Interaction>)>,
+    pushpin_query: Query<&Interaction, (With<PushpinButton>, Changed<Interaction>)>,
     close_query: Query<&Interaction, (With<CloseButton>, Changed<Interaction>)>,
     d_tx: Res<ChannelSenderD>,
 ) {
     for interaction in minimize_query.iter() {
         if *interaction == Interaction::Pressed {
             window.set_minimized(true);
+        }
+    }
+    for interaction in pushpin_query.iter() {
+        if *interaction == Interaction::Pressed {
+            let top = window.window_level != WindowLevel::AlwaysOnTop;
+            if top {
+                window.window_level = WindowLevel::AlwaysOnTop;
+            } else {
+                window.window_level = WindowLevel::Normal;
+            }
+            LocalConfig::set_always_on_top(top);
         }
     }
     for interaction in close_query.iter() {
@@ -366,9 +414,14 @@ const PRESSED_BG: Color = Color::srgba(0.15, 0.15, 0.15, 0.85);
 const CLOSE_NORMAL_BG: Color = Color::srgba(0.82, 0.25, 0.2, 0.7);
 const CLOSE_HOVER_BG: Color = Color::srgba(0.95, 0.3, 0.25, 0.85);
 const CLOSE_PRESSED_BG: Color = Color::srgba(0.65, 0.12, 0.08, 0.9);
+const PIN_NORMAL_BG: Color = Color::srgba(0.7, 0.55, 0.15, 0.65);
+const PIN_HOVER_BG: Color = Color::srgba(0.8, 0.65, 0.2, 0.75);
+const PIN_PRESSED_BG: Color = Color::srgba(0.55, 0.42, 0.1, 0.85);
 
 fn button_interaction(
+    window: Single<&Window>,
     minimize_query: Query<(Entity, &Interaction), (With<MinimizeButton>, Changed<Interaction>)>,
+    pushpin_query: Query<(Entity, &Interaction), (With<PushpinButton>, Changed<Interaction>)>,
     close_query: Query<(Entity, &Interaction), (With<CloseButton>, Changed<Interaction>)>,
     mut bg_query: Query<&mut BackgroundColor>,
 ) {
@@ -378,6 +431,25 @@ fn button_interaction(
                 Interaction::Pressed => PRESSED_BG,
                 Interaction::Hovered => HOVERED_BG,
                 Interaction::None => NORMAL_BG,
+            }
+            .into();
+        }
+    }
+    let pinned = window.window_level == WindowLevel::AlwaysOnTop;
+    for (entity, interaction) in pushpin_query.iter() {
+        if let Ok(mut bg) = bg_query.get_mut(entity) {
+            *bg = if pinned {
+                match *interaction {
+                    Interaction::Pressed => PIN_PRESSED_BG,
+                    Interaction::Hovered => PIN_HOVER_BG,
+                    Interaction::None => PIN_NORMAL_BG,
+                }
+            } else {
+                match *interaction {
+                    Interaction::Pressed => PRESSED_BG,
+                    Interaction::Hovered => HOVERED_BG,
+                    Interaction::None => NORMAL_BG,
+                }
             }
             .into();
         }
@@ -444,5 +516,17 @@ fn sync_titlebar_visibility(
         } else {
             Display::None
         };
+    }
+}
+
+fn sync_pushpin_style(
+    window: Single<&Window, Changed<Window>>,
+    mut pushpin_query: Query<(&Interaction, &mut BackgroundColor), With<PushpinButton>>,
+) {
+    let pinned = window.window_level == WindowLevel::AlwaysOnTop;
+    for (interaction, mut bg) in pushpin_query.iter_mut() {
+        if *interaction == Interaction::None {
+            *bg = if pinned { PIN_NORMAL_BG } else { NORMAL_BG }.into();
+        }
     }
 }
