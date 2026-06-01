@@ -10,8 +10,8 @@ use bevy::{
 use crate::{
     config::LocalConfig,
     mask::{mask_command::TitlebarState, video::VideoPlayer},
-    scrcpy::controller::ControllerCommand,
-    utils::{ChannelSenderD, DeviceOrientation, share::ControlledDevice},
+    scrcpy::{constant::Keycode, controller::ControllerCommand, device_action},
+    utils::{ChannelSenderCS, ChannelSenderD, DeviceOrientation, share::ControlledDevice},
 };
 
 pub const BORDER_THICKNESS: f32 = 1.0;
@@ -38,6 +38,19 @@ struct CloseButton;
 #[derive(Component)]
 struct PushpinButton;
 
+#[derive(Component)]
+pub struct DeviceButton(pub DeviceAction);
+
+pub enum DeviceAction {
+    Back,
+    Home,
+    AppSwitch,
+    ScreenOff,
+    ScreenOn,
+    VolumeUp,
+    VolumeDown,
+}
+
 #[derive(Resource)]
 pub struct MaskContentEntity(pub Entity);
 
@@ -51,7 +64,7 @@ impl Plugin for BasicPlugin {
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_millis(100)),
             })
             .add_systems(Startup, setup_ui)
-            .add_systems(Update, (button_interaction, handle_titlebar_buttons, handle_titlebar_drag, handle_resize, sync_titlebar_visibility, sync_pushpin_style));
+            .add_systems(Update, (button_interaction, handle_titlebar_buttons, handle_device_buttons, handle_titlebar_drag, handle_resize, sync_titlebar_visibility, sync_pushpin_style));
     }
 }
 
@@ -72,11 +85,18 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>, asset_serve
     let minimize_icon: Handle<Image> = asset_server.load("icons/minus.png");
     let pushpin_icon: Handle<Image> = asset_server.load("icons/pushpin.png");
     let close_icon: Handle<Image> = asset_server.load("icons/close.png");
+    let screen_off_icon: Handle<Image> = asset_server.load("icons/bulb.png");
+    let screen_on_icon: Handle<Image> = asset_server.load("icons/bulb-fill.png");
+    let volume_up_icon: Handle<Image> = asset_server.load("icons/up.png");
+    let volume_down_icon: Handle<Image> = asset_server.load("icons/down.png");
+    let back_icon: Handle<Image> = asset_server.load("icons/enter.png");
+    let home_icon: Handle<Image> = asset_server.load("icons/border.png");
+    let menu_icon: Handle<Image> = asset_server.load("icons/menu.png");
 
     let initial_pin_bg = if config.always_on_top {
-        PIN_NORMAL_BG
+        MAC_PIN_BG
     } else {
-        NORMAL_BG
+        MAC_PIN_INACTIVE_BG
     };
 
     // Root container
@@ -98,7 +118,6 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>, asset_serve
                 padding: UiRect::px(8., 8., 0., 0.),
                 display: Display::Flex,
                 flex_direction: FlexDirection::Row,
-                justify_content: JustifyContent::SpaceBetween,
                 align_items: AlignItems::Center,
                 ..default()
             },
@@ -109,16 +128,7 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>, asset_serve
         .id();
 
     commands.entity(titlebar_entity).with_children(|titlebar| {
-        titlebar.spawn((
-            Text::new("scrcpy-mask"),
-            TextFont {
-                font_size: 13.,
-                ..default()
-            },
-            TextColor(Color::srgb(0.8, 0.8, 0.8)),
-        ));
-
-        // Button container (right side)
+        // Left group: window buttons + app name
         titlebar
             .spawn(Node {
                 flex_direction: FlexDirection::Row,
@@ -126,72 +136,183 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>, asset_serve
                 column_gap: Val::Px(6.),
                 ..default()
             })
-            .with_children(|buttons| {
-                buttons
-                    .spawn((
-                        Button,
-                        Node {
-                            width: Val::Px(20.),
-                            height: Val::Px(20.),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                        BackgroundColor(NORMAL_BG),
-                        MinimizeButton,
-                    ))
-                    .with_child((
-                        Node {
-                            width: Val::Px(14.),
-                            height: Val::Px(14.),
-                            ..default()
-                        },
-                        ImageNode::new(minimize_icon),
-                    ));
+            .with_children(|left| {
+                left.spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(14.),
+                        height: Val::Px(14.),
+                        border_radius: BorderRadius::all(Val::Px(7.)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    BackgroundColor(MAC_CLOSE_BG),
+                    CloseButton,
+                ))
+                .with_child((
+                    Node {
+                        width: Val::Px(10.),
+                        height: Val::Px(10.),
+                        ..default()
+                    },
+                    ImageNode::new(close_icon.clone()),
+                ));
 
-                buttons
-                    .spawn((
-                        Button,
-                        Node {
-                            width: Val::Px(20.),
-                            height: Val::Px(20.),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                        BackgroundColor(initial_pin_bg),
-                        PushpinButton,
-                    ))
-                    .with_child((
-                        Node {
-                            width: Val::Px(14.),
-                            height: Val::Px(14.),
-                            ..default()
-                        },
-                        ImageNode::new(pushpin_icon),
-                    ));
+                left.spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(14.),
+                        height: Val::Px(14.),
+                        border_radius: BorderRadius::all(Val::Px(7.)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    BackgroundColor(MAC_MINIMIZE_BG),
+                    MinimizeButton,
+                ))
+                .with_child((
+                    Node {
+                        width: Val::Px(10.),
+                        height: Val::Px(10.),
+                        ..default()
+                    },
+                    ImageNode::new(minimize_icon),
+                ));
 
-                buttons
-                    .spawn((
-                        Button,
-                        Node {
-                            width: Val::Px(20.),
-                            height: Val::Px(20.),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                        BackgroundColor(CLOSE_NORMAL_BG),
-                        CloseButton,
-                    ))
-                    .with_child((
-                        Node {
-                            width: Val::Px(14.),
-                            height: Val::Px(14.),
-                            ..default()
-                        },
-                        ImageNode::new(close_icon),
-                    ));
+                left.spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(14.),
+                        height: Val::Px(14.),
+                        border_radius: BorderRadius::all(Val::Px(7.)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    BackgroundColor(initial_pin_bg),
+                    PushpinButton,
+                ))
+                .with_child((
+                    Node {
+                        width: Val::Px(10.),
+                        height: Val::Px(10.),
+                        ..default()
+                    },
+                    ImageNode::new(pushpin_icon),
+                ));
+
+                left.spawn((
+                    Text::new("scrcpy-mask"),
+                    TextFont {
+                        font_size: 14.,
+                        ..default()
+                    },
+                    TextColor(Color::srgb(0.8, 0.8, 0.8)),
+                    Node {
+                        margin: UiRect::px(5., 0., 0., 0.),
+                        ..default()
+                    },
+                ));
+            });
+
+        // Spacer
+        titlebar.spawn(Node {
+            flex_grow: 1.,
+            ..default()
+        });
+
+        // Right group: display/volume | navigation
+        titlebar
+            .spawn(Node {
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Center,
+                column_gap: Val::Px(4.),
+                ..default()
+            })
+            .with_children(|right| {
+                // Display & volume buttons
+                for action in [
+                    DeviceAction::ScreenOff,
+                    DeviceAction::ScreenOn,
+                    DeviceAction::VolumeDown,
+                    DeviceAction::VolumeUp,
+                ] {
+                    let icon = match action {
+                        DeviceAction::ScreenOff => screen_off_icon.clone(),
+                        DeviceAction::ScreenOn => screen_on_icon.clone(),
+                        DeviceAction::VolumeDown => volume_down_icon.clone(),
+                        DeviceAction::VolumeUp => volume_up_icon.clone(),
+                        _ => unreachable!(),
+                    };
+                    right
+                        .spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(20.),
+                                height: Val::Px(20.),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            BackgroundColor(NORMAL_BG),
+                            DeviceButton(action),
+                        ))
+                        .with_child((
+                            Node {
+                                width: Val::Px(14.),
+                                height: Val::Px(14.),
+                                ..default()
+                            },
+                            ImageNode::new(icon),
+                        ));
+                }
+
+                // Separator
+                right
+                    .spawn(Node {
+                        width: Val::Px(1.),
+                        height: Val::Px(16.),
+                        margin: UiRect::px(2., 2., 0., 0.),
+                        ..default()
+                    })
+                    .insert(BackgroundColor(Color::srgba(0.4, 0.4, 0.4, 0.5)));
+
+                // Navigation buttons
+                for action in [
+                    DeviceAction::Back,
+                    DeviceAction::Home,
+                    DeviceAction::AppSwitch,
+                ] {
+                    let icon = match action {
+                        DeviceAction::Back => back_icon.clone(),
+                        DeviceAction::Home => home_icon.clone(),
+                        DeviceAction::AppSwitch => menu_icon.clone(),
+                        _ => unreachable!(),
+                    };
+                    right
+                        .spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(20.),
+                                height: Val::Px(20.),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            BackgroundColor(NORMAL_BG),
+                            DeviceButton(action),
+                        ))
+                        .with_child((
+                            Node {
+                                width: Val::Px(14.),
+                                height: Val::Px(14.),
+                                ..default()
+                            },
+                            ImageNode::new(icon),
+                        ));
+                }
             });
     });
 
@@ -368,7 +489,7 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>, asset_serve
 fn handle_titlebar_drag(
     mut window: Single<&mut Window>,
     interaction_query: Query<&Interaction, (With<TitlebarMarker>, Changed<Interaction>)>,
-    button_query: Query<&Interaction, Or<(With<MinimizeButton>, With<PushpinButton>, With<CloseButton>)>>,
+    button_query: Query<&Interaction, Or<(With<MinimizeButton>, With<PushpinButton>, With<CloseButton>, With<DeviceButton>)>>,
 ) {
     let button_pressed = button_query.iter().any(|i| *i == Interaction::Pressed);
     if !button_pressed && interaction_query.iter().any(|i| *i == Interaction::Pressed) {
@@ -408,29 +529,55 @@ fn handle_titlebar_buttons(
     }
 }
 
+fn handle_device_buttons(
+    query: Query<(&DeviceButton, &Interaction), Changed<Interaction>>,
+    cs_tx: Res<ChannelSenderCS>,
+) {
+    for (btn, interaction) in query.iter() {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        match btn.0 {
+            DeviceAction::Back => device_action::inject_keycode(&cs_tx.0, Keycode::Back),
+            DeviceAction::Home => device_action::inject_keycode(&cs_tx.0, Keycode::Home),
+            DeviceAction::AppSwitch => device_action::inject_keycode(&cs_tx.0, Keycode::AppSwitch),
+            DeviceAction::ScreenOff => device_action::set_display_power(&cs_tx.0, false),
+            DeviceAction::ScreenOn => device_action::set_display_power(&cs_tx.0, true),
+            DeviceAction::VolumeUp => device_action::inject_keycode(&cs_tx.0, Keycode::VolumeUp),
+            DeviceAction::VolumeDown => device_action::inject_keycode(&cs_tx.0, Keycode::VolumeDown),
+        }
+    }
+}
+
 const NORMAL_BG: Color = Color::srgba(0.25, 0.25, 0.25, 0.6);
 const HOVERED_BG: Color = Color::srgba(0.38, 0.38, 0.38, 0.7);
 const PRESSED_BG: Color = Color::srgba(0.15, 0.15, 0.15, 0.85);
-const CLOSE_NORMAL_BG: Color = Color::srgba(0.82, 0.25, 0.2, 0.7);
-const CLOSE_HOVER_BG: Color = Color::srgba(0.95, 0.3, 0.25, 0.85);
-const CLOSE_PRESSED_BG: Color = Color::srgba(0.65, 0.12, 0.08, 0.9);
-const PIN_NORMAL_BG: Color = Color::srgba(0.7, 0.55, 0.15, 0.65);
-const PIN_HOVER_BG: Color = Color::srgba(0.8, 0.65, 0.2, 0.75);
-const PIN_PRESSED_BG: Color = Color::srgba(0.55, 0.42, 0.1, 0.85);
+
+const MAC_CLOSE_BG: Color = Color::srgba(1.0, 0.373, 0.341, 1.0);
+const MAC_CLOSE_HOVER_BG: Color = Color::srgba(1.0, 0.52, 0.49, 1.0);
+const MAC_CLOSE_PRESSED_BG: Color = Color::srgba(0.85, 0.23, 0.20, 1.0);
+const MAC_MINIMIZE_BG: Color = Color::srgba(1.0, 0.737, 0.180, 1.0);
+const MAC_MINIMIZE_HOVER_BG: Color = Color::srgba(1.0, 0.82, 0.35, 1.0);
+const MAC_MINIMIZE_PRESSED_BG: Color = Color::srgba(0.85, 0.60, 0.10, 1.0);
+const MAC_PIN_BG: Color = Color::srgba(0.157, 0.784, 0.251, 1.0);
+const MAC_PIN_HOVER_BG: Color = Color::srgba(0.28, 0.86, 0.35, 1.0);
+const MAC_PIN_PRESSED_BG: Color = Color::srgba(0.10, 0.65, 0.18, 1.0);
+const MAC_PIN_INACTIVE_BG: Color = Color::srgba(0.157, 0.784, 0.251, 0.4);
 
 fn button_interaction(
     window: Single<&Window>,
     minimize_query: Query<(Entity, &Interaction), (With<MinimizeButton>, Changed<Interaction>)>,
     pushpin_query: Query<(Entity, &Interaction), (With<PushpinButton>, Changed<Interaction>)>,
     close_query: Query<(Entity, &Interaction), (With<CloseButton>, Changed<Interaction>)>,
+    device_btn_query: Query<(Entity, &Interaction), (With<DeviceButton>, Changed<Interaction>)>,
     mut bg_query: Query<&mut BackgroundColor>,
 ) {
     for (entity, interaction) in minimize_query.iter() {
         if let Ok(mut bg) = bg_query.get_mut(entity) {
             *bg = match *interaction {
-                Interaction::Pressed => PRESSED_BG,
-                Interaction::Hovered => HOVERED_BG,
-                Interaction::None => NORMAL_BG,
+                Interaction::Pressed => MAC_MINIMIZE_PRESSED_BG,
+                Interaction::Hovered => MAC_MINIMIZE_HOVER_BG,
+                Interaction::None => MAC_MINIMIZE_BG,
             }
             .into();
         }
@@ -440,15 +587,15 @@ fn button_interaction(
         if let Ok(mut bg) = bg_query.get_mut(entity) {
             *bg = if pinned {
                 match *interaction {
-                    Interaction::Pressed => PIN_PRESSED_BG,
-                    Interaction::Hovered => PIN_HOVER_BG,
-                    Interaction::None => PIN_NORMAL_BG,
+                    Interaction::Pressed => MAC_PIN_PRESSED_BG,
+                    Interaction::Hovered => MAC_PIN_HOVER_BG,
+                    Interaction::None => MAC_PIN_BG,
                 }
             } else {
                 match *interaction {
-                    Interaction::Pressed => PRESSED_BG,
-                    Interaction::Hovered => HOVERED_BG,
-                    Interaction::None => NORMAL_BG,
+                    Interaction::Pressed => MAC_PIN_PRESSED_BG,
+                    Interaction::Hovered => MAC_PIN_HOVER_BG,
+                    Interaction::None => MAC_PIN_INACTIVE_BG,
                 }
             }
             .into();
@@ -457,9 +604,19 @@ fn button_interaction(
     for (entity, interaction) in close_query.iter() {
         if let Ok(mut bg) = bg_query.get_mut(entity) {
             *bg = match *interaction {
-                Interaction::Pressed => CLOSE_PRESSED_BG,
-                Interaction::Hovered => CLOSE_HOVER_BG,
-                Interaction::None => CLOSE_NORMAL_BG,
+                Interaction::Pressed => MAC_CLOSE_PRESSED_BG,
+                Interaction::Hovered => MAC_CLOSE_HOVER_BG,
+                Interaction::None => MAC_CLOSE_BG,
+            }
+            .into();
+        }
+    }
+    for (entity, interaction) in device_btn_query.iter() {
+        if let Ok(mut bg) = bg_query.get_mut(entity) {
+            *bg = match *interaction {
+                Interaction::Pressed => PRESSED_BG,
+                Interaction::Hovered => HOVERED_BG,
+                Interaction::None => NORMAL_BG,
             }
             .into();
         }
@@ -526,7 +683,7 @@ fn sync_pushpin_style(
     let pinned = window.window_level == WindowLevel::AlwaysOnTop;
     for (interaction, mut bg) in pushpin_query.iter_mut() {
         if *interaction == Interaction::None {
-            *bg = if pinned { PIN_NORMAL_BG } else { NORMAL_BG }.into();
+            *bg = if pinned { MAC_PIN_BG } else { MAC_PIN_INACTIVE_BG }.into();
         }
     }
 }

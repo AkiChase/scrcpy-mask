@@ -21,9 +21,10 @@ use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{
         adb::{Adb, Device},
-        constant::{KeyEventAction, Keycode, MetaState},
+        constant::Keycode,
         control_msg::ScrcpyControlMsg,
         controller::ControllerCommand,
+        device_action,
     },
     utils::{relate_to_root_path, share::ControlledDevice},
     web::{JsonResponse, WebServerError, ws::WebSocketNotification},
@@ -420,10 +421,7 @@ async fn set_display_power(
         )));
     }
 
-    state
-        .cs_tx
-        .send(ScrcpyControlMsg::SetDisplayPower { mode: payload.mode })
-        .unwrap();
+    device_action::set_display_power(&state.cs_tx, payload.mode);
     Ok(JsonResponse::success(
         t!("web.device.setDisplayPowerSuccess"),
         None,
@@ -445,25 +443,7 @@ async fn send_key(
         )));
     }
 
-    state
-        .cs_tx
-        .send(ScrcpyControlMsg::InjectKeycode {
-            action: KeyEventAction::Down,
-            keycode: payload.keycode.clone(),
-            repeat: 0,
-            metastate: MetaState::NONE,
-        })
-        .unwrap();
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-    state
-        .cs_tx
-        .send(ScrcpyControlMsg::InjectKeycode {
-            action: KeyEventAction::Up,
-            keycode: payload.keycode,
-            repeat: 0,
-            metastate: MetaState::NONE,
-        })
-        .unwrap();
+    device_action::inject_keycode(&state.cs_tx, payload.keycode);
     Ok(JsonResponse::success(t!("web.device.sendKeySuccess"), None))
 }
 

@@ -5,6 +5,7 @@ pub mod connection;
 pub mod constant;
 pub mod control_msg;
 pub mod controller;
+pub mod device_action;
 pub mod media;
 
 #[derive(Clone, Serialize, Debug)]
