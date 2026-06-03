@@ -19,7 +19,7 @@ use bevy::{
 use crate::{
     config::LocalConfig,
     mask::{
-        mask_command::{MaskSize, TitlebarState, handle_mask_command},
+        mask_command::{MaskSize, TitlebarState, handle_mask_command, physical_to_logical_i32},
         ui::basic::TITLEBAR_HEIGHT,
         video::{VideoAttributes, handle_video_msg},
     },
@@ -151,13 +151,12 @@ fn sync_mask_size(
                     return;
                 };
                 let scale_factor = window.resolution.scale_factor() as f32;
-                let titlebar_physical = (TITLEBAR_HEIGHT * scale_factor) as i32;
                 let content_top = if titlebar_state.visible {
-                    pos.y + titlebar_physical
+                    physical_to_logical_i32(pos.y, scale_factor) + TITLEBAR_HEIGHT.round() as i32
                 } else {
-                    pos.y
+                    physical_to_logical_i32(pos.y, scale_factor)
                 };
-                let content_left = pos.x;
+                let content_left = physical_to_logical_i32(pos.x, scale_factor);
 
                 match orientation {
                     DeviceOrientation::Landscape => {
@@ -174,10 +173,7 @@ fn sync_mask_size(
                         LocalConfig::set_vertical_mask_height(content_h);
                         LocalConfig::set_vertical_position((content_left, content_top));
                         let _ = ws_tx.0.send(WebSocketNotification::ConfigChanged {
-                            keys: vec![
-                                "vertical_mask_height".into(),
-                                "vertical_position".into(),
-                            ],
+                            keys: vec!["vertical_mask_height".into(), "vertical_position".into()],
                         });
                     }
                 }
@@ -214,13 +210,12 @@ fn sync_mask_position(
                     return;
                 };
                 let scale_factor = window.resolution.scale_factor() as f32;
-                let titlebar_physical = (TITLEBAR_HEIGHT * scale_factor) as i32;
                 let content_top = if titlebar_state.visible {
-                    pos.y + titlebar_physical
+                    physical_to_logical_i32(pos.y, scale_factor) + TITLEBAR_HEIGHT.round() as i32
                 } else {
-                    pos.y
+                    physical_to_logical_i32(pos.y, scale_factor)
                 };
-                let content_left = pos.x;
+                let content_left = physical_to_logical_i32(pos.x, scale_factor);
 
                 match DeviceOrientation::from_size(dw, dh) {
                     DeviceOrientation::Landscape => {

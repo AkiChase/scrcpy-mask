@@ -36,6 +36,7 @@ pub enum MaskCommand {
     ValidateMappingConfig {
         config: MappingConfig,
     },
+    GetScaleFactor,
     LoadAndActivateMappingConfig {
         file_name: String,
     },
@@ -145,6 +146,11 @@ pub fn handle_mask_command(
                     }
                 }
             }
+            MaskCommand::GetScaleFactor => {
+                oneshot_tx
+                    .send(Ok(window.resolution.scale_factor().to_string()))
+                    .unwrap();
+            }
             MaskCommand::LoadAndActivateMappingConfig { file_name } => {
                 log::info!(
                     "[Mapping] {}: {}",
@@ -202,16 +208,16 @@ pub fn handle_mask_command(
                     unreachable!("window position should always be At")
                 };
                 let scale_factor = window.resolution.scale_factor() as f32;
-                let titlebar_physical = (TITLEBAR_HEIGHT * scale_factor) as i32;
 
                 let content_top = if titlebar_state.visible {
                     // titlebar_state is already new_visible; we need content_top from OLD state.
                     // new_visible=true (old was hidden): content_top = pos.y
                     // new_visible=false (old was visible): content_top = pos.y + titlebar_physical
-                    pos.y
+                    physical_to_logical_i32(pos.y, scale_factor)
                 } else {
-                    pos.y + titlebar_physical
+                    physical_to_logical_i32(pos.y, scale_factor) + TITLEBAR_HEIGHT.round() as i32
                 };
+                let content_left = physical_to_logical_i32(pos.x, scale_factor);
 
                 let content_width = mask_size.0.x;
                 let content_height = mask_size.0.y;
@@ -222,7 +228,7 @@ pub fn handle_mask_command(
                     new_visible,
                     content_width,
                     content_height,
-                    pos.x,
+                    content_left,
                     content_top,
                 );
 
@@ -243,20 +249,29 @@ fn apply_titlebar_dimensions(
     top: i32,
 ) {
     let scale_factor = window.resolution.scale_factor() as f32;
-    let titlebar_physical = (TITLEBAR_HEIGHT * scale_factor) as i32;
 
     let win_height = if titlebar_visible {
         content_height + TITLEBAR_HEIGHT
     } else {
         content_height
     };
-    let win_top = if titlebar_visible {
-        top - titlebar_physical
+    let win_top_logical = if titlebar_visible {
+        top as f32 - TITLEBAR_HEIGHT
     } else {
-        top
+        top as f32
     };
+    let win_left = logical_to_physical_i32(left as f32, scale_factor);
+    let win_top = logical_to_physical_i32(win_top_logical, scale_factor);
 
     window.resolution.set(content_width, win_height);
-    window.position.set((left, win_top).into());
+    window.position.set((win_left, win_top).into());
     mask_size.0 = Vec2::new(content_width, content_height);
+}
+
+pub fn physical_to_logical_i32(value: i32, scale_factor: f32) -> i32 {
+    (value as f32 / scale_factor).round() as i32
+}
+
+fn logical_to_physical_i32(value: f32, scale_factor: f32) -> i32 {
+    (value * scale_factor).round() as i32
 }

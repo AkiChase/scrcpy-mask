@@ -12,7 +12,7 @@ use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{adb::Adb, media::VideoCodec},
     utils::{
-        IDENTIFIER, check_for_update, mask_win_move_helper,
+        IDENTIFIER, check_for_update, get_mask_scale_factor, mask_win_move_helper,
         share::{ControlledDevice, UpdateInfo},
     },
     web::{JsonResponse, WebServerError},
@@ -82,6 +82,41 @@ async fn check_update() -> Result<JsonResponse, WebServerError> {
 struct PostDataUpdateConfig {
     key: String,
     value: serde_json::Value,
+    #[serde(default)]
+    space: PixelSpace,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum PixelSpace {
+    Logical,
+    Physical,
+}
+
+impl Default for PixelSpace {
+    fn default() -> Self {
+        Self::Logical
+    }
+}
+
+async fn scale_factor_for_pixel_space(
+    pixel_space: PixelSpace,
+    state: &AppStatConfig,
+) -> Result<f32, WebServerError> {
+    match pixel_space {
+        PixelSpace::Logical => Ok(1.0),
+        PixelSpace::Physical => get_mask_scale_factor(&state.m_tx)
+            .await
+            .map_err(WebServerError::bad_request),
+    }
+}
+
+fn u32_to_logical(value: u64, scale_factor: f32) -> u32 {
+    (value as f32 / scale_factor).round() as u32
+}
+
+fn i32_to_logical(value: i64, scale_factor: f32) -> i32 {
+    (value as f32 / scale_factor).round() as i32
 }
 
 async fn update_config(
@@ -199,7 +234,8 @@ async fn update_config(
         }
         "vertical_mask_height" => {
             if let Some(value) = payload.value.as_u64() {
-                LocalConfig::set_vertical_mask_height(value as u32);
+                let scale_factor = scale_factor_for_pixel_space(payload.space, &state).await?;
+                LocalConfig::set_vertical_mask_height(u32_to_logical(value, scale_factor));
                 if let Some(main_device) = ControlledDevice::get_main_device().await {
                     let (device_w, device_h) = main_device.device_size;
                     let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
@@ -219,7 +255,8 @@ async fn update_config(
         }
         "horizontal_mask_width" => {
             if let Some(value) = payload.value.as_u64() {
-                LocalConfig::set_horizontal_mask_width(value as u32);
+                let scale_factor = scale_factor_for_pixel_space(payload.space, &state).await?;
+                LocalConfig::set_horizontal_mask_width(u32_to_logical(value, scale_factor));
                 if let Some(main_device) = ControlledDevice::get_main_device().await {
                     let (device_w, device_h) = main_device.device_size;
                     let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
@@ -245,7 +282,12 @@ async fn update_config(
             if let Some(value) = payload.value.as_array() {
                 if value.len() == 2 {
                     if let (Some(x), Some(y)) = (value[0].as_i64(), value[1].as_i64()) {
-                        LocalConfig::set_vertical_position((x as i32, y as i32));
+                        let scale_factor =
+                            scale_factor_for_pixel_space(payload.space, &state).await?;
+                        LocalConfig::set_vertical_position((
+                            i32_to_logical(x, scale_factor),
+                            i32_to_logical(y, scale_factor),
+                        ));
                         if let Some(main_device) = ControlledDevice::get_main_device().await {
                             let (device_w, device_h) = main_device.device_size;
                             let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
@@ -269,7 +311,12 @@ async fn update_config(
             if let Some(value) = payload.value.as_array() {
                 if value.len() == 2 {
                     if let (Some(x), Some(y)) = (value[0].as_i64(), value[1].as_i64()) {
-                        LocalConfig::set_horizontal_position((x as i32, y as i32));
+                        let scale_factor =
+                            scale_factor_for_pixel_space(payload.space, &state).await?;
+                        LocalConfig::set_horizontal_position((
+                            i32_to_logical(x, scale_factor),
+                            i32_to_logical(y, scale_factor),
+                        ));
                         if let Some(main_device) = ControlledDevice::get_main_device().await {
                             let (device_w, device_h) = main_device.device_size;
                             let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
@@ -282,6 +329,10 @@ async fn update_config(
                                 None,
                             ));
                         }
+                        return Ok(JsonResponse::success(
+                            format!("{}", t!("web.config.setHorizontalPositionSuccess")),
+                            None,
+                        ));
                     }
                 }
             }
