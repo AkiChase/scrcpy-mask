@@ -33,7 +33,7 @@ tracing-appender = "0.2"
 axum = { version = "0.8.4", features = ["macros", "ws"] }
 opener = "0.8.2"
 tower = "0.5"
-tower-http = { version = "0.6", features = ["fs", "cors"] }
+tower-http = { version = "0.6", features = ["fs", "cors", "set-header"] }
 futures-util = { version = "0.3", default-features = false, features = [
     "sink",
     "std",

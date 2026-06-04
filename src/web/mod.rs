@@ -5,7 +5,7 @@ pub mod ws;
 
 use axum::{
     Json, Router,
-    http::StatusCode,
+    http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
 };
 use rust_i18n::t;
@@ -13,7 +13,11 @@ use serde::Serialize;
 use serde_json::Value;
 use std::{net::SocketAddrV4, thread};
 use tokio::sync::{broadcast, mpsc::UnboundedSender, oneshot};
-use tower_http::services::{ServeDir, ServeFile};
+use tower::ServiceBuilder;
+use tower_http::{
+    services::{ServeDir, ServeFile},
+    set_header::SetResponseHeaderLayer,
+};
 
 use crate::{
     mask::mask_command::MaskCommand,
@@ -81,12 +85,30 @@ impl Server {
         m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) -> Router {
+        let web_root = relate_to_root_path(["assets", "web"]);
+        let cache_immutable = HeaderValue::from_static("public, max-age=31536000, immutable");
+        let cache_no_store = HeaderValue::from_static("no-store");
+
+        let hashed_assets = ServiceBuilder::new()
+            .layer(SetResponseHeaderLayer::overriding(
+                header::CACHE_CONTROL,
+                cache_immutable,
+            ))
+            .service(ServeDir::new(web_root.join("assets")));
+
+        let html_shell = ServiceBuilder::new()
+            .layer(SetResponseHeaderLayer::overriding(
+                header::CACHE_CONTROL,
+                cache_no_store,
+            ))
+            .service(
+                ServeDir::new(&web_root)
+                    .not_found_service(ServeFile::new(web_root.join("index.html"))),
+            );
+
         let router = Router::new()
-            .fallback_service(
-                ServeDir::new(relate_to_root_path(["assets", "web"])).not_found_service(
-                    ServeFile::new(relate_to_root_path(["assets", "web", "index.html"])),
-                ),
-            )
+            .nest_service("/assets", hashed_assets)
+            .fallback_service(html_shell)
             .nest(
                 "/api/device",
                 device::routers(cs_tx.clone(), d_tx, m_tx.clone(), ws_tx.clone()),
