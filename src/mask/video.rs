@@ -60,13 +60,13 @@ pub fn handle_video_msg(
             } => {
                 let image_handle =
                     video_attr.update_image_asset(width, height, &mut images, &mut video_node);
-                if let Some(image) = images.get_mut(image_handle) {
+                if let Some(mut image) = images.get_mut(image_handle) {
                     image.data = Some(data);
                 }
             }
             VideoMsg::Close => {
                 if let Some(image_handle) = video_attr.image_handle.take() {
-                    if let Some(image) = images.get_mut(&image_handle) {
+                    if let Some(mut image) = images.get_mut(&image_handle) {
                         let lenght = image.data.take().unwrap().len();
                         image.data = Some(vec![0; lenght]);
                     }

@@ -5,7 +5,6 @@ use bevy::{
     prelude::*,
     window::{PresentMode, WindowLevel},
 };
-use bevy_tokio_tasks::TokioTasksRuntime;
 use scrcpy_mask::{
     config::LocalConfig,
     mask::{MaskPlugins, mask_command::MaskCommand},
@@ -14,6 +13,7 @@ use scrcpy_mask::{
         controller::{self, ControllerCommand},
         media::VideoMsg,
     },
+    tokio_tasks::{TokioTasksPlugin, TokioTasksRuntime},
     utils::{
         ChannelReceiverM, ChannelReceiverV, ChannelSenderCS, ChannelSenderD, ChannelSenderWS,
         check_for_update, relate_to_data_path,
@@ -93,7 +93,7 @@ fn main() {
                 ..default()
             }),
     )
-    .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default())
+    .add_plugins(TokioTasksPlugin::default())
     .add_plugins(MaskPlugins)
     .add_systems(Startup, (start_servers, check_for_update_system));
 

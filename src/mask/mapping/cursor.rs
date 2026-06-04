@@ -34,20 +34,22 @@ impl Plugin for CursorPlugins {
             .insert_resource(ActiveCursorFpsConfig::default())
             .add_systems(
                 Update,
-                handle_cursor_normal
-                    .run_if(not(in_state(MappingState::Stop)).and(in_state(CursorState::Normal))),
+                handle_cursor_normal.run_if(
+                    not(in_state(MappingState::Stop)).and_then(in_state(CursorState::Normal)),
+                ),
             )
             .add_systems(
                 Update,
-                handle_normal_left_click
-                    .run_if(not(in_state(MappingState::Stop)).and(in_state(CursorState::Normal))),
+                handle_normal_left_click.run_if(
+                    not(in_state(MappingState::Stop)).and_then(in_state(CursorState::Normal)),
+                ),
             )
             .add_systems(
                 Update,
                 handle_cursor_fps.run_if(
                     in_state(CursorState::Fps)
-                        .and(in_state(MappingState::Normal))
-                        .and(run_if_handle_cursor_fps),
+                        .and_then(in_state(MappingState::Normal))
+                        .and_then(run_if_handle_cursor_fps),
                 ),
             )
             .add_systems(OnEnter(CursorState::Fps), on_enter_cursor_fps)

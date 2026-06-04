@@ -55,7 +55,12 @@ pub fn routers(
         .route("/control/set_display_power", post(set_display_power))
         .route("/control/send_key", post(send_key))
         .route("/control/eval_script", post(eval_script))
-        .with_state(AppStateDevice { cs_tx, d_tx, m_tx, ws_tx })
+        .with_state(AppStateDevice {
+            cs_tx,
+            d_tx,
+            m_tx,
+            ws_tx,
+        })
 }
 
 async fn device_list() -> Result<JsonResponse, WebServerError> {
@@ -240,7 +245,14 @@ async fn reconnect_device(
     for device in device_list {
         if device.device_id == device_id {
             _decontrol_device(&device_id, &state.d_tx).await?;
-            _control_device(&device_id, payload.display_id, payload.video, &state.d_tx, &state.ws_tx).await?;
+            _control_device(
+                &device_id,
+                payload.display_id,
+                payload.video,
+                &state.d_tx,
+                &state.ws_tx,
+            )
+            .await?;
             return Ok(JsonResponse::success(
                 format!("{}: {}", t!("web.device.reconnectDevice"), device_id),
                 None,

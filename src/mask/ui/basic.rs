@@ -64,11 +64,26 @@ impl Plugin for BasicPlugin {
                 unfocused_mode: UpdateMode::reactive_low_power(Duration::from_millis(100)),
             })
             .add_systems(Startup, setup_ui)
-            .add_systems(Update, (button_interaction, handle_titlebar_buttons, handle_device_buttons, handle_titlebar_drag, handle_resize, sync_titlebar_visibility, sync_pushpin_style));
+            .add_systems(
+                Update,
+                (
+                    button_interaction,
+                    handle_titlebar_buttons,
+                    handle_device_buttons,
+                    handle_titlebar_drag,
+                    handle_resize,
+                    sync_titlebar_visibility,
+                    sync_pushpin_style,
+                ),
+            );
     }
 }
 
-fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>, asset_server: Res<AssetServer>) {
+fn setup_ui(
+    mut commands: Commands,
+    mut window: Single<&mut Window>,
+    asset_server: Res<AssetServer>,
+) {
     let config = LocalConfig::get();
     let win_h = if config.titlebar_visible {
         600. + TITLEBAR_HEIGHT
@@ -206,7 +221,7 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>, asset_serve
                 left.spawn((
                     Text::new("scrcpy-mask"),
                     TextFont {
-                        font_size: 14.,
+                        font_size: FontSize::Px(14.),
                         ..default()
                     },
                     TextColor(Color::srgb(0.8, 0.8, 0.8)),
@@ -330,7 +345,9 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>, asset_serve
     commands.insert_resource(MaskContentEntity(mask_entity));
 
     // Parent hierarchy: root -> titlebar, root -> mask_content
-    commands.entity(root_entity).add_children(&[titlebar_entity, mask_entity]);
+    commands
+        .entity(root_entity)
+        .add_children(&[titlebar_entity, mask_entity]);
 
     // Add children to MaskContent
     commands.entity(mask_entity).with_children(|content| {
@@ -489,7 +506,15 @@ fn setup_ui(mut commands: Commands, mut window: Single<&mut Window>, asset_serve
 fn handle_titlebar_drag(
     mut window: Single<&mut Window>,
     interaction_query: Query<&Interaction, (With<TitlebarMarker>, Changed<Interaction>)>,
-    button_query: Query<&Interaction, Or<(With<MinimizeButton>, With<PushpinButton>, With<CloseButton>, With<DeviceButton>)>>,
+    button_query: Query<
+        &Interaction,
+        Or<(
+            With<MinimizeButton>,
+            With<PushpinButton>,
+            With<CloseButton>,
+            With<DeviceButton>,
+        )>,
+    >,
 ) {
     let button_pressed = button_query.iter().any(|i| *i == Interaction::Pressed);
     if !button_pressed && interaction_query.iter().any(|i| *i == Interaction::Pressed) {
@@ -523,7 +548,9 @@ fn handle_titlebar_buttons(
     for interaction in close_query.iter() {
         if *interaction == Interaction::Pressed {
             if let Some(device) = ControlledDevice::get_main_device_blocking() {
-                let _ = d_tx.0.send(ControllerCommand::ShutdownMain(device.scid.clone()));
+                let _ = d_tx
+                    .0
+                    .send(ControllerCommand::ShutdownMain(device.scid.clone()));
             }
         }
     }
@@ -544,7 +571,9 @@ fn handle_device_buttons(
             DeviceAction::ScreenOff => device_action::set_display_power(&cs_tx.0, false),
             DeviceAction::ScreenOn => device_action::set_display_power(&cs_tx.0, true),
             DeviceAction::VolumeUp => device_action::inject_keycode(&cs_tx.0, Keycode::VolumeUp),
-            DeviceAction::VolumeDown => device_action::inject_keycode(&cs_tx.0, Keycode::VolumeDown),
+            DeviceAction::VolumeDown => {
+                device_action::inject_keycode(&cs_tx.0, Keycode::VolumeDown)
+            }
         }
     }
 }
@@ -623,16 +652,27 @@ fn button_interaction(
     }
 }
 
-fn map_handle_for_device(handle: CompassOctant, orientation: DeviceOrientation) -> Option<CompassOctant> {
+fn map_handle_for_device(
+    handle: CompassOctant,
+    orientation: DeviceOrientation,
+) -> Option<CompassOctant> {
     match orientation {
         DeviceOrientation::Landscape => match handle {
-            CompassOctant::NorthWest | CompassOctant::West | CompassOctant::SouthWest => Some(CompassOctant::West),
-            CompassOctant::NorthEast | CompassOctant::East | CompassOctant::SouthEast => Some(CompassOctant::East),
+            CompassOctant::NorthWest | CompassOctant::West | CompassOctant::SouthWest => {
+                Some(CompassOctant::West)
+            }
+            CompassOctant::NorthEast | CompassOctant::East | CompassOctant::SouthEast => {
+                Some(CompassOctant::East)
+            }
             CompassOctant::North | CompassOctant::South => None,
         },
         DeviceOrientation::Portrait => match handle {
-            CompassOctant::NorthWest | CompassOctant::North | CompassOctant::NorthEast => Some(CompassOctant::North),
-            CompassOctant::SouthWest | CompassOctant::South | CompassOctant::SouthEast => Some(CompassOctant::South),
+            CompassOctant::NorthWest | CompassOctant::North | CompassOctant::NorthEast => {
+                Some(CompassOctant::North)
+            }
+            CompassOctant::SouthWest | CompassOctant::South | CompassOctant::SouthEast => {
+                Some(CompassOctant::South)
+            }
             CompassOctant::East | CompassOctant::West => None,
         },
     }
@@ -648,7 +688,8 @@ fn handle_resize(
         if *interaction == Interaction::Pressed {
             let direction = match &device {
                 Some(dev) if dev.device_size.0 > 0 && dev.device_size.1 > 0 => {
-                    let orientation = DeviceOrientation::from_size(dev.device_size.0, dev.device_size.1);
+                    let orientation =
+                        DeviceOrientation::from_size(dev.device_size.0, dev.device_size.1);
                     map_handle_for_device(handle.0, orientation)
                 }
                 _ => None, // no device or unknown size: block resize
@@ -683,7 +724,12 @@ fn sync_pushpin_style(
     let pinned = window.window_level == WindowLevel::AlwaysOnTop;
     for (interaction, mut bg) in pushpin_query.iter_mut() {
         if *interaction == Interaction::None {
-            *bg = if pinned { MAC_PIN_BG } else { MAC_PIN_INACTIVE_BG }.into();
+            *bg = if pinned {
+                MAC_PIN_BG
+            } else {
+                MAC_PIN_INACTIVE_BG
+            }
+            .into();
         }
     }
 }

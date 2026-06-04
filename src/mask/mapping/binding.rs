@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
 use bevy::input::{
+    ButtonInput,
     gamepad::{GamepadAxis, GamepadButton},
     keyboard::{KeyCode, NativeKeyCode},
     mouse::MouseButton,
-    ButtonInput,
 };
 use bevy_ineffable::{
     bindings::{AnalogInput, BinaryInput, ChordLike, Threshold},

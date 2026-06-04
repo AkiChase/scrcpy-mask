@@ -93,7 +93,9 @@ impl Plugin for MappingPlugins {
                     raw_input::handle_raw_input_trigger,
                     raw_input::handle_exit_raw_input_mode,
                 )
-                    .run_if(in_state(MappingState::RawInput).and(not(in_state(CursorState::Fps)))),
+                    .run_if(
+                        in_state(MappingState::RawInput).and_then(not(in_state(CursorState::Fps))),
+                    ),
             )
             .add_systems(
                 OnEnter(MappingState::RawInput),

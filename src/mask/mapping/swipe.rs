@@ -1,11 +1,11 @@
 use std::time::Duration;
 
+use crate::tokio_tasks::TokioTasksRuntime;
 use bevy::{
     ecs::system::{Res, ResMut},
     math::Vec2,
 };
 use bevy_ineffable::prelude::*;
-use bevy_tokio_tasks::TokioTasksRuntime;
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 
@@ -14,10 +14,10 @@ use crate::{
         binding::{ButtonBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
         utils::{
-                build_multisegment_swipe_intermediate_points,
-                build_single_segment_swipe_intermediate_points, ControlMsgHelper,
-                MultiSwipeStrategy, Position, SingleSwipeStrategy,
-            },
+            ControlMsgHelper, MultiSwipeStrategy, Position, SingleSwipeStrategy,
+            build_multisegment_swipe_intermediate_points,
+            build_single_segment_swipe_intermediate_points,
+        },
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
@@ -123,10 +123,7 @@ pub fn handle_swipe(
                             for i in 1..points.len() {
                                 let next_pos: Vec2 = points[i].into();
                                 for step in build_single_segment_swipe_intermediate_points(
-                                    cur_pos,
-                                    next_pos,
-                                    strategy,
-                                    duration,
+                                    cur_pos, next_pos, strategy, duration,
                                 ) {
                                     ControlMsgHelper::send_touch(
                                         &cs_tx,

@@ -1,34 +1,34 @@
 use std::{
     collections::HashMap,
-    sync::atomic::{AtomicBool, AtomicU64, Ordering},
     sync::Arc,
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
     time::Instant,
 };
 
-use bevy::{
-    ecs::{
-        resource::Resource,
-        system::{Commands, Res, ResMut},
-    },
-    input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
-    math::Vec2,
-};
-use bevy_ineffable::prelude::{Ineffable, InputBinding};
-use bevy_tokio_tasks::TokioTasksRuntime;
-use serde::{Deserialize, Serialize};
+use crate::tokio_tasks::TokioTasksRuntime;
 use crate::{
     mask::mapping::{
         binding::{ButtonBinding, DirectionBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
         utils::{
-            anchor_random_offset, ControlMsgHelper, DEFAULT_SWIPE_DURATION, Position,
-            SingleSwipeStrategy, handle_direction_jitter, handle_direction_move_randomized,
+            ControlMsgHelper, DEFAULT_SWIPE_DURATION, Position, SingleSwipeStrategy,
+            anchor_random_offset, handle_direction_jitter, handle_direction_move_randomized,
             next_jitter_deadline, random_offset_vec2, spawn_initial_swipe,
         },
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
 };
+use bevy::{
+    ecs::{
+        resource::Resource,
+        system::{Commands, Res, ResMut},
+    },
+    input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton},
+    math::Vec2,
+};
+use bevy_ineffable::prelude::{Ineffable, InputBinding};
+use serde::{Deserialize, Serialize};
 
 pub fn direction_pad_init(mut commands: Commands) {
     commands.insert_resource(DirectionPadMap::default());
@@ -82,7 +82,10 @@ pub struct MappingDirectionPad {
     pub enable_randomization: bool,
     #[serde(default)]
     pub up_boost_key: Option<ButtonBinding>,
-    #[serde(default = "default_up_boost_scale", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
+    #[serde(
+        default = "default_up_boost_scale",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
     pub up_boost_scale: f32,
     pub bind: DirectionBinding,
 }
@@ -144,7 +147,6 @@ fn scale_direction_2d_state(d_state: Vec2, mapping: &BindMappingDirectionPad) ->
 #[derive(Resource, Default)]
 pub struct BlockDirectionPad(pub bool);
 
-
 pub fn handle_direction_pad(
     ineffable: Res<Ineffable>,
     active_mapping: Res<ActiveMappingConfig>,
@@ -170,10 +172,9 @@ pub fn handle_direction_pad(
                     mapping,
                 );
                 if state.y < 0.0
-                    && mapping
-                        .up_boost_key
-                        .as_ref()
-                        .is_some_and(|b| b.is_any_key_pressed(&key_input) || b.is_any_mouse_pressed(&mouse_input))
+                    && mapping.up_boost_key.as_ref().is_some_and(|b| {
+                        b.is_any_key_pressed(&key_input) || b.is_any_mouse_pressed(&mouse_input)
+                    })
                 {
                     state.y *= mapping.up_boost_scale;
                 }
@@ -184,7 +185,10 @@ pub fn handle_direction_pad(
                     }
                     let original_pos: Vec2 = mapping.position.into();
                     if state.x == 0.0 && state.y == 0.0 {
-                        if mapping.bind.is_any_direction_active(&key_input, &mouse_input) {
+                        if mapping
+                            .bind
+                            .is_any_direction_active(&key_input, &mouse_input)
+                        {
                             // Opposite directions canceled — move back to center, don't lift.
                             let old_state = item.last_state_actual;
                             item.last_state = state;
@@ -257,9 +261,7 @@ pub fn handle_direction_pad(
                                 original_pos + state,
                             );
                         }
-                    } else if item.enable_randomization
-                        && Instant::now() > item.next_jitter_at
-                    {
+                    } else if item.enable_randomization && Instant::now() > item.next_jitter_at {
                         handle_direction_jitter(
                             state,
                             item.random_anchor,

@@ -6,6 +6,7 @@ use std::{
     time::Instant,
 };
 
+use crate::tokio_tasks::TokioTasksRuntime;
 use bevy::{
     ecs::{
         resource::Resource,
@@ -14,7 +15,6 @@ use bevy::{
     math::Vec2,
 };
 use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding, PulseBinding};
-use bevy_tokio_tasks::TokioTasksRuntime;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -817,7 +817,7 @@ pub fn handle_cancel_cast(
                                 current_pos,
                                 cancel_pos,
                                 SingleSwipeStrategy::Linear,
-                            DEFAULT_SWIPE_DURATION,
+                                DEFAULT_SWIPE_DURATION,
                             );
                             let mut end_pos = current_pos;
                             for point in move_points {

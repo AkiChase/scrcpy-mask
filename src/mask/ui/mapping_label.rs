@@ -25,8 +25,8 @@ impl Plugin for MappingLabelPlugin {
                     redraw_normal_mapping_label.run_if(resource_changed::<ActiveMappingConfig>),
                     update_labels.run_if(
                         resource_changed::<MaskSize>
-                            .or(resource_changed::<LabelOpacity>)
-                            .or(resource_changed::<RedrawMappingLabel>),
+                            .or_else(resource_changed::<LabelOpacity>)
+                            .or_else(resource_changed::<RedrawMappingLabel>),
                     ),
                 ),
             )
@@ -215,7 +215,7 @@ fn create_simple_label(
             children![(
                 Text::new(binding),
                 TextFont {
-                    font_size: 12.,
+                    font_size: FontSize::Px(12.),
                     ..default()
                 },
                 TextColor(Color::WHITE),
@@ -228,7 +228,7 @@ fn text_node(binding: &str) -> (Text, TextFont, TextColor) {
     (
         Text::new(binding),
         TextFont {
-            font_size: 12.,
+            font_size: FontSize::Px(12.),
             ..default()
         },
         TextColor(Color::WHITE),
@@ -275,76 +275,77 @@ fn create_pad_label(
     commands.entity(parent_entity).with_children(|parent| {
         parent
             .spawn(MappingLabelBundle {
-            label: MappingLabel {
-                original_pos,
-                original_size,
-            },
-            label_type: MappingLabelType::Pad,
-            node: pad_node,
-            background_color: BackgroundColor(Color::BLACK),
-        })
-        .with_children(|parent| {
-            match children.len() {
-                4 => {
-                    let [top, bottom, left, right]: [_; 4] = children.try_into().unwrap();
-                    parent.spawn((
-                        Node {
-                            width: Val::Percent(100.),
-                            justify_content: JustifyContent::Center,
-                            ..default()
-                        },
-                        children![top],
-                    ));
-                    parent.spawn((
-                        Node {
-                            width: Val::Percent(100.),
-                            justify_content: JustifyContent::SpaceBetween,
-                            ..default()
-                        },
-                        children![left, right],
-                    ));
-                    parent.spawn((
-                        Node {
-                            width: Val::Percent(100.),
-                            justify_content: JustifyContent::Center,
-                            ..default()
-                        },
-                        children![bottom],
-                    ));
-                }
-                5 => {
-                    let [top, bottom, left, right, center]: [_; 5] = children.try_into().unwrap();
-                    parent.spawn((
-                        Node {
-                            width: Val::Percent(100.),
-                            justify_content: JustifyContent::Center,
-                            ..default()
-                        },
-                        children![top],
-                    ));
-                    parent.spawn((
-                        Node {
-                            width: Val::Percent(100.),
-                            justify_content: JustifyContent::SpaceBetween,
-                            ..default()
-                        },
-                        children![left, center, right],
-                    ));
-                    parent.spawn((
-                        Node {
-                            width: Val::Percent(100.),
-                            justify_content: JustifyContent::Center,
-                            ..default()
-                        },
-                        children![bottom],
-                    ));
-                }
-                _ => {
-                    for child in children {
-                        parent.spawn(child);
+                label: MappingLabel {
+                    original_pos,
+                    original_size,
+                },
+                label_type: MappingLabelType::Pad,
+                node: pad_node,
+                background_color: BackgroundColor(Color::BLACK),
+            })
+            .with_children(|parent| {
+                match children.len() {
+                    4 => {
+                        let [top, bottom, left, right]: [_; 4] = children.try_into().unwrap();
+                        parent.spawn((
+                            Node {
+                                width: Val::Percent(100.),
+                                justify_content: JustifyContent::Center,
+                                ..default()
+                            },
+                            children![top],
+                        ));
+                        parent.spawn((
+                            Node {
+                                width: Val::Percent(100.),
+                                justify_content: JustifyContent::SpaceBetween,
+                                ..default()
+                            },
+                            children![left, right],
+                        ));
+                        parent.spawn((
+                            Node {
+                                width: Val::Percent(100.),
+                                justify_content: JustifyContent::Center,
+                                ..default()
+                            },
+                            children![bottom],
+                        ));
                     }
-                }
-            };
-        });
+                    5 => {
+                        let [top, bottom, left, right, center]: [_; 5] =
+                            children.try_into().unwrap();
+                        parent.spawn((
+                            Node {
+                                width: Val::Percent(100.),
+                                justify_content: JustifyContent::Center,
+                                ..default()
+                            },
+                            children![top],
+                        ));
+                        parent.spawn((
+                            Node {
+                                width: Val::Percent(100.),
+                                justify_content: JustifyContent::SpaceBetween,
+                                ..default()
+                            },
+                            children![left, center, right],
+                        ));
+                        parent.spawn((
+                            Node {
+                                width: Val::Percent(100.),
+                                justify_content: JustifyContent::Center,
+                                ..default()
+                            },
+                            children![bottom],
+                        ));
+                    }
+                    _ => {
+                        for child in children {
+                            parent.spawn(child);
+                        }
+                    }
+                };
+            });
     });
 }

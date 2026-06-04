@@ -1,5 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
+use crate::tokio_tasks::TokioTasksRuntime;
 use bevy::{
     ecs::{
         resource::Resource,
@@ -9,7 +10,6 @@ use bevy::{
     time::{Time, Timer, TimerMode},
 };
 use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding};
-use bevy_tokio_tasks::TokioTasksRuntime;
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 

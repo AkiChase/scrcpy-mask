@@ -178,9 +178,15 @@ pub struct MappingFire {
     #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub sensitivity_y: f32,
     pub bind: ButtonBinding,
-    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
+    #[serde(
+        default = "default_random_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
     pub random_offset_x: f32,
-    #[serde(default = "default_random_offset", serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
+    #[serde(
+        default = "default_random_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
     pub random_offset_y: f32,
 }
 

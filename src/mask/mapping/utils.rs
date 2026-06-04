@@ -1,14 +1,14 @@
 use std::{
     ops::MulAssign,
     sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::{Duration, Instant},
 };
 
+use crate::tokio_tasks::TokioTasksRuntime;
 use bevy::math::Vec2;
-use bevy_tokio_tasks::TokioTasksRuntime;
 use serde::{Deserialize, Serialize};
 use tokio::{sync::broadcast, time::sleep};
 
@@ -259,7 +259,10 @@ pub fn spawn_initial_swipe(
         }
 
         let points = build_single_segment_swipe_intermediate_points(
-            start, target, swipe_strategy, swipe_duration_ms,
+            start,
+            target,
+            swipe_strategy,
+            swipe_duration_ms,
         );
         for point in points {
             ControlMsgHelper::send_touch(
@@ -333,13 +336,31 @@ pub fn build_single_segment_swipe_intermediate_points(
             build_linear_path(start, delta, point_count, steps, duration_ms)
         }
         SingleSwipeStrategy::ArcWithCubicEasing => build_arc_path(
-            start, delta, distance, point_count, steps, duration_ms, cubic_easing_timing,
+            start,
+            delta,
+            distance,
+            point_count,
+            steps,
+            duration_ms,
+            cubic_easing_timing,
         ),
         SingleSwipeStrategy::ArcWithEaseOut => build_arc_path(
-            start, delta, distance, point_count, steps, duration_ms, ease_out_timing,
+            start,
+            delta,
+            distance,
+            point_count,
+            steps,
+            duration_ms,
+            ease_out_timing,
         ),
         SingleSwipeStrategy::ArcWithEaseInOut => build_arc_path(
-            start, delta, distance, point_count, steps, duration_ms, ease_in_out_timing,
+            start,
+            delta,
+            distance,
+            point_count,
+            steps,
+            duration_ms,
+            ease_in_out_timing,
         ),
     }
 }
@@ -502,14 +523,8 @@ fn build_arc_path(
     points
 }
 
-fn build_multisegment_linear(
-    waypoints: &[Vec2],
-    duration_ms: u64,
-) -> Vec<SwipePointStep> {
-    let total_distance: f32 = waypoints
-        .windows(2)
-        .map(|w| w[0].distance(w[1]))
-        .sum();
+fn build_multisegment_linear(waypoints: &[Vec2], duration_ms: u64) -> Vec<SwipePointStep> {
+    let total_distance: f32 = waypoints.windows(2).map(|w| w[0].distance(w[1])).sum();
     if total_distance <= 1.0 {
         return vec![];
     }
@@ -520,10 +535,7 @@ fn build_multisegment_linear(
         return vec![];
     }
 
-    let segment_lengths: Vec<f32> = waypoints
-        .windows(2)
-        .map(|w| w[0].distance(w[1]))
-        .collect();
+    let segment_lengths: Vec<f32> = waypoints.windows(2).map(|w| w[0].distance(w[1])).collect();
     let mut cumulative_seg = vec![0.0f32];
     for &len in &segment_lengths {
         cumulative_seg.push(cumulative_seg.last().unwrap() + len);
@@ -654,10 +666,7 @@ fn build_multisegment_arc_cubic(
         return vec![];
     }
 
-    let total_straight: f32 = waypoints
-        .windows(2)
-        .map(|w| w[0].distance(w[1]))
-        .sum();
+    let total_straight: f32 = waypoints.windows(2).map(|w| w[0].distance(w[1])).sum();
     let total_point_count = ((total_straight / 14.0).round() as usize).clamp(10, 80);
     let steps = total_point_count.saturating_sub(1);
     if steps == 0 {
@@ -831,7 +840,10 @@ pub fn handle_direction_move_randomized(
 
     if dist > 2.0 {
         let points = build_single_segment_swipe_intermediate_points(
-            cur, target, strategy, DEFAULT_SWIPE_DURATION,
+            cur,
+            target,
+            strategy,
+            DEFAULT_SWIPE_DURATION,
         );
         let cs_tx = cs_tx.clone();
         let expected_gen = move_gen.fetch_add(1, Ordering::SeqCst) + 1;

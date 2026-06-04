@@ -1,8 +1,8 @@
 pub mod basic;
 pub mod mapping_label;
 
-pub use basic::{MaskContentEntity, MaskContentMarker, TITLEBAR_HEIGHT};
 use basic::BasicPlugin;
+pub use basic::{MaskContentEntity, MaskContentMarker, TITLEBAR_HEIGHT};
 use bevy::app::{App, Plugin};
 
 use crate::mask::ui::mapping_label::MappingLabelPlugin;

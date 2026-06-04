@@ -13,52 +13,38 @@ pub struct PendingAlphaMode(pub CompositeAlphaMode);
 /// Creates a temporary wgpu instance + surface (no swap chain, no configure)
 /// to query `SurfaceCapabilities::alpha_modes`, then returns the best choice.
 /// All temporary resources are dropped before this function returns.
-fn probe_alpha_modes(handle: &RawHandleWrapper) -> Option<CompositeAlphaMode> {
-    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
+fn probe_alpha_modes(handle: &RawHandleWrapper) -> Result<(CompositeAlphaMode, bool), String> {
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
 
     // Safety: the RawHandleWrapper holds valid window/display handles from a live winit window.
     // The surface is created and dropped on the main thread during Startup, before Bevy's
     // renderer creates its own surface from the same HWND.
-    let surface = unsafe {
-        instance
-            .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
-                raw_display_handle: handle.get_display_handle(),
-                raw_window_handle: handle.get_window_handle(),
-            })
-    }
-    .ok()?;
+    let surface = match unsafe {
+        instance.create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
+            raw_display_handle: Some(handle.get_display_handle()),
+            raw_window_handle: handle.get_window_handle(),
+        })
+    } {
+        Ok(surface) => surface,
+        Err(e) => return Err(format!("failed to create temporary surface: {e}")),
+    };
 
-    debug!(
-        "alpha probe: surface created (window={:?}, display={:?})",
-        handle.get_window_handle(),
-        handle.get_display_handle(),
-    );
-
-    let adapter = pollster::block_on(instance.request_adapter(
-        &wgpu::RequestAdapterOptions {
-            compatible_surface: Some(&surface),
-            power_preference: wgpu::PowerPreference::default(),
-            force_fallback_adapter: false,
-        },
-    ))
-    .ok()?;
-
-    debug!(
-        "alpha probe: adapter obtained: {:?}",
-        adapter.get_info(),
-    );
+    let adapter = match pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+        compatible_surface: Some(&surface),
+        power_preference: wgpu::PowerPreference::default(),
+        force_fallback_adapter: false,
+    })) {
+        Ok(adapter) => adapter,
+        Err(e) => return Err(format!("failed to request compatible adapter: {e}")),
+    };
 
     let caps = surface.get_capabilities(&adapter);
-    debug!(
-        "alpha probe: supported alpha_modes={:?}, formats={:?}",
-        caps.alpha_modes,
-        caps.formats.iter().take(8).collect::<Vec<_>>(),
-    );
+    info!("alpha probe: supported alpha_modes={:?}", caps.alpha_modes);
 
-    let chosen = if caps
+    let desired_supported = caps
         .alpha_modes
-        .contains(&wgpu::CompositeAlphaMode::PreMultiplied)
-    {
+        .contains(&wgpu::CompositeAlphaMode::PreMultiplied);
+    let chosen = if desired_supported {
         CompositeAlphaMode::PreMultiplied
     } else {
         // Auto lets the system decide — may still produce transparency on some GPUs,
@@ -66,7 +52,7 @@ fn probe_alpha_modes(handle: &RawHandleWrapper) -> Option<CompositeAlphaMode> {
         CompositeAlphaMode::Auto
     };
 
-    Some(chosen)
+    Ok((chosen, desired_supported))
 }
 
 /// Runs in `Startup`: extracts `RawHandleWrapper` from the primary window, probes GPU
@@ -87,23 +73,17 @@ pub fn detect_alpha_mode(
         return;
     };
 
-    debug!(
-        "alpha probe: current composite_alpha_mode={:?}",
-        window.composite_alpha_mode,
-    );
-
     match probe_alpha_modes(handle) {
-        Some(chosen) => {
+        Ok((chosen, desired_supported)) => {
             info!(
-                "alpha probe: chose {chosen:?} (was {:?})",
-                window.composite_alpha_mode,
+                "alpha probe: desired PreMultiplied supported={desired_supported}, final selection={chosen:?}"
             );
             commands.entity(entity).insert(PendingAlphaMode(chosen));
         }
-        None => {
+        Err(e) => {
             warn!(
-                "alpha probe: probe failed, keeping current mode {:?}",
-                window.composite_alpha_mode,
+                "alpha probe: probe failed ({e}), keeping current mode {:?}",
+                window.composite_alpha_mode
             );
         }
     }
@@ -112,18 +92,10 @@ pub fn detect_alpha_mode(
 /// Runs in `PostStartup`: reads `PendingAlphaMode` and writes the value to
 /// `Window.composite_alpha_mode`, then removes the marker.
 pub fn apply_alpha_mode(
-    mut windows: Query<(
-        Entity,
-        &mut Window,
-        &PendingAlphaMode,
-    )>,
+    mut windows: Query<(Entity, &mut Window, &PendingAlphaMode)>,
     mut commands: Commands,
 ) {
     for (entity, mut window, pending) in &mut windows {
-        debug!(
-            "alpha probe: applying {pending:?} (was {:?})",
-            window.composite_alpha_mode,
-        );
         window.composite_alpha_mode = pending.0;
         commands.entity(entity).remove::<PendingAlphaMode>();
     }

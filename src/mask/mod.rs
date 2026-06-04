@@ -32,7 +32,7 @@ pub struct MaskPlugins;
 impl Plugin for MaskPlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins((ui::UiPlugins, mapping::MappingPlugins))
-            .init_non_send_resource::<VideoAttributes>()
+            .init_non_send::<VideoAttributes>()
             .add_systems(Startup, (init_mask_size, init_titlebar_state))
             .add_systems(
                 Update,
