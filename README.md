@@ -23,9 +23,10 @@ To better support the interaction between **Scrcpy Mask** and Android devices, w
 * [x] Scrcpy video protocol (screen mirroring)
 * [x] Visual key mapping configuration
 * [x] Built-in scripting support — see [Script Syntax Guide](./scripts-help.md)
-* [x] Mouse and keyboard mapping
+* [x] Mouse and keyboard mapping with taps, repeat taps, multi-taps, swipes, direction pads, cast-spell controls, FPS/fire, RawInput, scripts, and more
+* [x] Input randomization enhancements, including randomized touch offsets, swipe paths, random anchors, and micro-jitter
 * [ ] Game controller mapping (awaiting sponsorship ❤️)
-* [ ] External control — see [External Control](https://github.com/AkiChase/scrcpy-mask-external-control) (in progress)
+* [x] External control via HTTP API + WebSocket for devices, mapping configs, and app settings, including a window-sync example — see [External Control](https://github.com/AkiChase/scrcpy-mask-external-control)
 * [ ] Documentation
 
 ## Video Tutorial
