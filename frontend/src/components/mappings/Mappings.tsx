@@ -432,6 +432,36 @@ const menuItems = buttonTypes.map((key) => [
   `mappings.${key.charAt(0).toLowerCase() + key.slice(1)}.name`,
 ]);
 
+const firstAutoPointerId = 1;
+
+function getNextAvailablePointerId(mappings: MappingType[]): number {
+  const usedPointerIds = new Set<number>();
+  for (const mapping of mappings) {
+    if (
+      "pointer_id" in mapping &&
+      Number.isInteger(mapping.pointer_id) &&
+      mapping.pointer_id >= firstAutoPointerId
+    ) {
+      usedPointerIds.add(mapping.pointer_id);
+    }
+  }
+
+  let pointerId = firstAutoPointerId;
+  while (usedPointerIds.has(pointerId)) {
+    pointerId += 1;
+  }
+  return pointerId;
+}
+
+function assignNextAvailablePointerId(
+  mapping: MappingType,
+  mappings: MappingType[],
+) {
+  if ("pointer_id" in mapping) {
+    mapping.pointer_id = getNextAvailablePointerId(mappings);
+  }
+}
+
 function Displayer({
   state,
   setState,
@@ -566,6 +596,7 @@ function Displayer({
                 config = mappingConstructorMap[key](contextMenuPosRef.current);
               }
               const newState = { ...state, edited: true };
+              assignNextAvailablePointerId(config, newState.current.mappings);
               newState.current.mappings.push(config);
               setState(newState);
             },
