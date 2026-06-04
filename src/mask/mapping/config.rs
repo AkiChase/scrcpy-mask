@@ -310,7 +310,16 @@ pub fn default_mapping_config() -> MappingConfig {
 pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), String> {
     let mut validate_errors = Vec::<String>::new();
 
-    // 1. Check mapping action count
+    if mapping_config.original_size.width == 0 || mapping_config.original_size.height == 0 {
+        validate_errors.push(format!(
+            "{}: {}x{}",
+            t!("web.mapping.invalidSize"),
+            mapping_config.original_size.width,
+            mapping_config.original_size.height
+        ));
+    }
+
+    // Check mapping action count
     let mut mapping_type_map = HashMap::<String, u32>::new();
     for mapping in mapping_config.mappings.iter() {
         let name = mapping.as_ref();

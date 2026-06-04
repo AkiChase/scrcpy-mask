@@ -17,17 +17,13 @@ pub struct MappingLabelPlugin;
 
 impl Plugin for MappingLabelPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(RedrawMappingLabel(0))
-            .add_systems(Startup, init_label_opacity)
+        app.add_systems(Startup, init_label_opacity)
             .add_systems(
                 Update,
                 (
+                    sync_label_opacity,
                     redraw_normal_mapping_label.run_if(resource_changed::<ActiveMappingConfig>),
-                    update_labels.run_if(
-                        resource_changed::<MaskSize>
-                            .or_else(resource_changed::<LabelOpacity>)
-                            .or_else(resource_changed::<RedrawMappingLabel>),
-                    ),
+                    update_labels,
                 ),
             )
             .add_systems(OnEnter(MappingState::RawInput), redraw_raw_input_label)
@@ -39,12 +35,19 @@ fn init_label_opacity(mut commands: Commands) {
     commands.insert_resource(LabelOpacity(LocalConfig::get().mapping_label_opacity));
 }
 
+fn sync_label_opacity(mut opacity: ResMut<LabelOpacity>) {
+    let current = LocalConfig::get().mapping_label_opacity;
+    if (opacity.0 - current).abs() > f32::EPSILON {
+        opacity.0 = current;
+    }
+}
+
 fn redraw_raw_input_label(
     mut commands: Commands,
     query: Query<(Entity, &MappingLabel)>,
     mask_size: Res<MaskSize>,
     mask_content: Res<MaskContentEntity>,
-    mut redraw_mapping_label: ResMut<RedrawMappingLabel>,
+    opacity: Res<LabelOpacity>,
 ) {
     for (entity, _) in query.iter() {
         commands.entity(entity).despawn();
@@ -56,19 +59,16 @@ fn redraw_raw_input_label(
         (25., 25.).into(),
         mask_size.0,
         mask_content.0,
+        opacity.0,
     );
-    redraw_mapping_label.0 += 1;
 }
-
-#[derive(Resource)]
-pub struct RedrawMappingLabel(u32);
 
 fn redraw_normal_mapping_label(
     mut commands: Commands,
     query: Query<(Entity, &MappingLabel)>,
     active_mapping: Res<ActiveMappingConfig>,
     mask_content: Res<MaskContentEntity>,
-    mut redraw_mapping_label: ResMut<RedrawMappingLabel>,
+    opacity: Res<LabelOpacity>,
 ) {
     for (entity, _) in query.iter() {
         commands.entity(entity).despawn();
@@ -93,6 +93,7 @@ fn redraw_normal_mapping_label(
                                 pos,
                                 size,
                                 mask_content.0,
+                                opacity.0,
                             );
                         }
                         BindMappingType::PadCastSpell(mapping_pad_cast_spell) => {
@@ -104,15 +105,22 @@ fn redraw_normal_mapping_label(
                                 pos,
                                 size,
                                 mask_content.0,
+                                opacity.0,
                             )
                         }
                         _ => {}
                     }
                 } else {
-                    create_simple_label(&mut commands, &binding, pos, size, mask_content.0);
+                    create_simple_label(
+                        &mut commands,
+                        &binding,
+                        pos,
+                        size,
+                        mask_content.0,
+                        opacity.0,
+                    );
                 }
             });
-        redraw_mapping_label.0 += 1;
     }
 }
 
@@ -129,15 +137,9 @@ fn update_labels(
     )>,
     mut text_query: Query<&mut TextColor>,
     mut child_query: Query<&Children>,
-    mut redraw_mapping_label: ResMut<RedrawMappingLabel>,
 ) {
-    let mut updated_flag = false;
-
     for (label, mut bg, mut node, cp_node, node_children) in query.iter_mut() {
         let node_size = cp_node.size();
-        if node_size != Vec2::ZERO {
-            updated_flag = true;
-        }
 
         let scale = window.scale_factor();
         let new_pos =
@@ -145,24 +147,20 @@ fn update_labels(
         node.left = Val::Px(new_pos.x);
         node.top = Val::Px(new_pos.y);
 
-        bg.0 = Color::linear_rgba(0., 0., 0., opacity.0);
+        bg.0 = label_background_color(opacity.0);
         for child in node_children.iter() {
             if let Ok(mut text_color) = text_query.get_mut(child) {
-                text_color.0 = Color::linear_rgba(1., 1., 1., opacity.0);
+                text_color.0 = label_text_color(opacity.0);
             }
 
             if let Ok(children) = child_query.get_mut(child) {
                 for child in children.iter() {
                     if let Ok(mut text_color) = text_query.get_mut(child) {
-                        text_color.0 = Color::linear_rgba(1., 1., 1., opacity.0);
+                        text_color.0 = label_text_color(opacity.0);
                     }
                 }
             }
         }
-    }
-
-    if !updated_flag {
-        redraw_mapping_label.0 += 1;
     }
 }
 
@@ -195,6 +193,7 @@ fn create_simple_label(
     original_pos: Vec2,
     original_size: Vec2,
     parent_entity: Entity,
+    opacity: f32,
 ) {
     commands.entity(parent_entity).with_children(|parent| {
         parent.spawn((
@@ -210,7 +209,7 @@ fn create_simple_label(
                     border_radius: BorderRadius::all(Val::Px(3.)),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::BLACK),
+                background_color: BackgroundColor(label_background_color(opacity)),
             },
             children![(
                 Text::new(binding),
@@ -218,21 +217,29 @@ fn create_simple_label(
                     font_size: FontSize::Px(12.),
                     ..default()
                 },
-                TextColor(Color::WHITE),
+                TextColor(label_text_color(opacity)),
             )],
         ));
     });
 }
 
-fn text_node(binding: &str) -> (Text, TextFont, TextColor) {
+fn text_node(binding: &str, opacity: f32) -> (Text, TextFont, TextColor) {
     (
         Text::new(binding),
         TextFont {
             font_size: FontSize::Px(12.),
             ..default()
         },
-        TextColor(Color::WHITE),
+        TextColor(label_text_color(opacity)),
     )
+}
+
+fn label_background_color(opacity: f32) -> Color {
+    Color::linear_rgba(0., 0., 0., opacity)
+}
+
+fn label_text_color(opacity: f32) -> Color {
+    Color::linear_rgba(1., 1., 1., opacity)
 }
 
 fn create_pad_label(
@@ -241,6 +248,7 @@ fn create_pad_label(
     original_pos: Vec2,
     original_size: Vec2,
     parent_entity: Entity,
+    opacity: f32,
 ) {
     let mut pad_node = Node {
         position_type: PositionType::Absolute,
@@ -257,14 +265,20 @@ fn create_pad_label(
     };
 
     let children = match bindings.len() {
-        1 => vec![text_node(&bindings[0])],
+        1 => vec![text_node(&bindings[0], opacity)],
         2 => {
             pad_node.row_gap = Val::Px(15.);
-            bindings.iter().map(|binding| text_node(binding)).collect()
+            bindings
+                .iter()
+                .map(|binding| text_node(binding, opacity))
+                .collect()
         }
         4 | 5 => {
             pad_node.justify_content = JustifyContent::SpaceBetween;
-            bindings.iter().map(|binding| text_node(binding)).collect()
+            bindings
+                .iter()
+                .map(|binding| text_node(binding, opacity))
+                .collect()
         }
         _ => panic!(
             "{}",
@@ -281,7 +295,7 @@ fn create_pad_label(
                 },
                 label_type: MappingLabelType::Pad,
                 node: pad_node,
-                background_color: BackgroundColor(Color::BLACK),
+                background_color: BackgroundColor(label_background_color(opacity)),
             })
             .with_children(|parent| {
                 match children.len() {
