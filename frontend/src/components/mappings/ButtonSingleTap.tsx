@@ -11,6 +11,7 @@ import { ItemBoxContainer, ItemBox } from "../common/ItemBox";
 import {
   SettingBind,
   SettingFooter,
+  SettingMappingId,
   SettingModal,
   SettingNote,
   SettingPointerId,
@@ -136,6 +137,7 @@ function Setting({
         {t("mappings.singleTap.setting.title")}
       </h1>
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
+        <SettingMappingId id={config.id} />
         <SettingBind
           bind={config.bind}
           onBindChange={(bind) => onConfigChange((pre) => ({ ...pre, bind }))}

@@ -17,6 +17,7 @@ import {
   Button,
   Select,
   type SelectProps,
+  Typography,
 } from "antd";
 import {
   useState,
@@ -136,6 +137,21 @@ export function SettingNote({ note, onNoteChange }: SettingNoteProps) {
   return (
     <ItemBox label={t("mappings.common.note.label")}>
       <Input value={note} onChange={(e) => onNoteChange(e.target.value)} />
+    </ItemBox>
+  );
+}
+
+export function SettingMappingId({ id }: { id: string }) {
+  const { t } = useTranslation();
+
+  return (
+    <ItemBox
+      label={t("mappings.common.id.label")}
+      tooltip={t("mappings.common.id.hint")}
+    >
+      <Typography.Text className="font-mono break-all" copyable={{ text: id }}>
+        {id}
+      </Typography.Text>
     </ItemBox>
   );
 }

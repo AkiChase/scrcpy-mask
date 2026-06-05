@@ -25,6 +25,7 @@ import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
 import {
   SettingBind,
   SettingFooter,
+  SettingMappingId,
   SettingModal,
   SettingNote,
   SettingPointerId,
@@ -277,6 +278,7 @@ function Setting({
         {t("mappings.directionPad.setting.title")}
       </h1>
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
+        <SettingMappingId id={config.id} />
         <ItemBox
           label={t("mappings.common.bind.settingLabel")}
           extra={

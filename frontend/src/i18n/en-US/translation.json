@@ -72,6 +72,10 @@
       "note": {
         "label": "Note"
       },
+      "id": {
+        "label": "Config ID",
+        "hint": "Used by scripts or external APIs to reference this mapping exactly. Click the copy icon to copy it."
+      },
       "delete": {
         "label": "Delete"
       },
