@@ -25,6 +25,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct BindMappingSwipe {
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub positions: Vec<Position>,
@@ -43,6 +44,7 @@ impl From<MappingSwipe> for BindMappingSwipe {
             SingleSwipeStrategy::Linear
         };
         Self {
+            id: value.id,
             note: value.note,
             pointer_id: value.pointer_id,
             positions: value.positions,
@@ -57,6 +59,8 @@ impl From<MappingSwipe> for BindMappingSwipe {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingSwipe {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub positions: Vec<Position>,

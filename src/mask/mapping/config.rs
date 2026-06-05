@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::{File, create_dir_all},
     io::Write,
     path::Path,
@@ -40,6 +40,10 @@ use crate::{
     },
     utils::{is_safe_file_name, relate_to_data_path},
 };
+
+pub fn default_mapping_id() -> String {
+    format!("{:08x}", rand::random::<u32>())
+}
 
 // declare 32 actions for each kind of key mapping
 seq!(N in 1..=32 {
@@ -178,6 +182,16 @@ macro_rules! impl_mapping_related {
                 }
             )*
         }
+
+        impl MappingType {
+            pub fn id(&self) -> &str {
+                match self {
+                    $(
+                        MappingType::$variant(inner) => inner.id.as_str(),
+                    )*
+                }
+            }
+        }
     };
 }
 
@@ -209,20 +223,24 @@ pub struct BindMappingConfig {
     pub version: String,
     pub original_size: Size,
     pub mappings: HashMap<MappingAction, BindMappingType>,
+    pub mapping_id_actions: HashMap<String, MappingAction>,
 }
 
 impl From<MappingConfig> for BindMappingConfig {
     fn from(value: MappingConfig) -> Self {
         let mut mappings = HashMap::<MappingAction, BindMappingType>::new();
+        let mut mapping_id_actions = HashMap::<String, MappingAction>::new();
         let mut mapping_type_map = HashMap::<String, u32>::new();
         for mapping in value.mappings.into_iter() {
             let name = mapping.as_ref();
+            let id = mapping.id().to_string();
             let count = *mapping_type_map
                 .entry(name.to_string())
                 .and_modify(|c| *c += 1)
                 .or_insert(1);
             let action_name = format!("{}{}", name, count);
             let action = MappingAction::from_str(&action_name).unwrap();
+            mapping_id_actions.insert(id, action.clone());
 
             if let MappingType::PadCastSpell(mapping_pad_cast_spell) = mapping {
                 let pad_action_name = format!("PadCastDirection{count}");
@@ -238,6 +256,7 @@ impl From<MappingConfig> for BindMappingConfig {
             version: value.version,
             original_size: value.original_size,
             mappings,
+            mapping_id_actions,
         }
     }
 }
@@ -309,6 +328,7 @@ pub fn default_mapping_config() -> MappingConfig {
 // Validate mapping config:
 pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), String> {
     let mut validate_errors = Vec::<String>::new();
+    let mut mapping_ids = HashSet::<String>::new();
 
     if mapping_config.original_size.width == 0 || mapping_config.original_size.height == 0 {
         validate_errors.push(format!(
@@ -337,6 +357,13 @@ pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), Str
                 )
                 .to_string(),
             );
+        }
+
+        let id = mapping.id();
+        if id.trim().is_empty() {
+            validate_errors.push(format!("[{name}-{count}] mapping id cannot be empty"));
+        } else if !mapping_ids.insert(id.to_string()) {
+            validate_errors.push(format!("[{name}-{count}] duplicate mapping id: {id}"));
         }
 
         if let Err(e) = mapping.validate() {

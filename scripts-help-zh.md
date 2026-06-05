@@ -134,6 +134,34 @@ wait(1000); // 等待 1 秒
 paste_text("Hello from script!");
 ```
 
+### `enter_fps(id)`
+
+进入指定 FPS 映射的 FPS 模式。
+
+* `id`: FPS 映射的 `id`
+
+### `exit_fps()`
+
+退出 FPS 模式。
+
+### `enter_raw_input()`
+
+进入原始输入模式。FPS 模式下会被忽略。
+
+### `exit_raw_input()`
+
+退出原始输入模式。
+
+### `cancel_cast(id)`
+
+使用指定取消技能映射取消当前技能。
+
+* `id`: CancelCast 映射的 `id`
+
+### `release_cast()`
+
+直接释放当前技能，不经过取消技能位置。
+
 ---
 
 ## ⚠️ 错误处理

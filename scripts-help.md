@@ -135,6 +135,34 @@ Pastes the given text into the device:
 paste_text("Hello from script!");
 ```
 
+### `enter_fps(id)`
+
+Enters FPS mode using the specified FPS mapping.
+
+* `id`: the `id` of an FPS mapping
+
+### `exit_fps()`
+
+Exits FPS mode.
+
+### `enter_raw_input()`
+
+Enters raw input mode. This is ignored while FPS mode is active.
+
+### `exit_raw_input()`
+
+Exits raw input mode.
+
+### `cancel_cast(id)`
+
+Cancels the active cast using the specified CancelCast mapping.
+
+* `id`: the `id` of a CancelCast mapping
+
+### `release_cast()`
+
+Releases the active cast directly without moving through the cancel position.
+
 ---
 
 ## ⚠️ Error Handling

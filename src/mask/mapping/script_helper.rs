@@ -1,7 +1,14 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use bevy::math::Vec2;
+use bevy::{
+    ecs::{
+        resource::Resource,
+        system::{Res, ResMut},
+    },
+    math::Vec2,
+    state::state::{NextState, State},
+};
 use pest::iterators::Pair;
 use pest::{Parser, Span};
 use pest_derive::Parser;
@@ -11,12 +18,309 @@ use tokio::sync::broadcast;
 use crate::mask::mapping::utils::{
     ControlMsgHelper, SingleSwipeStrategy, build_single_segment_swipe_intermediate_points,
 };
+use crate::mask::mapping::{
+    MappingState,
+    cast_spell::{ActiveCastSpell, cancel_active_cast, release_active_cast},
+    config::{ActiveMappingConfig, BindMappingType},
+    cursor::{ActiveCursorFpsConfig, CursorPosition, CursorState},
+    direction_pad::BlockDirectionPad,
+    fire::{enter_fps_mode, exit_fps_mode},
+    raw_input::{enter_raw_input_mode, exit_raw_input_mode},
+};
+use crate::mask::mask_command::MaskSize;
 use crate::scrcpy::constant::{KeyEventAction, Keycode, MetaState, MotionEventAction};
 use crate::scrcpy::control_msg::ScrcpyControlMsg;
+use crate::tokio_tasks::TokioTasksRuntime;
+use crate::utils::ChannelSenderCS;
 
 #[derive(Parser)]
 #[grammar = "src/mask/mapping/script.pest"]
 struct ScriptParser;
+
+#[derive(Debug, Clone)]
+pub enum ScriptRuntimeCommand {
+    EnterFps { id: String },
+    ExitFps,
+    EnterRawInput,
+    ExitRawInput,
+    CancelCast { id: String },
+    ReleaseCast,
+}
+
+#[derive(Resource, Clone)]
+pub struct ScriptRuntimeCommandSender(pub crossbeam_channel::Sender<ScriptRuntimeCommand>);
+
+#[derive(Resource)]
+pub struct ScriptRuntimeCommandReceiver(pub crossbeam_channel::Receiver<ScriptRuntimeCommand>);
+
+struct ScriptFuncContext<'a> {
+    cs_tx: &'a broadcast::Sender<ScrcpyControlMsg>,
+    runtime_command_tx: &'a crossbeam_channel::Sender<ScriptRuntimeCommand>,
+    original_size: Vec2,
+}
+
+enum ScriptAction {
+    Print {
+        output: String,
+    },
+    Wait {
+        ms: u64,
+    },
+    Touch {
+        pointer_id: u64,
+        action: MotionEventAction,
+        position: Vec2,
+        tap_default: bool,
+    },
+    Swipe {
+        pointer_id: u64,
+        interval: u64,
+        points: Vec<Vec2>,
+    },
+    Key {
+        keycode: Keycode,
+        action: KeyEventAction,
+        metastate: MetaState,
+        key_default: bool,
+    },
+    PasteText {
+        text: String,
+    },
+    Runtime(ScriptRuntimeCommand),
+}
+
+fn execute_script_action(
+    source: &str,
+    span: &SourceSpan,
+    ctx: &ScriptFuncContext,
+    action: ScriptAction,
+) -> Result<Value, ScriptError> {
+    match action {
+        ScriptAction::Print { output } => {
+            log::info!("{}", output);
+        }
+        ScriptAction::Wait { ms } => {
+            std::thread::sleep(std::time::Duration::from_millis(ms));
+        }
+        ScriptAction::Touch {
+            pointer_id,
+            action,
+            position,
+            tap_default,
+        } => {
+            ControlMsgHelper::send_touch(
+                ctx.cs_tx,
+                action,
+                pointer_id,
+                ctx.original_size,
+                position,
+            );
+
+            if tap_default {
+                std::thread::sleep(std::time::Duration::from_millis(30));
+                ControlMsgHelper::send_touch(
+                    ctx.cs_tx,
+                    MotionEventAction::Up,
+                    pointer_id,
+                    ctx.original_size,
+                    position,
+                );
+            }
+        }
+        ScriptAction::Swipe {
+            pointer_id,
+            interval,
+            points,
+        } => {
+            let mut cur_pos = points[0];
+            ControlMsgHelper::send_touch(
+                ctx.cs_tx,
+                MotionEventAction::Down,
+                pointer_id,
+                ctx.original_size,
+                cur_pos,
+            );
+            for next_pos in points.into_iter().skip(1) {
+                let steps = build_single_segment_swipe_intermediate_points(
+                    cur_pos,
+                    next_pos,
+                    SingleSwipeStrategy::Linear,
+                    interval,
+                );
+                for step in steps {
+                    ControlMsgHelper::send_touch(
+                        ctx.cs_tx,
+                        MotionEventAction::Move,
+                        pointer_id,
+                        ctx.original_size,
+                        step.pos,
+                    );
+                    std::thread::sleep(std::time::Duration::from_millis(step.wait_ms));
+                }
+                cur_pos = next_pos;
+            }
+            ControlMsgHelper::send_touch(
+                ctx.cs_tx,
+                MotionEventAction::Up,
+                pointer_id,
+                ctx.original_size,
+                cur_pos,
+            );
+        }
+        ScriptAction::Key {
+            keycode,
+            action,
+            metastate,
+            key_default,
+        } => {
+            if key_default {
+                ctx.cs_tx
+                    .send(ScrcpyControlMsg::InjectKeycode {
+                        action: KeyEventAction::Down,
+                        keycode: keycode.clone(),
+                        repeat: 0,
+                        metastate: metastate.clone(),
+                    })
+                    .unwrap();
+            }
+
+            ctx.cs_tx
+                .send(ScrcpyControlMsg::InjectKeycode {
+                    action,
+                    keycode,
+                    repeat: 0,
+                    metastate,
+                })
+                .unwrap();
+        }
+        ScriptAction::PasteText { text } => {
+            let sequence = rand::random::<u64>();
+            ctx.cs_tx
+                .send(ScrcpyControlMsg::SetClipboard {
+                    sequence,
+                    paste: true,
+                    text,
+                })
+                .unwrap();
+        }
+        ScriptAction::Runtime(command) => {
+            ctx.runtime_command_tx.send(command).map_err(|e| {
+                ScriptError::from_span(
+                    span.clone(),
+                    source,
+                    format!("Failed to send script runtime command: {e}"),
+                )
+            })?;
+        }
+    }
+
+    Ok(Value::Int(0))
+}
+
+pub fn handle_script_runtime_commands(
+    command_rx: Res<ScriptRuntimeCommandReceiver>,
+    active_mapping: Res<ActiveMappingConfig>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    mut fps_config: ResMut<ActiveCursorFpsConfig>,
+    cursor_state: Res<State<CursorState>>,
+    mut next_cursor_state: ResMut<NextState<CursorState>>,
+    cursor_pos: Res<CursorPosition>,
+    mask_size: Res<MaskSize>,
+    mut next_mapping_state: ResMut<NextState<MappingState>>,
+    runtime: ResMut<TokioTasksRuntime>,
+    mut active_cast: ResMut<ActiveCastSpell>,
+    mut block_direction_pad: ResMut<BlockDirectionPad>,
+) {
+    for command in command_rx.0.try_iter() {
+        match command {
+            ScriptRuntimeCommand::EnterFps { id } => {
+                let Some(active_mapping) = &active_mapping.0 else {
+                    log::error!("[Script] enter_fps failed: no active mapping config");
+                    continue;
+                };
+                let Some(action) = active_mapping.mapping_id_actions.get(&id) else {
+                    log::error!("[Script] enter_fps failed: mapping id not found: {id}");
+                    continue;
+                };
+                let Some(BindMappingType::Fps(mapping)) = active_mapping.mappings.get(action)
+                else {
+                    log::error!("[Script] enter_fps failed: mapping id is not Fps: {id}");
+                    continue;
+                };
+
+                if cursor_state.get() == &CursorState::Fps {
+                    exit_fps_mode(
+                        &cs_tx_res.0,
+                        &fps_config,
+                        &mut next_cursor_state,
+                        mask_size.0,
+                        cursor_pos.0,
+                    );
+                }
+                enter_fps_mode(
+                    &cs_tx_res.0,
+                    &mut fps_config,
+                    &mut next_cursor_state,
+                    mapping,
+                    active_mapping.original_size.into(),
+                );
+            }
+            ScriptRuntimeCommand::ExitFps => {
+                if cursor_state.get() == &CursorState::Fps {
+                    exit_fps_mode(
+                        &cs_tx_res.0,
+                        &fps_config,
+                        &mut next_cursor_state,
+                        mask_size.0,
+                        cursor_pos.0,
+                    );
+                }
+            }
+            ScriptRuntimeCommand::EnterRawInput => {
+                if cursor_state.get() == &CursorState::Fps {
+                    log::error!("[Script] enter_raw_input ignored while cursor is in FPS mode");
+                    continue;
+                }
+                enter_raw_input_mode(&mut next_mapping_state);
+            }
+            ScriptRuntimeCommand::ExitRawInput => {
+                exit_raw_input_mode(&mut next_mapping_state);
+            }
+            ScriptRuntimeCommand::CancelCast { id } => {
+                let Some(active_mapping) = &active_mapping.0 else {
+                    log::error!("[Script] cancel_cast failed: no active mapping config");
+                    continue;
+                };
+                let Some(action) = active_mapping.mapping_id_actions.get(&id) else {
+                    log::error!("[Script] cancel_cast failed: mapping id not found: {id}");
+                    continue;
+                };
+                let Some(BindMappingType::CancelCast(mapping)) =
+                    active_mapping.mappings.get(action)
+                else {
+                    log::error!("[Script] cancel_cast failed: mapping id is not CancelCast: {id}");
+                    continue;
+                };
+                cancel_active_cast(
+                    &cs_tx_res.0,
+                    &runtime,
+                    &mut active_cast,
+                    mapping,
+                    active_mapping.original_size.into(),
+                    mask_size.0,
+                );
+            }
+            ScriptRuntimeCommand::ReleaseCast => {
+                release_active_cast(
+                    &cs_tx_res.0,
+                    mask_size.0,
+                    &mut active_cast,
+                    &mut block_direction_pad,
+                );
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -30,8 +334,6 @@ pub struct ScriptAST {
     pub program: Program,
     pub script: String,
     pub empty: bool,
-    pub build_in_funcs:
-        HashMap<String, fn(&str, &SourceSpan, &[Value]) -> Result<Value, ScriptError>>,
 }
 
 impl ScriptAST {
@@ -66,44 +368,13 @@ impl ScriptAST {
                 .join("\n\n"));
         }
 
-        ast.build_in_funcs
-            .insert("print".to_string(), |_source, _span, args: &[Value]| {
-                let output = args
-                    .iter()
-                    .map(|val| match val {
-                        Value::Int(n) => n.to_string(),
-                        Value::Bool(b) => b.to_string(),
-                        Value::Str(s) => s.clone(),
-                    })
-                    .collect::<Vec<String>>()
-                    .join(" ");
-                log::info!("{}", output);
-                Ok(Value::Int(0))
-            });
-
-        ast.build_in_funcs.insert(
-            "wait".to_string(),
-            |source: &str, span: &SourceSpan, args: &[Value]| {
-                if args.len() != 1 || !matches!(args[0], Value::Int(_)) {
-                    return Err(ScriptError::from_span(
-                        span.clone(),
-                        source,
-                        "The wait function takes one argument: time (int)".to_string(),
-                    ));
-                }
-                std::thread::sleep(std::time::Duration::from_millis(
-                    Self::to_int_value(&args[0]) as u64,
-                ));
-                Ok(Value::Int(0))
-            },
-        );
-
         Ok(ast)
     }
 
     pub fn eval_script(
         &self,
         cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+        script_command_tx: &crossbeam_channel::Sender<ScriptRuntimeCommand>,
         original_size: Vec2,
         cursor_pos: Vec2,
         mask_size: Vec2,
@@ -127,26 +398,63 @@ impl ScriptAST {
             Value::Int(cursor_relative_pos.y as i64),
         );
 
+        let script_func_ctx = ScriptFuncContext {
+            cs_tx,
+            runtime_command_tx: script_command_tx,
+            original_size,
+        };
         let mut funcs: HashMap<
             String,
             Box<dyn Fn(&str, &SourceSpan, &[Value]) -> Result<Value, ScriptError>>,
         > = HashMap::new();
 
         funcs.insert(
+            "print".to_string(),
+            Box::new(|s, span, args| print_func(&script_func_ctx, s, span, args)),
+        );
+        funcs.insert(
+            "wait".to_string(),
+            Box::new(|s, span, args| wait_func(&script_func_ctx, s, span, args)),
+        );
+        funcs.insert(
             "tap".to_string(),
-            Box::new(move |s, span, args| tap_func(s, span, args, cs_tx, original_size)),
+            Box::new(|s, span, args| tap_func(&script_func_ctx, s, span, args)),
         );
         funcs.insert(
             "swipe".to_string(),
-            Box::new(move |s, span, args| swipe_func(s, span, args, cs_tx, original_size)),
+            Box::new(|s, span, args| swipe_func(&script_func_ctx, s, span, args)),
         );
         funcs.insert(
             "send_key".to_string(),
-            Box::new(move |s, span, args| send_key_func(s, span, args, cs_tx)),
+            Box::new(|s, span, args| send_key_func(&script_func_ctx, s, span, args)),
         );
         funcs.insert(
             "paste_text".to_string(),
-            Box::new(move |s, span, args| paste_text_func(s, span, args, cs_tx)),
+            Box::new(|s, span, args| paste_text_func(&script_func_ctx, s, span, args)),
+        );
+        funcs.insert(
+            "enter_fps".to_string(),
+            Box::new(|s, span, args| enter_fps_func(&script_func_ctx, s, span, args)),
+        );
+        funcs.insert(
+            "exit_fps".to_string(),
+            Box::new(|s, span, args| exit_fps_func(&script_func_ctx, s, span, args)),
+        );
+        funcs.insert(
+            "enter_raw_input".to_string(),
+            Box::new(|s, span, args| enter_raw_input_func(&script_func_ctx, s, span, args)),
+        );
+        funcs.insert(
+            "exit_raw_input".to_string(),
+            Box::new(|s, span, args| exit_raw_input_func(&script_func_ctx, s, span, args)),
+        );
+        funcs.insert(
+            "cancel_cast".to_string(),
+            Box::new(|s, span, args| cancel_cast_func(&script_func_ctx, s, span, args)),
+        );
+        funcs.insert(
+            "release_cast".to_string(),
+            Box::new(|s, span, args| release_cast_func(&script_func_ctx, s, span, args)),
         );
 
         for stmt in self.program.stmts.iter() {
@@ -299,16 +607,7 @@ impl ScriptAST {
                 }
             }
             Expr::Call { name, args, span } => {
-                // build in funcs
-                if let Some(func) = self.build_in_funcs.get(name) {
-                    let mut arg_values = Vec::new();
-                    for arg in args {
-                        arg_values.push(self.eval_expr(arg, vars, funcs)?);
-                    }
-                    func(&self.script, span, &arg_values)
-                        .map_err(|e| e.with_outer_span(span.clone(), &self.script))
-                // custom funcs
-                } else if let Some(func) = funcs.get(name) {
+                if let Some(func) = funcs.get(name) {
                     let mut arg_values = Vec::new();
                     for arg in args {
                         arg_values.push(self.eval_expr(arg, vars, funcs)?);
@@ -907,12 +1206,50 @@ impl ScriptAST {
     }
 }
 
-fn tap_func(
+fn print_func(
+    ctx: &ScriptFuncContext,
     source: &str,
     span: &SourceSpan,
     args: &[Value],
-    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
-    original_size: Vec2,
+) -> Result<Value, ScriptError> {
+    let output = args
+        .iter()
+        .map(|val| match val {
+            Value::Int(n) => n.to_string(),
+            Value::Bool(b) => b.to_string(),
+            Value::Str(s) => s.clone(),
+        })
+        .collect::<Vec<String>>()
+        .join(" ");
+
+    execute_script_action(source, span, ctx, ScriptAction::Print { output })
+}
+
+fn wait_func(
+    ctx: &ScriptFuncContext,
+    source: &str,
+    span: &SourceSpan,
+    args: &[Value],
+) -> Result<Value, ScriptError> {
+    let ms = match args {
+        [Value::Int(ms)] if *ms >= 0 => *ms as u64,
+        _ => {
+            return Err(ScriptError::from_span(
+                span.clone(),
+                source,
+                "The wait function takes one argument: time (non-negative int)".to_string(),
+            ));
+        }
+    };
+
+    execute_script_action(source, span, ctx, ScriptAction::Wait { ms })
+}
+
+fn tap_func(
+    ctx: &ScriptFuncContext,
+    source: &str,
+    span: &SourceSpan,
+    args: &[Value],
 ) -> Result<Value, ScriptError> {
     // tap(pointer_id, x, y, action?)
     let format_msg = "The tap function takes 3-4 arguments: pointer_id (int), x (int), y (int), action (optional string: 'default', 'down', 'up', or 'move', default is 'default')";
@@ -962,26 +1299,17 @@ fn tap_func(
                 *p as u64
             };
 
-            ControlMsgHelper::send_touch(
-                cs_tx,
-                action,
-                pointer_id,
-                original_size,
-                (*x as f32, *y as f32).into(),
-            );
-
-            if action_str == "default" {
-                std::thread::sleep(std::time::Duration::from_millis(30));
-                ControlMsgHelper::send_touch(
-                    cs_tx,
-                    MotionEventAction::Up,
+            execute_script_action(
+                source,
+                span,
+                ctx,
+                ScriptAction::Touch {
                     pointer_id,
-                    original_size,
-                    (*x as f32, *y as f32).into(),
-                );
-            }
-
-            Ok(Value::Int(0))
+                    action,
+                    position: (*x as f32, *y as f32).into(),
+                    tap_default: action_str == "default",
+                },
+            )
         }
         _ => Err(ScriptError::from_span(
             span.clone(),
@@ -991,12 +1319,134 @@ fn tap_func(
     }
 }
 
-fn swipe_func(
+fn expect_no_args_func(
     source: &str,
     span: &SourceSpan,
     args: &[Value],
-    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
-    original_size: Vec2,
+    function_name: &str,
+) -> Result<(), ScriptError> {
+    if args.is_empty() {
+        Ok(())
+    } else {
+        Err(ScriptError::from_span(
+            span.clone(),
+            source,
+            format!("The {function_name} function takes no arguments"),
+        ))
+    }
+}
+
+fn expect_id_arg_func<'a>(
+    source: &'a str,
+    span: &SourceSpan,
+    args: &'a [Value],
+    function_name: &str,
+) -> Result<&'a str, ScriptError> {
+    match args {
+        [Value::Str(id)] if !id.trim().is_empty() => Ok(id),
+        _ => Err(ScriptError::from_span(
+            span.clone(),
+            source,
+            format!("The {function_name} function takes one argument: id (non-empty string)"),
+        )),
+    }
+}
+
+fn enter_fps_func(
+    ctx: &ScriptFuncContext,
+    source: &str,
+    span: &SourceSpan,
+    args: &[Value],
+) -> Result<Value, ScriptError> {
+    let id = expect_id_arg_func(source, span, args, "enter_fps")?;
+    execute_script_action(
+        source,
+        span,
+        ctx,
+        ScriptAction::Runtime(ScriptRuntimeCommand::EnterFps { id: id.to_string() }),
+    )
+}
+
+fn exit_fps_func(
+    ctx: &ScriptFuncContext,
+    source: &str,
+    span: &SourceSpan,
+    args: &[Value],
+) -> Result<Value, ScriptError> {
+    expect_no_args_func(source, span, args, "exit_fps")?;
+    execute_script_action(
+        source,
+        span,
+        ctx,
+        ScriptAction::Runtime(ScriptRuntimeCommand::ExitFps),
+    )
+}
+
+fn enter_raw_input_func(
+    ctx: &ScriptFuncContext,
+    source: &str,
+    span: &SourceSpan,
+    args: &[Value],
+) -> Result<Value, ScriptError> {
+    expect_no_args_func(source, span, args, "enter_raw_input")?;
+    execute_script_action(
+        source,
+        span,
+        ctx,
+        ScriptAction::Runtime(ScriptRuntimeCommand::EnterRawInput),
+    )
+}
+
+fn exit_raw_input_func(
+    ctx: &ScriptFuncContext,
+    source: &str,
+    span: &SourceSpan,
+    args: &[Value],
+) -> Result<Value, ScriptError> {
+    expect_no_args_func(source, span, args, "exit_raw_input")?;
+    execute_script_action(
+        source,
+        span,
+        ctx,
+        ScriptAction::Runtime(ScriptRuntimeCommand::ExitRawInput),
+    )
+}
+
+fn cancel_cast_func(
+    ctx: &ScriptFuncContext,
+    source: &str,
+    span: &SourceSpan,
+    args: &[Value],
+) -> Result<Value, ScriptError> {
+    let id = expect_id_arg_func(source, span, args, "cancel_cast")?;
+    execute_script_action(
+        source,
+        span,
+        ctx,
+        ScriptAction::Runtime(ScriptRuntimeCommand::CancelCast { id: id.to_string() }),
+    )
+}
+
+fn release_cast_func(
+    ctx: &ScriptFuncContext,
+    source: &str,
+    span: &SourceSpan,
+    args: &[Value],
+) -> Result<Value, ScriptError> {
+    expect_no_args_func(source, span, args, "release_cast")?;
+    execute_script_action(
+        source,
+        span,
+        ctx,
+        ScriptAction::Runtime(ScriptRuntimeCommand::ReleaseCast),
+    )
+}
+
+fn swipe_func(
+    ctx: &ScriptFuncContext,
+    source: &str,
+    span: &SourceSpan,
+    args: &[Value],
 ) -> Result<Value, ScriptError> {
     // swipe(pointer_id, interval, x1, y1, x2, y2...)
     let format_msg = "The swipe function takes at least 6 arguments: pointer_id (int), interval (int), x1 (int), y1 (int), x2 (int), y2 (int)...";
@@ -1033,50 +1483,23 @@ fn swipe_func(
 
     let points = points?;
 
-    let mut cur_pos = points[0];
-    ControlMsgHelper::send_touch(
-        &cs_tx,
-        MotionEventAction::Down,
-        pointer_id,
-        original_size,
-        cur_pos,
-    );
-    for i in 1..points.len() {
-        let next_pos = points[i];
-        let steps = build_single_segment_swipe_intermediate_points(
-            cur_pos,
-            next_pos,
-            SingleSwipeStrategy::Linear,
+    execute_script_action(
+        source,
+        span,
+        ctx,
+        ScriptAction::Swipe {
+            pointer_id,
             interval,
-        );
-        for step in steps {
-            ControlMsgHelper::send_touch(
-                &cs_tx,
-                MotionEventAction::Move,
-                pointer_id,
-                original_size,
-                step.pos,
-            );
-            std::thread::sleep(std::time::Duration::from_millis(step.wait_ms));
-        }
-        cur_pos = next_pos;
-    }
-    ControlMsgHelper::send_touch(
-        &cs_tx,
-        MotionEventAction::Up,
-        pointer_id,
-        original_size,
-        cur_pos,
-    );
-
-    Ok(Value::Int(0))
+            points,
+        },
+    )
 }
 
 fn send_key_func(
+    ctx: &ScriptFuncContext,
     source: &str,
     span: &SourceSpan,
     args: &[Value],
-    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
 ) -> Result<Value, ScriptError> {
     // send_key(key_name, action?, metastate?)
     let format_msg = "The send_key function takes 1-3 arguments: key_name (string), action (optional string: 'down' or 'up', default 'default'), metastate (optional string, default 'NONE')";
@@ -1167,40 +1590,30 @@ fn send_key_func(
         }
     };
 
-    if action == "default" {
-        cs_tx
-            .send(ScrcpyControlMsg::InjectKeycode {
-                action: KeyEventAction::Down,
-                keycode: keycode.clone(),
-                repeat: 0,
-                metastate: metastate.clone(),
-            })
-            .unwrap();
-    }
-
-    cs_tx
-        .send(ScrcpyControlMsg::InjectKeycode {
-            action: key_action,
+    execute_script_action(
+        source,
+        span,
+        ctx,
+        ScriptAction::Key {
             keycode,
-            repeat: 0,
+            action: key_action,
             metastate,
-        })
-        .unwrap();
-
-    Ok(Value::Int(0))
+            key_default: action == "default",
+        },
+    )
 }
 
 fn paste_text_func(
+    ctx: &ScriptFuncContext,
     source: &str,
     span: &SourceSpan,
     args: &[Value],
-    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
 ) -> Result<Value, ScriptError> {
     // paste_text(text)
     let format_msg = "The paste_text function takes one argument: text (string)";
 
     let text = match args {
-        [Value::Str(text)] => text,
+        [Value::Str(text)] => text.clone(),
         _ => {
             return Err(ScriptError::from_span(
                 span.clone(),
@@ -1210,17 +1623,7 @@ fn paste_text_func(
         }
     };
 
-    let sequence = rand::random::<u64>();
-
-    cs_tx
-        .send(ScrcpyControlMsg::SetClipboard {
-            sequence,
-            paste: true,
-            text: text.clone(),
-        })
-        .unwrap();
-
-    Ok(Value::Int(0))
+    execute_script_action(source, span, ctx, ScriptAction::PasteText { text })
 }
 
 #[derive(Clone, Copy, Debug)]

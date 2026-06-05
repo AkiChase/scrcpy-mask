@@ -31,7 +31,18 @@ export type Position = {
 
 export type ButtonBinding = string[];
 
+export function newMappingId(): string {
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
+    const value = crypto.getRandomValues(new Uint32Array(1))[0];
+    return value.toString(16).padStart(8, "0");
+  }
+  return Math.floor(Math.random() * 0x100000000)
+    .toString(16)
+    .padStart(8, "0");
+}
+
 export interface SingleTapConfig {
+  id: string;
   bind: ButtonBinding;
   duration: number;
   note: string;
@@ -45,6 +56,7 @@ export interface SingleTapConfig {
 
 export function newSingleTap(position: Position): SingleTapConfig {
   return {
+    id: newMappingId(),
     bind: [],
     duration: 50,
     note: "",
@@ -58,6 +70,7 @@ export function newSingleTap(position: Position): SingleTapConfig {
 }
 
 export interface RepeatTapConfig {
+  id: string;
   bind: ButtonBinding;
   duration: number;
   interval: number;
@@ -71,6 +84,7 @@ export interface RepeatTapConfig {
 
 export function newRepeatTap(position: Position): RepeatTapConfig {
   return {
+    id: newMappingId(),
     bind: [],
     duration: 50,
     interval: 100,
@@ -90,6 +104,7 @@ export interface MultipleTapItem {
 }
 
 export interface MultipleTapConfig {
+  id: string;
   bind: ButtonBinding;
   items: MultipleTapItem[];
   note: string;
@@ -101,6 +116,7 @@ export interface MultipleTapConfig {
 
 export function newMultipleTap(position: Position): MultipleTapConfig {
   return {
+    id: newMappingId(),
     bind: [],
     items: [
       {
@@ -118,6 +134,7 @@ export function newMultipleTap(position: Position): MultipleTapConfig {
 }
 
 export interface SwipeConfig {
+  id: string;
   bind: ButtonBinding;
   enable_randomization: boolean;
   duration: number;
@@ -129,6 +146,7 @@ export interface SwipeConfig {
 
 export function newSwipe(position: Position): SwipeConfig {
   return {
+    id: newMappingId(),
     bind: [],
     enable_randomization: false,
     duration: 100,
@@ -158,6 +176,7 @@ export type DirectionBinding =
   | DirectionJoyStickBinding;
 
 export interface DirectionPadConfig {
+  id: string;
   bind: DirectionBinding;
   enable_randomization: boolean;
   initial_duration: number;
@@ -173,6 +192,7 @@ export interface DirectionPadConfig {
 
 export function newDirectionPad(position: Position): DirectionPadConfig {
   return {
+    id: newMappingId(),
     bind: {
       type: "Button",
       up: [],
@@ -196,6 +216,7 @@ export function newDirectionPad(position: Position): DirectionPadConfig {
 export type MouseCastReleaseMode = "OnPress" | "OnRelease" | "OnSecondPress";
 
 export interface MouseCastSpellConfig {
+  id: string;
   bind: ButtonBinding;
   cast_no_direction: boolean;
   cast_radius: number;
@@ -218,6 +239,7 @@ export function newMouseCastSpell(
   center: Position
 ): MouseCastSpellConfig {
   return {
+    id: newMappingId(),
     bind: [],
     cast_no_direction: false,
     cast_radius: 200,
@@ -239,6 +261,7 @@ export function newMouseCastSpell(
 export type PadCastReleaseMode = "OnRelease" | "OnSecondPress";
 
 export interface PadCastSpellConfig {
+  id: string;
   bind: ButtonBinding;
   block_direction_pad: boolean;
   drag_radius: number;
@@ -255,6 +278,7 @@ export interface PadCastSpellConfig {
 
 export function newPadCastSpell(position: Position): PadCastSpellConfig {
   return {
+    id: newMappingId(),
     bind: [],
     block_direction_pad: false,
     drag_radius: 150,
@@ -277,6 +301,7 @@ export function newPadCastSpell(position: Position): PadCastSpellConfig {
 }
 
 export interface CancelCastConfig {
+  id: string;
   bind: ButtonBinding;
   note: string;
   position: Position;
@@ -285,6 +310,7 @@ export interface CancelCastConfig {
 
 export function newCancelCast(position: Position): CancelCastConfig {
   return {
+    id: newMappingId(),
     bind: [],
     note: "",
     position,
@@ -293,6 +319,7 @@ export function newCancelCast(position: Position): CancelCastConfig {
 }
 
 export interface ObservationConfig {
+  id: string;
   bind: ButtonBinding;
   max_radius: number;
   note: string;
@@ -307,6 +334,7 @@ export interface ObservationConfig {
 
 export function newObservation(position: Position): ObservationConfig {
   return {
+    id: newMappingId(),
     bind: [],
     max_radius: 0,
     note: "",
@@ -321,6 +349,7 @@ export function newObservation(position: Position): ObservationConfig {
 }
 
 export interface FpsConfig {
+  id: string;
   bind: ButtonBinding;
   note: string;
   pointer_id: number;
@@ -332,6 +361,7 @@ export interface FpsConfig {
 
 export function newFps(position: Position): FpsConfig {
   return {
+    id: newMappingId(),
     bind: [],
     note: "",
     pointer_id: 0,
@@ -343,6 +373,7 @@ export function newFps(position: Position): FpsConfig {
 }
 
 export interface FireConfig {
+  id: string;
   bind: ButtonBinding;
   note: string;
   pointer_id: number;
@@ -356,6 +387,7 @@ export interface FireConfig {
 
 export function newFire(position: Position): FireConfig {
   return {
+    id: newMappingId(),
     bind: [],
     note: "",
     pointer_id: 0,
@@ -369,6 +401,7 @@ export function newFire(position: Position): FireConfig {
 }
 
 export interface RawInputConfig {
+  id: string;
   bind: ButtonBinding;
   note: string;
   position: Position;
@@ -377,6 +410,7 @@ export interface RawInputConfig {
 
 export function newRawInput(position: Position): RawInputConfig {
   return {
+    id: newMappingId(),
     bind: [],
     note: "",
     position,
@@ -385,6 +419,7 @@ export function newRawInput(position: Position): RawInputConfig {
 }
 
 export interface ScriptConfig {
+  id: string;
   bind: ButtonBinding;
   note: string;
   position: Position;
@@ -397,6 +432,7 @@ export interface ScriptConfig {
 
 export function newScript(position: Position): ScriptConfig {
   return {
+    id: newMappingId(),
     bind: [],
     note: "",
     position,
@@ -415,43 +451,53 @@ function withDefaultRandomOffset(value?: number): number {
 }
 
 export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
+  const usedIds = new Set<string>();
   return {
     ...config,
     mappings: config.mappings.map((mapping) => {
+      const currentId = (mapping as { id?: string }).id;
+      const id = currentId && !usedIds.has(currentId) ? currentId : newMappingId();
+      usedIds.add(id);
       switch (mapping.type) {
         case "SingleTap":
           return {
             ...mapping,
+            id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
           };
         case "RepeatTap":
           return {
             ...mapping,
+            id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
           };
         case "MultipleTap":
           return {
             ...mapping,
+            id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
           };
         case "Fire":
           return {
             ...mapping,
+            id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
           };
         case "Observation":
           return {
             ...mapping,
+            id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
           };
         case "MouseCastSpell":
           return {
             ...mapping,
+            id,
             initial_duration: mapping.initial_duration ?? 0,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
@@ -459,18 +505,20 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
         case "DirectionPad":
           return {
             ...mapping,
+            id,
             up_boost_key: mapping.up_boost_key ?? null,
             up_boost_scale: mapping.up_boost_scale ?? 1.0,
           };
         case "PadCastSpell":
           return {
             ...mapping,
+            id,
             enable_randomization: mapping.enable_randomization ?? false,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
           };
         default:
-          return mapping;
+          return { ...mapping, id };
       }
     }),
   };

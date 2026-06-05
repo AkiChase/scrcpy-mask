@@ -11,7 +11,7 @@ use crate::{
                 ActiveMappingConfig, MappingConfig, load_mapping_config, validate_mapping_config,
             },
             cursor::{CursorPosition, CursorState},
-            script_helper::ScriptAST,
+            script_helper::{ScriptAST, ScriptRuntimeCommandSender},
         },
         ui::basic::TITLEBAR_HEIGHT,
     },
@@ -63,6 +63,7 @@ impl TitlebarState {
 pub fn handle_mask_command(
     m_rx: Res<ChannelReceiverM>,
     cs_tx_res: Res<ChannelSenderCS>,
+    script_command_tx: Res<ScriptRuntimeCommandSender>,
     cursor_pos: Res<CursorPosition>,
     mut window: Single<&mut Window>,
     mut next_mapping_state: ResMut<NextState<MappingState>>,
@@ -181,6 +182,7 @@ pub fn handle_mask_command(
                 if let Some(mapping_config) = &active_mapping.0 {
                     match ast.eval_script(
                         &cs_tx_res.0,
+                        &script_command_tx.0,
                         mapping_config.original_size.into(),
                         cursor_pos.0,
                         mask_size.0,

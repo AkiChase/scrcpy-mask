@@ -36,6 +36,7 @@ use crate::{
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
 };
+use tokio::sync::broadcast;
 
 pub fn cast_spell_init(mut commands: Commands) {
     commands.insert_resource(ActiveCastSpell::default());
@@ -165,6 +166,7 @@ pub enum MouseCastReleaseMode {
 
 #[derive(Debug, Clone)]
 pub struct BindMappingMouseCastSpell {
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -185,6 +187,7 @@ pub struct BindMappingMouseCastSpell {
 impl From<MappingMouseCastSpell> for BindMappingMouseCastSpell {
     fn from(value: MappingMouseCastSpell) -> Self {
         Self {
+            id: value.id,
             note: value.note,
             pointer_id: value.pointer_id,
             position: value.position,
@@ -206,6 +209,8 @@ impl From<MappingMouseCastSpell> for BindMappingMouseCastSpell {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingMouseCastSpell {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -476,6 +481,7 @@ pub enum PadCastReleaseMode {
 
 #[derive(Debug, Clone)]
 pub struct BindMappingPadCastSpell {
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -495,6 +501,7 @@ pub struct BindMappingPadCastSpell {
 impl From<MappingPadCastSpell> for BindMappingPadCastSpell {
     fn from(value: MappingPadCastSpell) -> Self {
         Self {
+            id: value.id,
             note: value.note,
             pointer_id: value.pointer_id,
             position: value.position,
@@ -515,6 +522,8 @@ impl From<MappingPadCastSpell> for BindMappingPadCastSpell {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingPadCastSpell {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -757,6 +766,7 @@ pub fn handle_pad_cast_spell(
 
 #[derive(Debug, Clone)]
 pub struct BindMappingCancelCast {
+    pub id: String,
     pub note: String,
     pub position: Position,
     pub bind: ButtonBinding,
@@ -766,6 +776,7 @@ pub struct BindMappingCancelCast {
 impl From<MappingCancelCast> for BindMappingCancelCast {
     fn from(value: MappingCancelCast) -> Self {
         Self {
+            id: value.id,
             position: value.position,
             note: value.note,
             bind: value.bind.clone(),
@@ -776,12 +787,108 @@ impl From<MappingCancelCast> for BindMappingCancelCast {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingCancelCast {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub note: String,
     pub position: Position,
     pub bind: ButtonBinding,
 }
 
 impl ValidateMappingConfig for MappingCancelCast {}
+
+pub fn release_active_cast(
+    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    mask_size: Vec2,
+    active_cast: &mut ActiveCastSpell,
+    block_direction_pad: &mut BlockDirectionPad,
+) {
+    if let Some(cast) = active_cast.0.take() {
+        ControlMsgHelper::send_touch(
+            cs_tx,
+            MotionEventAction::Up,
+            cast.pointer_id,
+            mask_size,
+            cast.current_pos,
+        );
+        if cast.block_direction_pad {
+            block_direction_pad.0 = false;
+        }
+    }
+}
+
+pub fn cancel_active_cast(
+    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    runtime: &TokioTasksRuntime,
+    active_cast: &mut ActiveCastSpell,
+    cancel_mapping: &BindMappingCancelCast,
+    original_size: Vec2,
+    mask_size: Vec2,
+) {
+    if let Some(cast) = active_cast.0.take() {
+        let mut cancel_pos: Vec2 = cancel_mapping.position.into();
+        let current_pos = cast.current_pos;
+
+        cancel_pos = cancel_pos / original_size * mask_size;
+
+        let cs_tx = cs_tx.clone();
+        let pointer_id = cast.pointer_id;
+        let cast_block_direction_pad = cast.block_direction_pad;
+        let cast_initial_swipe_done = cast.initial_swipe_done.clone();
+        runtime.spawn_background_task(move |mut ctx| async move {
+            while !cast_initial_swipe_done.load(Ordering::Relaxed) {
+                tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            }
+            let move_points = build_single_segment_swipe_intermediate_points(
+                current_pos,
+                cancel_pos,
+                SingleSwipeStrategy::Linear,
+                DEFAULT_SWIPE_DURATION,
+            );
+            let mut end_pos = current_pos;
+            for point in move_points {
+                ControlMsgHelper::send_touch(
+                    &cs_tx,
+                    MotionEventAction::Move,
+                    pointer_id,
+                    mask_size,
+                    point.pos,
+                );
+                tokio::time::sleep(std::time::Duration::from_millis(point.wait_ms)).await;
+                end_pos = point.pos;
+            }
+
+            let steps: u64 = 10;
+            let step_interval = CAST_SPELL_DELAY / steps;
+            for _ in 0..steps {
+                end_pos.x += 5.;
+                ControlMsgHelper::send_touch(
+                    &cs_tx,
+                    MotionEventAction::Move,
+                    pointer_id,
+                    mask_size,
+                    end_pos,
+                );
+                tokio::time::sleep(std::time::Duration::from_millis(step_interval)).await;
+            }
+
+            ControlMsgHelper::send_touch(
+                &cs_tx,
+                MotionEventAction::Up,
+                pointer_id,
+                mask_size,
+                cancel_pos,
+            );
+
+            if cast_block_direction_pad {
+                ctx.run_on_main_thread(move |ctx| {
+                    let mut block_direction_pad = ctx.world.resource_mut::<BlockDirectionPad>();
+                    block_direction_pad.0 = false;
+                })
+                .await;
+            }
+        });
+    }
+}
 
 pub fn handle_cancel_cast(
     ineffable: Res<Ineffable>,
@@ -796,77 +903,15 @@ pub fn handle_cancel_cast(
             if action.as_ref().starts_with("CancelCast") {
                 let mapping = mapping.as_ref_cancelcast();
                 if ineffable.just_pulsed(action.ineff_pulse()) {
-                    // clear
-                    if let Some(cast) = active_cast.0.take() {
-                        let original_size: Vec2 = active_mapping.original_size.into();
-                        let mut cancel_pos: Vec2 = mapping.position.into();
-                        let cur_mask_size = mask_size.0;
-                        let current_pos = cast.current_pos;
-
-                        cancel_pos = cancel_pos / original_size * cur_mask_size; // relative to mask
-
-                        let cs_tx = cs_tx_res.0.clone();
-                        let pointer_id = cast.pointer_id;
-                        let cast_block_direction_pad = cast.block_direction_pad;
-                        let cast_initial_swipe_done = cast.initial_swipe_done.clone();
-                        runtime.spawn_background_task(move |mut ctx| async move {
-                            while !cast_initial_swipe_done.load(Ordering::Relaxed) {
-                                tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-                            }
-                            let move_points = build_single_segment_swipe_intermediate_points(
-                                current_pos,
-                                cancel_pos,
-                                SingleSwipeStrategy::Linear,
-                                DEFAULT_SWIPE_DURATION,
-                            );
-                            let mut end_pos = current_pos;
-                            for point in move_points {
-                                ControlMsgHelper::send_touch(
-                                    &cs_tx,
-                                    MotionEventAction::Move,
-                                    pointer_id,
-                                    cur_mask_size,
-                                    point.pos,
-                                );
-                                tokio::time::sleep(std::time::Duration::from_millis(point.wait_ms))
-                                    .await;
-                                end_pos = point.pos;
-                            }
-
-                            // stay at the end
-                            let steps: u64 = 10;
-                            let step_interval = CAST_SPELL_DELAY / steps;
-                            for _ in 0..steps {
-                                end_pos.x += 5.;
-                                ControlMsgHelper::send_touch(
-                                    &cs_tx,
-                                    MotionEventAction::Move,
-                                    pointer_id,
-                                    cur_mask_size,
-                                    end_pos,
-                                );
-                                tokio::time::sleep(std::time::Duration::from_millis(step_interval))
-                                    .await;
-                            }
-
-                            ControlMsgHelper::send_touch(
-                                &cs_tx,
-                                MotionEventAction::Up,
-                                pointer_id,
-                                cur_mask_size,
-                                cancel_pos,
-                            );
-
-                            if cast_block_direction_pad {
-                                ctx.run_on_main_thread(move |ctx| {
-                                    let mut block_direction_pad =
-                                        ctx.world.resource_mut::<BlockDirectionPad>();
-                                    block_direction_pad.0 = false;
-                                })
-                                .await;
-                            }
-                        });
-                    }
+                    let original_size: Vec2 = active_mapping.original_size.into();
+                    cancel_active_cast(
+                        &cs_tx_res.0,
+                        &runtime,
+                        &mut active_cast,
+                        mapping,
+                        original_size,
+                        mask_size.0,
+                    );
                 }
             }
         }

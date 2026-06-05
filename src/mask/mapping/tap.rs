@@ -30,6 +30,7 @@ pub fn tap_init(mut commands: Commands) {
 
 #[derive(Debug, Clone)]
 pub struct BindMappingSingleTap {
+    pub id: String,
     pub position: Position,
     pub note: String,
     pub pointer_id: u64,
@@ -44,6 +45,7 @@ pub struct BindMappingSingleTap {
 impl From<MappingSingleTap> for BindMappingSingleTap {
     fn from(value: MappingSingleTap) -> Self {
         Self {
+            id: value.id,
             position: value.position,
             note: value.note,
             pointer_id: value.pointer_id,
@@ -59,6 +61,8 @@ impl From<MappingSingleTap> for BindMappingSingleTap {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingSingleTap {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub position: Position,
     pub note: String,
     pub pointer_id: u64,
@@ -157,6 +161,7 @@ pub fn handle_single_tap(
 
 #[derive(Debug, Clone)]
 pub struct BindMappingRepeatTap {
+    pub id: String,
     pub position: Position,
     pub note: String,
     pub pointer_id: u64,
@@ -171,6 +176,7 @@ pub struct BindMappingRepeatTap {
 impl From<MappingRepeatTap> for BindMappingRepeatTap {
     fn from(value: MappingRepeatTap) -> Self {
         Self {
+            id: value.id,
             position: value.position,
             note: value.note,
             pointer_id: value.pointer_id,
@@ -186,6 +192,8 @@ impl From<MappingRepeatTap> for BindMappingRepeatTap {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingRepeatTap {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub position: Position,
     pub note: String,
     pub pointer_id: u64,
@@ -299,6 +307,7 @@ pub struct MappingMultipleTapItem {
 
 #[derive(Debug, Clone)]
 pub struct BindMappingMultipleTap {
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub items: Vec<MappingMultipleTapItem>,
@@ -311,6 +320,7 @@ pub struct BindMappingMultipleTap {
 impl From<MappingMultipleTap> for BindMappingMultipleTap {
     fn from(value: MappingMultipleTap) -> Self {
         Self {
+            id: value.id,
             note: value.note,
             pointer_id: value.pointer_id,
             items: value.items,
@@ -324,6 +334,8 @@ impl From<MappingMultipleTap> for BindMappingMultipleTap {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingMultipleTap {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub items: Vec<MappingMultipleTapItem>,

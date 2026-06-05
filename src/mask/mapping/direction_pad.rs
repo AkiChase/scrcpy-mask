@@ -37,6 +37,7 @@ pub fn direction_pad_init(mut commands: Commands) {
 
 #[derive(Debug, Clone)]
 pub struct BindMappingDirectionPad {
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -53,6 +54,7 @@ pub struct BindMappingDirectionPad {
 impl From<MappingDirectionPad> for BindMappingDirectionPad {
     fn from(value: MappingDirectionPad) -> Self {
         Self {
+            id: value.id,
             note: value.note,
             pointer_id: value.pointer_id,
             position: value.position,
@@ -70,6 +72,8 @@ impl From<MappingDirectionPad> for BindMappingDirectionPad {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingDirectionPad {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,

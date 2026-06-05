@@ -19,7 +19,10 @@ use crate::{
             binding::{ButtonBinding, ValidateMappingConfig},
             config::ActiveMappingConfig,
             cursor::CursorPosition,
-            script_helper::ScriptAST,
+            script_helper::{
+                ScriptAST, ScriptRuntimeCommand, ScriptRuntimeCommandReceiver,
+                ScriptRuntimeCommandSender,
+            },
             utils::Position,
         },
         mask_command::MaskSize,
@@ -29,10 +32,15 @@ use crate::{
 
 pub fn script_init(mut commands: Commands) {
     commands.insert_resource(ActiveScriptMap::default());
+    let (runtime_command_tx, runtime_command_rx) =
+        crossbeam_channel::unbounded::<ScriptRuntimeCommand>();
+    commands.insert_resource(ScriptRuntimeCommandSender(runtime_command_tx));
+    commands.insert_resource(ScriptRuntimeCommandReceiver(runtime_command_rx));
 }
 
 #[derive(Debug, Clone)]
 pub struct BindMappingScript {
+    pub id: String,
     pub position: Position,
     pub note: String,
     pub pressed_script: String,
@@ -49,6 +57,7 @@ pub struct BindMappingScript {
 impl From<MappingScript> for BindMappingScript {
     fn from(value: MappingScript) -> Self {
         Self {
+            id: value.id,
             position: value.position,
             note: value.note,
             pressed_script_ast: ScriptAST::new(&value.pressed_script).unwrap(),
@@ -66,6 +75,8 @@ impl From<MappingScript> for BindMappingScript {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingScript {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub position: Position,
     pub note: String,
     pub pressed_script: String,
@@ -104,6 +115,7 @@ pub fn handle_script(
     ineffable: Res<Ineffable>,
     active_mapping: Res<ActiveMappingConfig>,
     cs_tx_res: Res<ChannelSenderCS>,
+    script_command_tx: Res<ScriptRuntimeCommandSender>,
     cursor_pos_res: Res<CursorPosition>,
     mask_size_res: Res<MaskSize>,
     runtime: ResMut<TokioTasksRuntime>,
@@ -115,6 +127,7 @@ pub fn handle_script(
                 let mapping = mapping.as_ref_script();
                 let original_size: Vec2 = active_mapping.original_size.into();
                 let cs_tx = cs_tx_res.0.clone();
+                let script_command_tx = script_command_tx.0.clone();
                 let cursor_pos = cursor_pos_res.0.clone();
                 let mask_size = mask_size_res.0;
                 let interval = Duration::from_millis(mapping.interval as u64);
@@ -123,9 +136,13 @@ pub fn handle_script(
                     if !mapping.pressed_script_ast.empty {
                         let ast = mapping.pressed_script_ast.clone();
                         runtime.spawn_background_task(move |_ctx| async move {
-                            if let Err(e) =
-                                ast.eval_script(&cs_tx, original_size, cursor_pos, mask_size)
-                            {
+                            if let Err(e) = ast.eval_script(
+                                &cs_tx,
+                                &script_command_tx,
+                                original_size,
+                                cursor_pos,
+                                mask_size,
+                            ) {
                                 log::error!(
                                     "{}: {}",
                                     t!("mask.mapping.pressedScriptRuntimeError"),
@@ -154,10 +171,15 @@ pub fn handle_script(
 
                     if !mapping.released_script_ast.empty {
                         let ast = mapping.released_script_ast.clone();
+                        let script_command_tx = script_command_tx.clone();
                         runtime.spawn_background_task(move |_ctx| async move {
-                            if let Err(e) =
-                                ast.eval_script(&cs_tx, original_size, cursor_pos, mask_size)
-                            {
+                            if let Err(e) = ast.eval_script(
+                                &cs_tx,
+                                &script_command_tx,
+                                original_size,
+                                cursor_pos,
+                                mask_size,
+                            ) {
                                 log::error!(
                                     "{}: {}",
                                     t!("mask.mapping.releasedScriptRuntimeError"),
@@ -185,6 +207,7 @@ pub fn handle_script_trigger(
     time: Res<Time>,
     mut active_map: ResMut<ActiveScriptMap>,
     cs_tx_res: Res<ChannelSenderCS>,
+    script_command_tx: Res<ScriptRuntimeCommandSender>,
     cursor_pos_res: Res<CursorPosition>,
     mask_size_res: Res<MaskSize>,
     runtime: ResMut<TokioTasksRuntime>,
@@ -192,13 +215,20 @@ pub fn handle_script_trigger(
     for (_, timer) in active_map.0.iter_mut() {
         if timer.timer.tick(time.delta()).just_finished() {
             let cs_tx = cs_tx_res.0.clone();
+            let script_command_tx = script_command_tx.0.clone();
             let original_size = timer.original_size;
             let cursor_pos = cursor_pos_res.0;
             let mask_size = mask_size_res.0;
 
             let ast = timer.held_script_ast.clone();
             runtime.spawn_background_task(move |_ctx| async move {
-                if let Err(e) = ast.eval_script(&cs_tx, original_size, cursor_pos, mask_size) {
+                if let Err(e) = ast.eval_script(
+                    &cs_tx,
+                    &script_command_tx,
+                    original_size,
+                    cursor_pos,
+                    mask_size,
+                ) {
                     log::error!("{}: {}", t!("mask.mapping.heldScriptRuntimeError"), e);
                 }
             });

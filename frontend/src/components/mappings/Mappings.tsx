@@ -2,6 +2,7 @@ import {
   type DirectionBinding,
   type MappingConfig,
   type MappingType,
+  newMappingId,
   normalizeMappingConfig,
 } from "./mapping";
 import * as MappingConstructor from "./mapping";
@@ -542,7 +543,10 @@ function Displayer({
       if (prev === null) return null;
       const newState = { ...prev };
       newState.edited = true;
-      newState.current.mappings.push(newState.current.mappings[index]);
+      newState.current.mappings.push({
+        ...deepClone(newState.current.mappings[index]),
+        id: newMappingId(),
+      });
 
       return newState;
     });

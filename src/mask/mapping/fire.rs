@@ -26,6 +26,7 @@ use crate::{
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
 };
+use tokio::sync::broadcast;
 
 pub fn fire_init(mut commands: Commands) {
     commands.insert_resource(ActiveFireMap::default());
@@ -33,6 +34,7 @@ pub fn fire_init(mut commands: Commands) {
 
 #[derive(Debug, Clone)]
 pub struct BindMappingFps {
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -45,6 +47,7 @@ pub struct BindMappingFps {
 impl From<MappingFps> for BindMappingFps {
     fn from(value: MappingFps) -> Self {
         Self {
+            id: value.id,
             note: value.note,
             pointer_id: value.pointer_id,
             position: value.position,
@@ -58,6 +61,8 @@ impl From<MappingFps> for BindMappingFps {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingFps {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -66,6 +71,49 @@ pub struct MappingFps {
     #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub sensitivity_y: f32,
     pub bind: ButtonBinding,
+}
+
+pub fn enter_fps_mode(
+    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    fps_config: &mut ActiveCursorFpsConfig,
+    next_state: &mut NextState<CursorState>,
+    mapping: &BindMappingFps,
+    original_size: Vec2,
+) {
+    let original_pos = mapping.position.into();
+    fps_config.pointer_id = mapping.pointer_id;
+    fps_config.original_pos = original_pos;
+    fps_config.original_size = original_size;
+    fps_config.ignore_fps_motion = false;
+    fps_config.sensitivity = (mapping.sensitivity_x, mapping.sensitivity_y).into();
+
+    ControlMsgHelper::send_touch(
+        cs_tx,
+        MotionEventAction::Down,
+        mapping.pointer_id,
+        original_size,
+        original_pos,
+    );
+    next_state.set(CursorState::Fps);
+    log::info!("[Cursor] {}", t!("mask.mapping.enterFpsMode"));
+}
+
+pub fn exit_fps_mode(
+    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    fps_config: &ActiveCursorFpsConfig,
+    next_state: &mut NextState<CursorState>,
+    mask_size: Vec2,
+    cursor_pos: Vec2,
+) {
+    ControlMsgHelper::send_touch(
+        cs_tx,
+        MotionEventAction::Up,
+        fps_config.pointer_id,
+        mask_size,
+        cursor_pos,
+    );
+    next_state.set(CursorState::Normal);
+    log::info!("[Cursor] {}", t!("mask.mapping.exitFpsMode"));
 }
 
 impl ValidateMappingConfig for MappingFps {
@@ -101,35 +149,22 @@ pub fn handle_fps(
                     match state.get() {
                         CursorState::Normal => {
                             let mapping = mapping.as_ref_fps();
-                            let original_pos = mapping.position.into();
-                            fps_config.pointer_id = mapping.pointer_id;
-                            fps_config.original_pos = original_pos;
-                            fps_config.original_size = original_size;
-                            fps_config.ignore_fps_motion = false;
-                            fps_config.sensitivity =
-                                (mapping.sensitivity_x, mapping.sensitivity_y).into();
-                            // touch down center
-                            ControlMsgHelper::send_touch(
+                            enter_fps_mode(
                                 &cs_tx_res.0,
-                                MotionEventAction::Down,
-                                mapping.pointer_id,
+                                &mut fps_config,
+                                &mut next_state,
+                                mapping,
                                 original_size,
-                                original_pos,
                             );
-                            next_state.set(CursorState::Fps);
-                            log::info!("[Cursor] {}", t!("mask.mapping.enterFpsMode"));
                         }
                         CursorState::Fps => {
-                            // touch up
-                            ControlMsgHelper::send_touch(
+                            exit_fps_mode(
                                 &cs_tx_res.0,
-                                MotionEventAction::Up,
-                                0,
-                                mask_size.0, // cursor_pos is related to mask size
+                                &fps_config,
+                                &mut next_state,
+                                mask_size.0,
                                 cursor_pos.0,
                             );
-                            next_state.set(CursorState::Normal);
-                            log::info!("[Cursor] {}", t!("mask.mapping.exitFpsMode"));
                         }
                     };
                     return;
@@ -141,6 +176,7 @@ pub fn handle_fps(
 
 #[derive(Debug, Clone)]
 pub struct BindMappingFire {
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -155,6 +191,7 @@ pub struct BindMappingFire {
 impl From<MappingFire> for BindMappingFire {
     fn from(value: MappingFire) -> Self {
         Self {
+            id: value.id,
             note: value.note,
             pointer_id: value.pointer_id,
             position: value.position,
@@ -170,6 +207,8 @@ impl From<MappingFire> for BindMappingFire {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingFire {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,

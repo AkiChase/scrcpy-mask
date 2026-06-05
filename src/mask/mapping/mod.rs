@@ -61,6 +61,11 @@ impl Plugin for MappingPlugins {
             // normal mapping mode
             .add_systems(
                 Update,
+                script_helper::handle_script_runtime_commands
+                    .run_if(not(in_state(MappingState::Stop))),
+            )
+            .add_systems(
+                Update,
                 (
                     tap::handle_single_tap,
                     tap::handle_repeat_tap,

@@ -30,6 +30,7 @@ pub fn init_observation(mut commands: Commands) {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BindMappingObservation {
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -53,6 +54,7 @@ pub struct BindMappingObservation {
 impl From<MappingObservation> for BindMappingObservation {
     fn from(value: MappingObservation) -> Self {
         Self {
+            id: value.id,
             note: value.note,
             pointer_id: value.pointer_id,
             position: value.position,
@@ -69,6 +71,8 @@ impl From<MappingObservation> for BindMappingObservation {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingObservation {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,

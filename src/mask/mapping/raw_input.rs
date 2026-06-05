@@ -37,6 +37,7 @@ pub fn raw_input_init(mut commands: Commands) {
 
 #[derive(Debug, Clone)]
 pub struct BindMappingRawInput {
+    pub id: String,
     pub note: String,
     pub position: Position,
     pub bind: ButtonBinding,
@@ -46,6 +47,7 @@ pub struct BindMappingRawInput {
 impl From<MappingRawInput> for BindMappingRawInput {
     fn from(value: MappingRawInput) -> Self {
         Self {
+            id: value.id,
             note: value.note,
             position: value.position,
             bind: value.bind.clone(),
@@ -56,12 +58,24 @@ impl From<MappingRawInput> for BindMappingRawInput {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingRawInput {
+    #[serde(default = "crate::mask::mapping::config::default_mapping_id")]
+    pub id: String,
     pub note: String,
     pub position: Position,
     pub bind: ButtonBinding,
 }
 
 impl ValidateMappingConfig for MappingRawInput {}
+
+pub fn enter_raw_input_mode(next_state: &mut NextState<MappingState>) {
+    next_state.set(MappingState::RawInput);
+    log::info!("[Mapping] {}", t!("mask.mapping.rawInputModeHint"));
+}
+
+pub fn exit_raw_input_mode(next_state: &mut NextState<MappingState>) {
+    next_state.set(MappingState::Normal);
+    log::info!("[Mapping] {}", t!("mask.mapping.exitRawInputMode"));
+}
 
 pub fn handle_raw_input(
     ineffable: Res<Ineffable>,
@@ -72,8 +86,7 @@ pub fn handle_raw_input(
         for (action, _) in &active_mapping.mappings {
             if action.as_ref().starts_with("RawInput") {
                 if ineffable.just_pulsed(action.ineff_pulse()) {
-                    next_state.set(MappingState::RawInput);
-                    log::info!("[Mapping] {}", t!("mask.mapping.rawInputModeHint"));
+                    enter_raw_input_mode(&mut next_state);
                     return;
                 }
             }
@@ -268,8 +281,7 @@ pub fn handle_exit_raw_input_mode(
     if let Some(start) = right_hold_instant.0 {
         if now.duration_since(start).as_secs_f32() >= 1.0 {
             right_hold_instant.0 = None;
-            next_state.set(MappingState::Normal);
-            log::info!("[Mapping] {}", t!("mask.mapping.exitRawInputMode"));
+            exit_raw_input_mode(&mut next_state);
         }
     }
 }
