@@ -10,13 +10,14 @@
 * Variables must be declared with `let` before use:
 
   ```js
-  let x = 100;
+  let x = 100
   ```
 * Reassignment is supported (variable must be declared first):
 
   ```js
-  x = 200;
+  x = 200
   ```
+* Semicolons `;` may be omitted at most line endings, similar to JavaScript. Multiple simple statements on the same line must still be separated with `;`.
 
 ---
 
@@ -60,16 +61,14 @@
 ### Conditional Branches
 
 ```js
-if x > 10 { ... } else { ... };
+if x > 10 { ... } else { ... }
 ```
 
 ### Loops
 
 ```js
-while x > 0 { x = x - 1; };
+while x > 0 { x = x - 1 }
 ```
-
-> ⚠️ Note: Each code block `{ ... }` must also end with a semicolon `;`.
 
 ---
 
@@ -81,6 +80,8 @@ while x > 0 { x = x - 1; };
 | `ORIGINAL_H`  | Original height of the configuration area  |
 | `CURSOR_X`    | X-coordinate of the cursor inside the mask |
 | `CURSOR_Y`    | Y-coordinate of the cursor inside the mask |
+| `RawInputFlag` | Whether raw input mode is active (`Bool`) |
+| `FpsModeFlag` | Whether FPS mode is active (`Bool`) |
 
 > Constants are updated each time the script runs and remain fixed during execution.
 
@@ -134,6 +135,31 @@ Pastes the given text into the device:
 ```js
 paste_text("Hello from script!");
 ```
+
+### `state_set(name, value)`
+
+Stores a shared state value for the current Script mapping.
+
+* `name`: State name (non-empty string)
+* `value`: `Int`, `Bool`, or `Str`
+
+### `state_get(name, default_value)`
+
+Reads a shared state value for the current Script mapping. If the value does not exist, returns `default_value`.
+
+### `state_has(name)`
+
+Returns whether a shared state value exists.
+
+### `state_delete(name)`
+
+Deletes a shared state value and returns whether a value was removed.
+
+### `state_clear()`
+
+Clears all shared state values for the current Script mapping.
+
+> `state_*` values are shared between the pressed, held, and released scripts of the same Script mapping. Other Script mappings use separate state. Values remain until deleted, cleared, or the script runtime state is recreated.
 
 ### `enter_fps(id)`
 
@@ -192,62 +218,62 @@ Releases the active cast directly without moving through the cancel position.
 
 ```rs
 // Declare and initialize variables
-let x = ORIGINAL_W / 2;
-let y = ORIGINAL_H / 2;
-let counter = 0;
+let x = ORIGINAL_W / 2
+let y = ORIGINAL_H / 2
+let counter = 0
 
 // Use built-in constants
-print("Original size:", ORIGINAL_W, "x", ORIGINAL_H);
-print("Cursor position:", CURSOR_X, CURSOR_Y);
+print("Original size:", ORIGINAL_W, "x", ORIGINAL_H)
+print("Cursor position:", CURSOR_X, CURSOR_Y)
 
 // Conditional example
 if CURSOR_X > ORIGINAL_W / 2 {
-    print("Cursor is on the right side");
+    print("Cursor is on the right side")
 } else {
-    print("Cursor is on the left side or middle");
-};
+    print("Cursor is on the left side or middle")
+}
 
 // Loop example
 while counter < 3 {
-    tap(counter, x, y);     // Tap at current position
-    x = x + 100;            // Update variable
-    counter = counter + 1;
-    wait(500);              // Wait for a while
-};
+    tap(counter, x, y)      // Tap at current position
+    x = x + 100             // Update variable
+    counter = counter + 1
+    wait(500)               // Wait for a while
+}
 
 // String example
-let message = "Hello" + " " + "World";
-print(message);
+let message = "Hello" + " " + "World"
+print(message)
 
 // Swipe example: from center to upper-right
-swipe(0, 500, ORIGINAL_W/2, ORIGINAL_H/2, ORIGINAL_W/2 + 200, ORIGINAL_H/2 - 200);
+swipe(0, 500, ORIGINAL_W/2, ORIGINAL_H/2, ORIGINAL_W/2 + 200, ORIGINAL_H/2 - 200)
 
 // Paste text example
-paste_text("Hello from script!");
+paste_text("Hello from script!")
 
 // Key event example
-send_key("VolumeUp"); // Press and release the volume key
+send_key("VolumeUp") // Press and release the volume key
 
 // Example using modifier key
-send_key("A", "default", "CTRL_ON");
+send_key("A", "default", "CTRL_ON")
 
 // Example controlling key press duration
-send_key("Home", "down");
-wait(100);
-send_key("Home", "up");
+send_key("Home", "down")
+wait(100)
+send_key("Home", "up")
 
 // Logical operations
-let flag = true;
+let flag = true
 if flag && counter > 0 {
-    print("Flag is true and counter is positive");
-};
+    print("Flag is true and counter is positive")
+}
 
 if !flag || counter == 3 {
-    print("Either flag is false or counter equals 3");
-};
+    print("Either flag is false or counter equals 3")
+}
 
 // Numeric comparison
 if x > ORIGINAL_W / 2 && y < ORIGINAL_H / 2 {
-    print("Position is in the upper right quadrant");
-};
+    print("Position is in the upper right quadrant")
+}
 ```

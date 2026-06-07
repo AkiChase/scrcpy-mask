@@ -10,13 +10,14 @@
 * 变量需通过 `let` 声明并赋值后使用
 
   ```js
-  let x = 100;
+  let x = 100
   ```
 * 支持重新赋值（需先声明）
 
   ```js
-  x = 200;
+  x = 200
   ```
+* 分号 `;` 可像 JavaScript 一样在多数行尾省略。若同一行写多条普通语句，仍需用 `;` 分隔。
 
 ---
 
@@ -59,16 +60,14 @@
 ### 条件分支
 
 ```js
-if x > 10 { ... } else { ... };
+if x > 10 { ... } else { ... }
 ```
 
 ### 循环
 
 ```js
-while x > 0 { x = x - 1; };
+while x > 0 { x = x - 1 }
 ```
-
-> ⚠️ 注意：代码块 `{ ... }` 末尾也需以 `;` 结尾。
 
 ---
 
@@ -80,6 +79,8 @@ while x > 0 { x = x - 1; };
 | `ORIGINAL_H` | 配置区域的原始高度      |
 | `CURSOR_X`   | 鼠标指针在蒙版内的 X 坐标 |
 | `CURSOR_Y`   | 鼠标指针在蒙版内的 Y 坐标 |
+| `RawInputFlag` | 当前是否处于直控模式（`Bool`） |
+| `FpsModeFlag` | 当前是否处于 FPS 模式（`Bool`） |
 
 > 每次脚本重新执行时常量更新，执行期间为固定值。
 
@@ -133,6 +134,31 @@ wait(1000); // 等待 1 秒
 ```js
 paste_text("Hello from script!");
 ```
+
+### `state_set(name, value)`
+
+为当前 Script 映射保存一个共享状态值。
+
+* `name`: 状态名（非空字符串）
+* `value`: `Int`、`Bool` 或 `Str`
+
+### `state_get(name, default_value)`
+
+读取当前 Script 映射的共享状态值。如果值不存在，返回 `default_value`。
+
+### `state_has(name)`
+
+返回共享状态值是否存在。
+
+### `state_delete(name)`
+
+删除一个共享状态值，并返回是否实际删除了值。
+
+### `state_clear()`
+
+清空当前 Script 映射的所有共享状态值。
+
+> `state_*` 的值会在同一个 Script 映射的按下、按住、抬起脚本之间共享。其他 Script 映射使用独立状态。值会持续到被删除、清空，或脚本运行时状态被重新创建。
 
 ### `enter_fps(id)`
 
@@ -191,62 +217,62 @@ paste_text("Hello from script!");
 
 ```rs
 // 声明并初始化变量
-let x = ORIGINAL_W / 2;
-let y = ORIGINAL_H / 2;
-let counter = 0;
+let x = ORIGINAL_W / 2
+let y = ORIGINAL_H / 2
+let counter = 0
 
 // 使用内置常量进行计算
-print("Original size:", ORIGINAL_W, "x", ORIGINAL_H);
-print("Cursor position:", CURSOR_X, CURSOR_Y);
+print("Original size:", ORIGINAL_W, "x", ORIGINAL_H)
+print("Cursor position:", CURSOR_X, CURSOR_Y)
 
 // 条件语句示例
 if CURSOR_X > ORIGINAL_W / 2 {
-    print("Cursor is on the right side");
+    print("Cursor is on the right side")
 } else {
-    print("Cursor is on the left side or middle");
-};
+    print("Cursor is on the left side or middle")
+}
 
 // 循环示例
 while counter < 3 {
-    tap(counter, x, y);     // 在当前位置点击
-    x = x + 100;            // 更新变量
-    counter = counter + 1;
-    wait(500);              // 等待一段时间
-};
+    tap(counter, x, y)      // 在当前位置点击
+    x = x + 100             // 更新变量
+    counter = counter + 1
+    wait(500)               // 等待一段时间
+}
 
 // 字符串操作示例
-let message = "Hello" + " " + "World";
-print(message);
+let message = "Hello" + " " + "World"
+print(message)
 
 // 滑动示例：从中心点向右上角滑动
-swipe(0, 500, ORIGINAL_W/2, ORIGINAL_H/2, ORIGINAL_W/2 + 200, ORIGINAL_H/2 - 200);
+swipe(0, 500, ORIGINAL_W/2, ORIGINAL_H/2, ORIGINAL_W/2 + 200, ORIGINAL_H/2 - 200)
 
 // 粘贴文本示例
-paste_text("Hello from script!");
+paste_text("Hello from script!")
 
 // 按键示例
-send_key("VolumeUp"); // 按下并释放音量键
+send_key("VolumeUp") // 按下并释放音量键
 
 // 使用修饰键的示例
-send_key("A", "default", "CTRL_ON");
+send_key("A", "default", "CTRL_ON")
 
 // 控制按键时长的示例
-send_key("Home", "down");
-wait(100);
-send_key("Home", "up");
+send_key("Home", "down")
+wait(100)
+send_key("Home", "up")
 
 // 使用逻辑运算符
-let flag = true;
+let flag = true
 if flag && counter > 0 {
-    print("Flag is true and counter is positive");
-};
+    print("Flag is true and counter is positive")
+}
 
 if !flag || counter == 3 {
-    print("Either flag is false or counter equals 3");
-};
+    print("Either flag is false or counter equals 3")
+}
 
 // 数值比较
 if x > ORIGINAL_W / 2 && y < ORIGINAL_H / 2 {
-    print("Position is in the upper right quadrant");
-};
+    print("Position is in the upper right quadrant")
+}
 ```
