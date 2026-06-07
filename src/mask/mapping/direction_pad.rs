@@ -8,14 +8,23 @@ use std::{
 use crate::tokio_tasks::TokioTasksRuntime;
 use crate::{
     mask::mapping::{
+        MappingState,
         binding::{ButtonBinding, DirectionBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
+        cursor::{CursorPosition, CursorState},
+        executor::{
+            MappingLifecycleStart, MappingLifecycleState, make_mapping_execution_context,
+            run_script_hook,
+        },
+        script::{BindMappingScriptHooks, MappingScriptHooks},
+        script_helper::{ScriptRuntimeCommandSender, ScriptSharedState},
         utils::{
             ControlMsgHelper, DEFAULT_SWIPE_DURATION, Position, SingleSwipeStrategy,
             anchor_random_offset, handle_direction_jitter, handle_direction_move_randomized,
             next_jitter_deadline, random_offset_vec2, spawn_initial_swipe,
         },
     },
+    mask::mask_command::MaskSize,
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
 };
@@ -26,6 +35,7 @@ use bevy::{
     },
     input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton},
     math::Vec2,
+    state::state::State,
 };
 use bevy_ineffable::prelude::{Ineffable, InputBinding};
 use serde::{Deserialize, Serialize};
@@ -33,6 +43,7 @@ use serde::{Deserialize, Serialize};
 pub fn direction_pad_init(mut commands: Commands) {
     commands.insert_resource(DirectionPadMap::default());
     commands.insert_resource(BlockDirectionPad::default());
+    commands.insert_resource(DirectionPadLifecycleState::default());
 }
 
 #[derive(Debug, Clone)]
@@ -49,6 +60,7 @@ pub struct BindMappingDirectionPad {
     pub up_boost_scale: f32,
     pub bind: DirectionBinding,
     pub input_binding: InputBinding,
+    pub script_hooks: BindMappingScriptHooks,
 }
 
 impl From<MappingDirectionPad> for BindMappingDirectionPad {
@@ -66,6 +78,7 @@ impl From<MappingDirectionPad> for BindMappingDirectionPad {
             up_boost_scale: value.up_boost_scale,
             bind: value.bind.clone(),
             input_binding: value.bind.into(),
+            script_hooks: value.script_hooks.into(),
         }
     }
 }
@@ -92,16 +105,33 @@ pub struct MappingDirectionPad {
     )]
     pub up_boost_scale: f32,
     pub bind: DirectionBinding,
+    #[serde(default)]
+    pub script_hooks: MappingScriptHooks,
 }
 
 fn default_up_boost_scale() -> f32 {
     1.4
 }
 
-impl ValidateMappingConfig for MappingDirectionPad {}
+impl ValidateMappingConfig for MappingDirectionPad {
+    fn validate(&self) -> Result<(), String> {
+        self.script_hooks.validate()
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct DirectionPadMap(pub HashMap<String, DirectionPadItem>);
+
+#[derive(Resource, Default)]
+pub struct DirectionPadLifecycleState(MappingLifecycleState<DirectionPadReleaseContext>);
+
+#[derive(Clone)]
+struct DirectionPadReleaseContext {
+    cursor_pos: Vec2,
+    mask_size: Vec2,
+    raw_input_flag: bool,
+    fps_mode_flag: bool,
+}
 
 pub struct DirectionPadItem {
     pub initial_swipe_done: Arc<AtomicBool>,
@@ -151,13 +181,149 @@ fn scale_direction_2d_state(d_state: Vec2, mapping: &BindMappingDirectionPad) ->
 #[derive(Resource, Default)]
 pub struct BlockDirectionPad(pub bool);
 
+fn direction_pad_has_before_hook(mapping: &BindMappingDirectionPad) -> bool {
+    !mapping.script_hooks.before_script_ast.empty
+}
+
+fn direction_pad_has_after_hook(mapping: &BindMappingDirectionPad) -> bool {
+    !mapping.script_hooks.after_script_ast.empty
+}
+
+fn apply_direction_pad_down(
+    cs_tx: &ChannelSenderCS,
+    runtime: &TokioTasksRuntime,
+    direction_pad_map: &mut DirectionPadMap,
+    action: String,
+    mapping: &BindMappingDirectionPad,
+    original_size: Vec2,
+    state: Vec2,
+) {
+    let pointer_id = mapping.pointer_id;
+    let original_pos: Vec2 = mapping.position.into();
+
+    let random_offset = anchor_random_offset(mapping.max_offset_x, mapping.max_offset_y);
+    let random_anchor = if mapping.enable_randomization {
+        random_offset_vec2(original_pos, random_offset)
+    } else {
+        original_pos
+    };
+
+    ControlMsgHelper::send_touch(
+        &cs_tx.0,
+        MotionEventAction::Down,
+        pointer_id,
+        original_size,
+        random_anchor,
+    );
+
+    let strategy = if mapping.enable_randomization {
+        SingleSwipeStrategy::ArcWithEaseOut
+    } else {
+        SingleSwipeStrategy::Linear
+    };
+    let swipe_start = if mapping.enable_randomization {
+        random_anchor
+    } else {
+        original_pos
+    };
+    let initial_swipe_done = spawn_initial_swipe(
+        runtime,
+        &cs_tx.0,
+        pointer_id,
+        original_size,
+        swipe_start,
+        swipe_start + state,
+        mapping.initial_duration,
+        DEFAULT_SWIPE_DURATION,
+        strategy,
+    );
+
+    direction_pad_map.0.insert(
+        action,
+        DirectionPadItem {
+            initial_swipe_done,
+            pointer_id,
+            original_size,
+            original_pos,
+            random_anchor,
+            last_state: state,
+            last_state_actual: state,
+            next_jitter_at: next_jitter_deadline(),
+            current_jitter: Vec2::ZERO,
+            enable_randomization: mapping.enable_randomization,
+            random_offset,
+            move_gen: Arc::new(AtomicU64::new(0)),
+        },
+    );
+}
+
+fn apply_direction_pad_tap_without_swipe(
+    cs_tx: &ChannelSenderCS,
+    mapping: &BindMappingDirectionPad,
+    original_size: Vec2,
+) {
+    let original_pos: Vec2 = mapping.position.into();
+    let random_offset = anchor_random_offset(mapping.max_offset_x, mapping.max_offset_y);
+    let random_anchor = if mapping.enable_randomization {
+        random_offset_vec2(original_pos, random_offset)
+    } else {
+        original_pos
+    };
+
+    ControlMsgHelper::send_touch(
+        &cs_tx.0,
+        MotionEventAction::Down,
+        mapping.pointer_id,
+        original_size,
+        random_anchor,
+    );
+    ControlMsgHelper::send_touch(
+        &cs_tx.0,
+        MotionEventAction::Up,
+        mapping.pointer_id,
+        original_size,
+        random_anchor,
+    );
+}
+
+fn apply_direction_pad_up(
+    cs_tx: &ChannelSenderCS,
+    direction_pad_map: &mut DirectionPadMap,
+    action: &str,
+) -> bool {
+    if let Some(item) = direction_pad_map.0.remove(action) {
+        let last_pos = if item.enable_randomization {
+            item.random_anchor + item.last_state + item.current_jitter
+        } else {
+            item.original_pos + item.last_state
+        };
+        ControlMsgHelper::send_touch(
+            &cs_tx.0,
+            MotionEventAction::Up,
+            item.pointer_id,
+            item.original_size,
+            last_pos,
+        );
+        true
+    } else {
+        false
+    }
+}
+
 pub fn handle_direction_pad(
     ineffable: Res<Ineffable>,
     active_mapping: Res<ActiveMappingConfig>,
     cs_tx_res: Res<ChannelSenderCS>,
+    script_command_tx: Res<ScriptRuntimeCommandSender>,
+    shared_state: Res<ScriptSharedState>,
+    mask_size: Res<MaskSize>,
+    cursor_pos: Res<CursorPosition>,
+    mapping_state: Res<State<MappingState>>,
+    cursor_state: Res<State<CursorState>>,
     runtime: ResMut<TokioTasksRuntime>,
     block: Res<BlockDirectionPad>,
     mut direction_pad_map: ResMut<DirectionPadMap>,
+    mut lifecycle_state: ResMut<DirectionPadLifecycleState>,
     key_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
 ) {
@@ -223,19 +389,36 @@ pub fn handle_direction_pad(
                             }
                         } else {
                             // Genuine release: all keys up.
-                            let last_pos = if item.enable_randomization {
-                                item.random_anchor + item.last_state + item.current_jitter
-                            } else {
-                                original_pos + item.last_state
-                            };
-                            ControlMsgHelper::send_touch(
-                                &cs_tx_res.0,
-                                MotionEventAction::Up,
-                                mapping.pointer_id,
-                                original_size,
-                                last_pos,
-                            );
-                            direction_pad_map.0.remove(&key);
+                            let released =
+                                apply_direction_pad_up(&cs_tx_res, &mut direction_pad_map, &key);
+                            if released {
+                                lifecycle_state.0.clear_pending(&key);
+                            }
+                            if released && direction_pad_has_after_hook(mapping) {
+                                let after_script_ast =
+                                    mapping.script_hooks.after_script_ast.clone();
+                                let exec_ctx = make_mapping_execution_context(
+                                    &cs_tx_res,
+                                    &script_command_tx,
+                                    &shared_state,
+                                    mapping.id.clone(),
+                                    original_size,
+                                    cursor_pos.0,
+                                    mask_size.0,
+                                    mapping_state.get() == &MappingState::RawInput,
+                                    cursor_state.get() == &CursorState::Fps,
+                                );
+                                runtime.spawn_background_task(move |_task_ctx| async move {
+                                    if let Err(e) =
+                                        run_script_hook(&after_script_ast, &exec_ctx).await
+                                    {
+                                        log::error!(
+                                            "[DirectionPad] script hook runtime error: {:?}",
+                                            e
+                                        );
+                                    }
+                                });
+                            }
                         }
                     } else if state != item.last_state {
                         let old_state = item.last_state_actual;
@@ -278,65 +461,128 @@ pub fn handle_direction_pad(
                         );
                     }
                 } else if state.x != 0.0 || state.y != 0.0 {
-                    let pointer_id = mapping.pointer_id;
-                    let original_size: Vec2 = active_mapping.original_size.into();
-                    let original_pos: Vec2 = mapping.position.into();
-
-                    let random_offset =
-                        anchor_random_offset(mapping.max_offset_x, mapping.max_offset_y);
-                    let random_anchor = if mapping.enable_randomization {
-                        random_offset_vec2(original_pos, random_offset)
-                    } else {
-                        original_pos
-                    };
-
-                    // touch down
-                    ControlMsgHelper::send_touch(
-                        &cs_tx_res.0,
-                        MotionEventAction::Down,
-                        pointer_id,
-                        original_size,
-                        random_anchor,
-                    );
-
-                    // initial swipe (jitter during initial_duration, then slide to target)
-                    let strategy = if mapping.enable_randomization {
-                        SingleSwipeStrategy::ArcWithEaseOut
-                    } else {
-                        SingleSwipeStrategy::Linear
-                    };
-                    let swipe_start = if mapping.enable_randomization {
-                        random_anchor
-                    } else {
-                        original_pos
-                    };
-                    let initial_swipe_done = spawn_initial_swipe(
-                        &runtime,
-                        &cs_tx_res.0,
-                        pointer_id,
-                        original_size,
-                        swipe_start,
-                        swipe_start + state,
-                        mapping.initial_duration,
-                        DEFAULT_SWIPE_DURATION,
-                        strategy,
-                    );
-
-                    direction_pad_map.0.insert(
-                        key,
-                        DirectionPadItem {
-                            initial_swipe_done,
-                            pointer_id,
+                    if direction_pad_has_before_hook(mapping) {
+                        let version = lifecycle_state.0.begin_start(&key);
+                        let mapping = mapping.clone();
+                        let before_script_ast = mapping.script_hooks.before_script_ast.clone();
+                        let after_script_ast = mapping.script_hooks.after_script_ast.clone();
+                        let exec_ctx = make_mapping_execution_context(
+                            &cs_tx_res,
+                            &script_command_tx,
+                            &shared_state,
+                            mapping.id.clone(),
                             original_size,
-                            original_pos,
-                            random_anchor,
-                            last_state: state,
-                            last_state_actual: state,
-                            next_jitter_at: next_jitter_deadline(),
-                            current_jitter: Vec2::ZERO,
-                            enable_randomization: mapping.enable_randomization,
-                            random_offset,
-                            move_gen: Arc::new(AtomicU64::new(0)),
+                            cursor_pos.0,
+                            mask_size.0,
+                            mapping_state.get() == &MappingState::RawInput,
+                            cursor_state.get() == &CursorState::Fps,
+                        );
+                        let cs_tx = cs_tx_res.0.clone();
+                        runtime.spawn_background_task(move |mut task_ctx| async move {
+                            if let Err(e) = run_script_hook(&before_script_ast, &exec_ctx).await {
+                                task_ctx
+                                    .run_on_main_thread({
+                                        let key = key.clone();
+                                        move |main_ctx| {
+                                            main_ctx
+                                                .world
+                                                .resource_mut::<DirectionPadLifecycleState>()
+                                                .0
+                                                .cancel_start(&key, version);
+                                        }
+                                    })
+                                    .await;
+                                log::error!("[DirectionPad] script hook runtime error: {:?}", e);
+                                return;
+                            }
+
+                            let pending_release = task_ctx
+                                .run_on_main_thread(move |main_ctx| {
+                                    let start = main_ctx
+                                        .world
+                                        .resource_mut::<DirectionPadLifecycleState>()
+                                        .0
+                                        .finish_start(&key, version);
+                                    let pending_release = match start {
+                                        MappingLifecycleStart::Stale => return None,
+                                        MappingLifecycleStart::Ready { pending_release } => {
+                                            pending_release
+                                        }
+                                    };
+                                    if main_ctx.world.resource::<BlockDirectionPad>().0 {
+                                        return None;
+                                    }
+
+                                    if pending_release.is_some() {
+                                        apply_direction_pad_tap_without_swipe(
+                                            &ChannelSenderCS(cs_tx),
+                                            &mapping,
+                                            original_size,
+                                        );
+                                    } else {
+                                        let mut direction_pad_map = main_ctx
+                                            .world
+                                            .remove_resource::<DirectionPadMap>()
+                                            .expect("DirectionPadMap resource missing");
+                                        let runtime =
+                                            main_ctx.world.resource::<TokioTasksRuntime>();
+                                        apply_direction_pad_down(
+                                            &ChannelSenderCS(cs_tx),
+                                            runtime,
+                                            &mut direction_pad_map,
+                                            key,
+                                            &mapping,
+                                            original_size,
+                                            state,
+                                        );
+                                        main_ctx.world.insert_resource(direction_pad_map);
+                                    }
+
+                                    pending_release
+                                })
+                                .await;
+
+                            if let Some(release) = pending_release {
+                                if !after_script_ast.empty {
+                                    let mut after_exec_ctx = exec_ctx.clone();
+                                    after_exec_ctx.cursor_pos = release.cursor_pos;
+                                    after_exec_ctx.mask_size = release.mask_size;
+                                    after_exec_ctx.raw_input_flag = release.raw_input_flag;
+                                    after_exec_ctx.fps_mode_flag = release.fps_mode_flag;
+                                    if let Err(e) =
+                                        run_script_hook(&after_script_ast, &after_exec_ctx).await
+                                    {
+                                        log::error!(
+                                            "[DirectionPad] script hook runtime error: {:?}",
+                                            e
+                                        );
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        apply_direction_pad_down(
+                            &cs_tx_res,
+                            &runtime,
+                            &mut direction_pad_map,
+                            key,
+                            mapping,
+                            original_size,
+                            state,
+                        );
+                    }
+                } else if direction_pad_has_before_hook(mapping)
+                    && !mapping
+                        .bind
+                        .is_any_direction_active(&key_input, &mouse_input)
+                {
+                    lifecycle_state.0.record_early_release(
+                        &key,
+                        DirectionPadReleaseContext {
+                            cursor_pos: cursor_pos.0,
+                            mask_size: mask_size.0,
+                            raw_input_flag: mapping_state.get() == &MappingState::RawInput,
+                            fps_mode_flag: cursor_state.get() == &CursorState::Fps,
                         },
                     );
                 }

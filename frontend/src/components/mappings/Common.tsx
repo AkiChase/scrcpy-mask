@@ -29,7 +29,7 @@ import {
 } from "react";
 import IconButton from "../common/IconButton";
 
-import type { ButtonBinding } from "./mapping";
+import type { ButtonBinding, MappingScriptHooks } from "./mapping";
 import { EVENT_CODE_TO_KEY_CODE, KEY_NAMES } from "./keyCode";
 import { debounce } from "../../utils";
 import { useTranslation } from "react-i18next";
@@ -153,6 +153,57 @@ export function SettingMappingId({ id }: { id: string }) {
         {id}
       </Typography.Text>
     </ItemBox>
+  );
+}
+
+type SettingScriptHooksProps = {
+  scriptHooks: MappingScriptHooks;
+  onScriptHooksChange: (scriptHooks: MappingScriptHooks) => void;
+};
+
+export function SettingScriptHooks({
+  scriptHooks,
+  onScriptHooksChange,
+}: SettingScriptHooksProps) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <ItemBox
+        label={t("mappings.common.scriptHooks.before")}
+        tooltip={t("mappings.common.scriptHooks.beforeHint")}
+      >
+        <Input.TextArea
+          className="w-full font-mono"
+          value={scriptHooks.before_script}
+          placeholder={t("mappings.common.scriptHooks.beforePlaceholder")}
+          autoSize={{ minRows: 1, maxRows: 10 }}
+          onChange={(e) =>
+            onScriptHooksChange({
+              ...scriptHooks,
+              before_script: e.target.value,
+            })
+          }
+        />
+      </ItemBox>
+      <ItemBox
+        label={t("mappings.common.scriptHooks.after")}
+        tooltip={t("mappings.common.scriptHooks.afterHint")}
+      >
+        <Input.TextArea
+          className="w-full font-mono"
+          value={scriptHooks.after_script}
+          placeholder={t("mappings.common.scriptHooks.afterPlaceholder")}
+          autoSize={{ minRows: 1, maxRows: 10 }}
+          onChange={(e) =>
+            onScriptHooksChange({
+              ...scriptHooks,
+              after_script: e.target.value,
+            })
+          }
+        />
+      </ItemBox>
+    </>
   );
 }
 

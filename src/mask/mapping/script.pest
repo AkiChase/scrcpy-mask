@@ -6,7 +6,13 @@ LINE_END   = _{ NEWLINE | EOI }
 program  = { SOI ~ stmt* ~ EOI }
 stmt_end = { ";" }
 
-stmt = { (let_stmt | assign_stmt | if_stmt | while_stmt | expr_stmt) ~ stmt_end }
+stmt = {
+    (let_stmt | assign_stmt | expr_stmt) ~ stmt_end
+  | if_stmt
+  | while_stmt
+  | empty_stmt
+}
+empty_stmt = { stmt_end }
 
 let_stmt    = { "let" ~ ident ~ "=" ~ expr }
 assign_stmt = { ident ~ "=" ~ expr }
@@ -34,13 +40,13 @@ arg_list = { expr ~ ("," ~ expr)* }
 
 ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 
-// only integer
-number = @{ "-"? ~ ASCII_DIGIT+ }
+// only integer; unary minus is parsed by `prefix`
+number = @{ ASCII_DIGIT+ }
 
 boolean = { "true" | "false" }
 
 string = @{ "\"" ~ inner* ~ "\"" }
-inner  =  { escape | !("\"") ~ ANY }
+inner  =  { escape | !("\"" | "\\" | NEWLINE) ~ ANY }
 // \" \\ \n \t
 escape = @{
     "\\\""

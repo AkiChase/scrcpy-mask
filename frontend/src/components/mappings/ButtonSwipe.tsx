@@ -19,6 +19,7 @@ import {
   SettingModal,
   SettingNote,
   SettingPointerId,
+  SettingScriptHooks,
 } from "./Common";
 import { useTranslation } from "react-i18next";
 import { RollbackOutlined } from "@ant-design/icons";
@@ -498,6 +499,12 @@ function Setting({
         <SettingNote
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
+        />
+        <SettingScriptHooks
+          scriptHooks={config.script_hooks}
+          onScriptHooksChange={(script_hooks) =>
+            onConfigChange({ ...config, script_hooks })
+          }
         />
         <SettingFooter onDelete={onConfigDelete} onCopy={onConfigCopy} />
       </ItemBoxContainer>

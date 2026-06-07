@@ -3,6 +3,7 @@ pub mod cast_spell;
 pub mod config;
 pub mod cursor;
 pub mod direction_pad;
+pub mod executor;
 pub mod fire;
 pub mod observation;
 pub mod raw_input;

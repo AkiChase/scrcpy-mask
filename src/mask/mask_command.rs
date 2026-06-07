@@ -11,10 +11,11 @@ use crate::{
                 ActiveMappingConfig, MappingConfig, load_mapping_config, validate_mapping_config,
             },
             cursor::{CursorPosition, CursorState},
-            script_helper::{ScriptAST, ScriptRuntimeCommandSender},
+            script_helper::{ScriptAST, ScriptRuntimeCommandSender, ScriptSharedState},
         },
         ui::basic::TITLEBAR_HEIGHT,
     },
+    tokio_tasks::TokioTasksRuntime,
     utils::{ChannelReceiverM, ChannelSenderCS},
 };
 
@@ -64,7 +65,10 @@ pub fn handle_mask_command(
     m_rx: Res<ChannelReceiverM>,
     cs_tx_res: Res<ChannelSenderCS>,
     script_command_tx: Res<ScriptRuntimeCommandSender>,
+    shared_state: Res<ScriptSharedState>,
     cursor_pos: Res<CursorPosition>,
+    mapping_state: Res<State<MappingState>>,
+    cursor_state: Res<State<CursorState>>,
     mut window: Single<&mut Window>,
     mut next_mapping_state: ResMut<NextState<MappingState>>,
     mut next_cursor_state: ResMut<NextState<CursorState>>,
@@ -72,6 +76,7 @@ pub fn handle_mask_command(
     mut active_mapping: ResMut<ActiveMappingConfig>,
     mut mask_size: ResMut<MaskSize>,
     mut titlebar_state: ResMut<TitlebarState>,
+    runtime: ResMut<TokioTasksRuntime>,
 ) {
     for (msg, oneshot_tx) in m_rx.0.try_iter() {
         match msg {
@@ -180,21 +185,32 @@ pub fn handle_mask_command(
                 };
 
                 if let Some(mapping_config) = &active_mapping.0 {
-                    match ast.eval_script(
-                        &cs_tx_res.0,
-                        &script_command_tx.0,
-                        mapping_config.original_size.into(),
-                        cursor_pos.0,
-                        mask_size.0,
-                    ) {
-                        Err(e) => {
-                            oneshot_tx.send(Err(e.to_string())).unwrap();
-                            return;
-                        }
-                        Ok(_) => {
-                            oneshot_tx.send(Ok(String::new())).unwrap();
-                        }
-                    }
+                    let cs_tx = cs_tx_res.0.clone();
+                    let script_command_tx = script_command_tx.0.clone();
+                    let shared_state = shared_state.as_ref().clone();
+                    let original_size = mapping_config.original_size.into();
+                    let cursor_pos = cursor_pos.0;
+                    let mask_size = mask_size.0;
+                    let raw_input_flag = mapping_state.get() == &MappingState::RawInput;
+                    let fps_mode_flag = cursor_state.get() == &CursorState::Fps;
+                    runtime.spawn_background_task(move |_ctx| async move {
+                        let result = ast
+                            .eval_script(
+                                &cs_tx,
+                                &script_command_tx,
+                                &shared_state,
+                                "EvalScript",
+                                original_size,
+                                cursor_pos,
+                                mask_size,
+                                raw_input_flag,
+                                fps_mode_flag,
+                            )
+                            .await
+                            .map(|_| String::new())
+                            .map_err(|e| e.to_string());
+                        let _ = oneshot_tx.send(result);
+                    });
                 } else {
                     oneshot_tx
                         .send(Err(t!("mask.evalScriptnoMappingError").to_string()))

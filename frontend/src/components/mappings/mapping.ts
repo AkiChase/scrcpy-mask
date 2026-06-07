@@ -31,6 +31,18 @@ export type Position = {
 
 export type ButtonBinding = string[];
 
+export interface MappingScriptHooks {
+  before_script: string;
+  after_script: string;
+}
+
+export function defaultScriptHooks(): MappingScriptHooks {
+  return {
+    before_script: "",
+    after_script: "",
+  };
+}
+
 export function newMappingId(): string {
   if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
     const value = crypto.getRandomValues(new Uint32Array(1))[0];
@@ -50,6 +62,7 @@ export interface SingleTapConfig {
   position: Position;
   random_offset_x: number;
   random_offset_y: number;
+  script_hooks: MappingScriptHooks;
   sync: boolean;
   type: "SingleTap";
 }
@@ -64,6 +77,7 @@ export function newSingleTap(position: Position): SingleTapConfig {
     position,
     random_offset_x: default_random_offset,
     random_offset_y: default_random_offset,
+    script_hooks: defaultScriptHooks(),
     sync: false,
     type: "SingleTap",
   };
@@ -79,6 +93,7 @@ export interface RepeatTapConfig {
   position: Position;
   random_offset_x: number;
   random_offset_y: number;
+  script_hooks: MappingScriptHooks;
   type: "RepeatTap";
 }
 
@@ -93,6 +108,7 @@ export function newRepeatTap(position: Position): RepeatTapConfig {
     position,
     random_offset_x: default_random_offset,
     random_offset_y: default_random_offset,
+    script_hooks: defaultScriptHooks(),
     type: "RepeatTap",
   };
 }
@@ -111,6 +127,7 @@ export interface MultipleTapConfig {
   pointer_id: number;
   random_offset_x: number;
   random_offset_y: number;
+  script_hooks: MappingScriptHooks;
   type: "MultipleTap";
 }
 
@@ -129,6 +146,7 @@ export function newMultipleTap(position: Position): MultipleTapConfig {
     pointer_id: 1,
     random_offset_x: default_random_offset,
     random_offset_y: default_random_offset,
+    script_hooks: defaultScriptHooks(),
     type: "MultipleTap",
   };
 }
@@ -141,6 +159,7 @@ export interface SwipeConfig {
   note: string;
   pointer_id: number;
   positions: Position[];
+  script_hooks: MappingScriptHooks;
   type: "Swipe";
 }
 
@@ -153,6 +172,7 @@ export function newSwipe(position: Position): SwipeConfig {
     note: "",
     pointer_id: 1,
     positions: [position],
+    script_hooks: defaultScriptHooks(),
     type: "Swipe",
   };
 }
@@ -185,6 +205,7 @@ export interface DirectionPadConfig {
   note: string;
   pointer_id: number;
   position: Position;
+  script_hooks: MappingScriptHooks;
   type: "DirectionPad";
   up_boost_key: ButtonBinding | null;
   up_boost_scale: number;
@@ -207,6 +228,7 @@ export function newDirectionPad(position: Position): DirectionPadConfig {
     note: "",
     pointer_id: 2,
     position,
+    script_hooks: defaultScriptHooks(),
     type: "DirectionPad",
     up_boost_key: null,
     up_boost_scale: 2.0,
@@ -230,6 +252,7 @@ export interface MouseCastSpellConfig {
   random_offset_x: number;
   random_offset_y: number;
   release_mode: MouseCastReleaseMode;
+  script_hooks: MappingScriptHooks;
   type: "MouseCastSpell";
   vertical_scale_factor: number;
 }
@@ -253,6 +276,7 @@ export function newMouseCastSpell(
     random_offset_y: default_random_offset,
     initial_duration: 0,
     release_mode: "OnRelease",
+    script_hooks: defaultScriptHooks(),
     type: "MouseCastSpell",
     vertical_scale_factor: 10,
   };
@@ -273,6 +297,7 @@ export interface PadCastSpellConfig {
   random_offset_x: number;
   random_offset_y: number;
   release_mode: PadCastReleaseMode;
+  script_hooks: MappingScriptHooks;
   type: "PadCastSpell";
 }
 
@@ -296,6 +321,7 @@ export function newPadCastSpell(position: Position): PadCastSpellConfig {
     random_offset_x: default_random_offset,
     random_offset_y: default_random_offset,
     release_mode: "OnRelease",
+    script_hooks: defaultScriptHooks(),
     type: "PadCastSpell",
   };
 }
@@ -305,6 +331,7 @@ export interface CancelCastConfig {
   bind: ButtonBinding;
   note: string;
   position: Position;
+  script_hooks: MappingScriptHooks;
   type: "CancelCast";
 }
 
@@ -314,6 +341,7 @@ export function newCancelCast(position: Position): CancelCastConfig {
     bind: [],
     note: "",
     position,
+    script_hooks: defaultScriptHooks(),
     type: "CancelCast",
   };
 }
@@ -329,6 +357,7 @@ export interface ObservationConfig {
   random_offset_y: number;
   sensitivity_x: number;
   sensitivity_y: number;
+  script_hooks: MappingScriptHooks;
   type: "Observation";
 }
 
@@ -344,6 +373,7 @@ export function newObservation(position: Position): ObservationConfig {
     random_offset_y: default_random_offset,
     sensitivity_x: 0.8,
     sensitivity_y: 0.8,
+    script_hooks: defaultScriptHooks(),
     type: "Observation",
   };
 }
@@ -382,6 +412,7 @@ export interface FireConfig {
   random_offset_y: number;
   sensitivity_x: number;
   sensitivity_y: number;
+  script_hooks: MappingScriptHooks;
   type: "Fire";
 }
 
@@ -396,6 +427,7 @@ export function newFire(position: Position): FireConfig {
     random_offset_y: default_random_offset,
     sensitivity_x: 0.8,
     sensitivity_y: 0.8,
+    script_hooks: defaultScriptHooks(),
     type: "Fire",
   };
 }
@@ -450,6 +482,15 @@ function withDefaultRandomOffset(value?: number): number {
   return value ?? default_random_offset;
 }
 
+function withDefaultScriptHooks(
+  value?: Partial<MappingScriptHooks>
+): MappingScriptHooks {
+  return {
+    before_script: value?.before_script ?? "",
+    after_script: value?.after_script ?? "",
+  };
+}
+
 export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
   const usedIds = new Set<string>();
   return {
@@ -465,6 +506,7 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+            script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
         case "RepeatTap":
           return {
@@ -472,6 +514,7 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+            script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
         case "MultipleTap":
           return {
@@ -479,6 +522,13 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+            script_hooks: withDefaultScriptHooks(mapping.script_hooks),
+          };
+        case "Swipe":
+          return {
+            ...mapping,
+            id,
+            script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
         case "Fire":
           return {
@@ -486,6 +536,7 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+            script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
         case "Observation":
           return {
@@ -493,6 +544,7 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             id,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+            script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
         case "MouseCastSpell":
           return {
@@ -501,6 +553,7 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             initial_duration: mapping.initial_duration ?? 0,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+            script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
         case "DirectionPad":
           return {
@@ -508,6 +561,7 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             id,
             up_boost_key: mapping.up_boost_key ?? null,
             up_boost_scale: mapping.up_boost_scale ?? 1.0,
+            script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
         case "PadCastSpell":
           return {
@@ -516,9 +570,41 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             enable_randomization: mapping.enable_randomization ?? false,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+            script_hooks: withDefaultScriptHooks(mapping.script_hooks),
           };
+        case "CancelCast":
+          return {
+            ...mapping,
+            id,
+            script_hooks: withDefaultScriptHooks(mapping.script_hooks),
+          };
+        case "Fps":
+          {
+            const normalized = { ...mapping } as FpsConfig & {
+              script_hooks?: unknown;
+            };
+            delete normalized.script_hooks;
+            return {
+              ...normalized,
+              id,
+            };
+          }
+        case "RawInput":
+          {
+            const normalized = { ...mapping } as RawInputConfig & {
+              script_hooks?: unknown;
+            };
+            delete normalized.script_hooks;
+            return {
+              ...normalized,
+              id,
+            };
+          }
         default:
-          return { ...mapping, id };
+          return {
+            ...mapping,
+            id,
+          };
       }
     }),
   };

@@ -89,7 +89,15 @@
       "randomOffsetX": "Random offset X",
       "randomOffsetY": "Random offset Y",
       "randomOffsetXHint": "Random horizontal offset applied each activation, picked from [-offset, +offset]. Set to 0 to disable.",
-      "randomOffsetYHint": "Random vertical offset applied each activation, picked from [-offset, +offset]. Set to 0 to disable."
+      "randomOffsetYHint": "Random vertical offset applied each activation, picked from [-offset, +offset]. Set to 0 to disable.",
+      "scriptHooks": {
+        "before": "Before script",
+        "beforeHint": "Runs before this mapping action. Leave empty to skip. Scripts block the current mapping flow, so slow scripts can cause input latency or stuck mappings.",
+        "beforePlaceholder": "Script to run before the action",
+        "after": "After script",
+        "afterHint": "Runs after this mapping action. Leave empty to skip. Scripts block the current mapping flow, so slow scripts can cause input latency or stuck mappings.",
+        "afterPlaceholder": "Script to run after the action"
+      }
     },
     "singleTap": {
       "setting": {

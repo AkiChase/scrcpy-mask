@@ -16,20 +16,29 @@ use serde::{Deserialize, Serialize};
 use crate::{
     mask::{
         mapping::{
+            MappingState,
             binding::{ButtonBinding, ValidateMappingConfig},
-            config::ActiveMappingConfig,
+            config::{ActiveMappingConfig, BindMappingConfig, BindMappingType},
             cursor::{ActiveCursorFpsConfig, CursorPosition, CursorState, FPS_MARGIN},
+            executor::{
+                MappingLifecycleStart, MappingLifecycleState, make_mapping_execution_context,
+                run_script_hook,
+            },
+            script::{BindMappingScriptHooks, MappingScriptHooks},
+            script_helper::{ScriptRuntimeCommandSender, ScriptSharedState},
             utils::{ControlMsgHelper, Position, default_random_offset, random_offset_vec2},
         },
         mask_command::MaskSize,
     },
     scrcpy::constant::MotionEventAction,
+    tokio_tasks::TokioTasksRuntime,
     utils::ChannelSenderCS,
 };
 use tokio::sync::broadcast;
 
 pub fn fire_init(mut commands: Commands) {
     commands.insert_resource(ActiveFireMap::default());
+    commands.insert_resource(FireLifecycleState::default());
 }
 
 #[derive(Debug, Clone)]
@@ -100,20 +109,26 @@ pub fn enter_fps_mode(
 
 pub fn exit_fps_mode(
     cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
-    fps_config: &ActiveCursorFpsConfig,
+    fps_config: &mut ActiveCursorFpsConfig,
+    active_fire_map: &mut ActiveFireMap,
     next_state: &mut NextState<CursorState>,
     mask_size: Vec2,
     cursor_pos: Vec2,
-) {
-    ControlMsgHelper::send_touch(
-        cs_tx,
-        MotionEventAction::Up,
-        fps_config.pointer_id,
-        mask_size,
-        cursor_pos,
-    );
+) -> Vec<String> {
+    let released_fire_actions = release_active_fire(cs_tx, active_fire_map, mask_size);
+    if released_fire_actions.is_empty() {
+        ControlMsgHelper::send_touch(
+            cs_tx,
+            MotionEventAction::Up,
+            fps_config.pointer_id,
+            mask_size,
+            cursor_pos,
+        );
+    }
+    fps_config.ignore_fps_motion = false;
     next_state.set(CursorState::Normal);
     log::info!("[Cursor] {}", t!("mask.mapping.exitFpsMode"));
+    released_fire_actions
 }
 
 impl ValidateMappingConfig for MappingFps {
@@ -135,11 +150,16 @@ pub fn handle_fps(
     ineffable: Res<Ineffable>,
     active_mapping: Res<ActiveMappingConfig>,
     cs_tx_res: Res<ChannelSenderCS>,
+    script_command_tx: Res<ScriptRuntimeCommandSender>,
+    shared_state: Res<ScriptSharedState>,
     mut fps_config: ResMut<ActiveCursorFpsConfig>,
+    mut active_fire_map: ResMut<ActiveFireMap>,
+    mapping_state: Res<State<MappingState>>,
     state: Res<State<CursorState>>,
     mut next_state: ResMut<NextState<CursorState>>,
     cursor_pos: Res<CursorPosition>,
     mask_size: Res<MaskSize>,
+    runtime: ResMut<TokioTasksRuntime>,
 ) {
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {
@@ -158,12 +178,25 @@ pub fn handle_fps(
                             );
                         }
                         CursorState::Fps => {
-                            exit_fps_mode(
+                            let released_fire_actions = exit_fps_mode(
                                 &cs_tx_res.0,
-                                &fps_config,
+                                &mut fps_config,
+                                &mut active_fire_map,
                                 &mut next_state,
                                 mask_size.0,
                                 cursor_pos.0,
+                            );
+                            spawn_fire_after_hooks_for_external_release(
+                                released_fire_actions,
+                                active_mapping,
+                                &cs_tx_res,
+                                &script_command_tx,
+                                &shared_state,
+                                &runtime,
+                                cursor_pos.0,
+                                mask_size.0,
+                                mapping_state.get() == &MappingState::RawInput,
+                                true,
                             );
                         }
                     };
@@ -186,6 +219,7 @@ pub struct BindMappingFire {
     pub input_binding: InputBinding,
     pub random_offset_x: f32,
     pub random_offset_y: f32,
+    pub script_hooks: BindMappingScriptHooks,
 }
 
 impl From<MappingFire> for BindMappingFire {
@@ -201,6 +235,7 @@ impl From<MappingFire> for BindMappingFire {
             input_binding: ContinuousBinding::hold(value.bind).0,
             random_offset_x: value.random_offset_x,
             random_offset_y: value.random_offset_y,
+            script_hooks: value.script_hooks.into(),
         }
     }
 }
@@ -227,12 +262,98 @@ pub struct MappingFire {
         serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
     )]
     pub random_offset_y: f32,
+    #[serde(default)]
+    pub script_hooks: MappingScriptHooks,
 }
 
-impl ValidateMappingConfig for MappingFire {}
+impl ValidateMappingConfig for MappingFire {
+    fn validate(&self) -> Result<(), String> {
+        self.script_hooks.validate()
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct ActiveFireMap(HashMap<String, FireItem>);
+
+#[derive(Resource, Default)]
+pub struct FireLifecycleState(MappingLifecycleState<FireReleaseContext>);
+
+#[derive(Clone)]
+struct FireReleaseContext {
+    mask_size: Vec2,
+    cursor_pos: Vec2,
+    raw_input_flag: bool,
+    fps_mode_flag: bool,
+}
+
+fn release_active_fire(
+    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    active_map: &mut ActiveFireMap,
+    mask_size: Vec2,
+) -> Vec<String> {
+    let mut released_actions = Vec::with_capacity(active_map.0.len());
+    for (action, fire_item) in active_map.0.drain() {
+        ControlMsgHelper::send_touch(
+            cs_tx,
+            MotionEventAction::Up,
+            fire_item.pointer_id,
+            mask_size,
+            fire_item.current_pos,
+        );
+        released_actions.push(action);
+    }
+    released_actions
+}
+
+pub fn spawn_fire_after_hooks_for_external_release(
+    released_actions: Vec<String>,
+    active_mapping: &BindMappingConfig,
+    cs_tx_res: &ChannelSenderCS,
+    script_command_tx: &ScriptRuntimeCommandSender,
+    shared_state: &ScriptSharedState,
+    runtime: &TokioTasksRuntime,
+    cursor_pos: Vec2,
+    mask_size: Vec2,
+    raw_input_flag: bool,
+    fps_mode_flag: bool,
+) {
+    if released_actions.is_empty() {
+        return;
+    }
+
+    let original_size: Vec2 = active_mapping.original_size.into();
+    for released_action in released_actions {
+        let Some((_, BindMappingType::Fire(mapping))) = active_mapping
+            .mappings
+            .iter()
+            .find(|(action, _)| action.as_ref() == released_action)
+        else {
+            continue;
+        };
+
+        if mapping.script_hooks.after_script_ast.empty {
+            continue;
+        }
+
+        let after_script_ast = mapping.script_hooks.after_script_ast.clone();
+        let exec_ctx = make_mapping_execution_context(
+            cs_tx_res,
+            script_command_tx,
+            shared_state,
+            mapping.id.clone(),
+            original_size,
+            cursor_pos,
+            mask_size,
+            raw_input_flag,
+            fps_mode_flag,
+        );
+        runtime.spawn_background_task(move |_task_ctx| async move {
+            if let Err(e) = run_script_hook(&after_script_ast, &exec_ctx).await {
+                log::error!("[Fire] script hook runtime error: {:?}", e);
+            }
+        });
+    }
+}
 
 pub fn handle_fire_trigger(
     accumulated_motion: Res<AccumulatedMouseMotion>,
@@ -264,79 +385,298 @@ struct FireItem {
     sensitivity: Vec2,
 }
 
+fn fire_has_before_hook(mapping: &BindMappingFire) -> bool {
+    !mapping.script_hooks.before_script_ast.empty
+}
+
+fn fire_has_after_hook(mapping: &BindMappingFire) -> bool {
+    !mapping.script_hooks.after_script_ast.empty
+}
+
+fn apply_fire_begin(
+    cs_tx: &ChannelSenderCS,
+    fps_config: &mut ActiveCursorFpsConfig,
+    active_map: &mut ActiveFireMap,
+    action: String,
+    mapping: &BindMappingFire,
+    original_size: Vec2,
+    mask_size: Vec2,
+    cursor_pos: Vec2,
+) {
+    fps_config.ignore_fps_motion = true;
+    ControlMsgHelper::send_touch(
+        &cs_tx.0,
+        MotionEventAction::Up,
+        fps_config.pointer_id,
+        mask_size,
+        cursor_pos,
+    );
+
+    let original_pos: Vec2 = mapping.position.into();
+    let random_pos = random_offset_vec2(
+        original_pos,
+        Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
+    );
+    let sensitivity: Vec2 = (mapping.sensitivity_x, mapping.sensitivity_y).into();
+    let current_pos = random_pos / original_size * mask_size;
+
+    ControlMsgHelper::send_touch(
+        &cs_tx.0,
+        MotionEventAction::Down,
+        mapping.pointer_id,
+        original_size,
+        random_pos,
+    );
+    active_map.0.insert(
+        action,
+        FireItem {
+            current_pos,
+            pointer_id: mapping.pointer_id,
+            sensitivity,
+        },
+    );
+}
+
+fn apply_fire_end(
+    cs_tx: &ChannelSenderCS,
+    fps_config: &mut ActiveCursorFpsConfig,
+    active_map: &mut ActiveFireMap,
+    cursor_pos: &mut CursorPosition,
+    mask_size: Vec2,
+    action: &str,
+) -> bool {
+    if let Some(fire_item) = active_map.0.remove(action) {
+        ControlMsgHelper::send_touch(
+            &cs_tx.0,
+            MotionEventAction::Up,
+            fire_item.pointer_id,
+            mask_size,
+            fire_item.current_pos,
+        );
+        ControlMsgHelper::send_touch(
+            &cs_tx.0,
+            MotionEventAction::Down,
+            fps_config.pointer_id,
+            fps_config.original_size,
+            fps_config.original_pos,
+        );
+        cursor_pos.0 = fps_config.original_pos / fps_config.original_size * mask_size;
+        fps_config.ignore_fps_motion = false;
+        true
+    } else {
+        false
+    }
+}
+
 pub fn handle_fire(
     ineffable: Res<Ineffable>,
     active_mapping: Res<ActiveMappingConfig>,
     cs_tx_res: Res<ChannelSenderCS>,
+    script_command_tx: Res<ScriptRuntimeCommandSender>,
+    shared_state: Res<ScriptSharedState>,
+    mapping_state: Res<State<MappingState>>,
+    cursor_state: Res<State<CursorState>>,
+    runtime: ResMut<TokioTasksRuntime>,
     mut fps_config: ResMut<ActiveCursorFpsConfig>,
     mut active_map: ResMut<ActiveFireMap>,
     mut cursor_pos: ResMut<CursorPosition>,
     mask_size: Res<MaskSize>,
+    mut lifecycle_state: ResMut<FireLifecycleState>,
 ) {
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {
             if action.as_ref().starts_with("Fire") {
                 let mapping = mapping.as_ref_fire();
                 if ineffable.just_activated(action.ineff_continuous()) {
-                    // stop fps motion
-                    fps_config.ignore_fps_motion = true;
-                    // touch up fps
-                    ControlMsgHelper::send_touch(
-                        &cs_tx_res.0,
-                        MotionEventAction::Up,
-                        fps_config.pointer_id,
-                        mask_size.0,
-                        cursor_pos.0, // fps cursor pos
-                    );
                     let original_size: Vec2 = active_mapping.original_size.into();
-                    let original_pos: Vec2 = mapping.position.into();
-                    let random_pos = random_offset_vec2(
-                        original_pos,
-                        Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
-                    );
-                    let sensitivity: Vec2 = (mapping.sensitivity_x, mapping.sensitivity_y).into();
-                    let pointer_id = mapping.pointer_id;
-                    let current_pos = random_pos / original_size * mask_size.0;
-                    // touch down fire
-                    ControlMsgHelper::send_touch(
-                        &cs_tx_res.0,
-                        MotionEventAction::Down,
-                        pointer_id,
-                        original_size,
-                        random_pos,
-                    );
-                    // add to active_map
-                    active_map.0.insert(
-                        action.to_string(),
-                        FireItem {
-                            current_pos, // independent pos
-                            pointer_id,
-                            sensitivity,
-                        },
-                    );
-                } else if ineffable.just_deactivated(action.ineff_continuous()) {
-                    if let Some(fire_item) = active_map.0.remove(action.as_ref()) {
-                        // touch up fire
-                        ControlMsgHelper::send_touch(
-                            &cs_tx_res.0,
-                            MotionEventAction::Up,
-                            fire_item.pointer_id,
+                    if fire_has_before_hook(mapping) {
+                        let action = action.to_string();
+                        let version = lifecycle_state.0.begin_start(&action);
+                        let mapping = mapping.clone();
+                        let before_script_ast = mapping.script_hooks.before_script_ast.clone();
+                        let after_script_ast = mapping.script_hooks.after_script_ast.clone();
+                        let exec_ctx = make_mapping_execution_context(
+                            &cs_tx_res,
+                            &script_command_tx,
+                            &shared_state,
+                            mapping.id.clone(),
+                            original_size,
+                            cursor_pos.0,
                             mask_size.0,
-                            fire_item.current_pos,
+                            mapping_state.get() == &MappingState::RawInput,
+                            cursor_state.get() == &CursorState::Fps,
                         );
-                        // touch down fps center
-                        ControlMsgHelper::send_touch(
-                            &cs_tx_res.0,
-                            MotionEventAction::Down,
-                            fps_config.pointer_id,
-                            fps_config.original_size,
-                            fps_config.original_pos,
+                        let cs_tx = cs_tx_res.0.clone();
+                        runtime.spawn_background_task(move |mut task_ctx| async move {
+                            if let Err(e) = run_script_hook(&before_script_ast, &exec_ctx).await {
+                                task_ctx
+                                    .run_on_main_thread({
+                                        let action = action.clone();
+                                        move |main_ctx| {
+                                            main_ctx
+                                                .world
+                                                .resource_mut::<FireLifecycleState>()
+                                                .0
+                                                .cancel_start(&action, version);
+                                        }
+                                    })
+                                    .await;
+                                log::error!("[Fire] script hook runtime error: {:?}", e);
+                                return;
+                            }
+
+                            let pending_release = task_ctx
+                                .run_on_main_thread(move |main_ctx| {
+                                    let start = main_ctx
+                                        .world
+                                        .resource_mut::<FireLifecycleState>()
+                                        .0
+                                        .finish_start(&action, version);
+                                    let pending_release = match start {
+                                        MappingLifecycleStart::Stale => return None,
+                                        MappingLifecycleStart::Ready { pending_release } => {
+                                            pending_release
+                                        }
+                                    };
+                                    if main_ctx.world.resource::<State<CursorState>>().get()
+                                        != &CursorState::Fps
+                                    {
+                                        return None;
+                                    }
+
+                                    let current_cursor_pos =
+                                        main_ctx.world.resource::<CursorPosition>().0;
+                                    let current_mask_size = main_ctx.world.resource::<MaskSize>().0;
+                                    let mut active_map = main_ctx
+                                        .world
+                                        .remove_resource::<ActiveFireMap>()
+                                        .expect("ActiveFireMap resource missing");
+                                    {
+                                        let mut fps_config =
+                                            main_ctx.world.resource_mut::<ActiveCursorFpsConfig>();
+                                        apply_fire_begin(
+                                            &ChannelSenderCS(cs_tx.clone()),
+                                            &mut fps_config,
+                                            &mut active_map,
+                                            action.clone(),
+                                            &mapping,
+                                            original_size,
+                                            current_mask_size,
+                                            current_cursor_pos,
+                                        );
+                                    }
+                                    if let Some(release) = &pending_release {
+                                        if let Some(fire_item) = active_map.0.remove(&action) {
+                                            ControlMsgHelper::send_touch(
+                                                &cs_tx,
+                                                MotionEventAction::Up,
+                                                fire_item.pointer_id,
+                                                release.mask_size,
+                                                fire_item.current_pos,
+                                            );
+                                            let (
+                                                fps_pointer_id,
+                                                fps_original_size,
+                                                fps_original_pos,
+                                            ) = {
+                                                let mut fps_config = main_ctx
+                                                    .world
+                                                    .resource_mut::<ActiveCursorFpsConfig>(
+                                                );
+                                                fps_config.ignore_fps_motion = false;
+                                                (
+                                                    fps_config.pointer_id,
+                                                    fps_config.original_size,
+                                                    fps_config.original_pos,
+                                                )
+                                            };
+                                            ControlMsgHelper::send_touch(
+                                                &cs_tx,
+                                                MotionEventAction::Down,
+                                                fps_pointer_id,
+                                                fps_original_size,
+                                                fps_original_pos,
+                                            );
+                                            main_ctx.world.resource_mut::<CursorPosition>().0 =
+                                                fps_original_pos / fps_original_size
+                                                    * release.mask_size;
+                                        }
+                                    }
+                                    main_ctx.world.insert_resource(active_map);
+
+                                    pending_release
+                                })
+                                .await;
+
+                            if let Some(release) = pending_release {
+                                if !after_script_ast.empty {
+                                    let mut after_exec_ctx = exec_ctx.clone();
+                                    after_exec_ctx.cursor_pos = release.cursor_pos;
+                                    after_exec_ctx.mask_size = release.mask_size;
+                                    after_exec_ctx.raw_input_flag = release.raw_input_flag;
+                                    after_exec_ctx.fps_mode_flag = release.fps_mode_flag;
+                                    if let Err(e) =
+                                        run_script_hook(&after_script_ast, &after_exec_ctx).await
+                                    {
+                                        log::error!("[Fire] script hook runtime error: {:?}", e);
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        apply_fire_begin(
+                            &cs_tx_res,
+                            &mut fps_config,
+                            &mut active_map,
+                            action.to_string(),
+                            mapping,
+                            original_size,
+                            mask_size.0,
+                            cursor_pos.0,
                         );
-                        // set cursor pos to fps center
-                        cursor_pos.0 =
-                            fps_config.original_pos / fps_config.original_size * mask_size.0;
-                        // continue fps motion
-                        fps_config.ignore_fps_motion = false;
+                    }
+                } else if ineffable.just_deactivated(action.ineff_continuous()) {
+                    let released = apply_fire_end(
+                        &cs_tx_res,
+                        &mut fps_config,
+                        &mut active_map,
+                        &mut cursor_pos,
+                        mask_size.0,
+                        action.as_ref(),
+                    );
+
+                    if released {
+                        lifecycle_state.0.clear_pending(action.as_ref());
+                    } else if fire_has_before_hook(mapping) {
+                        lifecycle_state.0.record_early_release(
+                            action.as_ref(),
+                            FireReleaseContext {
+                                mask_size: mask_size.0,
+                                cursor_pos: cursor_pos.0,
+                                raw_input_flag: mapping_state.get() == &MappingState::RawInput,
+                                fps_mode_flag: cursor_state.get() == &CursorState::Fps,
+                            },
+                        );
+                    }
+
+                    if released && fire_has_after_hook(mapping) {
+                        let after_script_ast = mapping.script_hooks.after_script_ast.clone();
+                        let exec_ctx = make_mapping_execution_context(
+                            &cs_tx_res,
+                            &script_command_tx,
+                            &shared_state,
+                            mapping.id.clone(),
+                            active_mapping.original_size.into(),
+                            cursor_pos.0,
+                            mask_size.0,
+                            mapping_state.get() == &MappingState::RawInput,
+                            cursor_state.get() == &CursorState::Fps,
+                        );
+                        runtime.spawn_background_task(move |_task_ctx| async move {
+                            if let Err(e) = run_script_hook(&after_script_ast, &exec_ctx).await {
+                                log::error!("[Fire] script hook runtime error: {:?}", e);
+                            }
+                        });
                     }
                 }
             }

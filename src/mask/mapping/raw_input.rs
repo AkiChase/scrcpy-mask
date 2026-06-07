@@ -65,7 +65,11 @@ pub struct MappingRawInput {
     pub bind: ButtonBinding,
 }
 
-impl ValidateMappingConfig for MappingRawInput {}
+impl ValidateMappingConfig for MappingRawInput {
+    fn validate(&self) -> Result<(), String> {
+        Ok(())
+    }
+}
 
 pub fn enter_raw_input_mode(next_state: &mut NextState<MappingState>) {
     next_state.set(MappingState::RawInput);

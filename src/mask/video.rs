@@ -21,6 +21,8 @@ impl VideoAttributes {
         video_node: &mut Single<(&mut ImageNode, &mut VideoPlayer)>,
     ) -> &Handle<Image> {
         if self.image_handle.is_none() || self.width != width || self.height != height {
+            self.width = width;
+            self.height = height;
             let mut image = Image::new_fill(
                 Extent3d {
                     width,
