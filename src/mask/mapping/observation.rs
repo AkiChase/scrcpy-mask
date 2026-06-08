@@ -3,10 +3,11 @@ use std::collections::HashMap;
 use bevy::{
     ecs::{
         resource::Resource,
-        system::{Commands, Res, ResMut},
+        system::{Commands, Local, Res, ResMut, Single},
     },
     math::Vec2,
     state::state::State,
+    window::Window,
 };
 use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding};
 use serde::{Deserialize, Serialize};
@@ -17,7 +18,7 @@ use crate::{
             MappingState,
             binding::{ButtonBinding, ValidateMappingConfig},
             config::ActiveMappingConfig,
-            cursor::{CursorPosition, CursorState},
+            cursor::{CursorPosition, CursorState, NormalCursorCapture},
             executor::{
                 MappingLifecycleStart, MappingLifecycleState, make_mapping_execution_context,
                 run_script_hook,
@@ -122,6 +123,10 @@ struct ObservationReleaseContext {
     cursor_pos: Vec2,
     raw_input_flag: bool,
     fps_mode_flag: bool,
+}
+
+fn observation_capture_owner(action: &str) -> String {
+    format!("Observation:{action}")
 }
 
 struct ObservationItem {
@@ -242,6 +247,7 @@ pub fn handle_observation(
     runtime: ResMut<TokioTasksRuntime>,
     mut active_map: ResMut<ActiveObservationMap>,
     mut lifecycle_state: ResMut<ObservationLifecycleState>,
+    mut normal_cursor_capture: ResMut<NormalCursorCapture>,
 ) {
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {
@@ -249,6 +255,11 @@ pub fn handle_observation(
                 let mapping = mapping.as_ref_observation();
                 if ineffable.just_activated(action.ineff_continuous()) {
                     let original_size: Vec2 = active_mapping.original_size.into();
+                    let capture_owner = observation_capture_owner(action.as_ref());
+                    let capture_requested = cursor_state.get() != &CursorState::Fps;
+                    if capture_requested {
+                        normal_cursor_capture.request(capture_owner.clone());
+                    }
                     if observation_has_before_hook(mapping) {
                         let action = action.to_string();
                         let version = lifecycle_state.0.begin_start(&action);
@@ -267,6 +278,7 @@ pub fn handle_observation(
                             cursor_state.get() == &CursorState::Fps,
                         );
                         let cs_tx = cs_tx_res.0.clone();
+                        let error_capture_owner = capture_owner.clone();
                         runtime.spawn_background_task(move |mut task_ctx| async move {
                             if let Err(e) = run_script_hook(&before_script_ast, &exec_ctx).await {
                                 task_ctx
@@ -276,6 +288,12 @@ pub fn handle_observation(
                                             .resource_mut::<ObservationLifecycleState>()
                                             .0
                                             .cancel_start(&action, version);
+                                        if capture_requested {
+                                            main_ctx
+                                                .world
+                                                .resource_mut::<NormalCursorCapture>()
+                                                .release(&error_capture_owner);
+                                        }
                                     })
                                     .await;
                                 log::error!("[Observation] script hook runtime error: {:?}", e);
@@ -326,6 +344,10 @@ pub fn handle_observation(
                                             release.mask_size,
                                             release.cursor_pos,
                                         );
+                                        main_ctx
+                                            .world
+                                            .resource_mut::<NormalCursorCapture>()
+                                            .release(&observation_capture_owner(&action));
                                     }
 
                                     pending_release
@@ -372,6 +394,7 @@ pub fn handle_observation(
 
                     if released {
                         lifecycle_state.0.clear_pending(action.as_ref());
+                        normal_cursor_capture.release(&observation_capture_owner(action.as_ref()));
                     } else if observation_has_before_hook(mapping) {
                         lifecycle_state.0.record_early_release(
                             action.as_ref(),
@@ -382,6 +405,7 @@ pub fn handle_observation(
                                 fps_mode_flag: cursor_state.get() == &CursorState::Fps,
                             },
                         );
+                        normal_cursor_capture.release(&observation_capture_owner(action.as_ref()));
                     }
 
                     if released && observation_has_after_hook(mapping) {
@@ -406,6 +430,92 @@ pub fn handle_observation(
                     }
                 }
             }
+        }
+    }
+}
+
+pub fn handle_observation_focus_lost(
+    window: Single<&Window>,
+    mut was_focused: Local<bool>,
+    active_mapping: Res<ActiveMappingConfig>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    script_command_tx: Res<ScriptRuntimeCommandSender>,
+    shared_state: Res<ScriptSharedState>,
+    mask_size: Res<MaskSize>,
+    cursor_pos: Res<CursorPosition>,
+    mapping_state: Res<State<MappingState>>,
+    cursor_state: Res<State<CursorState>>,
+    runtime: ResMut<TokioTasksRuntime>,
+    mut active_map: ResMut<ActiveObservationMap>,
+    mut lifecycle_state: ResMut<ObservationLifecycleState>,
+    mut normal_cursor_capture: ResMut<NormalCursorCapture>,
+) {
+    let lost_focus = *was_focused && !window.focused;
+    *was_focused = window.focused;
+    if !lost_focus {
+        return;
+    }
+
+    let Some(active_mapping) = &active_mapping.0 else {
+        return;
+    };
+
+    let original_size: Vec2 = active_mapping.original_size.into();
+    let raw_input_flag = mapping_state.get() == &MappingState::RawInput;
+    let fps_mode_flag = cursor_state.get() == &CursorState::Fps;
+
+    let active_actions: Vec<String> = active_map.0.keys().cloned().collect();
+    for action in active_actions {
+        let released = apply_observation_up(
+            &cs_tx_res,
+            &mut active_map,
+            &action,
+            mask_size.0,
+            cursor_pos.0,
+        );
+        normal_cursor_capture.release(&observation_capture_owner(&action));
+        lifecycle_state.0.clear_pending(&action);
+
+        if !released {
+            continue;
+        }
+
+        let Some((_, mapping)) = active_mapping
+            .mappings
+            .iter()
+            .find(|(mapping_action, _)| mapping_action.as_ref() == action)
+        else {
+            continue;
+        };
+
+        let mapping = mapping.as_ref_observation();
+        if !observation_has_after_hook(mapping) {
+            continue;
+        }
+
+        let after_script_ast = mapping.script_hooks.after_script_ast.clone();
+        let exec_ctx = make_mapping_execution_context(
+            &cs_tx_res,
+            &script_command_tx,
+            &shared_state,
+            mapping.id.clone(),
+            original_size,
+            cursor_pos.0,
+            mask_size.0,
+            raw_input_flag,
+            fps_mode_flag,
+        );
+        runtime.spawn_background_task(move |_task_ctx| async move {
+            if let Err(e) = run_script_hook(&after_script_ast, &exec_ctx).await {
+                log::error!("[Observation] script hook runtime error: {:?}", e);
+            }
+        });
+    }
+
+    for action in active_mapping.mappings.keys() {
+        if action.as_ref().starts_with("Observation") {
+            lifecycle_state.0.cancel_pending(action.as_ref());
+            normal_cursor_capture.release(&observation_capture_owner(action.as_ref()));
         }
     }
 }

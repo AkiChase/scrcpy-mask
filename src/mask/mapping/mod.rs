@@ -25,7 +25,7 @@ use crate::{
             ActiveMappingConfig, BindMappingConfig, MappingAction, default_mapping_config,
             load_mapping_config, save_mapping_config,
         },
-        cursor::{CursorPlugins, CursorState},
+        cursor::{CursorFrameSet, CursorPlugins, CursorState},
     },
     utils::relate_to_data_path,
 };
@@ -46,6 +46,16 @@ impl Plugin for MappingPlugins {
             .insert_state(MappingState::Stop)
             .insert_resource(ActiveMappingConfig(None, String::new()))
             .register_input_action::<MappingAction>()
+            .configure_sets(
+                Update,
+                (
+                    CursorFrameSet::UpdatePosition,
+                    CursorFrameSet::HandleMappings,
+                    CursorFrameSet::ApplyCapture,
+                    CursorFrameSet::SyncVirtualCursor,
+                )
+                    .chain(),
+            )
             .add_systems(
                 Startup,
                 (
@@ -63,6 +73,7 @@ impl Plugin for MappingPlugins {
             .add_systems(
                 Update,
                 script_helper::handle_script_runtime_commands
+                    .in_set(CursorFrameSet::HandleMappings)
                     .run_if(not(in_state(MappingState::Stop))),
             )
             .add_systems(
@@ -76,11 +87,13 @@ impl Plugin for MappingPlugins {
                     direction_pad::handle_direction_pad,
                     cast_spell::handle_mouse_cast_spell,
                     cast_spell::handle_mouse_cast_spell_trigger,
+                    cast_spell::handle_mouse_cast_spell_focus_lost,
                     cast_spell::handle_cancel_cast,
                     cast_spell::handle_pad_cast_spell,
                     cast_spell::handle_pad_cast_spell_trigger,
                     observation::handle_observation,
                     observation::handle_observation_trigger,
+                    observation::handle_observation_focus_lost,
                     fire::handle_fps,
                     // raw input won't work in fps mode
                     raw_input::handle_raw_input.run_if(not(in_state(CursorState::Fps))),
@@ -90,6 +103,7 @@ impl Plugin for MappingPlugins {
                     script::handle_script,
                     script::handle_script_trigger,
                 )
+                    .in_set(CursorFrameSet::HandleMappings)
                     .run_if(in_state(MappingState::Normal)),
             )
             // handlers in raw input mode
@@ -99,6 +113,7 @@ impl Plugin for MappingPlugins {
                     raw_input::handle_raw_input_trigger,
                     raw_input::handle_exit_raw_input_mode,
                 )
+                    .in_set(CursorFrameSet::HandleMappings)
                     .run_if(
                         in_state(MappingState::RawInput).and_then(not(in_state(CursorState::Fps))),
                     ),

@@ -199,6 +199,13 @@ impl<ReleaseContext> MappingLifecycleState<ReleaseContext> {
         self.pending_releases.remove(action);
     }
 
+    pub fn cancel_pending(&mut self, action: &str) {
+        let version = self.versions.entry(action.to_string()).or_default();
+        *version = version.wrapping_add(1);
+        self.pending_starts.remove(action);
+        self.pending_releases.remove(action);
+    }
+
     fn current_version(&self, action: &str) -> u64 {
         self.versions.get(action).copied().unwrap_or_default()
     }

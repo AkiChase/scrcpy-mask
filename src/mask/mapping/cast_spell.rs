@@ -10,10 +10,11 @@ use crate::tokio_tasks::TokioTasksRuntime;
 use bevy::{
     ecs::{
         resource::Resource,
-        system::{Commands, Res, ResMut},
+        system::{Commands, Local, Res, ResMut, Single},
     },
     math::Vec2,
     state::state::State,
+    window::Window,
 };
 use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding, PulseBinding};
 use serde::{Deserialize, Serialize};
@@ -24,7 +25,7 @@ use crate::{
             MappingState,
             binding::{ButtonBinding, DirectionBinding, ValidateMappingConfig},
             config::{ActiveMappingConfig, BindMappingConfig, BindMappingType, MappingAction},
-            cursor::{CursorPosition, CursorState},
+            cursor::{CursorPosition, CursorState, NormalCursorCapture},
             direction_pad::{BlockDirectionPad, DirectionPadMap},
             executor::{
                 MappingExecutionContext, MappingExecutionError, MappingLifecycleStart,
@@ -287,6 +288,19 @@ struct CastSpellReleaseContext {
     fps_mode_flag: bool,
 }
 
+fn mouse_cast_capture_owner(action: &str) -> String {
+    format!("MouseCastSpell:{action}")
+}
+
+fn mouse_cast_should_capture(
+    mapping: &BindMappingMouseCastSpell,
+    cursor_state: CursorState,
+) -> bool {
+    cursor_state != CursorState::Fps
+        && !mapping.cast_no_direction
+        && !matches!(mapping.release_mode, MouseCastReleaseMode::OnPress)
+}
+
 fn mouse_cast_has_before_hook(mapping: &BindMappingMouseCastSpell) -> bool {
     !mapping.script_hooks.before_script_ast.empty
 }
@@ -431,6 +445,7 @@ fn start_mouse_cast_after_before(
     runtime: &TokioTasksRuntime,
     active_cast: &mut ActiveCastSpell,
     block_direction_pad: &mut BlockDirectionPad,
+    mut normal_cursor_capture: Option<&mut NormalCursorCapture>,
     script_command_tx: &ScriptRuntimeCommandSender,
     shared_state: &ScriptSharedState,
     action: String,
@@ -453,6 +468,11 @@ fn start_mouse_cast_after_before(
         raw_input_flag,
         fps_mode_flag,
     );
+    if let Some(released_key) = released_key.as_deref()
+        && let Some(capture) = normal_cursor_capture.as_mut()
+    {
+        capture.release(&mouse_cast_capture_owner(released_key));
+    }
     if released_key.as_deref() == Some(action.as_str()) {
         return false;
     }
@@ -611,6 +631,7 @@ pub fn handle_mouse_cast_spell(
     mut active_cast: ResMut<ActiveCastSpell>,
     mut block_direction_pad: ResMut<BlockDirectionPad>,
     mut lifecycle_state: ResMut<MouseCastSpellLifecycleState>,
+    mut normal_cursor_capture: ResMut<NormalCursorCapture>,
 ) {
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {
@@ -619,6 +640,11 @@ pub fn handle_mouse_cast_spell(
                 if ineffable.just_activated(action.ineff_continuous()) {
                     let cur_cursor_pos = cursor_pos.0;
                     let cur_mask_size = mask_size.0;
+                    let capture_owner = mouse_cast_capture_owner(action.as_ref());
+                    let capture_requested = mouse_cast_should_capture(mapping, *cursor_state.get());
+                    if capture_requested {
+                        normal_cursor_capture.request(capture_owner.clone());
+                    }
                     if mouse_cast_has_before_hook(mapping) {
                         let action = action.to_string();
                         let version = lifecycle_state.0.begin_start(&action);
@@ -640,6 +666,8 @@ pub fn handle_mouse_cast_spell(
                         let shared_state = shared_state.clone();
                         let raw_input_flag = mapping_state.get() == &MappingState::RawInput;
                         let fps_mode_flag = cursor_state.get() == &CursorState::Fps;
+                        let error_capture_owner = capture_owner.clone();
+                        let start_capture_owner = capture_owner.clone();
                         runtime.spawn_background_task(move |mut task_ctx| async move {
                             if let Err(e) = run_script_hook(&before_script_ast, &exec_ctx).await {
                                 task_ctx
@@ -651,6 +679,12 @@ pub fn handle_mouse_cast_spell(
                                                 .resource_mut::<MouseCastSpellLifecycleState>()
                                                 .0
                                                 .cancel_start(&action, version);
+                                            if capture_requested {
+                                                main_ctx
+                                                    .world
+                                                    .resource_mut::<NormalCursorCapture>()
+                                                    .release(&error_capture_owner);
+                                            }
                                         }
                                     })
                                     .await;
@@ -672,6 +706,16 @@ pub fn handle_mouse_cast_spell(
                                         }
                                     };
 
+                                    let start_mask_size = pending_release
+                                        .as_ref()
+                                        .map(|release| release.mask_size)
+                                        .unwrap_or_else(|| main_ctx.world.resource::<MaskSize>().0);
+                                    let start_cursor_pos = pending_release
+                                        .as_ref()
+                                        .map(|release| release.cursor_pos)
+                                        .unwrap_or_else(|| {
+                                            main_ctx.world.resource::<CursorPosition>().0
+                                        });
                                     let active_mapping = main_ctx
                                         .world
                                         .resource::<ActiveMappingConfig>()
@@ -687,26 +731,34 @@ pub fn handle_mouse_cast_spell(
                                         .world
                                         .remove_resource::<BlockDirectionPad>()
                                         .expect("BlockDirectionPad resource missing");
+                                    let mut normal_cursor_capture = main_ctx
+                                        .world
+                                        .remove_resource::<NormalCursorCapture>()
+                                        .expect("NormalCursorCapture resource missing");
                                     {
                                         let runtime =
                                             main_ctx.world.resource::<TokioTasksRuntime>();
-                                        start_mouse_cast_after_before(
+                                        let started = start_mouse_cast_after_before(
                                             &cs_tx,
                                             runtime,
                                             &mut active_cast,
                                             &mut block_direction_pad,
+                                            Some(&mut normal_cursor_capture),
                                             &script_command_tx,
                                             &shared_state,
                                             action.clone(),
                                             &mapping,
                                             active_mapping.original_size.into(),
-                                            cur_mask_size,
-                                            cur_cursor_pos,
+                                            start_mask_size,
+                                            start_cursor_pos,
                                             raw_input_flag,
                                             fps_mode_flag,
                                         );
+                                        if !started && capture_requested {
+                                            normal_cursor_capture.release(&start_capture_owner);
+                                        }
                                         if let Some(release) = pending_release {
-                                            release_active_cast_and_spawn_after(
+                                            let released_key = release_active_cast_and_spawn_after(
                                                 &cs_tx,
                                                 runtime,
                                                 &mut active_cast,
@@ -718,19 +770,26 @@ pub fn handle_mouse_cast_spell(
                                                 release.raw_input_flag,
                                                 release.fps_mode_flag,
                                             );
+                                            if let Some(released_key) = released_key {
+                                                normal_cursor_capture.release(
+                                                    &mouse_cast_capture_owner(&released_key),
+                                                );
+                                            }
                                         }
                                     }
                                     main_ctx.world.insert_resource(active_cast);
                                     main_ctx.world.insert_resource(block_direction_pad);
+                                    main_ctx.world.insert_resource(normal_cursor_capture);
                                 })
                                 .await;
                         });
                     } else {
-                        start_mouse_cast_after_before(
+                        let started = start_mouse_cast_after_before(
                             &cs_tx_res.0,
                             &runtime,
                             &mut active_cast,
                             &mut block_direction_pad,
+                            Some(&mut normal_cursor_capture),
                             &script_command_tx,
                             &shared_state,
                             action.to_string(),
@@ -741,6 +800,9 @@ pub fn handle_mouse_cast_spell(
                             mapping_state.get() == &MappingState::RawInput,
                             cursor_state.get() == &CursorState::Fps,
                         );
+                        if !started && capture_requested {
+                            normal_cursor_capture.release(&capture_owner);
+                        }
                     }
                 } else if ineffable.just_deactivated(action.ineff_continuous()) {
                     if let MouseCastReleaseMode::OnRelease = mapping.release_mode {
@@ -762,6 +824,8 @@ pub fn handle_mouse_cast_spell(
                                 cursor_state.get() == &CursorState::Fps,
                             );
                             lifecycle_state.0.clear_pending(action.as_ref());
+                            normal_cursor_capture
+                                .release(&mouse_cast_capture_owner(action.as_ref()));
                         } else if mouse_cast_has_before_hook(mapping) {
                             lifecycle_state.0.record_early_release(
                                 action.as_ref(),
@@ -772,9 +836,62 @@ pub fn handle_mouse_cast_spell(
                                     fps_mode_flag: cursor_state.get() == &CursorState::Fps,
                                 },
                             );
+                            normal_cursor_capture
+                                .release(&mouse_cast_capture_owner(action.as_ref()));
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+pub fn handle_mouse_cast_spell_focus_lost(
+    window: Single<&Window>,
+    mut was_focused: Local<bool>,
+    active_mapping: Res<ActiveMappingConfig>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    script_command_tx: Res<ScriptRuntimeCommandSender>,
+    shared_state: Res<ScriptSharedState>,
+    cursor_pos: Res<CursorPosition>,
+    mask_size: Res<MaskSize>,
+    mapping_state: Res<State<MappingState>>,
+    cursor_state: Res<State<CursorState>>,
+    runtime: ResMut<TokioTasksRuntime>,
+    mut active_cast: ResMut<ActiveCastSpell>,
+    mut block_direction_pad: ResMut<BlockDirectionPad>,
+    mut lifecycle_state: ResMut<MouseCastSpellLifecycleState>,
+    mut normal_cursor_capture: ResMut<NormalCursorCapture>,
+) {
+    let lost_focus = *was_focused && !window.focused;
+    *was_focused = window.focused;
+    if !lost_focus {
+        return;
+    }
+
+    if active_cast.0.as_ref().is_some_and(|cast| cast.mouse_flag)
+        && let Some(released_key) = release_active_cast_and_spawn_after(
+            &cs_tx_res.0,
+            &runtime,
+            &mut active_cast,
+            &mut block_direction_pad,
+            &script_command_tx,
+            &shared_state,
+            cursor_pos.0,
+            mask_size.0,
+            mapping_state.get() == &MappingState::RawInput,
+            cursor_state.get() == &CursorState::Fps,
+        )
+    {
+        normal_cursor_capture.release(&mouse_cast_capture_owner(&released_key));
+        lifecycle_state.0.clear_pending(&released_key);
+    }
+
+    if let Some(active_mapping) = &active_mapping.0 {
+        for action in active_mapping.mappings.keys() {
+            if action.as_ref().starts_with("MouseCastSpell") {
+                lifecycle_state.0.cancel_pending(action.as_ref());
+                normal_cursor_capture.release(&mouse_cast_capture_owner(action.as_ref()));
             }
         }
     }
