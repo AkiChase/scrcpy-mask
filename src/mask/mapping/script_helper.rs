@@ -14,11 +14,12 @@ use bevy::{
     math::Vec2,
     state::state::{NextState, State},
 };
+use pest::error::LineColLocation;
 use pest::iterators::Pair;
 use pest::{Parser, Span};
 use pest_derive::Parser;
 use rust_i18n::t;
-use serde::de::DeserializeOwned;
+use serde::{Serialize, de::DeserializeOwned};
 use tokio::sync::{broadcast, oneshot};
 
 use crate::mask::mapping::utils::{
@@ -710,13 +711,49 @@ impl ScriptAST {
         Ok(ast)
     }
 
+    pub fn validate_source(script: &str) -> Result<(), String> {
+        Self::new(script).map(|_| ())
+    }
+
+    pub fn validate_diagnostics(script: &str) -> Vec<ScriptDiagnostic> {
+        let normalized_script = normalize_script_semicolons(script);
+        let program_pair = match ScriptParser::parse(Rule::program, &normalized_script) {
+            Ok(mut pairs) => match pairs.next() {
+                Some(pair) => pair,
+                None => {
+                    return vec![ScriptDiagnostic::error(
+                        t!("mask.mapping.noProgramFound").to_string(),
+                        SourceSpan::point_at_start(),
+                    )];
+                }
+            },
+            Err(err) => {
+                return vec![ScriptDiagnostic::from_pest_error(err)];
+            }
+        };
+
+        let mut ast = ScriptAST::default();
+        if script.is_empty() {
+            return Vec::new();
+        }
+
+        ast.script = script.to_string();
+        ast.program = ast.parse_program(program_pair);
+        ast.program.errors.extend(ast.validate_program());
+        ast.program
+            .errors
+            .iter()
+            .map(ScriptDiagnostic::from)
+            .collect()
+    }
+
     fn validate_program(&self) -> Vec<ScriptError> {
         let mut analyzer = ScriptAnalyzer::new(&self.script);
         analyzer.analyze_program(&self.program);
         analyzer.errors
     }
 
-    pub async fn eval_script(
+    pub async fn run_script(
         &self,
         cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
         script_command_tx: &crossbeam_channel::Sender<ScriptRuntimeCommand>,
@@ -2659,12 +2696,24 @@ async fn paste_text_func(
     execute_script_action(source, span, ctx, ScriptAction::PasteText { text }).await
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SourceSpan {
     pub start_line: usize,
     pub start_col: usize,
     pub end_line: usize,
     pub end_col: usize,
+}
+
+impl SourceSpan {
+    fn point_at_start() -> Self {
+        Self {
+            start_line: 1,
+            start_col: 1,
+            end_line: 1,
+            end_col: 2,
+        }
+    }
 }
 
 impl<'i> From<Span<'i>> for SourceSpan {
@@ -2677,6 +2726,65 @@ impl<'i> From<Span<'i>> for SourceSpan {
             end_line,
             end_col,
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptDiagnostic {
+    pub severity: ScriptDiagnosticSeverity,
+    pub message: String,
+    pub span: SourceSpan,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ScriptDiagnosticSeverity {
+    Error,
+}
+
+impl ScriptDiagnostic {
+    fn error(message: String, span: SourceSpan) -> Self {
+        Self {
+            severity: ScriptDiagnosticSeverity::Error,
+            message,
+            span,
+        }
+    }
+
+    fn from_pest_error(err: pest::error::Error<Rule>) -> Self {
+        let span = match err.line_col {
+            LineColLocation::Pos((line, col)) => SourceSpan {
+                start_line: line,
+                start_col: col,
+                end_line: line,
+                end_col: col + 1,
+            },
+            LineColLocation::Span((start_line, start_col), (end_line, end_col)) => {
+                let min_end_col = if start_line == end_line {
+                    start_col + 1
+                } else {
+                    1
+                };
+                SourceSpan {
+                    start_line,
+                    start_col,
+                    end_line,
+                    end_col: end_col.max(min_end_col),
+                }
+            }
+        };
+
+        Self::error(
+            format!("{}\n{}", t!("mask.mapping.parseScriptFailed"), err),
+            span,
+        )
+    }
+}
+
+impl From<&ScriptError> for ScriptDiagnostic {
+    fn from(error: &ScriptError) -> Self {
+        Self::error(error.message.clone(), error.span)
     }
 }
 

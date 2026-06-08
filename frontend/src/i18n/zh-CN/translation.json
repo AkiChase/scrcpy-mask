@@ -97,6 +97,11 @@
         "after": "后置脚本",
         "afterHint": "在该映射动作执行后运行。留空则跳过。脚本会阻塞当前映射流程，耗时脚本可能导致输入延迟或映射卡住。",
         "afterPlaceholder": "动作执行后运行的脚本"
+      },
+      "scriptEditor": {
+        "checking": "正在检查脚本...",
+        "run": "运行脚本",
+        "runResult": "运行结果"
       }
     },
     "singleTap": {

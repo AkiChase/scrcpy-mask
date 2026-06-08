@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MappingUpdater, ScriptConfig } from "./mapping";
-import { Flex, Input, InputNumber, Modal, Tooltip, Typography } from "antd";
+import { Flex, InputNumber, Tooltip, Typography } from "antd";
 import {
   mappingButtonDragFactory,
   mappingButtonPresetStyle,
@@ -16,12 +16,8 @@ import {
   SettingNote,
 } from "./Common";
 import { useTranslation } from "react-i18next";
-import IconButton from "../common/IconButton";
-import { PlayCircleOutlined } from "@ant-design/icons";
-import { useDispatch } from "react-redux";
-import { setIsLoading } from "../../store/other";
-import { requestPost } from "../../utils";
-import { IconFont, useMessageContext } from "../../hooks";
+import { IconFont } from "../../hooks";
+import { ScriptEditor } from "./ScriptEditor";
 
 const PRESET_STYLE = mappingButtonPresetStyle(52);
 
@@ -137,42 +133,9 @@ function Setting({
   onConfigCopy: () => void;
 }) {
   const { t } = useTranslation();
-  const dispatch = useDispatch();
-  const messageApi = useMessageContext();
-
-  const [errorMsg, setErrorMsg] = useState("");
-  const [open, setOpen] = useState(false);
-
-  async function run_script(script: string) {
-    dispatch(setIsLoading(true));
-    try {
-      const res = await requestPost("/api/device/control/eval_script", {
-        script,
-      });
-      messageApi?.success(res.message);
-    } catch (error: any) {
-      setErrorMsg(error);
-      setOpen(true);
-    }
-    dispatch(setIsLoading(false));
-  }
 
   return (
     <div>
-      <Modal
-        title={t("mappings.script.setting.result")}
-        className="min-w-50vw"
-        open={open}
-        onCancel={() => setOpen(false)}
-        footer={null}
-      >
-        <Input.TextArea
-          className="font-mono"
-          value={errorMsg}
-          readOnly
-          autoSize
-        />
-      </Modal>
       <h1 className="title-with-line">{t("mappings.script.setting.title")}</h1>
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <SettingMappingId id={config.id} />
@@ -191,75 +154,42 @@ function Setting({
           />
         </ItemBox>
         <ItemBox
-          label={
-            <Flex className="w-full" align="center" justify="space-between">
-              <span>{t("mappings.script.setting.pressed_script")}</span>
-              <IconButton
-                tooltip={t("mappings.script.setting.run_script")}
-                icon={<PlayCircleOutlined />}
-                onClick={() => run_script(config.pressed_script)}
-              />
-            </Flex>
-          }
+          label={t("mappings.script.setting.pressed_script")}
           tooltip={t("mappings.script.setting.pressedScriptHint")}
         >
-          <Input.TextArea
-            className="w-full font-mono"
+          <ScriptEditor
             value={config.pressed_script}
             placeholder={t(
               "mappings.script.setting.pressed_script_placeholder",
             )}
-            autoSize={{ minRows: 1, maxRows: 10 }}
-            onChange={(e) =>
-              onConfigChange({ ...config, pressed_script: e.target.value })
+            onChange={(value) =>
+              onConfigChange({ ...config, pressed_script: value })
             }
           />
         </ItemBox>
         <ItemBox
-          label={
-            <Flex className="w-full" align="center" justify="space-between">
-              <span>{t("mappings.script.setting.held_script")}</span>
-              <IconButton
-                tooltip={t("mappings.script.setting.run_script")}
-                icon={<PlayCircleOutlined />}
-                onClick={() => run_script(config.held_script)}
-              />
-            </Flex>
-          }
+          label={t("mappings.script.setting.held_script")}
           tooltip={t("mappings.script.setting.heldScriptHint")}
         >
-          <Input.TextArea
-            className="w-full font-mono"
+          <ScriptEditor
             value={config.held_script}
             placeholder={t("mappings.script.setting.held_script_placeholder")}
-            autoSize={{ minRows: 1, maxRows: 10 }}
-            onChange={(e) =>
-              onConfigChange({ ...config, held_script: e.target.value })
+            onChange={(value) =>
+              onConfigChange({ ...config, held_script: value })
             }
           />
         </ItemBox>
         <ItemBox
-          label={
-            <Flex className="w-full" align="center" justify="space-between">
-              <span>{t("mappings.script.setting.released_script")}</span>
-              <IconButton
-                tooltip={t("mappings.script.setting.run_script")}
-                icon={<PlayCircleOutlined />}
-                onClick={() => run_script(config.released_script)}
-              />
-            </Flex>
-          }
+          label={t("mappings.script.setting.released_script")}
           tooltip={t("mappings.script.setting.releasedScriptHint")}
         >
-          <Input.TextArea
-            className="w-full font-mono"
+          <ScriptEditor
             value={config.released_script}
             placeholder={t(
               "mappings.script.setting.released_script_placeholder",
             )}
-            autoSize={{ minRows: 1, maxRows: 10 }}
-            onChange={(e) =>
-              onConfigChange({ ...config, released_script: e.target.value })
+            onChange={(value) =>
+              onConfigChange({ ...config, released_script: value })
             }
           />
         </ItemBox>

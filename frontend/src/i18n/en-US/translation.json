@@ -97,6 +97,11 @@
         "after": "After script",
         "afterHint": "Runs after this mapping action. Leave empty to skip. Scripts block the current mapping flow, so slow scripts can cause input latency or stuck mappings.",
         "afterPlaceholder": "Script to run after the action"
+      },
+      "scriptEditor": {
+        "checking": "Checking script...",
+        "run": "Run script",
+        "runResult": "Running result"
       }
     },
     "singleTap": {

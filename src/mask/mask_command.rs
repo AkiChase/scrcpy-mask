@@ -7,9 +7,7 @@ use crate::{
     mask::{
         mapping::{
             MappingState,
-            config::{
-                ActiveMappingConfig, MappingConfig, load_mapping_config, validate_mapping_config,
-            },
+            config::{ActiveMappingConfig, load_mapping_config},
             cursor::{CursorPosition, CursorState},
             script_helper::{ScriptAST, ScriptRuntimeCommandSender, ScriptSharedState},
         },
@@ -34,14 +32,11 @@ pub enum MaskCommand {
         connect: bool,
     },
     GetActiveMapping,
-    ValidateMappingConfig {
-        config: MappingConfig,
-    },
     GetScaleFactor,
     LoadAndActivateMappingConfig {
         file_name: String,
     },
-    EvalScript {
+    RunScript {
         script: String,
     },
     ToggleTitlebar,
@@ -152,16 +147,6 @@ pub fn handle_mask_command(
             MaskCommand::GetActiveMapping => {
                 oneshot_tx.send(Ok(active_mapping.1.clone())).unwrap();
             }
-            MaskCommand::ValidateMappingConfig { config } => {
-                match validate_mapping_config(&config) {
-                    Ok(_) => {
-                        oneshot_tx.send(Ok(String::new())).unwrap();
-                    }
-                    Err(err) => {
-                        oneshot_tx.send(Err(err)).unwrap();
-                    }
-                }
-            }
             MaskCommand::GetScaleFactor => {
                 oneshot_tx
                     .send(Ok(window.resolution.scale_factor().to_string()))
@@ -185,7 +170,7 @@ pub fn handle_mask_command(
                     }
                 }
             }
-            MaskCommand::EvalScript { script } => {
+            MaskCommand::RunScript { script } => {
                 let ast = match ScriptAST::new(&script) {
                     Err(e) => {
                         oneshot_tx.send(Err(e)).unwrap();
@@ -205,11 +190,11 @@ pub fn handle_mask_command(
                     let fps_mode_flag = cursor_state.get() == &CursorState::Fps;
                     runtime.spawn_background_task(move |_ctx| async move {
                         let result = ast
-                            .eval_script(
+                            .run_script(
                                 &cs_tx,
                                 &script_command_tx,
                                 &shared_state,
-                                "EvalScript",
+                                "RunScript",
                                 original_size,
                                 cursor_pos,
                                 mask_size,
@@ -223,7 +208,7 @@ pub fn handle_mask_command(
                     });
                 } else {
                     oneshot_tx
-                        .send(Err(t!("mask.evalScriptnoMappingError").to_string()))
+                        .send(Err(t!("mask.runScriptnoMappingError").to_string()))
                         .unwrap();
                 }
             }

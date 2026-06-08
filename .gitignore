@@ -8,3 +8,5 @@ ffmpeg-7.1.2
 assets/lib
 .claude
 .codex
+AGENTS.md
+CLAUDE.md

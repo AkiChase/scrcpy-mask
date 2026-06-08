@@ -67,10 +67,13 @@
       "failedRemoveScreenshot": "为设备删除截图文件失败",
       "noDeviceControlled": "无受控设备",
       "setDisplayPowerSuccess": "成功设置所有受控设备的显示开关",
-      "evalScriptSuccess": "脚本执行成功",
-      "evalScriptError": "脚本执行失败",
       "startingScrcpyApp": "启动 scrcpy 应用...",
       "sendKeySuccess": "成功发送按键到所有受控设备"
+    },
+    "script": {
+      "validateScriptSuccess": "脚本语法检查通过",
+      "runScriptSuccess": "脚本执行成功",
+      "runScriptError": "脚本执行失败"
     },
     "config": {
       "getLocalConfigSuccess": "成功获取本地配置",
@@ -219,7 +222,7 @@
       "failedToParseTo": "无法解析为",
       "unknownMouseButton": "未知的鼠标按键类型"
     },
-    "evalScriptnoMappingError": "无法执行脚本：不存在激活的映射，无法获取映射配置尺寸",
+    "runScriptnoMappingError": "无法执行脚本：不存在激活的映射，无法获取映射配置尺寸",
     "video": {
       "noDecoder": "视频解码器未创建"
     },

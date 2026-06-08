@@ -12,7 +12,13 @@
   "dependencies": {
     "@ant-design/icons": "5.x",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/lint": "^6.9.6",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.43.0",
     "@reduxjs/toolkit": "^2.8.2",
+    "@uiw/react-codemirror": "^4.25.10",
     "antd": "^5.26.3",
     "axios": "^1.10.0",
     "i18next": "^25.3.2",

@@ -12,13 +12,12 @@ use rust_i18n::t;
 use serde::Deserialize;
 use serde_json::json;
 use tokio::{
-    sync::{broadcast, mpsc::UnboundedSender, oneshot},
+    sync::{broadcast, mpsc::UnboundedSender},
     time::sleep,
 };
 
 use crate::{
     config::LocalConfig,
-    mask::mask_command::MaskCommand,
     scrcpy::{
         adb::{Adb, Device},
         constant::Keycode,
@@ -34,14 +33,12 @@ use crate::{
 pub struct AppStateDevice {
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
-    m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
     ws_tx: broadcast::Sender<WebSocketNotification>,
 }
 
 pub fn routers(
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
-    m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
     ws_tx: broadcast::Sender<WebSocketNotification>,
 ) -> Router {
     Router::new()
@@ -54,13 +51,7 @@ pub fn routers(
         .route("/adb_screenshot", post(adb_screenshot))
         .route("/control/set_display_power", post(set_display_power))
         .route("/control/send_key", post(send_key))
-        .route("/control/eval_script", post(eval_script))
-        .with_state(AppStateDevice {
-            cs_tx,
-            d_tx,
-            m_tx,
-            ws_tx,
-        })
+        .with_state(AppStateDevice { cs_tx, d_tx, ws_tx })
 }
 
 async fn device_list() -> Result<JsonResponse, WebServerError> {
@@ -457,42 +448,4 @@ async fn send_key(
 
     device_action::inject_keycode(&state.cs_tx, payload.keycode);
     Ok(JsonResponse::success(t!("web.device.sendKeySuccess"), None))
-}
-
-#[derive(Deserialize)]
-struct PostDataEvalScript {
-    script: String,
-}
-
-async fn eval_script(
-    State(state): State<AppStateDevice>,
-    Json(payload): Json<PostDataEvalScript>,
-) -> Result<JsonResponse, WebServerError> {
-    if !ControlledDevice::is_any_device_controlled().await {
-        return Err(WebServerError::bad_request(t!(
-            "web.device.noDeviceControlled"
-        )));
-    }
-
-    let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-    state
-        .m_tx
-        .send((
-            MaskCommand::EvalScript {
-                script: payload.script,
-            },
-            oneshot_tx,
-        ))
-        .unwrap();
-    match oneshot_rx.await.unwrap() {
-        Ok(_) => Ok(JsonResponse::success(
-            t!("web.device.evalScriptSuccess"),
-            None,
-        )),
-        Err(e) => Err(WebServerError::bad_request(format!(
-            "{}:\n{}",
-            t!("web.device.evalScriptError"),
-            e
-        ))),
-    }
 }

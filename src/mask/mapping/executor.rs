@@ -72,7 +72,7 @@ pub async fn run_script_hook(
         return Ok(());
     }
 
-    ast.eval_script(
+    ast.run_script(
         &ctx.cs_tx,
         &ctx.script_command_tx,
         &ctx.shared_state,

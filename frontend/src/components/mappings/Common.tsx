@@ -37,6 +37,7 @@ import { ItemBox } from "../common/ItemBox";
 import { useAppSelector } from "../../store/store";
 import { useRefreshBackgroundImage } from "../../hooks";
 import { mappingModalDragFactory } from "./tools";
+import { ScriptEditor } from "./ScriptEditor";
 
 const MOUSE_BUTTONS = ["M-Left", "M-Middle", "M-Right", "M-Back", "M-Forward"];
 
@@ -173,15 +174,13 @@ export function SettingScriptHooks({
         label={t("mappings.common.scriptHooks.before")}
         tooltip={t("mappings.common.scriptHooks.beforeHint")}
       >
-        <Input.TextArea
-          className="w-full font-mono"
+        <ScriptEditor
           value={scriptHooks.before_script}
           placeholder={t("mappings.common.scriptHooks.beforePlaceholder")}
-          autoSize={{ minRows: 1, maxRows: 10 }}
-          onChange={(e) =>
+          onChange={(value) =>
             onScriptHooksChange({
               ...scriptHooks,
-              before_script: e.target.value,
+              before_script: value,
             })
           }
         />
@@ -190,15 +189,13 @@ export function SettingScriptHooks({
         label={t("mappings.common.scriptHooks.after")}
         tooltip={t("mappings.common.scriptHooks.afterHint")}
       >
-        <Input.TextArea
-          className="w-full font-mono"
+        <ScriptEditor
           value={scriptHooks.after_script}
           placeholder={t("mappings.common.scriptHooks.afterPlaceholder")}
-          autoSize={{ minRows: 1, maxRows: 10 }}
-          onChange={(e) =>
+          onChange={(value) =>
             onScriptHooksChange({
               ...scriptHooks,
-              after_script: e.target.value,
+              after_script: value,
             })
           }
         />

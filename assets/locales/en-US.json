@@ -67,10 +67,13 @@
       "failedRemoveScreenshot": "Failed to remove screenshot file for device",
       "noDeviceControlled": "No device under controlled",
       "setDisplayPowerSuccess": "Set display power of all controlled devices successfully",
-      "evalScriptSuccess": "Eval script successfully",
-      "evalScriptError": "Eval script failed",
       "startingScrcpyApp": "Start scrcpy app...",
       "sendKeySuccess": "Send key to all controlled devices successfully"
+    },
+    "script": {
+      "validateScriptSuccess": "Script syntax is valid",
+      "runScriptSuccess": "Run script successfully",
+      "runScriptError": "Run script failed"
     },
     "config": {
       "getLocalConfigSuccess": "Successfully get local config",
@@ -219,7 +222,7 @@
       "failedToParseTo": "Failed to parse to",
       "unknownMouseButton": "Unknown mouse button variant"
     },
-    "evalScriptnoMappingError": "Unable to execute script: No active mapping, cannot retrieve mapping configuration size",
+    "runScriptnoMappingError": "Unable to execute script: No active mapping, cannot retrieve mapping configuration size",
     "video": {
       "noDecoder": "Video decoder not created"
     },

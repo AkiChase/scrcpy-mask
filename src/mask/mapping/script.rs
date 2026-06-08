@@ -32,6 +32,12 @@ use crate::{
     utils::ChannelSenderCS,
 };
 
+fn collect_script_error(errors: &mut Vec<String>, label: impl ToString, script: &str) {
+    if let Err(e) = ScriptAST::validate_source(script) {
+        errors.push(format!("{}:\n{}", label.to_string(), e));
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct MappingScriptHooks {
     #[serde(default)]
@@ -43,12 +49,8 @@ pub struct MappingScriptHooks {
 impl MappingScriptHooks {
     pub fn validate(&self) -> Result<(), String> {
         let mut errors = Vec::new();
-        if let Err(e) = ScriptAST::new(&self.before_script) {
-            errors.push(format!("before_script:\n{e}"));
-        }
-        if let Err(e) = ScriptAST::new(&self.after_script) {
-            errors.push(format!("after_script:\n{e}"));
-        }
+        collect_script_error(&mut errors, "before_script", &self.before_script);
+        collect_script_error(&mut errors, "after_script", &self.after_script);
 
         if errors.is_empty() {
             Ok(())
@@ -137,19 +139,21 @@ pub struct MappingScript {
 impl ValidateMappingConfig for MappingScript {
     fn validate(&self) -> Result<(), String> {
         let mut errors = Vec::new();
-        if let Err(e) = ScriptAST::new(&self.pressed_script) {
-            errors.push(format!("{}:\n{}", t!("mask.mapping.pressedScriptError"), e));
-        }
-        if let Err(e) = ScriptAST::new(&self.released_script) {
-            errors.push(format!(
-                "{}:\n{}",
-                t!("mask.mapping.releasedScriptError"),
-                e
-            ));
-        }
-        if let Err(e) = ScriptAST::new(&self.held_script) {
-            errors.push(format!("{}:\n{}", t!("mask.mapping.heldScriptError"), e));
-        }
+        collect_script_error(
+            &mut errors,
+            t!("mask.mapping.pressedScriptError"),
+            &self.pressed_script,
+        );
+        collect_script_error(
+            &mut errors,
+            t!("mask.mapping.releasedScriptError"),
+            &self.released_script,
+        );
+        collect_script_error(
+            &mut errors,
+            t!("mask.mapping.heldScriptError"),
+            &self.held_script,
+        );
 
         if errors.is_empty() {
             Ok(())
@@ -192,7 +196,7 @@ pub fn handle_script(
                         let state_scope = mapping.id.clone();
                         runtime.spawn_background_task(move |_ctx| async move {
                             if let Err(e) = ast
-                                .eval_script(
+                                .run_script(
                                     &cs_tx,
                                     &script_command_tx,
                                     &shared_state,
@@ -239,7 +243,7 @@ pub fn handle_script(
                         let state_scope = mapping.id.clone();
                         runtime.spawn_background_task(move |_ctx| async move {
                             if let Err(e) = ast
-                                .eval_script(
+                                .run_script(
                                     &cs_tx,
                                     &script_command_tx,
                                     &shared_state,
@@ -303,7 +307,7 @@ pub fn handle_script_trigger(
             let state_scope = timer.state_scope.clone();
             runtime.spawn_background_task(move |_ctx| async move {
                 if let Err(e) = ast
-                    .eval_script(
+                    .run_script(
                         &cs_tx,
                         &script_command_tx,
                         &shared_state,

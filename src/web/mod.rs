@@ -1,6 +1,7 @@
 pub mod config;
 pub mod device;
 pub mod mapping;
+pub mod script;
 pub mod ws;
 
 use axum::{
@@ -111,8 +112,9 @@ impl Server {
             .fallback_service(html_shell)
             .nest(
                 "/api/device",
-                device::routers(cs_tx.clone(), d_tx, m_tx.clone(), ws_tx.clone()),
+                device::routers(cs_tx.clone(), d_tx, ws_tx.clone()),
             )
+            .nest("/api/script", script::routers(m_tx.clone()))
             .nest("/api/mapping", mapping::routers(m_tx.clone()))
             .nest("/api/config", config::routers(m_tx.clone()))
             .nest("/api/ws", ws::routers(cs_tx, ws_tx));
@@ -187,6 +189,7 @@ impl IntoResponse for WebServerError {
             message: self.1,
             data: None,
         };
+
         log::error!(
             "[WebServe] {} ({}): {}",
             t!("web.server.responseError"),
