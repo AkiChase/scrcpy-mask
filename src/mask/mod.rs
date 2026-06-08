@@ -12,6 +12,7 @@ use bevy::{
         system::{Commands, Local, Res, ResMut, Single},
     },
     math::Vec2,
+    prelude::IntoScheduleConfigs,
     time::{Time, Timer, TimerMode},
     window::{Window, WindowMoved, WindowPosition, WindowResized},
 };
@@ -19,7 +20,10 @@ use bevy::{
 use crate::{
     config::LocalConfig,
     mask::{
-        mask_command::{MaskSize, TitlebarState, handle_mask_command, physical_to_logical_i32},
+        mask_command::{
+            MaskSize, PendingWindowFocus, TitlebarState, apply_pending_window_focus,
+            handle_mask_command, physical_to_logical_i32,
+        },
         ui::basic::TITLEBAR_HEIGHT,
         video::{VideoAttributes, handle_video_msg},
     },
@@ -33,6 +37,7 @@ impl Plugin for MaskPlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins((ui::UiPlugins, mapping::MappingPlugins))
             .init_non_send::<VideoAttributes>()
+            .init_resource::<PendingWindowFocus>()
             .add_systems(Startup, (init_mask_size, init_titlebar_state))
             .add_systems(
                 Update,
@@ -40,6 +45,7 @@ impl Plugin for MaskPlugins {
                     sync_mask_size,
                     sync_mask_position,
                     handle_mask_command,
+                    apply_pending_window_focus.after(handle_mask_command),
                     handle_video_msg,
                 ),
             );

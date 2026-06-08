@@ -81,6 +81,7 @@ fn main() {
                     present_mode: PresentMode::AutoVsync,
                     resizable: false,
                     visible: false,
+                    focused: false,
                     window_level: if local_config.always_on_top {
                         WindowLevel::AlwaysOnTop
                     } else {

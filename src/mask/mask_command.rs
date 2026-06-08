@@ -55,6 +55,11 @@ pub struct TitlebarState {
     pub visible: bool,
 }
 
+#[derive(Resource, Default)]
+pub struct PendingWindowFocus {
+    frames_remaining: u8,
+}
+
 impl TitlebarState {
     pub fn offset(&self) -> f32 {
         if self.visible { TITLEBAR_HEIGHT } else { 0.0 }
@@ -76,6 +81,7 @@ pub fn handle_mask_command(
     mut active_mapping: ResMut<ActiveMappingConfig>,
     mut mask_size: ResMut<MaskSize>,
     mut titlebar_state: ResMut<TitlebarState>,
+    mut pending_focus: ResMut<PendingWindowFocus>,
     runtime: ResMut<TokioTasksRuntime>,
 ) {
     for (msg, oneshot_tx) in m_rx.0.try_iter() {
@@ -127,7 +133,8 @@ pub fn handle_mask_command(
                     log::info!("[Mapping] {}", t!("mask.enterNormalMappingMode"));
                     window.visible = true;
                     window.resizable = true;
-                    window.focused = true;
+                    window.focused = false;
+                    pending_focus.frames_remaining = 2;
                     t!("mask.mainDeviceConnected").to_string()
                 } else {
                     next_cursor_state.set(CursorState::Normal);
@@ -135,6 +142,8 @@ pub fn handle_mask_command(
                     log::info!("[Mapping] {}", t!("mask.exitStopMappingMode"));
                     window.visible = false;
                     window.resizable = false;
+                    window.focused = false;
+                    pending_focus.frames_remaining = 0;
                     t!("mask.mainDeviceDisconnected").to_string()
                 };
                 log::info!("[Mask] {}", msg);
@@ -255,6 +264,20 @@ pub fn handle_mask_command(
                 oneshot_tx.send(Ok(msg)).unwrap();
             }
         }
+    }
+}
+
+pub fn apply_pending_window_focus(
+    mut pending_focus: ResMut<PendingWindowFocus>,
+    mut window: Single<&mut Window>,
+) {
+    if pending_focus.frames_remaining == 0 {
+        return;
+    }
+
+    pending_focus.frames_remaining -= 1;
+    if pending_focus.frames_remaining == 0 {
+        window.focused = true;
     }
 }
 
