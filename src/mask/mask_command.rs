@@ -127,6 +127,7 @@ pub fn handle_mask_command(
                     log::info!("[Mapping] {}", t!("mask.enterNormalMappingMode"));
                     window.visible = true;
                     window.resizable = true;
+                    window.focused = true;
                     t!("mask.mainDeviceConnected").to_string()
                 } else {
                     next_cursor_state.set(CursorState::Normal);
