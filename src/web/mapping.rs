@@ -15,7 +15,7 @@ use crate::{
     config::LocalConfig,
     mask::{
         mapping::config::{
-            MappingConfig, MappingType, save_mapping_config, validate_mapping_config,
+            MappingConfig, MappingType, save_mapping_config, validate_mapping_config_diagnostics,
         },
         mask_command::MaskCommand,
     },
@@ -38,6 +38,7 @@ pub fn routers(
         .route("/duplicate_mapping", post(duplicate_mapping))
         .route("/delete_mapping", post(delete_mapping))
         .route("/update_mapping", post(update_mapping))
+        .route("/validate", post(validate_mapping))
         .route("/read_mapping", post(read_mapping))
         .route("/get_mapping_list", get(get_mapping_list))
         .route("/migrate_mapping", post(migrate_mapping))
@@ -100,6 +101,38 @@ struct PostDataNewMapping {
     config: MappingConfig,
 }
 
+fn mapping_validation_data(config: &MappingConfig) -> Option<serde_json::Value> {
+    let diagnostics = validate_mapping_config_diagnostics(config);
+    if diagnostics.is_empty() {
+        None
+    } else {
+        Some(json!({
+            "valid": false,
+            "diagnostics": diagnostics,
+        }))
+    }
+}
+
+fn mapping_validation_error(config: &MappingConfig) -> Option<WebServerError> {
+    mapping_validation_data(config).map(|data| {
+        WebServerError::bad_request_data(
+            t!("mask.mapping.mappingConfigValidationFailed").to_string(),
+            data,
+        )
+    })
+}
+
+async fn validate_mapping(Json(payload): Json<PostDataNewMapping>) -> Result<JsonResponse, WebServerError> {
+    let diagnostics = validate_mapping_config_diagnostics(&payload.config);
+    Ok(JsonResponse::success(
+        t!("web.script.validateScriptSuccess"),
+        Some(json!({
+            "valid": diagnostics.is_empty(),
+            "diagnostics": diagnostics,
+        })),
+    ))
+}
+
 async fn create_mapping(
     Json(mut payload): Json<PostDataNewMapping>,
 ) -> Result<JsonResponse, WebServerError> {
@@ -127,7 +160,9 @@ async fn create_mapping(
         ));
     }
 
-    validate_mapping_config(&payload.config).map_err(|e| WebServerError::bad_request(e))?;
+    if let Some(error) = mapping_validation_error(&payload.config) {
+        return Err(error);
+    }
 
     // save to file
     save_mapping_config(&payload.config, &config_path)
@@ -407,7 +442,9 @@ async fn update_mapping(
         ));
     }
 
-    validate_mapping_config(&payload.config).map_err(|e| WebServerError::bad_request(e))?;
+    if let Some(error) = mapping_validation_error(&payload.config) {
+        return Err(error);
+    }
 
     // save to file
     let config_path = relate_to_data_path(["mapping", &payload.file]);
@@ -547,14 +584,12 @@ async fn read_mapping(
         ))
     })?;
 
-    validate_mapping_config(&mapping_config).map_err(|e| {
-        WebServerError::bad_request(format!(
-            "{} {}: {}",
-            t!("web.mapping.invalidMappingConfig"),
-            payload.file,
-            e
-        ))
-    })?;
+    if let Some(data) = mapping_validation_data(&mapping_config) {
+        return Err(WebServerError::bad_request_data(
+            format!("{} {}", t!("web.mapping.invalidMappingConfig"), payload.file),
+            data,
+        ));
+    }
 
     Ok(JsonResponse::success(
         format!("{} {}", t!("web.mapping.mappingReadSuccess"), payload.file),

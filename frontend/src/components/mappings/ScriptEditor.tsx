@@ -22,8 +22,13 @@ type ScriptDiagnosticSpan = {
 
 type ScriptDiagnostic = {
   severity: "error";
+  code: string;
   message: string;
   span: ScriptDiagnosticSpan;
+  related?: {
+    message: string;
+    span: ScriptDiagnosticSpan;
+  }[];
 };
 
 type ScriptValidateResult = {
@@ -142,11 +147,23 @@ function toDiagnostic(doc: Text, diagnostic: ScriptDiagnostic): Diagnostic {
     to = Math.min(doc.length, from + 1);
   }
 
+  const related = diagnostic.related ?? [];
+  const message =
+    related.length === 0
+      ? diagnostic.message
+      : [
+          diagnostic.message,
+          ...related.map(
+            (item) =>
+              `${item.message} (line ${item.span.startLine}, column ${item.span.startCol})`,
+          ),
+        ].join("\n");
+
   return {
     from,
     to,
     severity: diagnostic.severity,
-    message: diagnostic.message,
+    message,
   };
 }
 

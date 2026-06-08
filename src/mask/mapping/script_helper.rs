@@ -14,11 +14,6 @@ use bevy::{
     math::Vec2,
     state::state::{NextState, State},
 };
-use pest::error::LineColLocation;
-use pest::iterators::Pair;
-use pest::{Parser, Span};
-use pest_derive::Parser;
-use rust_i18n::t;
 use serde::{Serialize, de::DeserializeOwned};
 use tokio::sync::{broadcast, oneshot};
 
@@ -41,10 +36,6 @@ use crate::scrcpy::constant::{KeyEventAction, Keycode, MetaState, MotionEventAct
 use crate::scrcpy::control_msg::ScrcpyControlMsg;
 use crate::tokio_tasks::TokioTasksRuntime;
 use crate::utils::ChannelSenderCS;
-
-#[derive(Parser)]
-#[grammar = "src/mask/mapping/script.pest"]
-struct ScriptParser;
 
 pub enum ScriptRuntimeCommand {
     EnterFps {
@@ -543,161 +534,1036 @@ pub struct ScriptAST {
     pub empty: bool,
 }
 
-fn normalize_script_semicolons(script: &str) -> String {
-    let mut normalized = String::with_capacity(script.len());
-    let mut chars = script.chars().peekable();
-    let mut in_string = false;
-    let mut escaped = false;
-    let mut in_line_comment = false;
-    let mut paren_depth = 0usize;
-    let mut needs_semicolon = false;
+#[derive(Debug, Clone)]
+pub struct ParsedScript {
+    pub program: Program,
+    pub diagnostics: Vec<ScriptDiagnostic>,
+    pub tokens: Vec<ScriptToken>,
+}
 
-    while let Some(ch) = chars.next() {
-        if in_line_comment {
-            normalized.push(ch);
-            if matches!(ch, '\n' | '\r') {
-                in_line_comment = false;
+#[derive(Debug, Clone)]
+pub struct ScriptToken {
+    pub kind: TokenKind,
+    pub lexeme: String,
+    pub span: SourceSpan,
+    pub leading_trivia: Vec<ScriptTrivia>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ScriptTrivia {
+    pub kind: ScriptTriviaKind,
+    pub text: String,
+    pub span: SourceSpan,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScriptTriviaKind {
+    Whitespace,
+    Comment,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TokenKind {
+    Ident,
+    Number,
+    String,
+    True,
+    False,
+    Let,
+    If,
+    Else,
+    While,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    Bang,
+    Equal,
+    EqualEqual,
+    BangEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    AndAnd,
+    OrOr,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    Comma,
+    Semicolon,
+    Newline,
+    Eof,
+}
+
+fn parse_script(source: &str) -> ParsedScript {
+    let mut lexer = Lexer::new(source);
+    let tokens = lexer.lex();
+    let lexer_errors = lexer.errors;
+    let mut diagnostics = lexer_errors
+        .iter()
+        .map(ScriptDiagnostic::from)
+        .collect::<Vec<_>>();
+
+    let mut parser = ParserState::new(source, tokens.clone());
+    let mut program = parser.parse_program();
+    diagnostics.extend(parser.errors.iter().map(ScriptDiagnostic::from));
+
+    let ast = ScriptAST {
+        program: program.clone(),
+        script: source.to_string(),
+        empty: source.is_empty(),
+    };
+    let semantic_errors = ast.validate_program();
+    diagnostics.extend(semantic_errors.iter().map(ScriptDiagnostic::from));
+    program.errors.extend(lexer_errors);
+    program.errors.extend(parser.errors);
+    program.errors.extend(semantic_errors);
+
+    ParsedScript {
+        program,
+        diagnostics,
+        tokens,
+    }
+}
+
+struct Lexer<'a> {
+    source: &'a str,
+    chars: std::iter::Peekable<std::str::CharIndices<'a>>,
+    line: usize,
+    col: usize,
+    errors: Vec<ScriptError>,
+    pending_trivia: Vec<ScriptTrivia>,
+}
+
+impl<'a> Lexer<'a> {
+    fn new(source: &'a str) -> Self {
+        Self {
+            source,
+            chars: source.char_indices().peekable(),
+            line: 1,
+            col: 1,
+            errors: Vec::new(),
+            pending_trivia: Vec::new(),
+        }
+    }
+
+    fn lex(&mut self) -> Vec<ScriptToken> {
+        let mut tokens = Vec::new();
+
+        while let Some((start_index, ch)) = self.peek_char() {
+            let start = self.position();
+            match ch {
+                ' ' | '\t' => {
+                    let text = self.take_while(|c| matches!(c, ' ' | '\t'));
+                    self.pending_trivia.push(ScriptTrivia {
+                        kind: ScriptTriviaKind::Whitespace,
+                        text,
+                        span: SourceSpan::between(start, self.position()),
+                    });
+                }
+                '\r' | '\n' => {
+                    tokens.push(self.make_token(TokenKind::Newline, start_index, start, |lexer| {
+                        lexer.advance_newline();
+                    }));
+                }
+                '/' if self.peek_next_char() == Some('/') => {
+                    let text = self.take_line_comment();
+                    self.pending_trivia.push(ScriptTrivia {
+                        kind: ScriptTriviaKind::Comment,
+                        text,
+                        span: SourceSpan::between(start, self.position()),
+                    });
+                }
+                '0'..='9' => {
+                    let text = self.take_while(|c| c.is_ascii_digit());
+                    tokens.push(self.token_with_text(TokenKind::Number, text, start));
+                }
+                '"' => tokens.push(self.lex_string(start_index, start)),
+                c if is_ident_start(c) => {
+                    let text = self.take_while(is_ident_continue);
+                    let kind = match text.as_str() {
+                        "let" => TokenKind::Let,
+                        "if" => TokenKind::If,
+                        "else" => TokenKind::Else,
+                        "while" => TokenKind::While,
+                        "true" => TokenKind::True,
+                        "false" => TokenKind::False,
+                        _ => TokenKind::Ident,
+                    };
+                    tokens.push(self.token_with_text(kind, text, start));
+                }
+                _ => {
+                    tokens.push(self.lex_symbol(start_index, start));
+                }
             }
-            continue;
         }
 
-        if in_string {
-            normalized.push(ch);
+        let pos = self.position();
+        tokens.push(ScriptToken {
+            kind: TokenKind::Eof,
+            lexeme: String::new(),
+            span: SourceSpan::between(pos, SourcePosition { line: pos.line, col: pos.col + 1 }),
+            leading_trivia: std::mem::take(&mut self.pending_trivia),
+        });
+        tokens
+    }
+
+    fn lex_string(&mut self, start_index: usize, start: SourcePosition) -> ScriptToken {
+        self.advance_char();
+        let mut escaped = false;
+        let mut closed = false;
+
+        while let Some((_, ch)) = self.peek_char() {
             if escaped {
+                if !matches!(ch, '"' | '\\' | 'n' | 't') {
+                    let span = SourceSpan::between(self.position(), self.next_position(ch));
+                    self.errors.push(ScriptError::from_code_span(
+                        "script.lex.invalidEscape",
+                        span,
+                        self.source,
+                        format!("Invalid escape sequence '\\{ch}'."),
+                    ));
+                }
                 escaped = false;
-            } else if ch == '\\' {
-                escaped = true;
-            } else if ch == '"' {
-                in_string = false;
-                needs_semicolon = true;
+                self.advance_char();
+                continue;
             }
-            continue;
+
+            match ch {
+                '\\' => {
+                    escaped = true;
+                    self.advance_char();
+                }
+                '"' => {
+                    self.advance_char();
+                    closed = true;
+                    break;
+                }
+                '\r' | '\n' => {
+                    let span = SourceSpan::between(self.position(), self.next_position(ch));
+                    self.errors.push(ScriptError::from_code_span(
+                        "script.lex.unterminatedString",
+                        span,
+                        self.source,
+                        "String literals cannot contain a raw newline.",
+                    ));
+                    break;
+                }
+                _ => {
+                    self.advance_char();
+                }
+            }
         }
 
-        match ch {
-            '"' => {
-                normalized.push(ch);
-                in_string = true;
-                escaped = false;
-                needs_semicolon = false;
+        if !closed {
+            self.errors.push(ScriptError::from_code_span(
+                "script.lex.unterminatedString",
+                SourceSpan::between(start, self.position()),
+                self.source,
+                "Unterminated string literal.",
+            ));
+        }
+
+        let text = self.source[start_index..self.byte_index()].to_string();
+        self.token_with_text(TokenKind::String, text, start)
+    }
+
+    fn lex_symbol(&mut self, start_index: usize, start: SourcePosition) -> ScriptToken {
+        let (_, ch) = self.advance_char().unwrap();
+        let kind = match ch {
+            '+' => TokenKind::Plus,
+            '-' => TokenKind::Minus,
+            '*' => TokenKind::Star,
+            '/' => TokenKind::Slash,
+            '%' => TokenKind::Percent,
+            '(' => TokenKind::LParen,
+            ')' => TokenKind::RParen,
+            '{' => TokenKind::LBrace,
+            '}' => TokenKind::RBrace,
+            ',' => TokenKind::Comma,
+            ';' => TokenKind::Semicolon,
+            '!' if self.peek_char().is_some_and(|(_, c)| c == '=') => {
+                self.advance_char();
+                TokenKind::BangEqual
             }
-            '/' if matches!(chars.peek(), Some('/')) => {
-                let mut lookahead = chars.clone();
-                lookahead.next();
-                if paren_depth == 0
-                    && needs_semicolon
-                    && next_significant_char_after_line_comment(lookahead) != Some('{')
-                {
-                    normalized.push(';');
-                    needs_semicolon = false;
-                }
-                normalized.push(ch);
-                if let Some(next) = chars.next() {
-                    normalized.push(next);
-                }
-                in_line_comment = true;
+            '!' => TokenKind::Bang,
+            '=' if self.peek_char().is_some_and(|(_, c)| c == '=') => {
+                self.advance_char();
+                TokenKind::EqualEqual
             }
-            '\n' | '\r' => {
-                if paren_depth == 0
-                    && needs_semicolon
-                    && next_significant_char(chars.clone()) != Some('{')
-                {
-                    normalized.push(';');
-                    needs_semicolon = false;
-                }
-                normalized.push(ch);
+            '=' => TokenKind::Equal,
+            '<' if self.peek_char().is_some_and(|(_, c)| c == '=') => {
+                self.advance_char();
+                TokenKind::LessEqual
             }
-            '}' => {
-                if paren_depth == 0 && needs_semicolon {
-                    normalized.push(';');
-                }
-                normalized.push(ch);
-                needs_semicolon = false;
+            '<' => TokenKind::Less,
+            '>' if self.peek_char().is_some_and(|(_, c)| c == '=') => {
+                self.advance_char();
+                TokenKind::GreaterEqual
             }
-            '(' => {
-                paren_depth += 1;
-                normalized.push(ch);
-                needs_semicolon = false;
+            '>' => TokenKind::Greater,
+            '&' if self.peek_char().is_some_and(|(_, c)| c == '&') => {
+                self.advance_char();
+                TokenKind::AndAnd
             }
-            ')' => {
-                paren_depth = paren_depth.saturating_sub(1);
-                normalized.push(ch);
-                needs_semicolon = true;
-            }
-            ';' | '{' | ',' | '+' | '-' | '*' | '/' | '%' | '!' | '=' | '<' | '>' | '&' | '|' => {
-                normalized.push(ch);
-                needs_semicolon = false;
-            }
-            c if c.is_whitespace() => {
-                normalized.push(c);
+            '|' if self.peek_char().is_some_and(|(_, c)| c == '|') => {
+                self.advance_char();
+                TokenKind::OrOr
             }
             _ => {
-                normalized.push(ch);
-                needs_semicolon = true;
+                let span = SourceSpan::between(start, self.position());
+                self.errors.push(ScriptError::from_code_span(
+                    "script.lex.unexpectedCharacter",
+                    span,
+                    self.source,
+                    format!("Unexpected character '{ch}'."),
+                ));
+                TokenKind::Ident
+            }
+        };
+
+        let text = self.source[start_index..self.byte_index()].to_string();
+        self.token_with_text(kind, text, start)
+    }
+
+    fn make_token(
+        &mut self,
+        kind: TokenKind,
+        start_index: usize,
+        start: SourcePosition,
+        advance: impl FnOnce(&mut Self),
+    ) -> ScriptToken {
+        advance(self);
+        let text = self.source[start_index..self.byte_index()].to_string();
+        self.token_with_text(kind, text, start)
+    }
+
+    fn token_with_text(
+        &mut self,
+        kind: TokenKind,
+        lexeme: String,
+        start: SourcePosition,
+    ) -> ScriptToken {
+        ScriptToken {
+            kind,
+            lexeme,
+            span: SourceSpan::between(start, self.position()),
+            leading_trivia: std::mem::take(&mut self.pending_trivia),
+        }
+    }
+
+    fn take_while(&mut self, pred: impl Fn(char) -> bool) -> String {
+        let start = self.byte_index();
+        while let Some((_, ch)) = self.peek_char() {
+            if !pred(ch) {
+                break;
+            }
+            self.advance_char();
+        }
+        self.source[start..self.byte_index()].to_string()
+    }
+
+    fn take_line_comment(&mut self) -> String {
+        let start = self.byte_index();
+        while let Some((_, ch)) = self.peek_char() {
+            if matches!(ch, '\r' | '\n') {
+                break;
+            }
+            self.advance_char();
+        }
+        self.source[start..self.byte_index()].to_string()
+    }
+
+    fn advance_newline(&mut self) {
+        if self.peek_char().is_some_and(|(_, c)| c == '\r') {
+            self.advance_char();
+            if self.peek_char().is_some_and(|(_, c)| c == '\n') {
+                self.advance_char();
+            }
+        } else {
+            self.advance_char();
+        }
+        self.line += 1;
+        self.col = 1;
+    }
+
+    fn advance_char(&mut self) -> Option<(usize, char)> {
+        let next = self.chars.next()?;
+        if !matches!(next.1, '\r' | '\n') {
+            self.col += 1;
+        }
+        Some(next)
+    }
+
+    fn peek_char(&mut self) -> Option<(usize, char)> {
+        self.chars.peek().copied()
+    }
+
+    fn peek_next_char(&self) -> Option<char> {
+        let mut chars = self.chars.clone();
+        chars.next();
+        chars.next().map(|(_, ch)| ch)
+    }
+
+    fn byte_index(&self) -> usize {
+        self.chars
+            .clone()
+            .next()
+            .map(|(index, _)| index)
+            .unwrap_or(self.source.len())
+    }
+
+    fn position(&self) -> SourcePosition {
+        SourcePosition {
+            line: self.line,
+            col: self.col,
+        }
+    }
+
+    fn next_position(&self, ch: char) -> SourcePosition {
+        SourcePosition {
+            line: self.line,
+            col: self.col + ch.len_utf8(),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct SourcePosition {
+    line: usize,
+    col: usize,
+}
+
+fn is_ident_start(ch: char) -> bool {
+    ch.is_ascii_alphabetic() || ch == '_'
+}
+
+fn is_ident_continue(ch: char) -> bool {
+    ch.is_ascii_alphanumeric() || ch == '_'
+}
+
+struct ParserState<'a> {
+    source: &'a str,
+    tokens: Vec<ScriptToken>,
+    pos: usize,
+    errors: Vec<ScriptError>,
+}
+
+impl<'a> ParserState<'a> {
+    fn new(source: &'a str, tokens: Vec<ScriptToken>) -> Self {
+        Self {
+            source,
+            tokens,
+            pos: 0,
+            errors: Vec::new(),
+        }
+    }
+
+    fn parse_program(&mut self) -> Program {
+        let mut stmts = Vec::new();
+
+        while !self.at(TokenKind::Eof) {
+            if self.consume(TokenKind::Newline) {
+                continue;
+            }
+            if self.consume(TokenKind::Semicolon) {
+                stmts.push(Stmt::Empty {
+                    span: self.previous().span,
+                });
+                continue;
+            }
+            if self.at(TokenKind::RBrace) {
+                self.error_current("script.syntax.unexpectedToken", "Unexpected closing brace.");
+                self.advance();
+                continue;
+            }
+
+            let stmt = self.parse_stmt();
+            let is_block_stmt = matches!(stmt, Stmt::If { .. } | Stmt::While { .. });
+            stmts.push(stmt);
+            self.finish_stmt(is_block_stmt);
+        }
+
+        Program {
+            stmts,
+            errors: Vec::new(),
+        }
+    }
+
+    fn parse_stmt(&mut self) -> Stmt {
+        if self.consume(TokenKind::Let) {
+            return self.parse_let_stmt(self.previous().span);
+        }
+        if self.consume(TokenKind::If) {
+            return self.parse_if_stmt(self.previous().span);
+        }
+        if self.consume(TokenKind::While) {
+            return self.parse_while_stmt(self.previous().span);
+        }
+        if self.at(TokenKind::Ident) && self.peek_kind(1) == TokenKind::Equal {
+            return self.parse_assign_stmt();
+        }
+
+        let start = self.current().span;
+        match self.parse_expr(0) {
+            Ok(expr) => Stmt::Expr {
+                span: expr_span(&expr),
+                expr,
+            },
+            Err(err) => {
+                self.errors.push(err);
+                self.synchronize_stmt();
+                Stmt::Error { span: start }
             }
         }
     }
 
-    if !in_string && !in_line_comment && paren_depth == 0 && needs_semicolon {
-        normalized.push(';');
+    fn parse_let_stmt(&mut self, start: SourceSpan) -> Stmt {
+        let name = if self.at(TokenKind::Ident) {
+            self.advance().lexeme.clone()
+        } else {
+            self.error_current("script.syntax.missingIdentifier", "Expected variable name after 'let'.");
+            "<error>".to_string()
+        };
+
+        if !self.consume(TokenKind::Equal) {
+            self.error_current("script.syntax.missingEqual", "Expected '=' after variable name.");
+        }
+
+        let expr = match self.parse_expr(0) {
+            Ok(expr) => expr,
+            Err(err) => {
+                self.errors.push(err);
+                self.synchronize_stmt();
+                return Stmt::Error { span: start };
+            }
+        };
+
+        Stmt::Let {
+            name,
+            span: start.join(expr_span(&expr)),
+            expr,
+        }
     }
 
-    normalized
+    fn parse_assign_stmt(&mut self) -> Stmt {
+        let ident = self.advance().clone();
+        self.advance();
+        let expr = match self.parse_expr(0) {
+            Ok(expr) => expr,
+            Err(err) => {
+                self.errors.push(err);
+                self.synchronize_stmt();
+                return Stmt::Error { span: ident.span };
+            }
+        };
+
+        Stmt::Assign {
+            name: ident.lexeme,
+            span: ident.span.join(expr_span(&expr)),
+            expr,
+        }
+    }
+
+    fn parse_if_stmt(&mut self, start: SourceSpan) -> Stmt {
+        let condition = match self.parse_expr(0) {
+            Ok(expr) => expr,
+            Err(err) => {
+                self.errors.push(err);
+                self.synchronize_stmt();
+                return Stmt::Error { span: start };
+            }
+        };
+
+        self.skip_newlines();
+        let then_block = self.parse_required_block("if");
+        self.skip_newlines();
+        let else_block = if self.consume(TokenKind::Else) {
+            self.skip_newlines();
+            if self.consume(TokenKind::If) {
+                Some(Box::new(self.parse_if_stmt(self.previous().span)))
+            } else {
+                Some(Box::new(self.parse_required_block("else")))
+            }
+        } else {
+            None
+        };
+
+        let end_span = else_block
+            .as_ref()
+            .map(|stmt| stmt_span(stmt))
+            .unwrap_or_else(|| stmt_span(&then_block));
+
+        Stmt::If {
+            condition,
+            then_block: Box::new(then_block),
+            else_block,
+            span: start.join(end_span),
+        }
+    }
+
+    fn parse_while_stmt(&mut self, start: SourceSpan) -> Stmt {
+        let condition = match self.parse_expr(0) {
+            Ok(expr) => expr,
+            Err(err) => {
+                self.errors.push(err);
+                self.synchronize_stmt();
+                return Stmt::Error { span: start };
+            }
+        };
+
+        self.skip_newlines();
+        let body = self.parse_required_block("while");
+        let span = start.join(stmt_span(&body));
+
+        Stmt::While {
+            condition,
+            body: Box::new(body),
+            span,
+        }
+    }
+
+    fn parse_required_block(&mut self, owner: &str) -> Stmt {
+        if !self.consume(TokenKind::LBrace) {
+            self.error_current(
+                "script.syntax.missingBlock",
+                format!("Expected '{{ ... }}' block after {owner}."),
+            );
+            return Stmt::Error {
+                span: self.current().span,
+            };
+        }
+
+        let start = self.previous().span;
+        let mut stmts = Vec::new();
+        while !self.at(TokenKind::RBrace) && !self.at(TokenKind::Eof) {
+            if self.consume(TokenKind::Newline) {
+                continue;
+            }
+            if self.consume(TokenKind::Semicolon) {
+                stmts.push(Stmt::Empty {
+                    span: self.previous().span,
+                });
+                continue;
+            }
+
+            let stmt = self.parse_stmt();
+            let is_block_stmt = matches!(stmt, Stmt::If { .. } | Stmt::While { .. });
+            stmts.push(stmt);
+            self.finish_stmt(is_block_stmt);
+        }
+
+        if !self.consume(TokenKind::RBrace) {
+            self.errors.push(ScriptError::from_code_span(
+                "script.syntax.missingRightBrace",
+                start,
+                self.source,
+                "Missing closing brace '}' for this block.",
+            )
+            .with_related("Block starts here.", start)
+            .with_related(
+                "Insert '}' after the last statement in this block.",
+                stmts
+                    .last()
+                    .map(stmt_span)
+                    .map(SourceSpan::insertion_after)
+                    .unwrap_or_else(|| SourceSpan::insertion_after(start)),
+            ));
+            return Stmt::Block { stmts, span: start };
+        }
+
+        Stmt::Block {
+            stmts,
+            span: start.join(self.previous().span),
+        }
+    }
+
+    fn parse_expr(&mut self, min_bp: u8) -> Result<Expr, ScriptError> {
+        let mut lhs = self.parse_prefix()?;
+
+        loop {
+            let Some((op, left_bp, right_bp)) = self.current_binary_op() else {
+                break;
+            };
+            if left_bp < min_bp {
+                break;
+            }
+
+            let op_token = self.advance().clone();
+            self.skip_newlines();
+            if self.at_expr_boundary() {
+                return Err(ScriptError::from_code_span(
+                    "script.syntax.missingExpression",
+                    op_token.span,
+                    self.source,
+                    format!("Missing expression after '{}'.", op_token.lexeme),
+                ));
+            }
+
+            let rhs = self.parse_expr(right_bp)?;
+            let span = expr_span(&lhs).join(expr_span(&rhs));
+            lhs = Expr::Binary {
+                lhs: Box::new(lhs),
+                op,
+                rhs: Box::new(rhs),
+                span,
+            };
+        }
+
+        Ok(lhs)
+    }
+
+    fn parse_prefix(&mut self) -> Result<Expr, ScriptError> {
+        if self.consume(TokenKind::Plus) || self.consume(TokenKind::Minus) || self.consume(TokenKind::Bang) {
+            let token = self.previous().clone();
+            self.skip_newlines();
+            let rhs = self.parse_expr(7)?;
+            let op = match token.kind {
+                TokenKind::Plus => UnaryOp::Plus,
+                TokenKind::Minus => UnaryOp::Minus,
+                TokenKind::Bang => UnaryOp::Not,
+                _ => unreachable!(),
+            };
+            return Ok(Expr::Unary {
+                op,
+                span: token.span.join(expr_span(&rhs)),
+                rhs: Box::new(rhs),
+            });
+        }
+
+        self.parse_primary()
+    }
+
+    fn parse_primary(&mut self) -> Result<Expr, ScriptError> {
+        if self.at_expr_boundary() {
+            let token = self.current().clone();
+            return Err(ScriptError::from_code_span(
+                "script.syntax.missingExpression",
+                token.span,
+                self.source,
+                format!("Expected expression, found '{}'.", token.lexeme_for_message()),
+            ));
+        }
+
+        let token = self.advance().clone();
+        match token.kind {
+            TokenKind::Number => {
+                let value = token.lexeme.parse::<i64>().map_err(|e| {
+                    ScriptError::from_code_span(
+                        "script.syntax.invalidNumber",
+                        token.span,
+                        self.source,
+                        e.to_string(),
+                    )
+                })?;
+                Ok(Expr::Number {
+                    value,
+                    span: token.span,
+                })
+            }
+            TokenKind::String => Ok(Expr::Str {
+                value: decode_string_literal(&token.lexeme),
+                span: token.span,
+            }),
+            TokenKind::True | TokenKind::False => Ok(Expr::Bool {
+                value: token.kind == TokenKind::True,
+                span: token.span,
+            }),
+            TokenKind::Ident => {
+                if self.consume(TokenKind::LParen) {
+                    return self.parse_call(token);
+                }
+                Ok(Expr::Var {
+                    name: token.lexeme,
+                    span: token.span,
+                })
+            }
+            TokenKind::LParen => {
+                let open_paren = token.clone();
+                self.skip_newlines();
+                let expr = self.parse_expr(0)?;
+                self.skip_newlines();
+                if !self.consume(TokenKind::RParen) {
+                    return Err(ScriptError::from_code_span(
+                        "script.syntax.missingRightParen",
+                        open_paren.span,
+                        self.source,
+                        "Missing closing parenthesis ')'.",
+                    )
+                    .with_related("Parenthesized expression starts here.", open_paren.span)
+                    .with_related(
+                        "Insert ')' after this expression.",
+                        SourceSpan::insertion_after(expr_span(&expr)),
+                    ));
+                }
+                Ok(expr)
+            }
+            _ => Err(ScriptError::from_code_span(
+                "script.syntax.missingExpression",
+                token.span,
+                self.source,
+                format!("Expected expression, found '{}'.", token.lexeme_for_message()),
+            )),
+        }
+    }
+
+    fn parse_call(&mut self, ident: ScriptToken) -> Result<Expr, ScriptError> {
+        let open_paren = self.previous().clone();
+        let mut args = Vec::new();
+        self.skip_newlines();
+
+        if !self.at(TokenKind::RParen) {
+            loop {
+                if self.at(TokenKind::Comma) || self.at(TokenKind::RParen) || self.at(TokenKind::Eof) {
+                    self.error_current("script.syntax.missingArgument", "Missing function argument.");
+                    break;
+                }
+
+                match self.parse_expr(0) {
+                    Ok(arg) => args.push(arg),
+                    Err(err) => {
+                        self.errors.push(err);
+                        self.synchronize_arg();
+                    }
+                }
+
+                self.skip_newlines();
+                if !self.consume(TokenKind::Comma) {
+                    break;
+                }
+                let comma = self.previous().clone();
+                self.skip_newlines();
+                if self.at(TokenKind::RParen) || self.at(TokenKind::Eof) {
+                    self.errors.push(ScriptError::from_code_span(
+                        "script.syntax.missingArgument",
+                        comma.span,
+                        self.source,
+                        "Missing function argument after ','.",
+                    )
+                    .with_related(
+                        "Insert an argument after this comma.",
+                        SourceSpan::insertion_after(comma.span),
+                    ));
+                    break;
+                }
+            }
+        }
+
+        if !self.consume(TokenKind::RParen) {
+            let insert_span = args
+                .last()
+                .map(expr_span)
+                .map(SourceSpan::insertion_after)
+                .unwrap_or_else(|| SourceSpan::insertion_after(open_paren.span));
+            self.errors.push(ScriptError::from_code_span(
+                "script.syntax.missingRightParen",
+                open_paren.span,
+                self.source,
+                "Missing closing ')' for this function call.",
+            )
+            .with_related("Function call starts here.", ident.span.join(open_paren.span))
+            .with_related("Insert ')' after the last argument.", insert_span));
+        }
+
+        let end = self.previous().span;
+        Ok(Expr::Call {
+            name: ident.lexeme,
+            args,
+            span: ident.span.join(end),
+        })
+    }
+
+    fn finish_stmt(&mut self, is_block_stmt: bool) {
+        if self.at(TokenKind::Eof) || self.at(TokenKind::RBrace) {
+            return;
+        }
+        if is_block_stmt {
+            return;
+        }
+        if self.consume(TokenKind::Semicolon) {
+            return;
+        }
+        if self.consume(TokenKind::Newline) {
+            while self.consume(TokenKind::Newline) {}
+            return;
+        }
+        self.error_current(
+            "script.syntax.missingSeparator",
+            "Expected a newline or ';' between statements.",
+        );
+        self.synchronize_stmt();
+    }
+
+    fn current_binary_op(&self) -> Option<(BinOp, u8, u8)> {
+        Some(match self.current().kind {
+            TokenKind::OrOr => (BinOp::Or, 1, 2),
+            TokenKind::AndAnd => (BinOp::And, 3, 4),
+            TokenKind::EqualEqual => (BinOp::Eq, 5, 6),
+            TokenKind::BangEqual => (BinOp::Neq, 5, 6),
+            TokenKind::Less => (BinOp::Lt, 7, 8),
+            TokenKind::LessEqual => (BinOp::Le, 7, 8),
+            TokenKind::Greater => (BinOp::Gt, 7, 8),
+            TokenKind::GreaterEqual => (BinOp::Ge, 7, 8),
+            TokenKind::Plus => (BinOp::Add, 9, 10),
+            TokenKind::Minus => (BinOp::Sub, 9, 10),
+            TokenKind::Star => (BinOp::Mul, 11, 12),
+            TokenKind::Slash => (BinOp::Div, 11, 12),
+            TokenKind::Percent => (BinOp::Mod, 11, 12),
+            _ => return None,
+        })
+    }
+
+    fn at_expr_boundary(&self) -> bool {
+        matches!(
+            self.current().kind,
+            TokenKind::Newline
+                | TokenKind::Semicolon
+                | TokenKind::Comma
+                | TokenKind::RParen
+                | TokenKind::RBrace
+                | TokenKind::Eof
+        )
+    }
+
+    fn skip_newlines(&mut self) {
+        while self.consume(TokenKind::Newline) {}
+    }
+
+    fn synchronize_stmt(&mut self) {
+        while !self.at(TokenKind::Eof) && !matches!(self.current().kind, TokenKind::Newline | TokenKind::Semicolon | TokenKind::RBrace) {
+            self.advance();
+        }
+    }
+
+    fn synchronize_arg(&mut self) {
+        while !self.at(TokenKind::Eof) && !matches!(self.current().kind, TokenKind::Comma | TokenKind::RParen) {
+            self.advance();
+        }
+    }
+
+    fn error_current(&mut self, code: &'static str, message: impl ToString) {
+        self.errors.push(ScriptError::from_code_span(
+            code,
+            self.current().span,
+            self.source,
+            message,
+        ));
+    }
+
+    fn consume(&mut self, kind: TokenKind) -> bool {
+        if self.at(kind) {
+            self.advance();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn at(&self, kind: TokenKind) -> bool {
+        self.current().kind == kind
+    }
+
+    fn peek_kind(&self, offset: usize) -> TokenKind {
+        self.tokens
+            .get(self.pos + offset)
+            .map(|token| token.kind)
+            .unwrap_or(TokenKind::Eof)
+    }
+
+    fn current(&self) -> &ScriptToken {
+        &self.tokens[self.pos]
+    }
+
+    fn previous(&self) -> &ScriptToken {
+        &self.tokens[self.pos.saturating_sub(1)]
+    }
+
+    fn advance(&mut self) -> &ScriptToken {
+        if !self.at(TokenKind::Eof) {
+            self.pos += 1;
+        }
+        self.previous()
+    }
 }
 
-fn next_significant_char(mut chars: std::iter::Peekable<std::str::Chars<'_>>) -> Option<char> {
+impl ScriptToken {
+    fn lexeme_for_message(&self) -> String {
+        if self.lexeme.is_empty() {
+            "end of script".to_string()
+        } else if self.kind == TokenKind::Newline {
+            "newline".to_string()
+        } else {
+            self.lexeme.clone()
+        }
+    }
+}
+
+fn decode_string_literal(raw: &str) -> String {
+    let mut out = String::new();
+    let mut chars = raw[1..raw.len().saturating_sub(1)].chars();
     while let Some(ch) = chars.next() {
-        if ch.is_whitespace() {
+        if ch != '\\' {
+            out.push(ch);
             continue;
         }
 
-        if ch == '/' && matches!(chars.peek(), Some('/')) {
-            chars.next();
-            return next_significant_char_after_line_comment(chars);
+        match chars.next() {
+            Some('"') => out.push('"'),
+            Some('\\') => out.push('\\'),
+            Some('n') => out.push('\n'),
+            Some('t') => out.push('\t'),
+            Some(other) => out.push(other),
+            None => {}
         }
-
-        return Some(ch);
     }
-
-    None
+    out
 }
 
-fn next_significant_char_after_line_comment(
-    mut chars: std::iter::Peekable<std::str::Chars<'_>>,
-) -> Option<char> {
-    for ch in chars.by_ref() {
-        if matches!(ch, '\n' | '\r') {
-            break;
-        }
+fn expr_span(expr: &Expr) -> SourceSpan {
+    match expr {
+        Expr::Number { span, .. }
+        | Expr::Str { span, .. }
+        | Expr::Bool { span, .. }
+        | Expr::Var { span, .. }
+        | Expr::Unary { span, .. }
+        | Expr::Binary { span, .. }
+        | Expr::Call { span, .. } => *span,
     }
+}
 
-    next_significant_char(chars)
+fn stmt_span(stmt: &Stmt) -> SourceSpan {
+    match stmt {
+        Stmt::Let { span, .. }
+        | Stmt::Assign { span, .. }
+        | Stmt::Expr { span, .. }
+        | Stmt::Block { span, .. }
+        | Stmt::If { span, .. }
+        | Stmt::While { span, .. }
+        | Stmt::Empty { span }
+        | Stmt::Error { span } => *span,
+    }
 }
 
 impl ScriptAST {
     pub fn new(script: &str) -> Result<Self, String> {
-        let normalized_script = normalize_script_semicolons(script);
-        let program_pair = ScriptParser::parse(Rule::program, &normalized_script)
-            .map_err(|e| {
-                format!(
-                    "{}\n: {}",
-                    t!("mask.mapping.parseScriptFailed"),
-                    e.to_string()
-                )
-            })?
-            .next()
-            .ok_or_else(|| t!("mask.mapping.noProgramFound").to_string())?;
-
-        let mut ast = ScriptAST::default();
         if script.is_empty() {
-            ast.empty = true;
-            return Ok(ast);
+            return Ok(ScriptAST {
+                program: Program::default(),
+                script: script.to_string(),
+                empty: true,
+            });
         }
 
-        ast.empty = false;
-        ast.script = script.to_string();
-        ast.program = ast.parse_program(program_pair);
-        ast.program.errors.extend(ast.validate_program());
+        let parsed = parse_script(script);
+        let ast = ScriptAST {
+            program: parsed.program,
+            script: script.to_string(),
+            empty: false,
+        };
+
         if !ast.program.errors.is_empty() {
             return Err(ast
                 .program
@@ -716,35 +1582,11 @@ impl ScriptAST {
     }
 
     pub fn validate_diagnostics(script: &str) -> Vec<ScriptDiagnostic> {
-        let normalized_script = normalize_script_semicolons(script);
-        let program_pair = match ScriptParser::parse(Rule::program, &normalized_script) {
-            Ok(mut pairs) => match pairs.next() {
-                Some(pair) => pair,
-                None => {
-                    return vec![ScriptDiagnostic::error(
-                        t!("mask.mapping.noProgramFound").to_string(),
-                        SourceSpan::point_at_start(),
-                    )];
-                }
-            },
-            Err(err) => {
-                return vec![ScriptDiagnostic::from_pest_error(err)];
-            }
-        };
-
-        let mut ast = ScriptAST::default();
         if script.is_empty() {
             return Vec::new();
         }
 
-        ast.script = script.to_string();
-        ast.program = ast.parse_program(program_pair);
-        ast.program.errors.extend(ast.validate_program());
-        ast.program
-            .errors
-            .iter()
-            .map(ScriptDiagnostic::from)
-            .collect()
+        parse_script(script).diagnostics
     }
 
     fn validate_program(&self) -> Vec<ScriptError> {
@@ -1254,334 +2096,6 @@ impl ScriptAST {
         }
     }
 
-    fn parse_program(&self, pair: Pair<Rule>) -> Program {
-        let mut stmts = Vec::new();
-        let mut errors = Vec::new();
-
-        for stmt_pair in pair.into_inner() {
-            match stmt_pair.as_rule() {
-                Rule::stmt => stmts.push(self.parse_stmt(stmt_pair, &mut errors)),
-                Rule::EOI => {}
-                _ => unreachable!(),
-            }
-        }
-        Program { stmts, errors }
-    }
-
-    fn parse_stmt(&self, pair: Pair<Rule>, errors: &mut Vec<ScriptError>) -> Stmt {
-        let span: SourceSpan = pair.as_span().into();
-        let mut it = pair.into_inner();
-        let core = it.next().unwrap();
-
-        let rule: Rule = core.as_rule();
-        match rule {
-            Rule::let_stmt | Rule::assign_stmt => {
-                let mut it = core.into_inner();
-                let name = it.next().unwrap().as_str().to_string();
-                let expr_pair = it.next().unwrap();
-                match self.parse_expr(expr_pair) {
-                    Ok(expr) => match rule {
-                        Rule::let_stmt => Stmt::Let { name, expr, span },
-                        Rule::assign_stmt => Stmt::Assign { name, expr, span },
-                        r => unreachable!("Unexpected rule {:?}", r),
-                    },
-                    Err(err) => {
-                        errors.push(err.with_outer_span(span, &self.script));
-                        Stmt::Error { span }
-                    }
-                }
-            }
-            Rule::expr_stmt => {
-                let expr_pair = core.into_inner().next().unwrap();
-                match self.parse_expr(expr_pair) {
-                    Ok(expr) => Stmt::Expr { expr, span },
-                    Err(err) => {
-                        errors.push(err.with_outer_span(span, &self.script));
-                        Stmt::Error { span }
-                    }
-                }
-            }
-            Rule::empty_stmt => Stmt::Empty { span },
-            Rule::block => {
-                let mut stmts = Vec::new();
-                let span: SourceSpan = core.as_span().into();
-
-                for stmt_pair in core.into_inner() {
-                    if stmt_pair.as_rule() == Rule::stmt {
-                        stmts.push(self.parse_stmt(stmt_pair, errors));
-                    }
-                }
-
-                Stmt::Block { stmts, span }
-            }
-            Rule::while_stmt => {
-                let while_span: SourceSpan = core.as_span().into();
-                let mut inner = core.into_inner();
-
-                let condition_pair = inner.next().unwrap();
-                let condition = match self.parse_expr(condition_pair) {
-                    Ok(expr) => expr,
-                    Err(err) => {
-                        errors.push(err.with_outer_span(span, &self.script));
-                        return Stmt::Error { span };
-                    }
-                };
-
-                let body_pair = inner.next().unwrap();
-                let body = match body_pair.as_rule() {
-                    Rule::block => {
-                        let mut stmts = Vec::new();
-                        let block_span: SourceSpan = body_pair.as_span().into();
-
-                        for stmt_pair in body_pair.into_inner() {
-                            if stmt_pair.as_rule() == Rule::stmt {
-                                stmts.push(self.parse_stmt(stmt_pair, errors));
-                            }
-                        }
-
-                        Stmt::Block {
-                            stmts,
-                            span: block_span,
-                        }
-                    }
-                    r => {
-                        errors.push(
-                            ScriptError::from_span(
-                                body_pair.as_span().into(),
-                                &self.script,
-                                format!("Expected block statement for while body, but got {:?}", r),
-                            )
-                            .with_outer_span(span, &self.script),
-                        );
-                        return Stmt::Error { span };
-                    }
-                };
-
-                Stmt::While {
-                    condition,
-                    body: Box::new(body),
-                    span: while_span,
-                }
-            }
-            Rule::if_stmt => {
-                let if_span: SourceSpan = core.as_span().into();
-                let mut inner = core.into_inner();
-
-                let condition_pair = inner.next().unwrap();
-                let condition = match self.parse_expr(condition_pair) {
-                    Ok(expr) => expr,
-                    Err(err) => {
-                        errors.push(err.with_outer_span(span, &self.script));
-                        return Stmt::Error { span };
-                    }
-                };
-
-                let then_pair = inner.next().unwrap();
-                let then_block = match then_pair.as_rule() {
-                    Rule::block => {
-                        let mut stmts = Vec::new();
-                        let block_span: SourceSpan = then_pair.as_span().into();
-
-                        for stmt_pair in then_pair.into_inner() {
-                            if stmt_pair.as_rule() == Rule::stmt {
-                                stmts.push(self.parse_stmt(stmt_pair, errors));
-                            }
-                        }
-
-                        Stmt::Block {
-                            stmts,
-                            span: block_span,
-                        }
-                    }
-                    r => {
-                        errors.push(
-                            ScriptError::from_span(
-                                then_pair.as_span().into(),
-                                &self.script,
-                                format!("Expected block statement for if branch, but got {:?}", r),
-                            )
-                            .with_outer_span(span, &self.script),
-                        );
-                        return Stmt::Error { span };
-                    }
-                };
-
-                let else_block = if let Some(else_pair) = inner.next() {
-                    match else_pair.as_rule() {
-                        Rule::block => {
-                            let mut stmts = Vec::new();
-                            let block_span: SourceSpan = else_pair.as_span().into();
-
-                            for stmt_pair in else_pair.into_inner() {
-                                if stmt_pair.as_rule() == Rule::stmt {
-                                    stmts.push(self.parse_stmt(stmt_pair, errors));
-                                }
-                            }
-
-                            Some(Box::new(Stmt::Block {
-                                stmts,
-                                span: block_span,
-                            }))
-                        }
-                        r => {
-                            errors.push(ScriptError::from_span(
-                                else_pair.as_span().into(),
-                                &self.script,
-                                format!(
-                                    "Expected block statement for else branch, but got {:?}",
-                                    r
-                                ),
-                            ));
-                            return Stmt::Error { span };
-                        }
-                    }
-                } else {
-                    None
-                };
-
-                Stmt::If {
-                    condition,
-                    then_block: Box::new(then_block),
-                    else_block,
-                    span: if_span,
-                }
-            }
-            _ => Stmt::Error { span },
-        }
-    }
-
-    fn parse_expr(&self, pair: Pair<Rule>) -> Result<Expr, ScriptError> {
-        match pair.as_rule() {
-            Rule::number => {
-                let span = pair.as_span();
-                let val: i64 = pair
-                    .as_str()
-                    .parse()
-                    .map_err(|e: std::num::ParseIntError| {
-                        ScriptError::from_span(span.into(), &self.script, e.to_string())
-                    })?;
-                Ok(Expr::Number {
-                    value: val,
-                    span: span.into(),
-                })
-            }
-            Rule::boolean => {
-                let val = match pair.as_str() {
-                    "true" => true,
-                    "false" => false,
-                    p => unreachable!("Unexpected pair {p}",),
-                };
-
-                Ok(Expr::Bool {
-                    value: val,
-                    span: pair.as_span().into(),
-                })
-            }
-            Rule::string => {
-                let raw = pair.as_str();
-                // escape \n, \t, \", \\
-                let s = raw[1..raw.len() - 1]
-                    .replace("\\n", "\n")
-                    .replace("\\t", "\t")
-                    .replace("\\\"", "\"")
-                    .replace("\\\\", "\\");
-
-                Ok(Expr::Str {
-                    value: s,
-                    span: pair.as_span().into(),
-                })
-            }
-            Rule::ident => Ok(Expr::Var {
-                name: pair.as_str().to_string(),
-                span: pair.as_span().into(),
-            }),
-            Rule::call => {
-                let expr_span = pair.as_span();
-                let mut inner = pair.into_inner();
-                let name = inner.next().unwrap().as_str().to_string();
-                let args = if let Some(arg_list) = inner.next() {
-                    arg_list
-                        .into_inner()
-                        .map(|pair| self.parse_expr(pair))
-                        .collect::<Result<Vec<_>, _>>()?
-                } else {
-                    vec![]
-                };
-                Ok(Expr::Call {
-                    name,
-                    args,
-                    span: expr_span.into(),
-                })
-            }
-            Rule::prefix => {
-                let expr_span = pair.as_span();
-                let mut inner = pair.into_inner();
-                let first = inner.next().unwrap(); // UnaryOp or atom
-
-                let (op, expr_pair) = match first.as_rule() {
-                    Rule::PLUS => (Some(UnaryOp::Plus), inner.next().unwrap()),
-                    Rule::MINUS => (Some(UnaryOp::Minus), inner.next().unwrap()),
-                    Rule::NOT => (Some(UnaryOp::Not), inner.next().unwrap()),
-                    _ => (None, first),
-                };
-
-                let rhs = self.parse_expr(expr_pair)?;
-                let expr = if let Some(op) = op {
-                    Expr::Unary {
-                        op,
-                        rhs: Box::new(rhs),
-                        span: expr_span.into(),
-                    }
-                } else {
-                    rhs
-                };
-
-                Ok(expr)
-            }
-            Rule::product
-            | Rule::sum
-            | Rule::comparison
-            | Rule::equality
-            | Rule::logic_and
-            | Rule::logic_or => {
-                let expr_span = pair.as_span();
-                let mut inner = pair.into_inner();
-                let mut lhs = self.parse_expr(inner.next().unwrap())?;
-                while let Some(op_pair) = inner.next() {
-                    let op = match op_pair.as_rule() {
-                        Rule::PLUS => BinOp::Add,
-                        Rule::MINUS => BinOp::Sub,
-                        Rule::STAR => BinOp::Mul,
-                        Rule::SLASH => BinOp::Div,
-                        Rule::MOD => BinOp::Mod,
-                        Rule::LT => BinOp::Lt,
-                        Rule::LTE => BinOp::Le,
-                        Rule::GT => BinOp::Gt,
-                        Rule::GTE => BinOp::Ge,
-                        Rule::EQ => BinOp::Eq,
-                        Rule::NEQ => BinOp::Neq,
-                        Rule::AND => BinOp::And,
-                        Rule::OR => BinOp::Or,
-                        r => unreachable!("Unexpected rule {:?}", r),
-                    };
-                    let rhs = self.parse_expr(inner.next().unwrap())?;
-
-                    lhs = Expr::Binary {
-                        lhs: Box::new(lhs),
-                        op,
-                        rhs: Box::new(rhs),
-                        span: expr_span.into(),
-                    };
-                }
-                Ok(lhs)
-            }
-            _ => Err(ScriptError::from_span(
-                pair.as_span().into(),
-                &self.script,
-                format!("Unsupported expr: {:?}", pair.as_rule()),
-            )),
-        }
-    }
 }
 
 struct ScriptAnalyzer<'a> {
@@ -2706,25 +3220,35 @@ pub struct SourceSpan {
 }
 
 impl SourceSpan {
-    fn point_at_start() -> Self {
+    fn between(start: SourcePosition, end: SourcePosition) -> Self {
+        let end_col = if start.line == end.line {
+            end.col.max(start.col + 1)
+        } else {
+            end.col
+        };
         Self {
-            start_line: 1,
-            start_col: 1,
-            end_line: 1,
-            end_col: 2,
+            start_line: start.line,
+            start_col: start.col,
+            end_line: end.line,
+            end_col,
         }
     }
-}
 
-impl<'i> From<Span<'i>> for SourceSpan {
-    fn from(s: Span<'i>) -> Self {
-        let (start_line, start_col) = s.start_pos().line_col();
-        let (end_line, end_col) = s.end_pos().line_col();
+    fn join(self, other: SourceSpan) -> Self {
         Self {
-            start_line,
-            start_col,
-            end_line,
-            end_col,
+            start_line: self.start_line,
+            start_col: self.start_col,
+            end_line: other.end_line,
+            end_col: other.end_col,
+        }
+    }
+
+    fn insertion_after(self) -> Self {
+        Self {
+            start_line: self.end_line,
+            start_col: self.end_col,
+            end_line: self.end_line,
+            end_col: self.end_col + 1,
         }
     }
 }
@@ -2733,6 +3257,16 @@ impl<'i> From<Span<'i>> for SourceSpan {
 #[serde(rename_all = "camelCase")]
 pub struct ScriptDiagnostic {
     pub severity: ScriptDiagnosticSeverity,
+    pub code: String,
+    pub message: String,
+    pub span: SourceSpan,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related: Vec<ScriptRelatedDiagnostic>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptRelatedDiagnostic {
     pub message: String,
     pub span: SourceSpan,
 }
@@ -2744,60 +3278,54 @@ pub enum ScriptDiagnosticSeverity {
 }
 
 impl ScriptDiagnostic {
-    fn error(message: String, span: SourceSpan) -> Self {
+    fn error(
+        code: impl Into<String>,
+        message: String,
+        span: SourceSpan,
+        related: Vec<ScriptRelatedDiagnostic>,
+    ) -> Self {
         Self {
             severity: ScriptDiagnosticSeverity::Error,
+            code: code.into(),
             message,
             span,
+            related,
         }
-    }
-
-    fn from_pest_error(err: pest::error::Error<Rule>) -> Self {
-        let span = match err.line_col {
-            LineColLocation::Pos((line, col)) => SourceSpan {
-                start_line: line,
-                start_col: col,
-                end_line: line,
-                end_col: col + 1,
-            },
-            LineColLocation::Span((start_line, start_col), (end_line, end_col)) => {
-                let min_end_col = if start_line == end_line {
-                    start_col + 1
-                } else {
-                    1
-                };
-                SourceSpan {
-                    start_line,
-                    start_col,
-                    end_line,
-                    end_col: end_col.max(min_end_col),
-                }
-            }
-        };
-
-        Self::error(
-            format!("{}\n{}", t!("mask.mapping.parseScriptFailed"), err),
-            span,
-        )
     }
 }
 
 impl From<&ScriptError> for ScriptDiagnostic {
     fn from(error: &ScriptError) -> Self {
-        Self::error(error.message.clone(), error.span)
+        Self::error(
+            error.code.clone(),
+            error.message.clone(),
+            error.span,
+            error.related.clone(),
+        )
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct ScriptError {
+    pub code: String,
     pub message: String,
     pub span: SourceSpan,
+    pub related: Vec<ScriptRelatedDiagnostic>,
     pub outer_span: Option<SourceSpan>,
     pub snippet_lines: Vec<String>,
 }
 
 impl ScriptError {
     pub fn from_span(span: SourceSpan, source: &str, message: impl ToString) -> ScriptError {
+        Self::from_code_span("script.error", span, source, message)
+    }
+
+    pub fn from_code_span(
+        code: impl Into<String>,
+        span: SourceSpan,
+        source: &str,
+        message: impl ToString,
+    ) -> ScriptError {
         let snippet_lines: Vec<String> = source
             .lines()
             .skip(span.start_line - 1)
@@ -2806,11 +3334,21 @@ impl ScriptError {
             .collect();
 
         ScriptError {
+            code: code.into(),
             message: message.to_string(),
             span,
+            related: Vec::new(),
             outer_span: None,
             snippet_lines,
         }
+    }
+
+    fn with_related(mut self, message: impl Into<String>, span: SourceSpan) -> Self {
+        self.related.push(ScriptRelatedDiagnostic {
+            message: message.into(),
+            span,
+        });
+        self
     }
 
     pub fn with_outer_span(mut self, span: SourceSpan, source: &str) -> Self {
@@ -3106,6 +3644,89 @@ print(x)
     #[test]
     fn rejects_same_line_simple_statements_without_separator() {
         assert!(ScriptAST::new("let x = 1 print(x)").is_err());
+    }
+
+    #[test]
+    fn reports_structured_syntax_diagnostics() {
+        let diagnostics = ScriptAST::validate_diagnostics(
+            r#"
+let x = 1 +
+;
+print(x
+"#,
+        );
+
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "script.syntax.missingExpression")
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "script.syntax.missingRightParen")
+        );
+    }
+
+    #[test]
+    fn missing_call_paren_points_to_opening_paren_with_related_insert_location() {
+        let diagnostics = ScriptAST::validate_diagnostics("tap(9, 250, 580\n\n\n");
+        let diagnostic = diagnostics
+            .iter()
+            .find(|diagnostic| diagnostic.code == "script.syntax.missingRightParen")
+            .unwrap();
+
+        assert_eq!(diagnostic.span.start_line, 1);
+        assert_eq!(diagnostic.span.start_col, 4);
+        assert!(
+            diagnostic
+                .related
+                .iter()
+                .any(|related| related.message == "Insert ')' after the last argument."
+                    && related.span.start_line == 1)
+        );
+    }
+
+    #[test]
+    fn parser_recovers_multiple_statement_errors() {
+        let diagnostics = ScriptAST::validate_diagnostics(
+            r#"
+let x =
+tap(0,, 1)
+"#,
+        );
+
+        assert!(diagnostics.len() >= 2);
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "script.syntax.missingExpression")
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "script.syntax.missingArgument")
+        );
+    }
+
+    #[test]
+    fn parse_result_keeps_comment_trivia_for_formatter() {
+        let parsed = parse_script(
+            r#"
+// leading comment
+print("x")
+"#,
+        );
+
+        assert!(
+            parsed
+                .tokens
+                .iter()
+                .any(|token| token
+                    .leading_trivia
+                    .iter()
+                    .any(|trivia| trivia.kind == ScriptTriviaKind::Comment))
+        );
     }
 
     #[test]

@@ -101,10 +101,11 @@ async fn _control_device(
         .iter()
         .any(|device| device.device_id == device_id)
     {
-        return Err(WebServerError(
-            400,
-            format!("{}: {}", t!("web.device.alreadyControlled"), device_id),
-        ));
+        return Err(WebServerError::bad_request(format!(
+            "{}: {}",
+            t!("web.device.alreadyControlled"),
+            device_id
+        )));
     }
 
     // prepare for scrcpy app
@@ -116,12 +117,12 @@ async fn _control_device(
         scrcpy_path.to_str().unwrap(),
         "/data/local/tmp/scrcpy-server.jar",
     )
-    .map_err(|e| WebServerError(500, e))?;
+    .map_err(WebServerError::internal_error)?;
     log::info!("[WebServe] {}", t!("web.device.pushScrcpyServerSuccess"));
 
     let remote = format!("localabstract:scrcpy_{}", scid);
     let local = format!("tcp:{}", local_config.controller_port);
-    Device::reverse(&device_id, &remote, &local).map_err(|e| WebServerError(500, e))?;
+    Device::reverse(&device_id, &remote, &local).map_err(WebServerError::internal_error)?;
     log::info!(
         "[WebServe] {}",
         t!("web.device.reverseSuccess", remote => remote, local => local)

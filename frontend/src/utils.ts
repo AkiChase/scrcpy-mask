@@ -1,5 +1,11 @@
 import axios, { type AxiosResponse, type ResponseType } from "axios";
 
+export type ApiError<D = any> = {
+  code?: number;
+  message: string;
+  data?: D;
+};
+
 async function handleRequest<D = any>(
   req: () => Promise<AxiosResponse>,
 ): Promise<{ message: string; data: D }> {
@@ -22,6 +28,13 @@ async function handleRequest<D = any>(
         }
       } else {
         msg = err.response.data.message;
+        if (err.response.data.data) {
+          throw {
+            code: err.response.data.code,
+            message: msg,
+            data: err.response.data.data,
+          } satisfies ApiError;
+        }
       }
     } else {
       msg = `Request failed: ${err}`;

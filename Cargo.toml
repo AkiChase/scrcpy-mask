@@ -46,8 +46,6 @@ half = "2.6.0"
 tokio-util = "0.7.15"
 once_cell = "1.21.3"
 copypasta = "0.10.2"
-pest = "2"
-pest_derive = "2"
 rust-i18n = "3"
 ffmpeg-next = { version = "7.1.0", default-features = false, features = [
     "format",

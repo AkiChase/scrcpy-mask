@@ -26,11 +26,13 @@ use crate::{
             BindMappingCancelCast, BindMappingMouseCastSpell, BindMappingPadCastSpell,
             MappingCancelCast, MappingMouseCastSpell, MappingPadCastSpell,
         },
+        cursor::FPS_MARGIN,
         direction_pad::{BindMappingDirectionPad, MappingDirectionPad},
         fire::{BindMappingFire, BindMappingFps, MappingFire, MappingFps},
         observation::{BindMappingObservation, MappingObservation},
         raw_input::{BindMappingRawInput, MappingRawInput},
-        script::{BindMappingScript, MappingScript},
+        script::{BindMappingScript, MappingScript, MappingScriptHooks},
+        script_helper::{ScriptAST, ScriptDiagnostic},
         swipe::{BindMappingSwipe, MappingSwipe},
         tap::{
             BindMappingMultipleTap, BindMappingRepeatTap, BindMappingSingleTap, MappingMultipleTap,
@@ -218,6 +220,77 @@ pub struct MappingConfig {
     pub mappings: Vec<MappingType>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MappingDiagnostic {
+    pub severity: String,
+    pub code: String,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mapping_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mapping_index: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mapping_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub script_diagnostic: Option<ScriptDiagnostic>,
+}
+
+impl MappingDiagnostic {
+    fn config(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            severity: "error".to_string(),
+            code: code.into(),
+            message: message.into(),
+            mapping_type: None,
+            mapping_index: None,
+            mapping_id: None,
+            field: None,
+            script_diagnostic: None,
+        }
+    }
+
+    fn mapping(
+        code: impl Into<String>,
+        message: impl Into<String>,
+        mapping_type: &str,
+        mapping_index: usize,
+        mapping_id: &str,
+    ) -> Self {
+        Self {
+            severity: "error".to_string(),
+            code: code.into(),
+            message: message.into(),
+            mapping_type: Some(mapping_type.to_string()),
+            mapping_index: Some(mapping_index),
+            mapping_id: Some(mapping_id.to_string()),
+            field: None,
+            script_diagnostic: None,
+        }
+    }
+
+    fn script(
+        mapping_type: &str,
+        mapping_index: usize,
+        mapping_id: &str,
+        field: &str,
+        diagnostic: ScriptDiagnostic,
+    ) -> Self {
+        Self {
+            severity: "error".to_string(),
+            code: "mapping.script.invalid".to_string(),
+            message: format!("Script field '{field}' has errors."),
+            mapping_type: Some(mapping_type.to_string()),
+            mapping_index: Some(mapping_index),
+            mapping_id: Some(mapping_id.to_string()),
+            field: Some(field.to_string()),
+            script_diagnostic: Some(diagnostic),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct BindMappingConfig {
     pub version: String,
@@ -326,56 +399,86 @@ pub fn default_mapping_config() -> MappingConfig {
 }
 
 // Validate mapping config:
-pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), String> {
-    let mut validate_errors = Vec::<String>::new();
+pub fn validate_mapping_config_diagnostics(mapping_config: &MappingConfig) -> Vec<MappingDiagnostic> {
+    let mut diagnostics = Vec::<MappingDiagnostic>::new();
     let mut mapping_ids = HashSet::<String>::new();
 
     if mapping_config.original_size.width == 0 || mapping_config.original_size.height == 0 {
-        validate_errors.push(format!(
-            "{}: {}x{}",
-            t!("web.mapping.invalidSize"),
-            mapping_config.original_size.width,
-            mapping_config.original_size.height
+        diagnostics.push(MappingDiagnostic::config(
+            "mapping.config.invalidSize",
+            format!(
+                "{}: {}x{}",
+                t!("web.mapping.invalidSize"),
+                mapping_config.original_size.width,
+                mapping_config.original_size.height
+            ),
         ));
     }
 
-    // Check mapping action count
     let mut mapping_type_map = HashMap::<String, u32>::new();
     for mapping in mapping_config.mappings.iter() {
-        let name = mapping.as_ref();
+        let mapping_type = mapping.as_ref();
         let count = *mapping_type_map
-            .entry(name.to_string())
+            .entry(mapping_type.to_string())
             .and_modify(|c| *c += 1)
             .or_insert(1);
+        let mapping_index = count as usize;
+        let id = mapping.id();
+
         if count > 32 {
-            validate_errors.push(
+            diagnostics.push(MappingDiagnostic::mapping(
+                "mapping.config.tooManyMappings",
                 t!(
                     "mask.mapping.mappingActionExceedsMaxCount",
-                    name => name,
+                    name => mapping_type,
                     count => count,
                     max => 32
                 )
                 .to_string(),
-            );
+                mapping_type,
+                mapping_index,
+                id,
+            ));
         }
 
-        let id = mapping.id();
         if id.trim().is_empty() {
-            validate_errors.push(format!("[{name}-{count}] mapping id cannot be empty"));
+            diagnostics.push(MappingDiagnostic::mapping(
+                "mapping.config.emptyId",
+                "Mapping id cannot be empty.",
+                mapping_type,
+                mapping_index,
+                id,
+            ));
         } else if !mapping_ids.insert(id.to_string()) {
-            validate_errors.push(format!("[{name}-{count}] duplicate mapping id: {id}"));
+            diagnostics.push(MappingDiagnostic::mapping(
+                "mapping.config.duplicateId",
+                format!("Duplicate mapping id: {id}."),
+                mapping_type,
+                mapping_index,
+                id,
+            ));
         }
 
-        if let Err(e) = mapping.validate() {
-            validate_errors.push(format!("[{name}-{count}] {e}"));
-        }
+        collect_mapping_specific_diagnostics(
+            &mut diagnostics,
+            mapping,
+            mapping_type,
+            mapping_index,
+            id,
+        );
     }
+
+    diagnostics
+}
+
+pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), String> {
+    let validate_errors = validate_mapping_config_diagnostics(mapping_config);
 
     if !validate_errors.is_empty() {
         let mut validate_errors: Vec<String> = validate_errors
             .into_iter()
             .enumerate()
-            .map(|(i, err)| format!("{}. {}", i + 1, err))
+            .map(|(i, err)| format!("{}. {}", i + 1, format_mapping_diagnostic(&err)))
             .collect();
         validate_errors.insert(
             0,
@@ -384,6 +487,215 @@ pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), Str
         return Err(validate_errors.join("\n"));
     }
     Ok(())
+}
+
+fn format_mapping_diagnostic(diagnostic: &MappingDiagnostic) -> String {
+    let mut prefix = String::new();
+    if let (Some(mapping_type), Some(index)) =
+        (&diagnostic.mapping_type, diagnostic.mapping_index)
+    {
+        prefix = format!("[{mapping_type}-{index}] ");
+    }
+    if let Some(field) = &diagnostic.field {
+        if let Some(script_diagnostic) = &diagnostic.script_diagnostic {
+            return format!(
+                "{prefix}{field}: {}",
+                script_diagnostic.message
+            );
+        }
+    }
+    format!("{prefix}{}", diagnostic.message)
+}
+
+fn collect_mapping_specific_diagnostics(
+    diagnostics: &mut Vec<MappingDiagnostic>,
+    mapping: &MappingType,
+    mapping_type: &str,
+    mapping_index: usize,
+    mapping_id: &str,
+) {
+    match mapping {
+        MappingType::SingleTap(mapping) => collect_script_hook_diagnostics(
+            diagnostics,
+            mapping_type,
+            mapping_index,
+            mapping_id,
+            &mapping.script_hooks,
+        ),
+        MappingType::RepeatTap(mapping) => collect_script_hook_diagnostics(
+            diagnostics,
+            mapping_type,
+            mapping_index,
+            mapping_id,
+            &mapping.script_hooks,
+        ),
+        MappingType::MultipleTap(mapping) => {
+            if mapping.items.is_empty() {
+                diagnostics.push(MappingDiagnostic::mapping(
+                    "mapping.multipleTap.emptyItems",
+                    "MultipleTap's operation item list is empty.",
+                    mapping_type,
+                    mapping_index,
+                    mapping_id,
+                ));
+            }
+            collect_script_hook_diagnostics(
+                diagnostics,
+                mapping_type,
+                mapping_index,
+                mapping_id,
+                &mapping.script_hooks,
+            );
+        }
+        MappingType::Swipe(mapping) => {
+            if mapping.positions.is_empty() {
+                diagnostics.push(MappingDiagnostic::mapping(
+                    "mapping.swipe.emptyPositions",
+                    "Swipe's position list is empty.",
+                    mapping_type,
+                    mapping_index,
+                    mapping_id,
+                ));
+            }
+            collect_script_hook_diagnostics(
+                diagnostics,
+                mapping_type,
+                mapping_index,
+                mapping_id,
+                &mapping.script_hooks,
+            );
+        }
+        MappingType::DirectionPad(mapping) => collect_script_hook_diagnostics(
+            diagnostics,
+            mapping_type,
+            mapping_index,
+            mapping_id,
+            &mapping.script_hooks,
+        ),
+        MappingType::MouseCastSpell(mapping) => collect_script_hook_diagnostics(
+            diagnostics,
+            mapping_type,
+            mapping_index,
+            mapping_id,
+            &mapping.script_hooks,
+        ),
+        MappingType::PadCastSpell(mapping) => collect_script_hook_diagnostics(
+            diagnostics,
+            mapping_type,
+            mapping_index,
+            mapping_id,
+            &mapping.script_hooks,
+        ),
+        MappingType::CancelCast(mapping) => collect_script_hook_diagnostics(
+            diagnostics,
+            mapping_type,
+            mapping_index,
+            mapping_id,
+            &mapping.script_hooks,
+        ),
+        MappingType::Observation(mapping) => collect_script_hook_diagnostics(
+            diagnostics,
+            mapping_type,
+            mapping_index,
+            mapping_id,
+            &mapping.script_hooks,
+        ),
+        MappingType::Fps(mapping) => {
+            if mapping.position.x <= FPS_MARGIN as i32 || mapping.position.y <= FPS_MARGIN as i32 {
+                diagnostics.push(MappingDiagnostic::mapping(
+                    "mapping.fps.invalidPosition",
+                    t!(
+                        "mask.mapping.invalidPosition",
+                        x => mapping.position.x,
+                        y => mapping.position.y,
+                        margin => FPS_MARGIN
+                    )
+                    .to_string(),
+                    mapping_type,
+                    mapping_index,
+                    mapping_id,
+                ));
+            }
+        }
+        MappingType::Fire(mapping) => collect_script_hook_diagnostics(
+            diagnostics,
+            mapping_type,
+            mapping_index,
+            mapping_id,
+            &mapping.script_hooks,
+        ),
+        MappingType::RawInput(_) => {}
+        MappingType::Script(mapping) => {
+            collect_script_field_diagnostics(
+                diagnostics,
+                mapping_type,
+                mapping_index,
+                mapping_id,
+                "pressed_script",
+                &mapping.pressed_script,
+            );
+            collect_script_field_diagnostics(
+                diagnostics,
+                mapping_type,
+                mapping_index,
+                mapping_id,
+                "held_script",
+                &mapping.held_script,
+            );
+            collect_script_field_diagnostics(
+                diagnostics,
+                mapping_type,
+                mapping_index,
+                mapping_id,
+                "released_script",
+                &mapping.released_script,
+            );
+        }
+    }
+}
+
+fn collect_script_hook_diagnostics(
+    diagnostics: &mut Vec<MappingDiagnostic>,
+    mapping_type: &str,
+    mapping_index: usize,
+    mapping_id: &str,
+    hooks: &MappingScriptHooks,
+) {
+    collect_script_field_diagnostics(
+        diagnostics,
+        mapping_type,
+        mapping_index,
+        mapping_id,
+        "script_hooks.before_script",
+        &hooks.before_script,
+    );
+    collect_script_field_diagnostics(
+        diagnostics,
+        mapping_type,
+        mapping_index,
+        mapping_id,
+        "script_hooks.after_script",
+        &hooks.after_script,
+    );
+}
+
+fn collect_script_field_diagnostics(
+    diagnostics: &mut Vec<MappingDiagnostic>,
+    mapping_type: &str,
+    mapping_index: usize,
+    mapping_id: &str,
+    field: &str,
+    script: &str,
+) {
+    for diagnostic in ScriptAST::validate_diagnostics(script) {
+        diagnostics.push(MappingDiagnostic::script(
+            mapping_type,
+            mapping_index,
+            mapping_id,
+            field,
+            diagnostic,
+        ));
+    }
 }
 
 pub fn load_mapping_config(

@@ -171,14 +171,18 @@ impl IntoResponse for JsonResponse {
 }
 
 #[derive(Debug)]
-pub struct WebServerError(u16, String);
+pub struct WebServerError(u16, String, Option<Value>);
 
 impl WebServerError {
     pub fn internal_error(message: impl Into<String>) -> Self {
-        Self(500, message.into())
+        Self(500, message.into(), None)
     }
     pub fn bad_request(message: impl Into<String>) -> Self {
-        Self(400, message.into())
+        Self(400, message.into(), None)
+    }
+
+    pub fn bad_request_data(message: impl Into<String>, data: Value) -> Self {
+        Self(400, message.into(), Some(data))
     }
 }
 
@@ -187,7 +191,7 @@ impl IntoResponse for WebServerError {
         let res = JsonResponse {
             code: self.0,
             message: self.1,
-            data: None,
+            data: self.2,
         };
 
         log::error!(

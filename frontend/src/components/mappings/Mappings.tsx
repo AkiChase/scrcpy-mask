@@ -45,7 +45,13 @@ import {
   SnippetsOutlined,
 } from "@ant-design/icons";
 import IconButton from "../common/IconButton";
-import { deepClone, requestGet, requestPost, throttle } from "../../utils";
+import {
+  type ApiError,
+  deepClone,
+  requestGet,
+  requestPost,
+  throttle,
+} from "../../utils";
 import { useMessageContext, useRefreshBackgroundImage } from "../../hooks";
 import ButtonSingleTap from "./ButtonSingleTap";
 import { setIsLoading, setMaskArea } from "../../store/other";
@@ -72,6 +78,76 @@ type MappingFileTabelItem = {
   active: boolean;
   displayed: boolean;
 };
+
+type ScriptDiagnostic = {
+  code: string;
+  message: string;
+  span: {
+    startLine: number;
+    startCol: number;
+    endLine: number;
+    endCol: number;
+  };
+  related?: {
+    message: string;
+    span: {
+      startLine: number;
+      startCol: number;
+      endLine: number;
+      endCol: number;
+    };
+  }[];
+};
+
+type MappingDiagnostic = {
+  severity: "error";
+  code: string;
+  message: string;
+  mappingType?: string;
+  mappingIndex?: number;
+  mappingId?: string;
+  field?: string;
+  scriptDiagnostic?: ScriptDiagnostic;
+};
+
+type MappingValidateResult = {
+  valid: boolean;
+  diagnostics: MappingDiagnostic[];
+};
+
+function isValidationError(error: unknown): error is ApiError<MappingValidateResult> {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "data" in error &&
+    Array.isArray((error as ApiError<MappingValidateResult>).data?.diagnostics)
+  );
+}
+
+function formatMappingDiagnostic(diagnostic: MappingDiagnostic) {
+  const parts = [];
+  if (diagnostic.mappingType && diagnostic.mappingIndex) {
+    parts.push(`${diagnostic.mappingType}-${diagnostic.mappingIndex}`);
+  }
+  if (diagnostic.field) {
+    parts.push(diagnostic.field);
+  }
+  const location = diagnostic.scriptDiagnostic
+    ? `line ${diagnostic.scriptDiagnostic.span.startLine}, column ${diagnostic.scriptDiagnostic.span.startCol}`
+    : "";
+  const message = diagnostic.scriptDiagnostic?.message ?? diagnostic.message;
+  const related = diagnostic.scriptDiagnostic?.related ?? [];
+  const relatedText =
+    related.length === 0
+      ? ""
+      : related
+          .map(
+            (item) =>
+              `\n  ${item.message} (line ${item.span.startLine}, column ${item.span.startCol})`,
+          )
+          .join("");
+  return `${parts.length ? `${parts.join(" / ")}: ` : ""}${location ? `${location}: ` : ""}${message}${relatedText}`;
+}
 
 type ConfirmProps = PropsWithChildren<{
   title: string;
@@ -657,6 +733,9 @@ export default function Mappings() {
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [editState, setEditState] = useState<EditState | null>(null);
   const [mappingList, setMappingList] = useState<string[]>([]);
+  const [validationDiagnostics, setValidationDiagnostics] = useState<
+    MappingDiagnostic[]
+  >([]);
 
   const mappingListOptions = useMemo(() => {
     return mappingList.map((item) => ({
@@ -727,7 +806,11 @@ export default function Mappings() {
         old: deepClone(mappingConfig),
       });
     } catch (error: any) {
-      messageApi?.error(error);
+      if (isValidationError(error)) {
+        setValidationDiagnostics(error.data?.diagnostics ?? []);
+      } else {
+        messageApi?.error(error);
+      }
     }
     dispatch(setIsLoading(false));
   }
@@ -787,19 +870,35 @@ export default function Mappings() {
 
       dispatch(setIsLoading(true));
       try {
-        const res = await requestPost("/api/mapping/update_mapping", {
-          file: editState.file,
-          config: curConfig,
-        });
-        messageApi?.success(res.message);
-        setEditState({
-          file: editState.file,
-          edited: false,
-          current: curConfig,
-          old: deepClone(curConfig),
-        });
+        const validateRes = await requestPost<MappingValidateResult>(
+          "/api/mapping/validate",
+          {
+            file: editState.file,
+            config: curConfig,
+          },
+        );
+        if (!validateRes.data.valid) {
+          setValidationDiagnostics(validateRes.data.diagnostics);
+        } else {
+          const res = await requestPost("/api/mapping/update_mapping", {
+            file: editState.file,
+            config: curConfig,
+          });
+          messageApi?.success(res.message);
+          setValidationDiagnostics([]);
+          setEditState({
+            file: editState.file,
+            edited: false,
+            current: curConfig,
+            old: deepClone(curConfig),
+          });
+        }
       } catch (error) {
-        messageApi?.error(error as string);
+        if (isValidationError(error)) {
+          setValidationDiagnostics(error.data?.diagnostics ?? []);
+        } else {
+          messageApi?.error(error as string);
+        }
       }
       dispatch(setIsLoading(false));
     }
@@ -907,12 +1006,31 @@ export default function Mappings() {
   }
 
   return (
-    <Flex
-      vertical
-      gap={32}
-      id="mappings-container"
-      className="page-container hide-scrollbar"
-    >
+    <>
+      <Modal
+        title="Mapping validation failed"
+        open={validationDiagnostics.length > 0}
+        onCancel={() => setValidationDiagnostics([])}
+        footer={null}
+        width={720}
+      >
+        <Flex vertical gap={8}>
+          {validationDiagnostics.map((diagnostic, index) => (
+            <div
+              key={`${diagnostic.code}-${index}`}
+              className="whitespace-pre-wrap rounded border border-solid border-red-500/40 px-3 py-2 font-mono text-sm"
+            >
+              {formatMappingDiagnostic(diagnostic)}
+            </div>
+          ))}
+        </Flex>
+      </Modal>
+      <Flex
+        vertical
+        gap={32}
+        id="mappings-container"
+        className="page-container hide-scrollbar"
+      >
       <Manager
         open={isManagerOpen}
         onCancel={() => setIsManagerOpen(false)}
@@ -993,6 +1111,7 @@ export default function Mappings() {
           </Splitter>
         )}
       </section>
-    </Flex>
+      </Flex>
+    </>
   );
 }
