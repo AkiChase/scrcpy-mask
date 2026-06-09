@@ -399,7 +399,9 @@ pub fn default_mapping_config() -> MappingConfig {
 }
 
 // Validate mapping config:
-pub fn validate_mapping_config_diagnostics(mapping_config: &MappingConfig) -> Vec<MappingDiagnostic> {
+pub fn validate_mapping_config_diagnostics(
+    mapping_config: &MappingConfig,
+) -> Vec<MappingDiagnostic> {
     let mut diagnostics = Vec::<MappingDiagnostic>::new();
     let mut mapping_ids = HashSet::<String>::new();
 
@@ -491,17 +493,13 @@ pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), Str
 
 fn format_mapping_diagnostic(diagnostic: &MappingDiagnostic) -> String {
     let mut prefix = String::new();
-    if let (Some(mapping_type), Some(index)) =
-        (&diagnostic.mapping_type, diagnostic.mapping_index)
+    if let (Some(mapping_type), Some(index)) = (&diagnostic.mapping_type, diagnostic.mapping_index)
     {
         prefix = format!("[{mapping_type}-{index}] ");
     }
     if let Some(field) = &diagnostic.field {
         if let Some(script_diagnostic) = &diagnostic.script_diagnostic {
-            return format!(
-                "{prefix}{field}: {}",
-                script_diagnostic.message
-            );
+            return format!("{prefix}{field}: {}", script_diagnostic.message);
         }
     }
     format!("{prefix}{}", diagnostic.message)

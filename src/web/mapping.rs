@@ -122,7 +122,9 @@ fn mapping_validation_error(config: &MappingConfig) -> Option<WebServerError> {
     })
 }
 
-async fn validate_mapping(Json(payload): Json<PostDataNewMapping>) -> Result<JsonResponse, WebServerError> {
+async fn validate_mapping(
+    Json(payload): Json<PostDataNewMapping>,
+) -> Result<JsonResponse, WebServerError> {
     let diagnostics = validate_mapping_config_diagnostics(&payload.config);
     Ok(JsonResponse::success(
         t!("web.script.validateScriptSuccess"),
@@ -586,7 +588,11 @@ async fn read_mapping(
 
     if let Some(data) = mapping_validation_data(&mapping_config) {
         return Err(WebServerError::bad_request_data(
-            format!("{} {}", t!("web.mapping.invalidMappingConfig"), payload.file),
+            format!(
+                "{} {}",
+                t!("web.mapping.invalidMappingConfig"),
+                payload.file
+            ),
             data,
         ));
     }
