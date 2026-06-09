@@ -3,6 +3,7 @@ pub mod share;
 use std::{
     env,
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
 };
 
 use axum::http::{HeaderMap, HeaderValue};
@@ -74,8 +75,55 @@ fn get_base_root() -> PathBuf {
 #[derive(Resource)]
 pub struct ChannelSenderCS(pub broadcast::Sender<ScrcpyControlMsg>);
 
-#[derive(Resource)]
-pub struct ChannelReceiverV(pub crossbeam_channel::Receiver<VideoMsg>);
+#[derive(Clone, Default)]
+pub struct LatestVideoFrame {
+    inner: Arc<LatestVideoFrameInner>,
+}
+
+#[derive(Default)]
+struct LatestVideoFrameInner {
+    slot: Mutex<Option<VideoMsg>>,
+    buffers: Mutex<Vec<Vec<u8>>>,
+}
+
+impl LatestVideoFrame {
+    pub fn send(&self, msg: VideoMsg) {
+        let old_msg = self.inner.slot.lock().unwrap().replace(msg);
+        self.recycle_msg(old_msg);
+    }
+
+    pub fn take(&self) -> Option<VideoMsg> {
+        self.inner.slot.lock().unwrap().take()
+    }
+
+    pub fn take_buffer(&self, size: usize) -> Vec<u8> {
+        let mut buffers = self.inner.buffers.lock().unwrap();
+        let Some(index) = buffers.iter().position(|buffer| buffer.capacity() >= size) else {
+            return vec![0; size];
+        };
+        let mut buffer = buffers.swap_remove(index);
+        if buffer.len() != size {
+            buffer.resize(size, 0);
+        }
+        buffer
+    }
+
+    pub fn recycle_buffer(&self, buffer: Vec<u8>) {
+        let mut buffers = self.inner.buffers.lock().unwrap();
+        if buffers.len() < 3 {
+            buffers.push(buffer);
+        }
+    }
+
+    fn recycle_msg(&self, msg: Option<VideoMsg>) {
+        if let Some(VideoMsg::Data { data, .. }) = msg {
+            self.recycle_buffer(data);
+        }
+    }
+}
+
+#[derive(Resource, Clone)]
+pub struct ChannelReceiverV(pub LatestVideoFrame);
 
 #[derive(Resource)]
 pub struct ChannelReceiverM(

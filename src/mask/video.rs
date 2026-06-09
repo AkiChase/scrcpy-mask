@@ -31,7 +31,7 @@ impl VideoAttributes {
                 },
                 TextureDimension::D2,
                 &[0, 0, 0, 0],
-                TextureFormat::Rgba8UnormSrgb,
+                TextureFormat::Bgra8UnormSrgb,
                 RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
             );
             image.texture_descriptor.usage =
@@ -53,7 +53,7 @@ pub fn handle_video_msg(
     mut video_attr: Local<VideoAttributes>,
     mut video_node: Single<(&mut ImageNode, &mut VideoPlayer)>,
 ) {
-    if let Some(msg) = v_rx.0.try_iter().last() {
+    if let Some(msg) = v_rx.0.take() {
         match msg {
             VideoMsg::Data {
                 data,
@@ -63,14 +63,21 @@ pub fn handle_video_msg(
                 let image_handle =
                     video_attr.update_image_asset(width, height, &mut images, &mut video_node);
                 if let Some(mut image) = images.get_mut(image_handle) {
-                    image.data = Some(data);
+                    if let Some(old_data) = image.data.replace(data) {
+                        v_rx.0.recycle_buffer(old_data);
+                    }
                 }
             }
             VideoMsg::Close => {
                 if let Some(image_handle) = video_attr.image_handle.take() {
                     if let Some(mut image) = images.get_mut(&image_handle) {
-                        let lenght = image.data.take().unwrap().len();
-                        image.data = Some(vec![0; lenght]);
+                        if let Some(old_data) = image.data.take() {
+                            let length = old_data.len();
+                            v_rx.0.recycle_buffer(old_data);
+                            let mut clear_data = v_rx.0.take_buffer(length);
+                            clear_data.fill(0);
+                            image.data = Some(clear_data);
+                        }
                     }
                     video_attr.image_handle = None;
                 }

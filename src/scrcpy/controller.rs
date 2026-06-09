@@ -19,9 +19,8 @@ use crate::{
     scrcpy::{
         connection::ScrcpyConnection,
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
-        media::VideoMsg,
     },
-    utils::{mask_win_move_helper, share::ControlledDevice},
+    utils::{LatestVideoFrame, mask_win_move_helper, share::ControlledDevice},
     web::ws::WebSocketNotification,
 };
 
@@ -40,7 +39,7 @@ impl Controller {
     pub fn start(
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
-        v_tx: crossbeam_channel::Sender<VideoMsg>,
+        v_tx: LatestVideoFrame,
         d_rx: UnboundedReceiver<ControllerCommand>,
         m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
@@ -122,7 +121,7 @@ impl Controller {
     async fn run_server(
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
-        v_tx: crossbeam_channel::Sender<VideoMsg>,
+        v_tx: LatestVideoFrame,
         mut d_rx: UnboundedReceiver<ControllerCommand>,
         m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,

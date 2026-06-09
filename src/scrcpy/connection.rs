@@ -26,7 +26,7 @@ use crate::{
             VideoMsg, read_media_packet,
         },
     },
-    utils::share::ControlledDevice,
+    utils::{LatestVideoFrame, share::ControlledDevice},
 };
 
 pub struct ScrcpyConnection {
@@ -248,7 +248,7 @@ impl ScrcpyConnection {
         }
     }
 
-    async fn video_handler(&mut self, v_tx: crossbeam_channel::Sender<VideoMsg>) {
+    async fn video_handler(&mut self, v_tx: LatestVideoFrame) {
         // read metadata
         let mut buf: [u8; 12] = [0; 12];
         let mut video_decoder = match self.socket.read_exact(&mut buf).await {
@@ -308,17 +308,20 @@ impl ScrcpyConnection {
                         // update size after decoding video packet
                         video_decoder.update();
 
-                        let rgb_frame = video_decoder.conver_to_rgba(&decoded);
-                        let mut buf = Vec::with_capacity(video_decoder.frame_size);
-                        buf.resize(video_decoder.frame_size, 0);
-                        buf.copy_from_slice(rgb_frame.data(0));
+                        let bgra_frame = video_decoder.convert_to_bgra(&decoded);
+                        let mut buf = v_tx.take_buffer(video_decoder.frame_size);
+                        copy_bgra_frame_data(
+                            &bgra_frame,
+                            video_decoder.width,
+                            video_decoder.height,
+                            &mut buf,
+                        );
 
                         v_tx.send(VideoMsg::Data {
                             data: buf,
                             width: video_decoder.width,
                             height: video_decoder.height,
-                        })
-                        .unwrap();
+                        });
                     }
                 }
                 Err(e) => {
@@ -332,7 +335,7 @@ impl ScrcpyConnection {
     pub async fn handle_video(
         mut self,
         token: CancellationToken,
-        v_tx: crossbeam_channel::Sender<VideoMsg>,
+        v_tx: LatestVideoFrame,
         meta_flag: bool,
         scid: &str,
     ) {
@@ -356,8 +359,27 @@ impl ScrcpyConnection {
                 finnal_token.cancel();
             }
         }
-        v_tx.send(VideoMsg::Close).unwrap();
+        v_tx.send(VideoMsg::Close);
         log::info!("[Controller] {}", t!("scrcpy.videoConnectionClosed"));
         self.socket.shutdown().await.unwrap();
+    }
+}
+
+fn copy_bgra_frame_data(bgra_frame: &frame::Video, width: u32, height: u32, dst: &mut [u8]) {
+    let row_bytes = width as usize * 4;
+    let frame_size = row_bytes * height as usize;
+    let src = bgra_frame.data(0);
+    let src_stride = bgra_frame.stride(0);
+
+    if src_stride == row_bytes {
+        dst[..frame_size].copy_from_slice(&src[..frame_size]);
+        return;
+    }
+
+    for row in 0..height as usize {
+        let src_start = row * src_stride;
+        let dst_start = row * row_bytes;
+        dst[dst_start..dst_start + row_bytes]
+            .copy_from_slice(&src[src_start..src_start + row_bytes]);
     }
 }

@@ -162,7 +162,7 @@ impl VideoDecoder {
                     self.decoder.format(),
                     width,
                     height,
-                    Pixel::RGBA,
+                    Pixel::BGRA,
                     width,
                     height,
                     scaling::Flags::BILINEAR,
@@ -177,14 +177,14 @@ impl VideoDecoder {
         }
     }
 
-    pub fn conver_to_rgba(&mut self, decoded: &frame::Video) -> frame::Video {
-        let mut rgba_frame = frame::Video::empty();
+    pub fn convert_to_bgra(&mut self, decoded: &frame::Video) -> frame::Video {
+        let mut bgra_frame = frame::Video::empty();
         self.scaler
             .as_mut()
             .unwrap()
-            .run(decoded, &mut rgba_frame)
+            .run(decoded, &mut bgra_frame)
             .unwrap();
-        rgba_frame
+        bgra_frame
     }
 }
 
