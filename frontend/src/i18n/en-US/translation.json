@@ -99,7 +99,13 @@
         "afterPlaceholder": "Script to run after the action"
       },
       "scriptEditor": {
+        "empty": "Empty script",
         "checking": "Checking script...",
+        "valid": "Syntax valid",
+        "errorCount": "{{count}} errors",
+        "checkFailed": "Check failed",
+        "expand": "Open large editor",
+        "editTitle": "Edit script",
         "run": "Run script",
         "runResult": "Running result"
       }

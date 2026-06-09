@@ -1,13 +1,18 @@
-import { LoadingOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import {
+  ArrowsAltOutlined,
+  LoadingOutlined,
+  PlayCircleOutlined,
+} from "@ant-design/icons";
 import { autocompletion, snippetCompletion, type CompletionContext } from "@codemirror/autocomplete";
 import { StreamLanguage, indentUnit } from "@codemirror/language";
 import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
-import type { Text } from "@codemirror/state";
+import type { Extension, Text } from "@codemirror/state";
 import { EditorView, placeholder as editorPlaceholder } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { Button, Input, Modal, Tooltip } from "antd";
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -53,7 +58,13 @@ type ScriptEditorProps = {
   showRun?: boolean;
 };
 
+type ValidationState = {
+  status: "empty" | "checking" | "valid" | "invalid" | "failed";
+  errorCount: number;
+};
+
 const KEYWORDS = ["let", "if", "else", "while", "true", "false"];
+const EDITOR_LINE_HEIGHT = 22;
 const BUILTIN_VARS = [
   "ORIGINAL_W",
   "ORIGINAL_H",
@@ -174,16 +185,137 @@ function toDiagnostic(doc: Text, diagnostic: ScriptDiagnostic): Diagnostic {
   };
 }
 
-async function validateScript(view: EditorView): Promise<Diagnostic[]> {
-  const script = view.state.doc.toString();
-  if (script.trim() === "") return [];
+function editorHeight(rows: number) {
+  return `${rows * EDITOR_LINE_HEIGHT + 12}px`;
+}
 
-  const res = await requestPost<ScriptValidateResult>("/api/script/validate", {
-    script,
-  });
+type EditorHeightMode =
+  | {
+      type: "auto";
+      minRows: number;
+      maxRows: number;
+    }
+  | {
+      type: "fixed";
+      rows: number;
+    };
 
-  return res.data.diagnostics.map((diagnostic) =>
-    toDiagnostic(view.state.doc, diagnostic),
+type EditorSize = {
+  height: string;
+  minHeight?: string;
+  maxHeight?: string;
+};
+
+type EditorSurfaceProps = {
+  value: string;
+  onChange: (value: string) => void;
+  extensions: Extension[];
+  size: EditorSize;
+  showRun: boolean;
+  showExpand: boolean;
+  running: boolean;
+  runLabel: string;
+  expandLabel: string;
+  onRun: () => void;
+  onExpand: () => void;
+};
+
+function EditorSurface({
+  value,
+  onChange,
+  extensions,
+  size,
+  showRun,
+  showExpand,
+  running,
+  runLabel,
+  expandLabel,
+  onRun,
+  onExpand,
+}: EditorSurfaceProps) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [hasVerticalScrollbar, setHasVerticalScrollbar] = useState(false);
+
+  const updateScrollbarState = useCallback(() => {
+    const scroller =
+      editorRef.current?.querySelector<HTMLElement>(".cm-scroller");
+    if (!scroller) return;
+    setHasVerticalScrollbar(scroller.scrollHeight > scroller.clientHeight + 1);
+  }, []);
+
+  useLayoutEffect(() => {
+    updateScrollbarState();
+
+    const scroller =
+      editorRef.current?.querySelector<HTMLElement>(".cm-scroller");
+    const content = editorRef.current?.querySelector<HTMLElement>(".cm-content");
+    if (!scroller) return;
+
+    const resizeObserver = new ResizeObserver(updateScrollbarState);
+    resizeObserver.observe(scroller);
+    if (content) resizeObserver.observe(content);
+
+    const frame = requestAnimationFrame(updateScrollbarState);
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+    };
+  }, [
+    size.height,
+    size.maxHeight,
+    size.minHeight,
+    updateScrollbarState,
+    value,
+  ]);
+
+  const editorStyle = {
+    "--script-editor-content-padding": hasVerticalScrollbar ? "86px" : "72px",
+  } as CSSProperties;
+
+  return (
+    <div ref={editorRef} className="group relative" style={editorStyle}>
+      <CodeMirror
+        value={value}
+        height={size.height}
+        minHeight={size.minHeight}
+        maxHeight={size.maxHeight}
+        theme="dark"
+        basicSetup={{
+          autocompletion: false,
+          foldGutter: false,
+          highlightActiveLine: false,
+          highlightActiveLineGutter: false,
+        }}
+        extensions={extensions}
+        onChange={onChange}
+      />
+      <div
+        className="absolute top-1.5 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+        style={{ right: hasVerticalScrollbar ? 16 : 6 }}
+      >
+        {showRun && (
+          <Tooltip title={runLabel}>
+            <Button
+              size="small"
+              type="text"
+              icon={running ? <LoadingOutlined /> : <PlayCircleOutlined />}
+              disabled={running || value.trim() === ""}
+              onClick={onRun}
+            />
+          </Tooltip>
+        )}
+        {showExpand && (
+          <Tooltip title={expandLabel}>
+            <Button
+              size="small"
+              type="text"
+              icon={<ArrowsAltOutlined />}
+              onClick={onExpand}
+            />
+          </Tooltip>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -193,26 +325,85 @@ export function ScriptEditor({
   placeholder,
   className,
   minRows = 1,
-  maxRows = 10,
+  maxRows = 6,
   showRun = true,
 }: ScriptEditorProps) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const messageApi = useMessageContext();
+  const [expanded, setExpanded] = useState(false);
   const [runningError, setRunningError] = useState("");
   const [running, setRunning] = useState(false);
-  const [hasVerticalScrollbar, setHasVerticalScrollbar] = useState(false);
-  const editorRef = useRef<HTMLDivElement>(null);
+  const [validationState, setValidationState] = useState<ValidationState>(() =>
+    value.trim() === ""
+      ? { status: "empty", errorCount: 0 }
+      : { status: "checking", errorCount: 0 },
+  );
+  const validationSeqRef = useRef(0);
 
-  const updateScrollbarState = useCallback(() => {
-    const scroller =
-      editorRef.current?.querySelector<HTMLElement>(".cm-scroller");
-    if (!scroller) return;
-    setHasVerticalScrollbar(scroller.scrollHeight > scroller.clientHeight + 1);
-  }, []);
+  useEffect(() => {
+    if (value.trim() === "") {
+      setValidationState({ status: "empty", errorCount: 0 });
+    }
+  }, [value]);
 
-  const extensions = useMemo(() => {
-    const lineHeight = 22;
+  const validateScript = useCallback(
+    async (view: EditorView): Promise<Diagnostic[]> => {
+      const script = view.state.doc.toString();
+      const seq = ++validationSeqRef.current;
+
+      if (script.trim() === "") {
+        setValidationState({ status: "empty", errorCount: 0 });
+        return [];
+      }
+
+      setValidationState({ status: "checking", errorCount: 0 });
+
+      try {
+        const res = await requestPost<ScriptValidateResult>(
+          "/api/script/validate",
+          { script },
+        );
+        const diagnostics = res.data.diagnostics.map((diagnostic) =>
+          toDiagnostic(view.state.doc, diagnostic),
+        );
+
+        if (seq === validationSeqRef.current) {
+          setValidationState({
+            status:
+              res.data.valid && diagnostics.length === 0 ? "valid" : "invalid",
+            errorCount: diagnostics.length,
+          });
+        }
+
+        return diagnostics;
+      } catch (error: any) {
+        const message = String(error?.message ?? error);
+        if (seq === validationSeqRef.current) {
+          setValidationState({ status: "failed", errorCount: 0 });
+        }
+
+        return [
+          {
+            from: 0,
+            to: Math.max(view.state.doc.length, 1),
+            severity: "error",
+            message,
+          },
+        ];
+      }
+    },
+    [],
+  );
+
+  const makeExtensions = useCallback((heightMode: EditorHeightMode) => {
+    const fixedHeight =
+      heightMode.type === "fixed" ? editorHeight(heightMode.rows) : undefined;
+    const minHeight =
+      heightMode.type === "auto" ? editorHeight(heightMode.minRows) : undefined;
+    const maxHeight =
+      heightMode.type === "auto" ? editorHeight(heightMode.maxRows) : undefined;
+
     return [
       scriptLanguage,
       indentUnit.of("  "),
@@ -223,6 +414,9 @@ export function ScriptEditor({
           borderRadius: "var(--ant-border-radius)",
           backgroundColor: "var(--ant-color-bg-container)",
           fontSize: "var(--ant-font-size)",
+          ...(fixedHeight ? { height: fixedHeight } : {}),
+          ...(minHeight ? { minHeight } : {}),
+          ...(maxHeight ? { maxHeight } : {}),
         },
         "&.cm-focused": {
           outline: "none",
@@ -230,12 +424,12 @@ export function ScriptEditor({
         },
         ".cm-scroller": {
           fontFamily: "var(--ant-font-family-code)",
-          minHeight: `${minRows * lineHeight + 12}px`,
-          maxHeight: `${maxRows * lineHeight + 12}px`,
+          ...(minHeight ? { minHeight } : {}),
+          ...(maxHeight ? { maxHeight } : {}),
           overflow: "auto",
         },
         ".cm-content": {
-          padding: "6px var(--script-editor-content-padding) 6px 0",
+          padding: "6px var(--script-editor-content-padding, 72px) 6px 0",
         },
         ".cm-gutters": {
           backgroundColor: "var(--ant-color-bg-container)",
@@ -263,30 +457,52 @@ export function ScriptEditor({
       }),
       lintGutter(),
     ];
-  }, [maxRows, minRows, placeholder]);
+  }, [placeholder, validateScript]);
 
-  useLayoutEffect(() => {
-    updateScrollbarState();
+  const inlineExtensions = useMemo(
+    () =>
+      makeExtensions({
+        type: "auto",
+        minRows,
+        maxRows: Math.max(minRows, maxRows),
+      }),
+    [makeExtensions, maxRows, minRows],
+  );
+  const expandedExtensions = useMemo(
+    () => makeExtensions({ type: "fixed", rows: 24 }),
+    [makeExtensions],
+  );
 
-    const scroller =
-      editorRef.current?.querySelector<HTMLElement>(".cm-scroller");
-    const content = editorRef.current?.querySelector<HTMLElement>(".cm-content");
-    if (!scroller) return;
+  const validationText = useMemo(() => {
+    switch (validationState.status) {
+      case "empty":
+        return t("mappings.common.scriptEditor.empty");
+      case "checking":
+        return t("mappings.common.scriptEditor.checking");
+      case "valid":
+        return t("mappings.common.scriptEditor.valid");
+      case "invalid":
+        return t("mappings.common.scriptEditor.errorCount", {
+          count: validationState.errorCount,
+        });
+      case "failed":
+        return t("mappings.common.scriptEditor.checkFailed");
+    }
+  }, [t, validationState]);
 
-    const resizeObserver = new ResizeObserver(updateScrollbarState);
-    resizeObserver.observe(scroller);
-    if (content) resizeObserver.observe(content);
-
-    const frame = requestAnimationFrame(updateScrollbarState);
-    return () => {
-      cancelAnimationFrame(frame);
-      resizeObserver.disconnect();
-    };
-  }, [maxRows, minRows, updateScrollbarState, value]);
-
-  const editorStyle = {
-    "--script-editor-content-padding": hasVerticalScrollbar ? "50px" : "34px",
-  } as CSSProperties;
+  const validationClassName = useMemo(() => {
+    switch (validationState.status) {
+      case "valid":
+        return "color-success-text";
+      case "invalid":
+      case "failed":
+        return "color-error-text";
+      case "checking":
+        return "color-warning-text";
+      default:
+        return "color-text-secondary";
+    }
+  }, [validationState.status]);
 
   async function runScript() {
     setRunning(true);
@@ -295,15 +511,43 @@ export function ScriptEditor({
       const res = await requestPost("/api/script/run", { script: value });
       messageApi?.success(res.message);
     } catch (error: any) {
-      setRunningError(error);
+      setRunningError(String(error?.message ?? error));
     } finally {
       setRunning(false);
       dispatch(setIsLoading(false));
     }
   }
 
+  const runLabel = t("mappings.common.scriptEditor.run");
+  const expandLabel = t("mappings.common.scriptEditor.expand");
+
   return (
     <div className={className}>
+      <Modal
+        title={t("mappings.common.scriptEditor.editTitle")}
+        className="min-w-80vw"
+        open={expanded}
+        onCancel={() => setExpanded(false)}
+        footer={null}
+        destroyOnHidden
+      >
+        <EditorSurface
+          value={value}
+          onChange={onChange}
+          extensions={expandedExtensions}
+          size={{ height: editorHeight(24) }}
+          showRun={showRun}
+          showExpand={false}
+          running={running}
+          runLabel={runLabel}
+          expandLabel={expandLabel}
+          onRun={runScript}
+          onExpand={() => setExpanded(true)}
+        />
+        <div className={`mt-2 text-right text-xs ${validationClassName}`}>
+          {validationText}
+        </div>
+      </Modal>
       <Modal
         title={t("mappings.common.scriptEditor.runResult")}
         className="min-w-50vw"
@@ -318,33 +562,27 @@ export function ScriptEditor({
           autoSize
         />
       </Modal>
-      <div ref={editorRef} className="group relative" style={editorStyle}>
-        <CodeMirror
+      <div>
+        <EditorSurface
           value={value}
-          height="auto"
-          theme="dark"
-          basicSetup={{
-            autocompletion: false,
-            foldGutter: false,
-            highlightActiveLine: false,
-            highlightActiveLineGutter: false,
-          }}
-          extensions={extensions}
           onChange={onChange}
+          extensions={inlineExtensions}
+          size={{
+            height: "auto",
+            minHeight: editorHeight(minRows),
+            maxHeight: editorHeight(Math.max(minRows, maxRows)),
+          }}
+          showRun={showRun}
+          showExpand
+          running={running}
+          runLabel={runLabel}
+          expandLabel={expandLabel}
+          onRun={runScript}
+          onExpand={() => setExpanded(true)}
         />
-        {showRun && (
-          <Tooltip title={t("mappings.common.scriptEditor.run")}>
-            <Button
-              className="absolute top-1.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-              style={{ right: hasVerticalScrollbar ? 16 : 6 }}
-              size="small"
-              type="text"
-              icon={running ? <LoadingOutlined /> : <PlayCircleOutlined />}
-              disabled={running || value.trim() === ""}
-              onClick={runScript}
-            />
-          </Tooltip>
-        )}
+        <div className={`mt-1 text-right text-xs ${validationClassName}`}>
+          {validationText}
+        </div>
       </div>
     </div>
   );

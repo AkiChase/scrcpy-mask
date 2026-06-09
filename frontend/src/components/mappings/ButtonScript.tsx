@@ -158,6 +158,8 @@ function Setting({
           tooltip={t("mappings.script.setting.pressedScriptHint")}
         >
           <ScriptEditor
+            minRows={1}
+            maxRows={6}
             value={config.pressed_script}
             placeholder={t(
               "mappings.script.setting.pressed_script_placeholder",
@@ -172,6 +174,8 @@ function Setting({
           tooltip={t("mappings.script.setting.heldScriptHint")}
         >
           <ScriptEditor
+            minRows={1}
+            maxRows={6}
             value={config.held_script}
             placeholder={t("mappings.script.setting.held_script_placeholder")}
             onChange={(value) =>
@@ -184,6 +188,8 @@ function Setting({
           tooltip={t("mappings.script.setting.releasedScriptHint")}
         >
           <ScriptEditor
+            minRows={1}
+            maxRows={6}
             value={config.released_script}
             placeholder={t(
               "mappings.script.setting.released_script_placeholder",

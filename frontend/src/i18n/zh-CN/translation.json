@@ -99,7 +99,13 @@
         "afterPlaceholder": "动作执行后运行的脚本"
       },
       "scriptEditor": {
+        "empty": "空脚本",
         "checking": "正在检查脚本...",
+        "valid": "语法正确",
+        "errorCount": "{{count}} 个错误",
+        "checkFailed": "检查失败",
+        "expand": "放大编辑",
+        "editTitle": "编辑脚本",
         "run": "运行脚本",
         "runResult": "运行结果"
       }
