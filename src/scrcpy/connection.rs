@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use ffmpeg_next::frame;
+use ffmpeg_next::{Error as FfmpegError, error, frame};
 use rust_i18n::t;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -283,46 +283,48 @@ impl ScrcpyConnection {
                         return;
                     }
                 };
-                let video_decoder = VideoDecoder::new(codec_id, width, height);
-                video_decoder
+                match VideoDecoder::new(codec_id, width, height) {
+                    Ok(video_decoder) => video_decoder,
+                    Err(e) => {
+                        log::error!("[Controller] {}", e);
+                        return;
+                    }
+                }
             }
         };
 
         // read video packets
         loop {
             match read_media_packet(&mut self.socket).await {
-                Ok(mut packet) => {
-                    if video_decoder.must_merge_config {
-                        // merge config packet if needed
-                        video_decoder.packet_merger.merge(&mut packet);
+                Ok(media_packet) => {
+                    let packet = if video_decoder.must_merge_config {
+                        video_decoder.packet_merger.merge(media_packet)
+                    } else if media_packet.is_config() {
+                        None
+                    } else {
+                        Some(media_packet.into_ffmpeg_packet())
+                    };
+
+                    let Some(packet) = packet else {
+                        continue;
+                    };
+
+                    match video_decoder.decoder.send_packet(&packet) {
+                        Ok(()) => {}
+                        Err(e) if is_ffmpeg_again(e) => {
+                            drain_video_decoder(&mut video_decoder, &v_tx);
+                            if let Err(e) = video_decoder.decoder.send_packet(&packet) {
+                                log::warn!("[Controller] Failed to send video packet: {}", e);
+                                continue;
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("[Controller] Failed to send video packet: {}", e);
+                            continue;
+                        }
                     }
 
-                    // no send config packet
-                    if packet.pts().is_some() {
-                        let decoded = {
-                            let mut decoded = frame::Video::empty();
-                            video_decoder.decoder.send_packet(&mut packet).unwrap();
-                            video_decoder.decoder.receive_frame(&mut decoded).unwrap();
-                            decoded
-                        };
-                        // update size after decoding video packet
-                        video_decoder.update();
-
-                        let bgra_frame = video_decoder.convert_to_bgra(&decoded);
-                        let mut buf = v_tx.take_buffer(video_decoder.frame_size);
-                        copy_bgra_frame_data(
-                            &bgra_frame,
-                            video_decoder.width,
-                            video_decoder.height,
-                            &mut buf,
-                        );
-
-                        v_tx.send(VideoMsg::Data {
-                            data: buf,
-                            width: video_decoder.width,
-                            height: video_decoder.height,
-                        });
-                    }
+                    drain_video_decoder(&mut video_decoder, &v_tx);
                 }
                 Err(e) => {
                     log::error!("[Controller] {}", e);
@@ -363,6 +365,52 @@ impl ScrcpyConnection {
         log::info!("[Controller] {}", t!("scrcpy.videoConnectionClosed"));
         self.socket.shutdown().await.unwrap();
     }
+}
+
+fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame) {
+    loop {
+        let mut decoded = frame::Video::empty();
+        match video_decoder.decoder.receive_frame(&mut decoded) {
+            Ok(()) => {
+                if let Err(e) = video_decoder.update(&decoded) {
+                    log::warn!("[Controller] {}", e);
+                    continue;
+                }
+
+                let bgra_frame = match video_decoder.convert_to_bgra(&decoded) {
+                    Ok(frame) => frame,
+                    Err(e) => {
+                        log::warn!("[Controller] {}", e);
+                        continue;
+                    }
+                };
+
+                let mut buf = v_tx.take_buffer(video_decoder.frame_size);
+                copy_bgra_frame_data(
+                    &bgra_frame,
+                    video_decoder.width,
+                    video_decoder.height,
+                    &mut buf,
+                );
+
+                v_tx.send(VideoMsg::Data {
+                    data: buf,
+                    width: video_decoder.width,
+                    height: video_decoder.height,
+                });
+            }
+            Err(e) if is_ffmpeg_again(e) => break,
+            Err(FfmpegError::Eof) => break,
+            Err(e) => {
+                log::warn!("[Controller] Failed to receive video frame: {}", e);
+                break;
+            }
+        }
+    }
+}
+
+fn is_ffmpeg_again(error: FfmpegError) -> bool {
+    matches!(error, FfmpegError::Other { errno } if errno == error::EAGAIN)
 }
 
 fn copy_bgra_frame_data(bgra_frame: &frame::Video, width: u32, height: u32, dst: &mut [u8]) {

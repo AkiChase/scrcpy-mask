@@ -1,6 +1,5 @@
-use std::{fmt, io::Write};
+use std::fmt;
 
-use bevy::ecs::error::Result;
 use ffmpeg_next::{Packet, codec, decoder, format::Pixel, frame, packet, software::scaling};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
@@ -9,7 +8,38 @@ use tokio::{io::AsyncReadExt, net::TcpStream};
 const SC_PACKET_FLAG_CONFIG: u64 = 1u64 << 63;
 const SC_PACKET_FLAG_KEY_FRAME: u64 = 1u64 << 62;
 const SC_PACKET_PTS_MASK: u64 = SC_PACKET_FLAG_KEY_FRAME - 1;
-pub async fn read_media_packet(socket: &mut TcpStream) -> Result<Packet, String> {
+const MAX_MEDIA_PACKET_SIZE: usize = 64 * 1024 * 1024;
+
+pub struct MediaPacket {
+    data: Vec<u8>,
+    pts: Option<i64>,
+    is_config: bool,
+    is_key_frame: bool,
+}
+
+impl MediaPacket {
+    pub fn is_config(&self) -> bool {
+        self.is_config
+    }
+
+    fn ffmpeg_packet(data: Vec<u8>, pts: Option<i64>, is_key_frame: bool) -> Packet {
+        let mut packet = Packet::copy(&data);
+        packet.set_pts(pts);
+        packet.set_dts(pts);
+
+        if is_key_frame {
+            packet.set_flags(packet.flags() | packet::Flags::KEY);
+        }
+
+        packet
+    }
+
+    pub fn into_ffmpeg_packet(self) -> Packet {
+        Self::ffmpeg_packet(self.data, self.pts, self.is_key_frame)
+    }
+}
+
+pub async fn read_media_packet(socket: &mut TcpStream) -> std::result::Result<MediaPacket, String> {
     // read header
     let mut header: [u8; 12] = [0; 12];
     socket
@@ -19,6 +49,12 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> Result<Packet, String>
 
     let pts_flags = u64::from_be_bytes(header[0..8].try_into().unwrap());
     let len = u32::from_be_bytes(header[8..12].try_into().unwrap()) as usize;
+    if len > MAX_MEDIA_PACKET_SIZE {
+        return Err(format!(
+            "{}: packet too large ({len})",
+            t!("scrcpy.failedToReadFrameHeader")
+        ));
+    }
 
     // read data
     let mut packet_data = vec![0u8; len];
@@ -27,20 +63,19 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> Result<Packet, String>
         .await
         .map_err(|e| format!("{}: {}", t!("scrcpy.failedToReadFrameHeader"), e))?;
 
-    let mut packet = Packet::copy(&packet_data);
-    if (pts_flags & SC_PACKET_FLAG_CONFIG) != 0 {
-        packet.set_pts(None);
+    let is_config = (pts_flags & SC_PACKET_FLAG_CONFIG) != 0;
+    let pts = if is_config {
+        None
     } else {
-        packet.set_pts(Some((pts_flags & SC_PACKET_PTS_MASK) as i64));
-    }
+        Some((pts_flags & SC_PACKET_PTS_MASK) as i64)
+    };
 
-    if (pts_flags & SC_PACKET_FLAG_KEY_FRAME) != 0 {
-        packet.set_flags(packet.flags() | packet::Flags::KEY);
-    }
-
-    packet.set_dts(packet.pts());
-
-    Ok(packet)
+    Ok(MediaPacket {
+        data: packet_data,
+        pts,
+        is_config,
+        is_key_frame: (pts_flags & SC_PACKET_FLAG_KEY_FRAME) != 0,
+    })
 }
 
 // Video Codec Constants
@@ -57,35 +92,25 @@ impl PacketMerger {
         PacketMerger { config: None }
     }
 
-    pub fn merge(&mut self, packet: &mut Packet) {
-        let is_config = packet.pts().is_none();
-
-        if is_config {
-            if let Some(data) = packet.data() {
-                self.config = Some(data.to_vec());
-            } else {
-                self.config = Some(Vec::new());
-            }
-        } else if let Some(config_data) = &self.config {
-            let config_size = config_data.len();
-
-            let original_data = if let Some(data) = packet.data() {
-                data.to_vec()
-            } else {
-                Vec::new()
-            };
-            let media_size = original_data.len();
-            let new_size = config_size + media_size;
-
-            let mut new_data = Vec::with_capacity(new_size);
-            new_data.extend_from_slice(config_data);
-            new_data.extend_from_slice(&original_data);
-
-            packet.grow(new_size);
-            packet.data_mut().unwrap().write_all(&new_data).unwrap();
-
-            self.config = None;
+    pub fn merge(&mut self, media_packet: MediaPacket) -> Option<Packet> {
+        if media_packet.is_config {
+            self.config = Some(media_packet.data);
+            return None;
         }
+
+        let Some(config_data) = self.config.take() else {
+            return Some(media_packet.into_ffmpeg_packet());
+        };
+
+        let mut merged_data = Vec::with_capacity(config_data.len() + media_packet.data.len());
+        merged_data.extend_from_slice(&config_data);
+        merged_data.extend_from_slice(&media_packet.data);
+
+        Some(MediaPacket::ffmpeg_packet(
+            merged_data,
+            media_packet.pts,
+            media_packet.is_key_frame,
+        ))
     }
 }
 
@@ -123,13 +148,15 @@ pub struct VideoDecoder {
     pub width: u32,
     pub height: u32,
     pub frame_size: usize,
+    pixel_format: Option<Pixel>,
     pub must_merge_config: bool,
     pub packet_merger: PacketMerger,
 }
 
 impl VideoDecoder {
-    pub fn new(codec_id: VideoCodec, width: u32, height: u32) -> Self {
-        let codec = decoder::find(codec_id.into()).unwrap();
+    pub fn new(codec_id: VideoCodec, width: u32, height: u32) -> std::result::Result<Self, String> {
+        let codec = decoder::find(codec_id.into())
+            .ok_or_else(|| format!("FFmpeg decoder not found: {codec_id}"))?;
         let mut codec_context = codec::Context::new_with_codec(codec);
         let flags = unsafe {
             let raw_flags = (*codec_context.as_mut_ptr()).flags;
@@ -138,28 +165,39 @@ impl VideoDecoder {
             flags | codec::Flags::LOW_DELAY
         };
         codec_context.set_flags(flags);
-        let video_decoder = codec_context.decoder().video().unwrap();
+        let video_decoder = codec_context
+            .decoder()
+            .video()
+            .map_err(|e| format!("Failed to open FFmpeg decoder: {e}"))?;
 
-        Self {
+        Ok(Self {
             decoder: video_decoder,
             scaler: None,
             width,
             height,
             must_merge_config: matches!(codec_id, VideoCodec::H264 | VideoCodec::H265),
             packet_merger: PacketMerger::new(),
+            pixel_format: None,
             frame_size: (width * height * 4) as usize,
-        }
+        })
     }
 
-    pub fn update(&mut self) -> bool {
-        let width = self.decoder.width();
-        let height = self.decoder.height();
-        if self.scaler.is_none() || width != self.width || height != self.height {
+    pub fn update(&mut self, decoded: &frame::Video) -> std::result::Result<bool, String> {
+        let width = decoded.width();
+        let height = decoded.height();
+        let format = decoded.format();
+
+        if self.scaler.is_none()
+            || width != self.width
+            || height != self.height
+            || self.pixel_format != Some(format)
+        {
             self.width = width;
             self.height = height;
+            self.pixel_format = Some(format);
             self.scaler = Some(
                 scaling::Context::get(
-                    self.decoder.format(),
+                    format,
                     width,
                     height,
                     Pixel::BGRA,
@@ -167,24 +205,27 @@ impl VideoDecoder {
                     height,
                     scaling::Flags::BILINEAR,
                 )
-                .unwrap(),
+                .map_err(|e| format!("Failed to create FFmpeg scaler: {e}"))?,
             );
             self.frame_size = (width * height * 4) as usize;
 
-            true
+            Ok(true)
         } else {
-            false
+            Ok(false)
         }
     }
 
-    pub fn convert_to_bgra(&mut self, decoded: &frame::Video) -> frame::Video {
+    pub fn convert_to_bgra(
+        &mut self,
+        decoded: &frame::Video,
+    ) -> std::result::Result<frame::Video, String> {
         let mut bgra_frame = frame::Video::empty();
         self.scaler
             .as_mut()
-            .unwrap()
+            .ok_or_else(|| "FFmpeg scaler is not initialized".to_string())?
             .run(decoded, &mut bgra_frame)
-            .unwrap();
-        bgra_frame
+            .map_err(|e| format!("Failed to convert video frame to BGRA: {e}"))?;
+        Ok(bgra_frame)
     }
 }
 
