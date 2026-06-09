@@ -665,9 +665,11 @@ impl<'a> Lexer<'a> {
                     });
                 }
                 '\r' | '\n' => {
-                    tokens.push(self.make_token(TokenKind::Newline, start_index, start, |lexer| {
-                        lexer.advance_newline();
-                    }));
+                    tokens.push(
+                        self.make_token(TokenKind::Newline, start_index, start, |lexer| {
+                            lexer.advance_newline();
+                        }),
+                    );
                 }
                 '/' if self.peek_next_char() == Some('/') => {
                     let text = self.take_line_comment();
@@ -705,7 +707,13 @@ impl<'a> Lexer<'a> {
         tokens.push(ScriptToken {
             kind: TokenKind::Eof,
             lexeme: String::new(),
-            span: SourceSpan::between(pos, SourcePosition { line: pos.line, col: pos.col + 1 }),
+            span: SourceSpan::between(
+                pos,
+                SourcePosition {
+                    line: pos.line,
+                    col: pos.col + 1,
+                },
+            ),
             leading_trivia: std::mem::take(&mut self.pending_trivia),
         });
         tokens
@@ -1025,12 +1033,18 @@ impl<'a> ParserState<'a> {
         let name = if self.at(TokenKind::Ident) {
             self.advance().lexeme.clone()
         } else {
-            self.error_current("script.syntax.missingIdentifier", "Expected variable name after 'let'.");
+            self.error_current(
+                "script.syntax.missingIdentifier",
+                "Expected variable name after 'let'.",
+            );
             "<error>".to_string()
         };
 
         if !self.consume(TokenKind::Equal) {
-            self.error_current("script.syntax.missingEqual", "Expected '=' after variable name.");
+            self.error_current(
+                "script.syntax.missingEqual",
+                "Expected '=' after variable name.",
+            );
         }
 
         let expr = match self.parse_expr(0) {
@@ -1157,21 +1171,23 @@ impl<'a> ParserState<'a> {
         }
 
         if !self.consume(TokenKind::RBrace) {
-            self.errors.push(ScriptError::from_code_span(
-                "script.syntax.missingRightBrace",
-                start,
-                self.source,
-                "Missing closing brace '}' for this block.",
-            )
-            .with_related("Block starts here.", start)
-            .with_related(
-                "Insert '}' after the last statement in this block.",
-                stmts
-                    .last()
-                    .map(stmt_span)
-                    .map(SourceSpan::insertion_after)
-                    .unwrap_or_else(|| SourceSpan::insertion_after(start)),
-            ));
+            self.errors.push(
+                ScriptError::from_code_span(
+                    "script.syntax.missingRightBrace",
+                    start,
+                    self.source,
+                    "Missing closing brace '}' for this block.",
+                )
+                .with_related("Block starts here.", start)
+                .with_related(
+                    "Insert '}' after the last statement in this block.",
+                    stmts
+                        .last()
+                        .map(stmt_span)
+                        .map(SourceSpan::insertion_after)
+                        .unwrap_or_else(|| SourceSpan::insertion_after(start)),
+                ),
+            );
             return Stmt::Block { stmts, span: start };
         }
 
@@ -1217,10 +1233,13 @@ impl<'a> ParserState<'a> {
     }
 
     fn parse_prefix(&mut self) -> Result<Expr, ScriptError> {
-        if self.consume(TokenKind::Plus) || self.consume(TokenKind::Minus) || self.consume(TokenKind::Bang) {
+        if self.consume(TokenKind::Plus)
+            || self.consume(TokenKind::Minus)
+            || self.consume(TokenKind::Bang)
+        {
             let token = self.previous().clone();
             self.skip_newlines();
-            let rhs = self.parse_expr(7)?;
+            let rhs = self.parse_expr(13)?;
             let op = match token.kind {
                 TokenKind::Plus => UnaryOp::Plus,
                 TokenKind::Minus => UnaryOp::Minus,
@@ -1244,7 +1263,10 @@ impl<'a> ParserState<'a> {
                 "script.syntax.missingExpression",
                 token.span,
                 self.source,
-                format!("Expected expression, found '{}'.", token.lexeme_for_message()),
+                format!(
+                    "Expected expression, found '{}'.",
+                    token.lexeme_for_message()
+                ),
             ));
         }
 
@@ -1305,7 +1327,10 @@ impl<'a> ParserState<'a> {
                 "script.syntax.missingExpression",
                 token.span,
                 self.source,
-                format!("Expected expression, found '{}'.", token.lexeme_for_message()),
+                format!(
+                    "Expected expression, found '{}'.",
+                    token.lexeme_for_message()
+                ),
             )),
         }
     }
@@ -1317,8 +1342,14 @@ impl<'a> ParserState<'a> {
 
         if !self.at(TokenKind::RParen) {
             loop {
-                if self.at(TokenKind::Comma) || self.at(TokenKind::RParen) || self.at(TokenKind::Eof) {
-                    self.error_current("script.syntax.missingArgument", "Missing function argument.");
+                if self.at(TokenKind::Comma)
+                    || self.at(TokenKind::RParen)
+                    || self.at(TokenKind::Eof)
+                {
+                    self.error_current(
+                        "script.syntax.missingArgument",
+                        "Missing function argument.",
+                    );
                     break;
                 }
 
@@ -1337,16 +1368,18 @@ impl<'a> ParserState<'a> {
                 let comma = self.previous().clone();
                 self.skip_newlines();
                 if self.at(TokenKind::RParen) || self.at(TokenKind::Eof) {
-                    self.errors.push(ScriptError::from_code_span(
-                        "script.syntax.missingArgument",
-                        comma.span,
-                        self.source,
-                        "Missing function argument after ','.",
-                    )
-                    .with_related(
-                        "Insert an argument after this comma.",
-                        SourceSpan::insertion_after(comma.span),
-                    ));
+                    self.errors.push(
+                        ScriptError::from_code_span(
+                            "script.syntax.missingArgument",
+                            comma.span,
+                            self.source,
+                            "Missing function argument after ','.",
+                        )
+                        .with_related(
+                            "Insert an argument after this comma.",
+                            SourceSpan::insertion_after(comma.span),
+                        ),
+                    );
                     break;
                 }
             }
@@ -1358,14 +1391,19 @@ impl<'a> ParserState<'a> {
                 .map(expr_span)
                 .map(SourceSpan::insertion_after)
                 .unwrap_or_else(|| SourceSpan::insertion_after(open_paren.span));
-            self.errors.push(ScriptError::from_code_span(
-                "script.syntax.missingRightParen",
-                open_paren.span,
-                self.source,
-                "Missing closing ')' for this function call.",
-            )
-            .with_related("Function call starts here.", ident.span.join(open_paren.span))
-            .with_related("Insert ')' after the last argument.", insert_span));
+            self.errors.push(
+                ScriptError::from_code_span(
+                    "script.syntax.missingRightParen",
+                    open_paren.span,
+                    self.source,
+                    "Missing closing ')' for this function call.",
+                )
+                .with_related(
+                    "Function call starts here.",
+                    ident.span.join(open_paren.span),
+                )
+                .with_related("Insert ')' after the last argument.", insert_span),
+            );
         }
 
         let end = self.previous().span;
@@ -1433,13 +1471,20 @@ impl<'a> ParserState<'a> {
     }
 
     fn synchronize_stmt(&mut self) {
-        while !self.at(TokenKind::Eof) && !matches!(self.current().kind, TokenKind::Newline | TokenKind::Semicolon | TokenKind::RBrace) {
+        while !self.at(TokenKind::Eof)
+            && !matches!(
+                self.current().kind,
+                TokenKind::Newline | TokenKind::Semicolon | TokenKind::RBrace
+            )
+        {
             self.advance();
         }
     }
 
     fn synchronize_arg(&mut self) {
-        while !self.at(TokenKind::Eof) && !matches!(self.current().kind, TokenKind::Comma | TokenKind::RParen) {
+        while !self.at(TokenKind::Eof)
+            && !matches!(self.current().kind, TokenKind::Comma | TokenKind::RParen)
+        {
             self.advance();
         }
     }
@@ -2095,7 +2140,6 @@ impl ScriptAST {
             )),
         }
     }
-
 }
 
 struct ScriptAnalyzer<'a> {
@@ -3531,6 +3575,59 @@ pub struct Program {
 mod tests {
     use super::*;
 
+    fn expect_let_expr<'a>(stmt: &'a Stmt, name: &str) -> &'a Expr {
+        match stmt {
+            Stmt::Let {
+                name: actual_name,
+                expr,
+                ..
+            } => {
+                assert_eq!(actual_name, name);
+                expr
+            }
+            other => panic!("Expected let statement, got {other:?}"),
+        }
+    }
+
+    fn expect_number(expr: &Expr, value: i64) {
+        match expr {
+            Expr::Number { value: actual, .. } => assert_eq!(*actual, value),
+            other => panic!("Expected number {value}, got {other:?}"),
+        }
+    }
+
+    fn expect_binary(expr: &Expr, op: BinOp) -> (&Expr, &Expr) {
+        match expr {
+            Expr::Binary {
+                lhs,
+                op: actual_op,
+                rhs,
+                ..
+            } => {
+                assert_eq!(*actual_op, op);
+                (lhs, rhs)
+            }
+            other => panic!("Expected binary {op:?}, got {other:?}"),
+        }
+    }
+
+    fn expect_unary(expr: &Expr, op: UnaryOp) -> &Expr {
+        match expr {
+            Expr::Unary {
+                op: actual_op, rhs, ..
+            } => {
+                assert!(matches!(
+                    (*actual_op, op),
+                    (UnaryOp::Plus, UnaryOp::Plus)
+                        | (UnaryOp::Minus, UnaryOp::Minus)
+                        | (UnaryOp::Not, UnaryOp::Not)
+                ));
+                rhs
+            }
+            other => panic!("Expected unary {op:?}, got {other:?}"),
+        }
+    }
+
     #[test]
     fn parses_simple_statements_without_semicolons() {
         let ast = ScriptAST::new(
@@ -3543,6 +3640,30 @@ print(x)
         .unwrap();
 
         assert_eq!(ast.program.stmts.len(), 3);
+    }
+
+    #[test]
+    fn parses_binary_precedence_and_left_associativity() {
+        let ast = ScriptAST::new("let x = 1 + 2 * 3 - 4").unwrap();
+        let expr = expect_let_expr(&ast.program.stmts[0], "x");
+        let (sub_lhs, sub_rhs) = expect_binary(expr, BinOp::Sub);
+        let (add_lhs, add_rhs) = expect_binary(sub_lhs, BinOp::Add);
+        let (mul_lhs, mul_rhs) = expect_binary(add_rhs, BinOp::Mul);
+
+        expect_number(add_lhs, 1);
+        expect_number(mul_lhs, 2);
+        expect_number(mul_rhs, 3);
+        expect_number(sub_rhs, 4);
+    }
+
+    #[test]
+    fn parses_unary_with_higher_precedence_than_binary() {
+        let ast = ScriptAST::new("let x = -1 + 2").unwrap();
+        let expr = expect_let_expr(&ast.program.stmts[0], "x");
+        let (lhs, rhs) = expect_binary(expr, BinOp::Add);
+
+        expect_number(expect_unary(lhs, UnaryOp::Minus), 1);
+        expect_number(rhs, 2);
     }
 
     #[test]
@@ -3565,6 +3686,30 @@ while x > 0 {
         assert_eq!(ast.program.stmts.len(), 3);
         assert!(matches!(ast.program.stmts[1], Stmt::If { .. }));
         assert!(matches!(ast.program.stmts[2], Stmt::While { .. }));
+    }
+
+    #[test]
+    fn parses_else_if_chains() {
+        let ast = ScriptAST::new(
+            r#"
+if false {
+    print("a")
+} else if true {
+    print("b")
+} else {
+    print("c")
+}
+"#,
+        )
+        .unwrap();
+
+        match &ast.program.stmts[0] {
+            Stmt::If {
+                else_block: Some(else_block),
+                ..
+            } => assert!(matches!(else_block.as_ref(), Stmt::If { .. })),
+            other => panic!("Expected if statement with else-if, got {other:?}"),
+        }
     }
 
     #[test]
@@ -3647,6 +3792,46 @@ print(x)
     }
 
     #[test]
+    fn reports_missing_block_and_unexpected_closing_brace() {
+        let diagnostics = ScriptAST::validate_diagnostics(
+            r#"
+if true
+    print("x")
+}
+"#,
+        );
+
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "script.syntax.missingBlock")
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "script.syntax.unexpectedToken")
+        );
+    }
+
+    #[test]
+    fn reports_missing_right_brace_with_related_insert_location() {
+        let diagnostics = ScriptAST::validate_diagnostics(
+            r#"
+if true {
+    print("x")
+"#,
+        );
+        let diagnostic = diagnostics
+            .iter()
+            .find(|diagnostic| diagnostic.code == "script.syntax.missingRightBrace")
+            .unwrap();
+
+        assert!(diagnostic.related.iter().any(|related| {
+            related.message == "Insert '}' after the last statement in this block."
+        }));
+    }
+
+    #[test]
     fn reports_structured_syntax_diagnostics() {
         let diagnostics = ScriptAST::validate_diagnostics(
             r#"
@@ -3678,13 +3863,9 @@ print(x
 
         assert_eq!(diagnostic.span.start_line, 1);
         assert_eq!(diagnostic.span.start_col, 4);
-        assert!(
-            diagnostic
-                .related
-                .iter()
-                .any(|related| related.message == "Insert ')' after the last argument."
-                    && related.span.start_line == 1)
-        );
+        assert!(diagnostic.related.iter().any(|related| related.message
+            == "Insert ')' after the last argument."
+            && related.span.start_line == 1));
     }
 
     #[test]
@@ -3710,6 +3891,19 @@ tap(0,, 1)
     }
 
     #[test]
+    fn parser_reports_missing_arguments_around_commas() {
+        let diagnostics = ScriptAST::validate_diagnostics("tap(, 1, 2)\nprint(1,)\n");
+
+        assert!(
+            diagnostics
+                .iter()
+                .filter(|diagnostic| diagnostic.code == "script.syntax.missingArgument")
+                .count()
+                >= 2
+        );
+    }
+
+    #[test]
     fn parse_result_keeps_comment_trivia_for_formatter() {
         let parsed = parse_script(
             r#"
@@ -3718,15 +3912,12 @@ print("x")
 "#,
         );
 
-        assert!(
-            parsed
-                .tokens
+        assert!(parsed.tokens.iter().any(|token| {
+            token
+                .leading_trivia
                 .iter()
-                .any(|token| token
-                    .leading_trivia
-                    .iter()
-                    .any(|trivia| trivia.kind == ScriptTriviaKind::Comment))
-        );
+                .any(|trivia| trivia.kind == ScriptTriviaKind::Comment)
+        }));
     }
 
     #[test]
@@ -3758,6 +3949,40 @@ swipe(0, 10, 1, 2, 3)
         let err = ScriptAST::new("print(x)").unwrap_err();
 
         assert!(err.contains("Variable 'x' not defined"));
+    }
+
+    #[test]
+    fn allows_variables_defined_in_both_dynamic_branches() {
+        let ast = ScriptAST::new(
+            r#"
+if RawInputFlag {
+    let x = 1
+} else {
+    let x = 2
+}
+print(x)
+"#,
+        )
+        .unwrap();
+
+        assert_eq!(ast.program.stmts.len(), 2);
+    }
+
+    #[test]
+    fn allows_branch_variables_with_conflicting_static_types() {
+        let ast = ScriptAST::new(
+            r#"
+if RawInputFlag {
+    let x = 1
+} else {
+    let x = "a"
+}
+print(x)
+"#,
+        )
+        .unwrap();
+
+        assert_eq!(ast.program.stmts.len(), 2);
     }
 
     #[test]
@@ -3818,6 +4043,24 @@ string\")"
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn reports_unterminated_string_at_eof() {
+        let diagnostics = ScriptAST::validate_diagnostics(r#"print("bad"#);
+
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "script.lex.unterminatedString")
+        );
+    }
+
+    #[test]
+    fn parses_crlf_newlines() {
+        let ast = ScriptAST::new("let x = 1\r\nprint(x)\r\n").unwrap();
+
+        assert_eq!(ast.program.stmts.len(), 2);
     }
 
     #[test]
