@@ -50,6 +50,7 @@ pub fn routers(
         .route("/adb_pair", post(adb_pair))
         .route("/adb_screenshot", post(adb_screenshot))
         .route("/control/set_display_power", post(set_display_power))
+        .route("/control/set_pointer_location", post(set_pointer_location))
         .route("/control/send_key", post(send_key))
         .with_state(AppStateDevice { cs_tx, d_tx, ws_tx })
 }
@@ -428,6 +429,45 @@ async fn set_display_power(
     device_action::set_display_power(&state.cs_tx, payload.mode);
     Ok(JsonResponse::success(
         t!("web.device.setDisplayPowerSuccess"),
+        None,
+    ))
+}
+
+#[derive(Deserialize)]
+struct PostDataSetPointerLocation {
+    mode: bool,
+}
+
+async fn set_pointer_location(
+    Json(payload): Json<PostDataSetPointerLocation>,
+) -> Result<JsonResponse, WebServerError> {
+    let device_list = ControlledDevice::get_device_list().await;
+    if device_list.is_empty() {
+        return Err(WebServerError::bad_request(t!(
+            "web.device.noDeviceControlled"
+        )));
+    }
+
+    let mode = if payload.mode { "1" } else { "0" };
+    for device in device_list {
+        let mut output = Vec::<u8>::new();
+        Device::shell(
+            &device.device_id,
+            ["settings", "put", "system", "pointer_location", mode],
+            &mut output,
+        )
+        .map_err(|e| {
+            WebServerError::bad_request(format!(
+                "{} {}: {}",
+                t!("web.device.setPointerLocationFailed"),
+                device.device_id,
+                e
+            ))
+        })?;
+    }
+
+    Ok(JsonResponse::success(
+        t!("web.device.setPointerLocationSuccess"),
         None,
     ))
 }

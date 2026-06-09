@@ -68,7 +68,9 @@
       "noDeviceControlled": "无受控设备",
       "setDisplayPowerSuccess": "成功设置所有受控设备的显示开关",
       "startingScrcpyApp": "启动 scrcpy 应用...",
-      "sendKeySuccess": "成功发送按键到所有受控设备"
+      "sendKeySuccess": "成功发送按键到所有受控设备",
+      "setPointerLocationSuccess": "成功设置所有受控设备的指针调试",
+      "setPointerLocationFailed": "设置指针调试失败"
     },
     "script": {
       "validateScriptSuccess": "脚本语法检查通过",

@@ -22,6 +22,7 @@ import {
   type ControlledDevice,
 } from "../utils";
 import {
+  AimOutlined,
   BorderOutlined,
   BulbFilled,
   BulbOutlined,
@@ -61,6 +62,7 @@ function ControlledDevices({
     (state) => state.other.deviceRotations,
   );
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const actionMessageKey = "controlled-device-action";
 
   const handleMenuOpenChange: DropdownProps["onOpenChange"] = (
     nextOpen,
@@ -70,6 +72,119 @@ function ControlledDevices({
       setActionMenuOpen(nextOpen);
     }
   };
+
+  async function runDeviceAction(
+    label: string,
+    request: () => Promise<unknown>,
+  ) {
+    messageApi?.open({
+      key: actionMessageKey,
+      type: "loading",
+      content: t("devices.actions.executing", { action: label }),
+      duration: 0,
+    });
+
+    try {
+      await request();
+      messageApi?.open({
+        key: actionMessageKey,
+        type: "success",
+        content: t("devices.actions.executed", { action: label }),
+        duration: 2,
+      });
+    } catch (error) {
+      messageApi?.open({
+        key: actionMessageKey,
+        type: "error",
+        content: error as string,
+        duration: 4,
+      });
+    }
+  }
+
+  const deviceActionItems = [
+    {
+      key: "SetDisplayPowerOff",
+      icon: <BulbOutlined />,
+      label: t("devices.actions.setDisplayPowerOff"),
+      request: () =>
+        requestPost("/api/device/control/set_display_power", {
+          mode: false,
+        }),
+    },
+    {
+      key: "SetDisplayPowerOn",
+      icon: <BulbFilled />,
+      label: t("devices.actions.setDisplayPowerOn"),
+      request: () =>
+        requestPost("/api/device/control/set_display_power", {
+          mode: true,
+        }),
+    },
+    {
+      key: "EnablePointerDebug",
+      icon: <AimOutlined />,
+      label: t("devices.actions.enablePointerDebug"),
+      request: () =>
+        requestPost("/api/device/control/set_pointer_location", {
+          mode: true,
+        }),
+    },
+    {
+      key: "DisablePointerDebug",
+      icon: <AimOutlined />,
+      label: t("devices.actions.disablePointerDebug"),
+      request: () =>
+        requestPost("/api/device/control/set_pointer_location", {
+          mode: false,
+        }),
+    },
+    {
+      key: "VolumeUp",
+      icon: <UpOutlined />,
+      label: t("devices.actions.volumeUp"),
+      request: () =>
+        requestPost("/api/device/control/send_key", {
+          keycode: "VolumeUp",
+        }),
+    },
+    {
+      key: "VolumeDown",
+      icon: <DownOutlined />,
+      label: t("devices.actions.volumeDown"),
+      request: () =>
+        requestPost("/api/device/control/send_key", {
+          keycode: "VolumeDown",
+        }),
+    },
+    {
+      key: "Back",
+      icon: <EnterOutlined />,
+      label: t("devices.actions.back"),
+      request: () =>
+        requestPost("/api/device/control/send_key", {
+          keycode: "Back",
+        }),
+    },
+    {
+      key: "Home",
+      icon: <BorderOutlined />,
+      label: t("devices.actions.home"),
+      request: () =>
+        requestPost("/api/device/control/send_key", {
+          keycode: "Home",
+        }),
+    },
+    {
+      key: "AppSwitch",
+      icon: <SwitcherOutlined />,
+      label: t("devices.actions.appSwitch"),
+      request: () =>
+        requestPost("/api/device/control/send_key", {
+          keycode: "AppSwitch",
+        }),
+    },
+  ];
 
   async function decontrolDevice(device_id: string) {
     dispatch(setIsLoading(true));
@@ -157,117 +272,18 @@ function ControlledDevices({
                 userSelect: "none",
               },
               onClick: async ({ key }) => {
-                switch (key) {
-                  case "SetDisplayPowerOff":
-                    try {
-                      await requestPost(
-                        "/api/device/control/set_display_power",
-                        {
-                          mode: false,
-                        },
-                      );
-                    } catch (error) {
-                      messageApi?.error(error as string);
-                    }
-                    break;
-                  case "SetDisplayPowerOn":
-                    try {
-                      await requestPost(
-                        "/api/device/control/set_display_power",
-                        {
-                          mode: true,
-                        },
-                      );
-                    } catch (error) {
-                      messageApi?.error(error as string);
-                    }
-                    break;
-                  case "VolumeUp":
-                    try {
-                      await requestPost("/api/device/control/send_key", {
-                        keycode: "VolumeUp",
-                      });
-                    } catch (error) {
-                      messageApi?.error(error as string);
-                    }
-                    break;
-                  case "VolumeDown":
-                    try {
-                      await requestPost("/api/device/control/send_key", {
-                        keycode: "VolumeDown",
-                      });
-                    } catch (error) {
-                      messageApi?.error(error as string);
-                    }
-                    break;
-                  case "Back":
-                    try {
-                      await requestPost("/api/device/control/send_key", {
-                        keycode: "Back",
-                      });
-                    } catch (error) {
-                      messageApi?.error(error as string);
-                    }
-                    break;
-                  case "Home":
-                    try {
-                      await requestPost("/api/device/control/send_key", {
-                        keycode: "Home",
-                      });
-                    } catch (error) {
-                      messageApi?.error(error as string);
-                    }
-                    break;
-                  case "AppSwitch":
-                    try {
-                      await requestPost("/api/device/control/send_key", {
-                        keycode: "AppSwitch",
-                      });
-                    } catch (error) {
-                      messageApi?.error(error as string);
-                    }
-                    break;
-                  default:
-                    break;
+                const action = deviceActionItems.find(
+                  (item) => item.key === key,
+                );
+                if (action) {
+                  await runDeviceAction(action.label, action.request);
                 }
               },
-              items: [
-                {
-                  key: "SetDisplayPowerOff",
-                  icon: <BulbOutlined />,
-                  label: t("devices.actions.setDisplayPowerOff"),
-                },
-                {
-                  key: "SetDisplayPowerOn",
-                  icon: <BulbFilled />,
-                  label: t("devices.actions.setDisplayPowerOn"),
-                },
-                {
-                  key: "VolumeUp",
-                  icon: <UpOutlined />,
-                  label: t("devices.actions.volumeUp"),
-                },
-                {
-                  key: "VolumeDown",
-                  icon: <DownOutlined />,
-                  label: t("devices.actions.volumeDown"),
-                },
-                {
-                  key: "Back",
-                  icon: <EnterOutlined />,
-                  label: t("devices.actions.back"),
-                },
-                {
-                  key: "Home",
-                  icon: <BorderOutlined />,
-                  label: t("devices.actions.home"),
-                },
-                {
-                  key: "AppSwitch",
-                  icon: <SwitcherOutlined />,
-                  label: t("devices.actions.appSwitch"),
-                },
-              ],
+              items: deviceActionItems.map((item) => ({
+                key: item.key,
+                icon: item.icon,
+                label: item.label,
+              })),
             }}
             onOpenChange={handleMenuOpenChange}
             open={actionMenuOpen}

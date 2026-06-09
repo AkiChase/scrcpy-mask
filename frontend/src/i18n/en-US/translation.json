@@ -52,7 +52,11 @@
       "volumeDown": "Volume down",
       "back": "Back",
       "home": "Home",
-      "appSwitch": "App switch"
+      "appSwitch": "App switch",
+      "enablePointerDebug": "Enable pointer debugging",
+      "disablePointerDebug": "Disable pointer debugging",
+      "executing": "Executing: {{action}}",
+      "executed": "Executed: {{action}}"
     }
   },
   "mappings": {

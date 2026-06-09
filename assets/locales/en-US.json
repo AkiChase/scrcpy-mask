@@ -68,7 +68,9 @@
       "noDeviceControlled": "No device under controlled",
       "setDisplayPowerSuccess": "Set display power of all controlled devices successfully",
       "startingScrcpyApp": "Start scrcpy app...",
-      "sendKeySuccess": "Send key to all controlled devices successfully"
+      "sendKeySuccess": "Send key to all controlled devices successfully",
+      "setPointerLocationSuccess": "Set pointer debugging for all controlled devices successfully",
+      "setPointerLocationFailed": "Failed to set pointer debugging"
     },
     "script": {
       "validateScriptSuccess": "Script syntax is valid",

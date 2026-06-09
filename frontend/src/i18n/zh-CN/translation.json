@@ -52,7 +52,11 @@
       "volumeDown": "减小音量",
       "back": "返回",
       "home": "主页",
-      "appSwitch": "切换应用"
+      "appSwitch": "切换应用",
+      "enablePointerDebug": "开启指针调试",
+      "disablePointerDebug": "关闭指针调试",
+      "executing": "正在执行：{{action}}",
+      "executed": "已执行：{{action}}"
     }
   },
   "mappings": {
