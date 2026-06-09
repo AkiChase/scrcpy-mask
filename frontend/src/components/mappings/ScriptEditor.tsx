@@ -6,7 +6,14 @@ import type { Text } from "@codemirror/state";
 import { EditorView, placeholder as editorPlaceholder } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { Button, Input, Modal, Tooltip } from "antd";
-import { useMemo, useState } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { useMessageContext } from "../../hooks";
@@ -194,6 +201,15 @@ export function ScriptEditor({
   const messageApi = useMessageContext();
   const [runningError, setRunningError] = useState("");
   const [running, setRunning] = useState(false);
+  const [hasVerticalScrollbar, setHasVerticalScrollbar] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  const updateScrollbarState = useCallback(() => {
+    const scroller =
+      editorRef.current?.querySelector<HTMLElement>(".cm-scroller");
+    if (!scroller) return;
+    setHasVerticalScrollbar(scroller.scrollHeight > scroller.clientHeight + 1);
+  }, []);
 
   const extensions = useMemo(() => {
     const lineHeight = 22;
@@ -219,7 +235,7 @@ export function ScriptEditor({
           overflow: "auto",
         },
         ".cm-content": {
-          padding: "6px 34px 6px 0",
+          padding: "6px var(--script-editor-content-padding) 6px 0",
         },
         ".cm-gutters": {
           backgroundColor: "var(--ant-color-bg-container)",
@@ -248,6 +264,29 @@ export function ScriptEditor({
       lintGutter(),
     ];
   }, [maxRows, minRows, placeholder]);
+
+  useLayoutEffect(() => {
+    updateScrollbarState();
+
+    const scroller =
+      editorRef.current?.querySelector<HTMLElement>(".cm-scroller");
+    const content = editorRef.current?.querySelector<HTMLElement>(".cm-content");
+    if (!scroller) return;
+
+    const resizeObserver = new ResizeObserver(updateScrollbarState);
+    resizeObserver.observe(scroller);
+    if (content) resizeObserver.observe(content);
+
+    const frame = requestAnimationFrame(updateScrollbarState);
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+    };
+  }, [maxRows, minRows, updateScrollbarState, value]);
+
+  const editorStyle = {
+    "--script-editor-content-padding": hasVerticalScrollbar ? "50px" : "34px",
+  } as CSSProperties;
 
   async function runScript() {
     setRunning(true);
@@ -279,7 +318,7 @@ export function ScriptEditor({
           autoSize
         />
       </Modal>
-      <div className="group relative">
+      <div ref={editorRef} className="group relative" style={editorStyle}>
         <CodeMirror
           value={value}
           height="auto"
@@ -296,7 +335,8 @@ export function ScriptEditor({
         {showRun && (
           <Tooltip title={t("mappings.common.scriptEditor.run")}>
             <Button
-              className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+              className="absolute top-1.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+              style={{ right: hasVerticalScrollbar ? 16 : 6 }}
               size="small"
               type="text"
               icon={running ? <LoadingOutlined /> : <PlayCircleOutlined />}
