@@ -23,6 +23,7 @@ use crate::{
 };
 
 pub const IDENTIFIER: &str = "com.akichase.scrcpy-mask";
+const VIDEO_BUFFER_POOL_LIMIT: usize = 12;
 
 pub fn relate_to_data_path<P>(segments: P) -> PathBuf
 where
@@ -110,14 +111,23 @@ impl LatestVideoFrame {
 
     pub fn recycle_buffer(&self, buffer: Vec<u8>) {
         let mut buffers = self.inner.buffers.lock().unwrap();
-        if buffers.len() < 3 {
+        if buffers.len() < VIDEO_BUFFER_POOL_LIMIT {
             buffers.push(buffer);
         }
     }
 
     fn recycle_msg(&self, msg: Option<VideoMsg>) {
-        if let Some(VideoMsg::Data { data, .. }) = msg {
-            self.recycle_buffer(data);
+        match msg {
+            Some(VideoMsg::Yuv420p { y, u, v, .. }) => {
+                self.recycle_buffer(y);
+                self.recycle_buffer(u);
+                self.recycle_buffer(v);
+            }
+            Some(VideoMsg::Nv12 { y, uv, .. }) => {
+                self.recycle_buffer(y);
+                self.recycle_buffer(uv);
+            }
+            _ => {}
         }
     }
 }

@@ -1,6 +1,11 @@
 use std::time::Duration;
 
-use ffmpeg_next::{Error as FfmpegError, error, frame};
+use ffmpeg_next::{
+    Error as FfmpegError, error,
+    format::Pixel,
+    frame,
+    util::color::{Range, Space},
+};
 use rust_i18n::t;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -23,7 +28,7 @@ use crate::{
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
         media::{
             SC_CODEC_ID_AV1, SC_CODEC_ID_H264, SC_CODEC_ID_H265, VideoCodec, VideoDecoder,
-            VideoMsg, read_media_packet,
+            VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout, YuvRange, read_media_packet,
         },
     },
     utils::{LatestVideoFrame, share::ControlledDevice},
@@ -312,7 +317,9 @@ impl ScrcpyConnection {
                     match video_decoder.decoder.send_packet(&packet) {
                         Ok(()) => {}
                         Err(e) if is_ffmpeg_again(e) => {
-                            drain_video_decoder(&mut video_decoder, &v_tx);
+                            if !drain_video_decoder(&mut video_decoder, &v_tx) {
+                                break;
+                            }
                             if let Err(e) = video_decoder.decoder.send_packet(&packet) {
                                 log::warn!("[Controller] Failed to send video packet: {}", e);
                                 continue;
@@ -324,7 +331,9 @@ impl ScrcpyConnection {
                         }
                     }
 
-                    drain_video_decoder(&mut video_decoder, &v_tx);
+                    if !drain_video_decoder(&mut video_decoder, &v_tx) {
+                        break;
+                    }
                 }
                 Err(e) => {
                     log::error!("[Controller] {}", e);
@@ -367,37 +376,115 @@ impl ScrcpyConnection {
     }
 }
 
-fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame) {
+fn drain_video_decoder(
+    video_decoder: &mut VideoDecoder,
+    v_tx: &LatestVideoFrame,
+) -> bool {
     loop {
         let mut decoded = frame::Video::empty();
         match video_decoder.decoder.receive_frame(&mut decoded) {
             Ok(()) => {
-                if let Err(e) = video_decoder.update(&decoded) {
-                    log::warn!("[Controller] {}", e);
-                    continue;
-                }
-
-                let bgra_frame = match video_decoder.convert_to_bgra(&decoded) {
-                    Ok(frame) => frame,
+                let format_changed = match video_decoder.update(&decoded) {
+                    Ok(changed) => changed,
                     Err(e) => {
                         log::warn!("[Controller] {}", e);
                         continue;
                     }
                 };
 
-                let mut buf = v_tx.take_buffer(video_decoder.frame_size);
-                copy_bgra_frame_data(
-                    &bgra_frame,
-                    video_decoder.width,
-                    video_decoder.height,
-                    &mut buf,
-                );
+                if format_changed {
+                    log_video_frame_metadata(video_decoder, &decoded);
+                }
 
-                v_tx.send(VideoMsg::Data {
-                    data: buf,
-                    width: video_decoder.width,
-                    height: video_decoder.height,
-                });
+                let color = map_yuv_color_info(&decoded, format_changed);
+                let planes = YuvPlaneLayout::new(video_decoder.width, video_decoder.height);
+
+                match decoded.format() {
+                    Pixel::YUV420P => {
+                        let y_size = (planes.y_width * planes.y_height) as usize;
+                        let uv_size = (planes.uv_width * planes.uv_height) as usize;
+                        let mut y = v_tx.take_buffer(y_size);
+                        let mut u = v_tx.take_buffer(uv_size);
+                        let mut v = v_tx.take_buffer(uv_size);
+
+                        copy_plane(
+                            &decoded,
+                            0,
+                            planes.y_width as usize,
+                            planes.y_height as usize,
+                            &mut y,
+                        );
+                        copy_plane(
+                            &decoded,
+                            1,
+                            planes.uv_width as usize,
+                            planes.uv_height as usize,
+                            &mut u,
+                        );
+                        copy_plane(
+                            &decoded,
+                            2,
+                            planes.uv_width as usize,
+                            planes.uv_height as usize,
+                            &mut v,
+                        );
+
+                        v_tx.send(VideoMsg::Yuv420p {
+                            y,
+                            u,
+                            v,
+                            width: video_decoder.width,
+                            height: video_decoder.height,
+                            planes,
+                            color,
+                        });
+                    }
+                    Pixel::NV12 => {
+                        let y_size = (planes.y_width * planes.y_height) as usize;
+                        let uv_size = (planes.uv_width * planes.uv_height * 2) as usize;
+                        let mut y = v_tx.take_buffer(y_size);
+                        let mut uv = v_tx.take_buffer(uv_size);
+
+                        copy_plane(
+                            &decoded,
+                            0,
+                            planes.y_width as usize,
+                            planes.y_height as usize,
+                            &mut y,
+                        );
+                        copy_plane(
+                            &decoded,
+                            1,
+                            planes.uv_width as usize * 2,
+                            planes.uv_height as usize,
+                            &mut uv,
+                        );
+
+                        v_tx.send(VideoMsg::Nv12 {
+                            y,
+                            uv,
+                            width: video_decoder.width,
+                            height: video_decoder.height,
+                            planes,
+                            color,
+                        });
+                    }
+                    format => {
+                        log::error!(
+                            "[Controller] Unsupported video pixel format: codec={}, format={format:?}, width={}, height={}, color_space={:?}, color_range={:?}, primaries={:?}, transfer={:?}, chroma_location={:?}",
+                            video_decoder.codec_id,
+                            decoded.width(),
+                            decoded.height(),
+                            decoded.color_space(),
+                            decoded.color_range(),
+                            decoded.color_primaries(),
+                            decoded.color_transfer_characteristic(),
+                            decoded.chroma_location(),
+                        );
+                        v_tx.send(VideoMsg::Close);
+                        return false;
+                    }
+                }
             }
             Err(e) if is_ffmpeg_again(e) => break,
             Err(FfmpegError::Eof) => break,
@@ -407,27 +494,83 @@ fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame
             }
         }
     }
+    true
+}
+
+
+
+fn log_video_frame_metadata(video_decoder: &VideoDecoder, decoded: &frame::Video) {
+    log::info!(
+        "[Controller] Video frame format: codec={}, format={:?}, size={}x{}, color_space={:?}, color_range={:?}, primaries={:?}, transfer={:?}, chroma_location={:?}",
+        video_decoder.codec_id,
+        decoded.format(),
+        decoded.width(),
+        decoded.height(),
+        decoded.color_space(),
+        decoded.color_range(),
+        decoded.color_primaries(),
+        decoded.color_transfer_characteristic(),
+        decoded.chroma_location(),
+    );
+}
+
+fn map_yuv_color_info(decoded: &frame::Video, warn_on_assumption: bool) -> YuvColorInfo {
+    let matrix = match decoded.color_space() {
+        Space::BT470BG | Space::SMPTE170M => YuvMatrix::Bt601,
+        Space::BT2020NCL | Space::BT2020CL => YuvMatrix::Bt2020,
+        Space::BT709 => YuvMatrix::Bt709,
+        other => {
+            if warn_on_assumption {
+                log::warn!(
+                    "[Controller] Unknown video color matrix {:?}; assuming BT.709 for YUV shader",
+                    other
+                );
+            }
+            YuvMatrix::Bt709
+        }
+    };
+
+    let range = match decoded.color_range() {
+        Range::MPEG => YuvRange::Limited,
+        Range::JPEG => YuvRange::Full,
+        other => {
+            if warn_on_assumption {
+                log::warn!(
+                    "[Controller] Unknown video color range {:?}; assuming limited range for YUV shader",
+                    other
+                );
+            }
+            YuvRange::Limited
+        }
+    };
+
+    YuvColorInfo { matrix, range }
 }
 
 fn is_ffmpeg_again(error: FfmpegError) -> bool {
     matches!(error, FfmpegError::Other { errno } if errno == error::EAGAIN)
 }
 
-fn copy_bgra_frame_data(bgra_frame: &frame::Video, width: u32, height: u32, dst: &mut [u8]) {
-    let row_bytes = width as usize * 4;
-    let frame_size = row_bytes * height as usize;
-    let src = bgra_frame.data(0);
-    let src_stride = bgra_frame.stride(0);
+fn copy_plane(
+    frame: &frame::Video,
+    plane: usize,
+    width_bytes: usize,
+    height: usize,
+    dst: &mut [u8],
+) {
+    let frame_size = width_bytes * height;
+    let src = frame.data(plane);
+    let src_stride = frame.stride(plane);
 
-    if src_stride == row_bytes {
+    if src_stride == width_bytes {
         dst[..frame_size].copy_from_slice(&src[..frame_size]);
         return;
     }
 
-    for row in 0..height as usize {
+    for row in 0..height {
         let src_start = row * src_stride;
-        let dst_start = row * row_bytes;
-        dst[dst_start..dst_start + row_bytes]
-            .copy_from_slice(&src[src_start..src_start + row_bytes]);
+        let dst_start = row * width_bytes;
+        dst[dst_start..dst_start + width_bytes]
+            .copy_from_slice(&src[src_start..src_start + width_bytes]);
     }
 }

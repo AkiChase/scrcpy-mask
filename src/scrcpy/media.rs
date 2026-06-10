@@ -1,6 +1,6 @@
 use std::fmt;
 
-use ffmpeg_next::{Packet, codec, decoder, format::Pixel, frame, packet, software::scaling};
+use ffmpeg_next::{Packet, codec, decoder, format::Pixel, frame, packet};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use tokio::{io::AsyncReadExt, net::TcpStream};
@@ -20,6 +20,10 @@ pub struct MediaPacket {
 impl MediaPacket {
     pub fn is_config(&self) -> bool {
         self.is_config
+    }
+
+    pub fn data_len(&self) -> usize {
+        self.data.len()
     }
 
     fn ffmpeg_packet(data: Vec<u8>, pts: Option<i64>, is_key_frame: bool) -> Packet {
@@ -144,10 +148,9 @@ impl fmt::Display for VideoCodec {
 
 pub struct VideoDecoder {
     pub decoder: decoder::Video,
-    pub scaler: Option<scaling::Context>,
+    pub codec_id: VideoCodec,
     pub width: u32,
     pub height: u32,
-    pub frame_size: usize,
     pixel_format: Option<Pixel>,
     pub must_merge_config: bool,
     pub packet_merger: PacketMerger,
@@ -172,13 +175,12 @@ impl VideoDecoder {
 
         Ok(Self {
             decoder: video_decoder,
-            scaler: None,
+            codec_id,
             width,
             height,
             must_merge_config: matches!(codec_id, VideoCodec::H264 | VideoCodec::H265),
             packet_merger: PacketMerger::new(),
             pixel_format: None,
-            frame_size: (width * height * 4) as usize,
         })
     }
 
@@ -187,53 +189,73 @@ impl VideoDecoder {
         let height = decoded.height();
         let format = decoded.format();
 
-        if self.scaler.is_none()
-            || width != self.width
-            || height != self.height
-            || self.pixel_format != Some(format)
-        {
+        if width != self.width || height != self.height || self.pixel_format != Some(format) {
             self.width = width;
             self.height = height;
             self.pixel_format = Some(format);
-            self.scaler = Some(
-                scaling::Context::get(
-                    format,
-                    width,
-                    height,
-                    Pixel::BGRA,
-                    width,
-                    height,
-                    scaling::Flags::BILINEAR,
-                )
-                .map_err(|e| format!("Failed to create FFmpeg scaler: {e}"))?,
-            );
-            self.frame_size = (width * height * 4) as usize;
 
             Ok(true)
         } else {
             Ok(false)
         }
     }
+}
 
-    pub fn convert_to_bgra(
-        &mut self,
-        decoded: &frame::Video,
-    ) -> std::result::Result<frame::Video, String> {
-        let mut bgra_frame = frame::Video::empty();
-        self.scaler
-            .as_mut()
-            .ok_or_else(|| "FFmpeg scaler is not initialized".to_string())?
-            .run(decoded, &mut bgra_frame)
-            .map_err(|e| format!("Failed to convert video frame to BGRA: {e}"))?;
-        Ok(bgra_frame)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct YuvPlaneLayout {
+    pub y_width: u32,
+    pub y_height: u32,
+    pub uv_width: u32,
+    pub uv_height: u32,
+}
+
+impl YuvPlaneLayout {
+    pub fn new(width: u32, height: u32) -> Self {
+        Self {
+            y_width: width,
+            y_height: height,
+            uv_width: width.div_ceil(2),
+            uv_height: height.div_ceil(2),
+        }
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct YuvColorInfo {
+    pub matrix: YuvMatrix,
+    pub range: YuvRange,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum YuvMatrix {
+    Bt601,
+    Bt709,
+    Bt2020,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum YuvRange {
+    Limited,
+    Full,
+}
+
 pub enum VideoMsg {
-    Data {
-        data: Vec<u8>,
+    Yuv420p {
+        y: Vec<u8>,
+        u: Vec<u8>,
+        v: Vec<u8>,
         width: u32,
         height: u32,
+        planes: YuvPlaneLayout,
+        color: YuvColorInfo,
+    },
+    Nv12 {
+        y: Vec<u8>,
+        uv: Vec<u8>,
+        width: u32,
+        height: u32,
+        planes: YuvPlaneLayout,
+        color: YuvColorInfo,
     },
     Close,
 }

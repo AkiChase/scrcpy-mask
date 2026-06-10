@@ -6264,6 +6264,7 @@ dependencies = [
  "axum",
  "bevy",
  "bevy_ineffable",
+ "bevy_ui_render",
  "bitflags 2.12.1",
  "copypasta",
  "crossbeam-channel",

@@ -6,10 +6,14 @@ use bevy::{
     window::WindowLevel,
     winit::{UpdateMode, WinitSettings},
 };
+use bevy_ui_render::prelude::MaterialNode;
 
 use crate::{
     config::LocalConfig,
-    mask::{mask_command::TitlebarState, video::VideoPlayer},
+    mask::{
+        mask_command::TitlebarState,
+        video::{VideoPlayer, YuvVideoMaterial, create_initial_yuv_material},
+    },
     scrcpy::{constant::Keycode, controller::ControllerCommand, device_action},
     utils::{ChannelSenderCS, ChannelSenderD, DeviceOrientation, share::ControlledDevice},
 };
@@ -82,6 +86,8 @@ impl Plugin for BasicPlugin {
 fn setup_ui(
     mut commands: Commands,
     mut window: Single<&mut Window>,
+    mut images: ResMut<Assets<Image>>,
+    mut yuv_materials: ResMut<Assets<YuvVideoMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
     let config = LocalConfig::get();
@@ -96,6 +102,7 @@ fn setup_ui(
 
     let titlebar_bg = Color::srgba(0.05, 0.05, 0.05, 0.85);
     let border_color = Color::srgba_u8(183, 42, 32, 255);
+    let video_material = create_initial_yuv_material(&mut images, &mut yuv_materials);
 
     let minimize_icon: Handle<Image> = asset_server.load("icons/minus.png");
     let pushpin_icon: Handle<Image> = asset_server.load("icons/pushpin.png");
@@ -363,7 +370,7 @@ fn setup_ui(
             },
             ZIndex(-1),
             BackgroundColor(Color::NONE),
-            ImageNode::default(),
+            MaterialNode(video_material),
             VideoPlayer,
         ));
 

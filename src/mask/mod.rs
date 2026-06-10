@@ -16,6 +16,7 @@ use bevy::{
     time::{Time, Timer, TimerMode},
     window::{Window, WindowMoved, WindowPosition, WindowResized},
 };
+use bevy_ui_render::prelude::UiMaterialPlugin;
 
 use crate::{
     config::LocalConfig,
@@ -25,7 +26,7 @@ use crate::{
             handle_mask_command, physical_to_logical_i32,
         },
         ui::basic::TITLEBAR_HEIGHT,
-        video::{VideoAttributes, handle_video_msg},
+        video::{YuvVideoMaterial, handle_video_msg},
     },
     utils::{ChannelSenderWS, DeviceOrientation, share::ControlledDevice},
     web::ws::WebSocketNotification,
@@ -35,8 +36,8 @@ pub struct MaskPlugins;
 
 impl Plugin for MaskPlugins {
     fn build(&self, app: &mut App) {
-        app.add_plugins((ui::UiPlugins, mapping::MappingPlugins))
-            .init_non_send::<VideoAttributes>()
+        app.add_plugins(UiMaterialPlugin::<YuvVideoMaterial>::default())
+            .add_plugins((ui::UiPlugins, mapping::MappingPlugins))
             .init_resource::<PendingWindowFocus>()
             .add_systems(Startup, (init_mask_size, init_titlebar_state))
             .add_systems(
