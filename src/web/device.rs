@@ -162,10 +162,10 @@ async fn _control_device(
             args.push(format!("video_codec={}", local_config.video_codec));
             args.push(format!("video_bit_rate={}", local_config.video_bit_rate));
             if local_config.video_max_size > 0 {
-                args.push(format!("video_max_size={}", local_config.video_max_size));
+                args.push(format!("max_size={}", local_config.video_max_size));
             }
             if local_config.video_max_fps > 0 {
-                args.push(format!("video_max_fps={}", local_config.video_max_fps));
+                args.push(format!("max_fps={}", local_config.video_max_fps));
             }
         }
         socket_id.push("main_control".to_string());
