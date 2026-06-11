@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 const VERSION_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
-const RELEASE_BRANCH = "main";
+const RELEASE_BRANCH = "master";
 const VERSION_FILES = [
   "Cargo.toml",
   "Cargo.lock",
