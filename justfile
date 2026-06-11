@@ -12,6 +12,16 @@ web-dev:
 web-build:
     cd frontend && pnpm build
 
+# build FFmpeg static libraries
+build-ffmpeg:
+    @if [ "{{os()}}" = "windows" ]; then \
+        powershell -NoProfile -File scripts/build-ffmpeg.ps1; \
+    elif [ "{{os()}}" = "macos" ] || [ "{{os()}}" = "linux" ]; then \
+        ./scripts/build-ffmpeg.sh; \
+    else \
+        echo "Unsupported OS: {{os()}}" >&2; exit 1; \
+    fi
+
 # build the app package
 build:
     @if [ "{{os()}}" = "windows" ]; then \
