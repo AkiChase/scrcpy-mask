@@ -1,4 +1,4 @@
-use adb_client::{ADBDeviceExt, ADBServer, ADBServerDevice};
+use adb_client::{ADBDeviceExt, server::ADBServer, server_device::ADBServerDevice};
 use rust_i18n::t;
 use serde::Serialize;
 use tokio::{
@@ -86,16 +86,19 @@ impl Device {
     {
         let mut device = Device::new_server_device(id);
         let shell_args: Vec<String> = shell_args.into_iter().map(|s| s.into()).collect();
+        let command = shell_args.join(" ");
 
         let (tx, mut rx) = mpsc::unbounded_channel();
         let h: JoinHandle<Result<(), String>> = tokio::task::spawn_blocking(move || {
             let mut writer = ChannelWriter { sender: tx };
-            let shell_args: Vec<&str> = shell_args.iter().map(|s| s.as_str()).collect();
-            device.shell_command(&shell_args, &mut writer).map_err(|e| {
-                let msg = format!("{}: {}", t!("adb.adbShellCommandFailed"), e);
-                log::error!("[Adb] {}", msg);
-                msg
-            })
+            device
+                .shell_command(&command, Some(&mut writer), None)
+                .map(|_| ())
+                .map_err(|e| {
+                    let msg = format!("{}: {}", t!("adb.adbShellCommandFailed"), e);
+                    log::error!("[Adb] {}", msg);
+                    msg
+                })
         });
 
         tokio::spawn(async move {
@@ -114,9 +117,10 @@ impl Device {
     {
         let mut device = Device::new_server_device(id);
         let shell_args: Vec<String> = shell_args.into_iter().map(|s| s.into()).collect();
-        let shell_args: Vec<&str> = shell_args.iter().map(|s| s.as_str()).collect();
+        let command = shell_args.join(" ");
         device
-            .shell_command(&shell_args, output)
+            .shell_command(&command, Some(output), None)
+            .map(|_| ())
             .map_err(|e| e.to_string())
     }
 
@@ -126,7 +130,7 @@ impl Device {
         let mut output: Vec<u8> = Vec::new();
         let mut cursor = Cursor::new(&mut output);
         device
-            .shell_command(&["wm", "size"], &mut cursor)
+            .shell_command(&"wm size", Some(&mut cursor), None)
             .map_err(|e| format!("{}: {}", t!("adb.adbShellCommandFailed"), e))?;
 
         let stdout = String::from_utf8_lossy(&output);
