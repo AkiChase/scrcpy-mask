@@ -20,12 +20,15 @@ use rust_i18n::t;
 
 use crate::{
     config::LocalConfig,
-    mask::mapping::{
-        config::{
-            ActiveMappingConfig, BindMappingConfig, MappingAction, default_mapping_config,
-            load_mapping_config, save_mapping_config,
+    mask::{
+        MaskResizeState,
+        mapping::{
+            config::{
+                ActiveMappingConfig, BindMappingConfig, MappingAction, default_mapping_config,
+                load_mapping_config, save_mapping_config,
+            },
+            cursor::{CursorFrameSet, CursorPlugins, CursorState},
         },
-        cursor::{CursorFrameSet, CursorPlugins, CursorState},
     },
     utils::relate_to_data_path,
 };
@@ -55,6 +58,10 @@ impl Plugin for MappingPlugins {
                     CursorFrameSet::SyncVirtualCursor,
                 )
                     .chain(),
+            )
+            .configure_sets(
+                Update,
+                CursorFrameSet::HandleMappings.run_if(mask_not_resizing),
             )
             .add_systems(
                 Startup,
@@ -127,6 +134,10 @@ impl Plugin for MappingPlugins {
                 raw_input::on_exit_raw_input_mode,
             );
     }
+}
+
+pub fn mask_not_resizing(resize_state: Res<MaskResizeState>) -> bool {
+    !resize_state.active()
 }
 
 fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappingConfig>) {

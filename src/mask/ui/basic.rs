@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use bevy::{
     math::CompassOctant,
+    prelude::IntoScheduleConfigs,
     prelude::*,
     window::WindowLevel,
     winit::{UpdateMode, WinitSettings},
@@ -11,6 +12,7 @@ use bevy_ui_render::prelude::MaterialNode;
 use crate::{
     config::LocalConfig,
     mask::{
+        MaskFrameSet, MaskResizeState,
         mask_command::TitlebarState,
         video::{VideoPlayer, YuvVideoMaterial, create_initial_yuv_material},
     },
@@ -75,7 +77,7 @@ impl Plugin for BasicPlugin {
                     handle_titlebar_buttons,
                     handle_device_buttons,
                     handle_titlebar_drag,
-                    handle_resize,
+                    handle_resize.in_set(MaskFrameSet::Resize),
                     sync_titlebar_visibility,
                     sync_pushpin_style,
                 ),
@@ -687,6 +689,7 @@ fn map_handle_for_device(
 
 fn handle_resize(
     mut window: Single<&mut Window>,
+    mut resize_state: ResMut<MaskResizeState>,
     query: Query<(&ResizeHandle, &Interaction), Changed<Interaction>>,
 ) {
     let device = ControlledDevice::get_main_device_blocking();
@@ -702,6 +705,7 @@ fn handle_resize(
                 _ => None, // no device or unknown size: block resize
             };
             if let Some(dir) = direction {
+                resize_state.begin_interaction();
                 window.start_drag_resize(dir);
             }
         }

@@ -8,7 +8,7 @@ use bevy::{
 
 use crate::{
     mask::{
-        mapping::{MappingState, utils::ControlMsgHelper},
+        mapping::{MappingState, mask_not_resizing, utils::ControlMsgHelper},
         mask_command::{MaskSize, TitlebarState},
         ui::basic::{MaskContentEntity, TITLEBAR_HEIGHT},
     },
@@ -111,7 +111,8 @@ impl Plugin for CursorPlugins {
                     .run_if(
                         in_state(CursorState::Fps)
                             .and_then(in_state(MappingState::Normal))
-                            .and_then(run_if_handle_cursor_fps),
+                            .and_then(run_if_handle_cursor_fps)
+                            .and_then(mask_not_resizing),
                     ),
             )
             .add_systems(OnEnter(CursorState::Fps), on_enter_cursor_fps)

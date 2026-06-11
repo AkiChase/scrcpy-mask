@@ -12,7 +12,7 @@ use bevy::{
         system::{Commands, Local, Res, ResMut, Single},
     },
     math::Vec2,
-    prelude::IntoScheduleConfigs,
+    prelude::{ButtonInput, IntoScheduleConfigs, MouseButton, Resource, SystemSet},
     time::{Time, Timer, TimerMode},
     window::{Window, WindowMoved, WindowPosition, WindowResized},
 };
@@ -21,6 +21,7 @@ use bevy_ui_render::prelude::UiMaterialPlugin;
 use crate::{
     config::LocalConfig,
     mask::{
+        mapping::cursor::CursorFrameSet,
         mask_command::{
             MaskSize, PendingWindowFocus, TitlebarState, apply_pending_window_focus,
             handle_mask_command, physical_to_logical_i32,
@@ -32,6 +33,11 @@ use crate::{
     web::ws::WebSocketNotification,
 };
 
+#[derive(SystemSet, Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum MaskFrameSet {
+    Resize,
+}
+
 pub struct MaskPlugins;
 
 impl Plugin for MaskPlugins {
@@ -39,11 +45,16 @@ impl Plugin for MaskPlugins {
         app.add_plugins(UiMaterialPlugin::<YuvVideoMaterial>::default())
             .add_plugins((ui::UiPlugins, mapping::MappingPlugins))
             .init_resource::<PendingWindowFocus>()
+            .init_resource::<MaskResizeState>()
+            .configure_sets(
+                Update,
+                (MaskFrameSet::Resize, CursorFrameSet::UpdatePosition).chain(),
+            )
             .add_systems(Startup, (init_mask_size, init_titlebar_state))
             .add_systems(
                 Update,
                 (
-                    sync_mask_size,
+                    sync_mask_size.in_set(MaskFrameSet::Resize),
                     sync_mask_position,
                     handle_mask_command,
                     apply_pending_window_focus.after(handle_mask_command),
@@ -72,17 +83,55 @@ fn init_titlebar_state(mut commands: Commands) {
 
 const DEBOUNCE_MS: u64 = 200;
 
-#[derive(Default)]
-struct ResizeDebounce {
+#[derive(Resource)]
+pub struct MaskResizeState {
+    active: bool,
+    pending_apply: bool,
     timer: Timer,
-    pending: bool,
 }
 
-impl ResizeDebounce {
-    fn ensure_init(&mut self) {
-        if self.timer.duration() == Duration::ZERO {
-            self.timer = Timer::new(Duration::from_millis(DEBOUNCE_MS), TimerMode::Once);
+impl Default for MaskResizeState {
+    fn default() -> Self {
+        Self {
+            active: false,
+            pending_apply: false,
+            timer: Timer::new(Duration::from_millis(DEBOUNCE_MS), TimerMode::Once),
         }
+    }
+}
+
+impl MaskResizeState {
+    pub fn begin_interaction(&mut self) {
+        self.active = true;
+        self.timer.reset();
+    }
+
+    fn mark_resized(&mut self) {
+        self.begin_interaction();
+        self.pending_apply = true;
+    }
+
+    pub fn active(&self) -> bool {
+        self.active
+    }
+
+    fn tick(&mut self, delta: Duration, mouse_input: &ButtonInput<MouseButton>) -> bool {
+        if !self.active {
+            return false;
+        }
+
+        if mouse_input.pressed(MouseButton::Left) {
+            self.timer.reset();
+            return false;
+        }
+
+        self.timer.tick(delta);
+        if !self.timer.just_finished() {
+            return false;
+        }
+
+        self.active = false;
+        std::mem::take(&mut self.pending_apply)
     }
 }
 
@@ -106,83 +155,74 @@ fn sync_mask_size(
     mut mask_size: ResMut<MaskSize>,
     mut window: Single<&mut Window>,
     time: Res<Time>,
-    mut debounce: Local<ResizeDebounce>,
+    mouse_input: Res<ButtonInput<MouseButton>>,
+    mut resize_state: ResMut<MaskResizeState>,
     ws_tx: Res<ChannelSenderWS>,
 ) {
-    debounce.ensure_init();
-
     for e in resize_reader.read() {
         let h = (e.height - titlebar_state.offset()).max(0.0);
         mask_size.0 = Vec2::new(e.width, h);
-        debounce.timer.reset();
-        debounce.pending = true;
+        resize_state.mark_resized();
     }
 
-    if debounce.pending {
-        debounce.timer.tick(time.delta());
-        if debounce.timer.just_finished() {
-            debounce.pending = false;
-            if let Some(device) = ControlledDevice::get_main_device_blocking() {
-                let (dw, dh) = device.device_size;
-                if dw == 0 || dh == 0 {
-                    return;
-                }
-                let device_w = dw as f32;
-                let device_h = dh as f32;
-                let orientation = DeviceOrientation::from_size(dw, dh);
-                let titlebar_offset = titlebar_state.offset();
-                let current_w = mask_size.0.x;
-                let current_h = mask_size.0.y;
+    if resize_state.tick(time.delta(), &mouse_input) {
+        if let Some(device) = ControlledDevice::get_main_device_blocking() {
+            let (dw, dh) = device.device_size;
+            if dw == 0 || dh == 0 {
+                return;
+            }
+            let device_w = dw as f32;
+            let device_h = dh as f32;
+            let orientation = DeviceOrientation::from_size(dw, dh);
+            let titlebar_offset = titlebar_state.offset();
+            let current_w = mask_size.0.x;
+            let current_h = mask_size.0.y;
 
-                match orientation {
-                    DeviceOrientation::Landscape => {
-                        let target_h = (current_w * (device_h / device_w)).round();
-                        if target_h != current_h {
-                            window.resolution.set(current_w, target_h + titlebar_offset);
-                            mask_size.0 = Vec2::new(current_w, target_h);
-                        }
-                    }
-                    DeviceOrientation::Portrait => {
-                        let target_w = (current_h * (device_w / device_h)).round();
-                        if target_w != current_w {
-                            window.resolution.set(target_w, current_h + titlebar_offset);
-                            mask_size.0 = Vec2::new(target_w, current_h);
-                        }
+            match orientation {
+                DeviceOrientation::Landscape => {
+                    let target_h = (current_w * (device_h / device_w)).round();
+                    if target_h != current_h {
+                        window.resolution.set(current_w, target_h + titlebar_offset);
+                        mask_size.0 = Vec2::new(current_w, target_h);
                     }
                 }
-
-                // Persist size and position after debounce settles
-                let content_w = mask_size.0.x.round() as u32;
-                let content_h = mask_size.0.y.round() as u32;
-                let WindowPosition::At(pos) = window.position else {
-                    return;
-                };
-                let scale_factor = window.resolution.scale_factor() as f32;
-                let content_top = if titlebar_state.visible {
-                    physical_to_logical_i32(pos.y, scale_factor) + TITLEBAR_HEIGHT.round() as i32
-                } else {
-                    physical_to_logical_i32(pos.y, scale_factor)
-                };
-                let content_left = physical_to_logical_i32(pos.x, scale_factor);
-
-                match orientation {
-                    DeviceOrientation::Landscape => {
-                        LocalConfig::set_horizontal_mask_width(content_w);
-                        LocalConfig::set_horizontal_position((content_left, content_top));
-                        let _ = ws_tx.0.send(WebSocketNotification::ConfigChanged {
-                            keys: vec![
-                                "horizontal_mask_width".into(),
-                                "horizontal_position".into(),
-                            ],
-                        });
+                DeviceOrientation::Portrait => {
+                    let target_w = (current_h * (device_w / device_h)).round();
+                    if target_w != current_w {
+                        window.resolution.set(target_w, current_h + titlebar_offset);
+                        mask_size.0 = Vec2::new(target_w, current_h);
                     }
-                    DeviceOrientation::Portrait => {
-                        LocalConfig::set_vertical_mask_height(content_h);
-                        LocalConfig::set_vertical_position((content_left, content_top));
-                        let _ = ws_tx.0.send(WebSocketNotification::ConfigChanged {
-                            keys: vec!["vertical_mask_height".into(), "vertical_position".into()],
-                        });
-                    }
+                }
+            }
+
+            // Persist size and position after debounce settles
+            let content_w = mask_size.0.x.round() as u32;
+            let content_h = mask_size.0.y.round() as u32;
+            let WindowPosition::At(pos) = window.position else {
+                return;
+            };
+            let scale_factor = window.resolution.scale_factor() as f32;
+            let content_top = if titlebar_state.visible {
+                physical_to_logical_i32(pos.y, scale_factor) + TITLEBAR_HEIGHT.round() as i32
+            } else {
+                physical_to_logical_i32(pos.y, scale_factor)
+            };
+            let content_left = physical_to_logical_i32(pos.x, scale_factor);
+
+            match orientation {
+                DeviceOrientation::Landscape => {
+                    LocalConfig::set_horizontal_mask_width(content_w);
+                    LocalConfig::set_horizontal_position((content_left, content_top));
+                    let _ = ws_tx.0.send(WebSocketNotification::ConfigChanged {
+                        keys: vec!["horizontal_mask_width".into(), "horizontal_position".into()],
+                    });
+                }
+                DeviceOrientation::Portrait => {
+                    LocalConfig::set_vertical_mask_height(content_h);
+                    LocalConfig::set_vertical_position((content_left, content_top));
+                    let _ = ws_tx.0.send(WebSocketNotification::ConfigChanged {
+                        keys: vec!["vertical_mask_height".into(), "vertical_position".into()],
+                    });
                 }
             }
         }
