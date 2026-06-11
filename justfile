@@ -20,6 +20,10 @@ build:
         ./build.sh release; \
     fi
 
+# update version, commit it, and create a release tag
+release-version version:
+    node scripts/release-version.mjs "{{version}}"
+
 # run the app via build script
 run:
     @if [ "{{os()}}" = "windows" ]; then \
