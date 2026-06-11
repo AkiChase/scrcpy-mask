@@ -251,7 +251,7 @@ function ControlledDevices({
       render: (_, record) => {
         const rot = deviceRotations[record.scid];
         if (!rot) return null;
-        const isLandscape = rot.rotation === 1 || rot.rotation === 3;
+        const isLandscape = rot.width >= rot.height;
         return (
           <Tag color={isLandscape ? "green" : "blue"}>
             {isLandscape

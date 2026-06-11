@@ -32,7 +32,7 @@
       "actionInfo": "More information",
       "actionClose": "Stop control",
       "actionReconnect": "Reconnect device",
-      "rotation": "Rotation",
+      "rotation": "Orientation",
       "landscape": "Landscape",
       "portrait": "Portrait"
     },
