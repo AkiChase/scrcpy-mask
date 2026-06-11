@@ -4,7 +4,7 @@ use bevy::{
     math::CompassOctant,
     prelude::IntoScheduleConfigs,
     prelude::*,
-    window::WindowLevel,
+    window::{CursorIcon, SystemCursorIcon, WindowLevel},
     winit::{UpdateMode, WinitSettings},
 };
 use bevy_ui_render::prelude::MaterialNode;
@@ -17,14 +17,13 @@ use crate::{
         video::{VideoPlayer, YuvVideoMaterial, create_initial_yuv_material},
     },
     scrcpy::{constant::Keycode, controller::ControllerCommand, device_action},
-    utils::{ChannelSenderCS, ChannelSenderD, DeviceOrientation, share::ControlledDevice},
+    utils::{ChannelSenderCS, ChannelSenderD, share::ControlledDevice},
 };
 
 pub const BORDER_THICKNESS: f32 = 1.0;
 pub const TITLEBAR_HEIGHT: f32 = 30.0;
 
-const EDGE_HANDLE_SIZE: f32 = 6.0;
-const CORNER_HANDLE_SIZE: f32 = 12.0;
+const RESIZE_HANDLE_SIZE: f32 = 5.0;
 
 #[derive(Component)]
 struct ResizeHandle(CompassOctant);
@@ -78,6 +77,7 @@ impl Plugin for BasicPlugin {
                     handle_device_buttons,
                     handle_titlebar_drag,
                     handle_resize.in_set(MaskFrameSet::Resize),
+                    sync_resize_cursor,
                     sync_titlebar_visibility,
                     sync_pushpin_style,
                 ),
@@ -87,11 +87,12 @@ impl Plugin for BasicPlugin {
 
 fn setup_ui(
     mut commands: Commands,
-    mut window: Single<&mut Window>,
+    window: Single<(Entity, &mut Window)>,
     mut images: ResMut<Assets<Image>>,
     mut yuv_materials: ResMut<Assets<YuvVideoMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
+    let (window_entity, mut window) = window.into_inner();
     let config = LocalConfig::get();
     let win_h = if config.titlebar_visible {
         600. + TITLEBAR_HEIGHT
@@ -99,6 +100,9 @@ fn setup_ui(
         600.
     };
     window.resolution.set(800., win_h);
+    commands
+        .entity(window_entity)
+        .insert(CursorIcon::from(SystemCursorIcon::Default));
 
     commands.spawn(Camera2d::default());
 
@@ -402,7 +406,7 @@ fn setup_ui(
                 top: Val::Px(0.),
                 left: Val::Px(0.),
                 width: Val::Percent(100.),
-                height: Val::Px(EDGE_HANDLE_SIZE),
+                height: Val::Px(RESIZE_HANDLE_SIZE),
                 ..default()
             },
             edge_z,
@@ -416,7 +420,7 @@ fn setup_ui(
                 bottom: Val::Px(0.),
                 left: Val::Px(0.),
                 width: Val::Percent(100.),
-                height: Val::Px(EDGE_HANDLE_SIZE),
+                height: Val::Px(RESIZE_HANDLE_SIZE),
                 ..default()
             },
             edge_z,
@@ -429,7 +433,7 @@ fn setup_ui(
                 position_type: PositionType::Absolute,
                 top: Val::Px(0.),
                 left: Val::Px(0.),
-                width: Val::Px(EDGE_HANDLE_SIZE),
+                width: Val::Px(RESIZE_HANDLE_SIZE),
                 height: Val::Percent(100.),
                 ..default()
             },
@@ -443,7 +447,7 @@ fn setup_ui(
                 position_type: PositionType::Absolute,
                 top: Val::Px(0.),
                 right: Val::Px(0.),
-                width: Val::Px(EDGE_HANDLE_SIZE),
+                width: Val::Px(RESIZE_HANDLE_SIZE),
                 height: Val::Percent(100.),
                 ..default()
             },
@@ -459,8 +463,8 @@ fn setup_ui(
                 position_type: PositionType::Absolute,
                 top: Val::Px(0.),
                 left: Val::Px(0.),
-                width: Val::Px(CORNER_HANDLE_SIZE),
-                height: Val::Px(CORNER_HANDLE_SIZE),
+                width: Val::Px(RESIZE_HANDLE_SIZE),
+                height: Val::Px(RESIZE_HANDLE_SIZE),
                 ..default()
             },
             corner_z,
@@ -473,8 +477,8 @@ fn setup_ui(
                 position_type: PositionType::Absolute,
                 top: Val::Px(0.),
                 right: Val::Px(0.),
-                width: Val::Px(CORNER_HANDLE_SIZE),
-                height: Val::Px(CORNER_HANDLE_SIZE),
+                width: Val::Px(RESIZE_HANDLE_SIZE),
+                height: Val::Px(RESIZE_HANDLE_SIZE),
                 ..default()
             },
             corner_z,
@@ -487,8 +491,8 @@ fn setup_ui(
                 position_type: PositionType::Absolute,
                 bottom: Val::Px(0.),
                 left: Val::Px(0.),
-                width: Val::Px(CORNER_HANDLE_SIZE),
-                height: Val::Px(CORNER_HANDLE_SIZE),
+                width: Val::Px(RESIZE_HANDLE_SIZE),
+                height: Val::Px(RESIZE_HANDLE_SIZE),
                 ..default()
             },
             corner_z,
@@ -501,8 +505,8 @@ fn setup_ui(
                 position_type: PositionType::Absolute,
                 bottom: Val::Px(0.),
                 right: Val::Px(0.),
-                width: Val::Px(CORNER_HANDLE_SIZE),
-                height: Val::Px(CORNER_HANDLE_SIZE),
+                width: Val::Px(RESIZE_HANDLE_SIZE),
+                height: Val::Px(RESIZE_HANDLE_SIZE),
                 ..default()
             },
             corner_z,
@@ -662,29 +666,28 @@ fn button_interaction(
     }
 }
 
-fn map_handle_for_device(
-    handle: CompassOctant,
-    orientation: DeviceOrientation,
-) -> Option<CompassOctant> {
-    match orientation {
-        DeviceOrientation::Landscape => match handle {
-            CompassOctant::NorthWest | CompassOctant::West | CompassOctant::SouthWest => {
-                Some(CompassOctant::West)
-            }
-            CompassOctant::NorthEast | CompassOctant::East | CompassOctant::SouthEast => {
-                Some(CompassOctant::East)
-            }
-            CompassOctant::North | CompassOctant::South => None,
-        },
-        DeviceOrientation::Portrait => match handle {
-            CompassOctant::NorthWest | CompassOctant::North | CompassOctant::NorthEast => {
-                Some(CompassOctant::North)
-            }
-            CompassOctant::SouthWest | CompassOctant::South | CompassOctant::SouthEast => {
-                Some(CompassOctant::South)
-            }
-            CompassOctant::East | CompassOctant::West => None,
-        },
+fn cursor_for_resize_direction(direction: CompassOctant) -> SystemCursorIcon {
+    match direction {
+        CompassOctant::North => SystemCursorIcon::NResize,
+        CompassOctant::NorthEast => SystemCursorIcon::NeResize,
+        CompassOctant::East => SystemCursorIcon::EResize,
+        CompassOctant::SouthEast => SystemCursorIcon::SeResize,
+        CompassOctant::South => SystemCursorIcon::SResize,
+        CompassOctant::SouthWest => SystemCursorIcon::SwResize,
+        CompassOctant::West => SystemCursorIcon::WResize,
+        CompassOctant::NorthWest => SystemCursorIcon::NwResize,
+    }
+}
+
+fn resize_handle_priority(handle: CompassOctant) -> u8 {
+    match handle {
+        CompassOctant::NorthEast
+        | CompassOctant::NorthWest
+        | CompassOctant::SouthEast
+        | CompassOctant::SouthWest => 1,
+        CompassOctant::North | CompassOctant::East | CompassOctant::South | CompassOctant::West => {
+            0
+        }
     }
 }
 
@@ -693,23 +696,42 @@ fn handle_resize(
     mut resize_state: ResMut<MaskResizeState>,
     query: Query<(&ResizeHandle, &Interaction), Changed<Interaction>>,
 ) {
-    let device = ControlledDevice::get_main_device_blocking();
+    let Some(handle) = query
+        .iter()
+        .filter_map(|(handle, interaction)| {
+            (*interaction == Interaction::Pressed).then_some(handle.0)
+        })
+        .max_by_key(|handle| resize_handle_priority(*handle))
+    else {
+        return;
+    };
 
-    for (handle, interaction) in query.iter() {
-        if *interaction == Interaction::Pressed {
-            let direction = match &device {
-                Some(dev) if dev.device_size.0 > 0 && dev.device_size.1 > 0 => {
-                    let orientation =
-                        DeviceOrientation::from_size(dev.device_size.0, dev.device_size.1);
-                    map_handle_for_device(handle.0, orientation)
-                }
-                _ => None, // no device or unknown size: block resize
-            };
-            if let Some(dir) = direction {
-                resize_state.begin_interaction();
-                window.start_drag_resize(dir);
-            }
-        }
+    resize_state.begin_interaction();
+    window.start_drag_resize(handle);
+}
+
+fn active_resize_handle(
+    resize_query: Query<(&ResizeHandle, &Interaction)>,
+) -> Option<CompassOctant> {
+    resize_query
+        .iter()
+        .filter_map(|(handle, interaction)| {
+            matches!(*interaction, Interaction::Hovered | Interaction::Pressed).then_some(handle.0)
+        })
+        .max_by_key(|handle| resize_handle_priority(*handle))
+}
+
+fn sync_resize_cursor(
+    resize_query: Query<(&ResizeHandle, &Interaction)>,
+    mut cursor_query: Single<&mut CursorIcon, With<Window>>,
+) {
+    let resize_cursor = active_resize_handle(resize_query)
+        .map(cursor_for_resize_direction)
+        .unwrap_or(SystemCursorIcon::Default);
+
+    let next_cursor = CursorIcon::from(resize_cursor);
+    if **cursor_query != next_cursor {
+        **cursor_query = next_cursor;
     }
 }
 

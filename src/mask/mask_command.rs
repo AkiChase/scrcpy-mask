@@ -127,7 +127,6 @@ pub fn handle_mask_command(
                     next_mapping_state.set(MappingState::Normal);
                     log::info!("[Mapping] {}", t!("mask.enterNormalMappingMode"));
                     window.visible = true;
-                    window.resizable = true;
                     window.focused = false;
                     pending_focus.frames_remaining = 2;
                     t!("mask.mainDeviceConnected").to_string()
@@ -136,7 +135,6 @@ pub fn handle_mask_command(
                     next_mapping_state.set(MappingState::Stop);
                     log::info!("[Mapping] {}", t!("mask.exitStopMappingMode"));
                     window.visible = false;
-                    window.resizable = false;
                     window.focused = false;
                     pending_focus.frames_remaining = 0;
                     t!("mask.mainDeviceDisconnected").to_string()

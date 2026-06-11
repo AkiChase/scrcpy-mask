@@ -78,7 +78,7 @@ fn main() {
                     transparent: true, // for windows: https://github.com/bevyengine/bevy/issues/7544
                     decorations: false,
                     present_mode: PresentMode::AutoVsync,
-                    resizable: false,
+                    resizable: true,
                     visible: false,
                     focused: false,
                     window_level: if local_config.always_on_top {

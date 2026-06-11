@@ -518,7 +518,7 @@ fn map_yuv_color_info(decoded: &frame::Video, warn_on_assumption: bool) -> YuvCo
     let matrix = match decoded.color_space() {
         Space::BT470BG | Space::SMPTE170M => YuvMatrix::Bt601,
         Space::BT2020NCL | Space::BT2020CL => YuvMatrix::Bt2020,
-        Space::BT709 => YuvMatrix::Bt709,
+        Space::BT709 | Space::RGB => YuvMatrix::Bt709,
         other => {
             if warn_on_assumption {
                 log::warn!(
