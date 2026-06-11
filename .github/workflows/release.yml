@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Create a draft release when running against a tag ref'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -15,24 +21,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout codes
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@v6
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@v6
         with:
-          version: latest
+          version: '11'
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
+          node-version: '24'
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Build frontend
         shell: bash
         run: |
           cd frontend
-          pnpm install
+          pnpm install --frozen-lockfile
           pnpm build
       - name: Upload frontend build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-web-assets
           path: assets/web
@@ -49,10 +56,10 @@ jobs:
             
     steps:
       - name: Checkout codes
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@v6
 
       - name: Download frontend build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-web-assets
           path: assets/web
@@ -73,7 +80,7 @@ jobs:
 
       - name: Cache FFmpeg build
         id: ffmpeg-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ffmpeg-7.1.2/ffmpeg-${{ matrix.platform }}
           key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.4
@@ -135,7 +142,7 @@ jobs:
           "OUTPUT_NAME=$($ProjectName)-$OS" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           path: ${{ env.OUTPUT_ZIP }}
           name: ${{ env.OUTPUT_NAME }}
@@ -152,17 +159,17 @@ jobs:
             
     steps:
       - name: Checkout codes
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@v6
 
       - name: Download frontend build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-web-assets
           path: assets/web
 
       - name: Cache FFmpeg build
         id: ffmpeg-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ffmpeg-7.1.2/ffmpeg-${{ matrix.platform }}
           key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.4
@@ -246,7 +253,7 @@ jobs:
           echo "OUTPUT_NAME=$PROJECT_NAME-$OS" >> $GITHUB_ENV
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           path: ${{ env.OUTPUT_DMG }}
           name: ${{ env.OUTPUT_NAME }}
@@ -263,17 +270,17 @@ jobs:
             
     steps:
       - name: Checkout codes
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@v6
 
       - name: Download frontend build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-web-assets
           path: assets/web
           
       - name: Cache FFmpeg build
         id: ffmpeg-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ffmpeg-7.1.2/ffmpeg-${{ matrix.platform }}
           key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.4
@@ -355,21 +362,22 @@ jobs:
           echo "OUTPUT_NAME=$PROJECT_NAME-$OS" >> $GITHUB_ENV
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           path: ${{ env.OUTPUT_ZIP }}
           name: ${{ env.OUTPUT_NAME }}
 
   release:
+    if: ${{ startsWith(github.ref, 'refs/tags/') && (github.event_name != 'workflow_dispatch' || inputs.publish_release) }}
     needs: [macos, linux, windows]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
       - name: List downloaded files
         run: ls -R
   
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: |
