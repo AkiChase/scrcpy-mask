@@ -1,89 +1,89 @@
-## Guild
+## Guide
 
-This guide provides a brief description of how to run and compile the project.
+This guide describes the common setup, development, verification, and packaging flow.
 
-## Web Frontend
+## Prerequisites
 
-Use [pnpm](https://pnpm.io/) to manage dependencies:
+- Rust toolchain
+- [just](https://github.com/casey/just)
+- [pnpm](https://pnpm.io/)
+- Windows FFmpeg build: [MSYS2](https://www.msys2.org/docs/environments/) for the build shell, and Visual Studio Build Tools with C++ build tools for the MSVC compiler
 
-```bash
-cd frontend
-pnpm install
-pnpm build
-```
+## First-time Setup
 
-The build output will be in `assets/web`.
-
-## FFMpeg
-
-Since the project relies on FFmpeg, some additional steps are required to ensure FFmpeg is properly set up and available.
-
-> I'm not familiar with FFmpeg, so the instructions below reflect my current configure. If you have a better build configure, feel free to submit a PR!
-
-[FFmpeg Compilation Guide](https://trac.ffmpeg.org/wiki/CompilationGuide)
-
-## Build FFMpeg
-
-### Windows
-
-Please use [MYSYS2](https://www.msys2.org/docs/environments/) and [MSVC](https://learn.microsoft.com/zh-cn/cpp/windows/latest-supported-vc-redist?view=msvc-170) for compilation.
-
-```pwsh
-.\scripts\build-ffmpeg.ps1
-```
-
-### macOS and Linux
+Run the setup recipe after cloning the repository:
 
 ```bash
-./scripts/build-ffmpeg.sh
+just setup
 ```
 
+This installs frontend dependencies with `pnpm install`, then builds the local FFmpeg static libraries.
 
-### Note:
+On Windows, install two separate prerequisites before running `just setup`: MSYS2 for `bash`/Unix build tools, and Visual Studio Build Tools for the MSVC compiler. The script uses MSYS2 bash at `C:\msys64\usr\bin\bash.exe` by default; set `MSYS2_BASH` to the full `bash.exe` path if MSYS2 is installed elsewhere.
 
-- The script downloads FFmpeg when `ffmpeg-7.1.2` is missing.
-- The build is static and only enables `avcodec`, `avformat`, `avutil`, and the H.264, H.265, and AV1 decoders.
-- Set `FFMPEG_VERSION` to build a different FFmpeg release tag, for example `FFMPEG_VERSION=7.1.2 ./scripts/build-ffmpeg.sh`.
+## FFmpeg
 
-## Run
-
-### Example for Windows
-
-```pwsh
-$PREFIX = "ffmpeg-windows-x64"
-$SCRIPT_DIR = Get-Location
-$env:PKG_CONFIG_PATH = "$SCRIPT_DIR\ffmpeg-7.1.2\$PREFIX\lib\pkgconfig"
-$env:FFMPEG_DIR = "$SCRIPT_DIR\ffmpeg-7.1.2\$PREFIX"
-
-cargo run
-```
-
-### Example for macOS
+The project links against a local FFmpeg build. The setup and FFmpeg build recipes both use the existing platform-specific scripts:
 
 ```bash
-PREFIX="ffmpeg-macos-arm64"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export PKG_CONFIG_PATH="$SCRIPT_DIR/ffmpeg-7.1.2/$PREFIX/lib/pkgconfig"
-export FFMPEG_DIR="$SCRIPT_DIR/ffmpeg-7.1.2/$PREFIX"
-
-cargo run
+just build-ffmpeg
 ```
 
-### Example for Linux
+The FFmpeg build script downloads the FFmpeg source archive when `ffmpeg-7.1.2` is missing, then builds and installs static libraries for the current target.
+
+On Windows, `scripts/build-ffmpeg.ps1` checks for MSYS2 bash, then loads the MSVC C++ build tools environment. MSYS2 provides the shell used to run FFmpeg's build scripts; MSVC provides the compiler selected by `--toolchain=msvc`. The script does not fall back to an arbitrary `bash` executable.
+
+Notes:
+
+- The default FFmpeg version is `7.1.2`.
+- The build only enables `avcodec`, `avformat`, `avutil`, and the H.264, H.265, and AV1 decoders.
+- Set `FFMPEG_VERSION` to build a different FFmpeg release tag, for example `FFMPEG_VERSION=7.1.2 just build-ffmpeg`.
+
+## Development
+
+Run the desktop app:
 
 ```bash
-PREFIX="ffmpeg-linux-x64"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export PKG_CONFIG_PATH="$SCRIPT_DIR/ffmpeg-7.1.2/$PREFIX/lib/pkgconfig"
-export FFMPEG_DIR="$SCRIPT_DIR/ffmpeg-7.1.2/$PREFIX"
-
-cargo run
+just run
 ```
 
+Start the frontend dev server:
 
-### Note
+```bash
+just web-dev
+```
 
-To ensure that the `rust-analyzer` extension in VS Code can correctly locate the FFmpeg dependencies, add the following configuration to your `settings.json`:
+Build the frontend only:
+
+```bash
+just web-build
+```
+
+The frontend build output is written to `assets/web`.
+
+## Verification
+
+Run the standard project checks:
+
+```bash
+just check
+```
+
+`just check` loads the FFmpeg environment, runs `cargo check`, then runs the frontend linter. It does not rebuild FFmpeg.
+
+## Packaging
+
+Build the release package for the current platform:
+
+```bash
+just build
+```
+
+The package scripts build the frontend, build the Rust app in release mode, and create the platform package. They require FFmpeg to have been built already.
+
+## Rust Analyzer
+
+To ensure that `rust-analyzer` can locate FFmpeg dependencies, add the matching local FFmpeg paths to VS Code `settings.json`:
 
 ```json
 "rust-analyzer.cargo.extraEnv": {
@@ -92,4 +92,4 @@ To ensure that the `rust-analyzer` extension in VS Code can correctly locate the
 }
 ```
 
-Make sure to replace `/path/to/scrcpy-mask/` and `ffmpeg-macos-arm64` with the actual path to your local FFmpeg build directory. This configuration sets the necessary environment variables so that Cargo and rust-analyzer can find the FFmpeg libraries and headers during build and analysis.
+Replace `/path/to/scrcpy-mask/` and `ffmpeg-macos-arm64` with the actual local path and target directory.

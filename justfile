@@ -1,38 +1,36 @@
 # scrcpy-mask 常用开发指令
 
+set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
+
+build_ffmpeg_cmd := if os() == "windows" { "powershell -NoProfile -File scripts/build-ffmpeg.ps1" } else { "./scripts/build-ffmpeg.sh" }
+build_package_cmd := if os() == "windows" { "powershell -NoProfile -File scripts/package-windows.ps1" } else if os() == "macos" { "./scripts/package-macos.sh" } else { "./scripts/package-linux.sh" }
+run_cmd := if os() == "windows" { "powershell -NoProfile -File scripts/run-windows.ps1" } else { "./scripts/run.sh" }
+check_cmd := if os() == "windows" { "powershell -NoProfile -File scripts/check-windows.ps1" } else { "./scripts/check.sh" }
+
 # list all recipes
 default:
     @just --list
 
+# install frontend dependencies and build FFmpeg
+setup:
+    pnpm --dir frontend install
+    just build-ffmpeg
+
 # start frontend dev server (hot-reload)
 web-dev:
-    cd frontend && pnpm dev
+    pnpm --dir frontend dev
 
 # build frontend (typecheck + vite build)
 web-build:
-    cd frontend && pnpm build
+    pnpm --dir frontend build
 
 # build FFmpeg static libraries
 build-ffmpeg:
-    @if [ "{{os()}}" = "windows" ]; then \
-        powershell -NoProfile -File scripts/build-ffmpeg.ps1; \
-    elif [ "{{os()}}" = "macos" ] || [ "{{os()}}" = "linux" ]; then \
-        ./scripts/build-ffmpeg.sh; \
-    else \
-        echo "Unsupported OS: {{os()}}" >&2; exit 1; \
-    fi
+    {{build_ffmpeg_cmd}}
 
 # build the app package
 build:
-    @if [ "{{os()}}" = "windows" ]; then \
-        powershell -NoProfile -File scripts/package-windows.ps1; \
-    elif [ "{{os()}}" = "macos" ]; then \
-        ./scripts/package-macos.sh; \
-    elif [ "{{os()}}" = "linux" ]; then \
-        ./scripts/package-linux.sh; \
-    else \
-        echo "Unsupported OS: {{os()}}" >&2; exit 1; \
-    fi
+    {{build_package_cmd}}
 
 # update version, commit it, and create a release tag
 release-version version:
@@ -40,17 +38,9 @@ release-version version:
 
 # run the app
 run:
-    @if [ "{{os()}}" = "windows" ]; then \
-        powershell -NoProfile -File scripts/run-windows.ps1; \
-    else \
-        ./scripts/run.sh; \
-    fi
+    {{run_cmd}}
 
-# verify Rust compile, frontend typecheck + build, and lint
+# verify Rust compile and frontend lint
 check:
-    @if [ "{{os()}}" = "windows" ]; then \
-        powershell -NoProfile -File scripts/check-windows.ps1; \
-    else \
-        ./scripts/check.sh; \
-    fi
-    cd frontend && pnpm lint
+    {{check_cmd}}
+    pnpm --dir frontend lint
