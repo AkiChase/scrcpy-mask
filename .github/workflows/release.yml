@@ -126,13 +126,18 @@ jobs:
 
           cargo build --release
 
-          $OutputZip = "$ScriptDir\$ProjectName-$OS.zip"
-          $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
-          $AssetsDir = "$ScriptDir\assets"
-          
           Write-Host "Build successful, creating zip package..."
+          Get-ChildItem "$ScriptDir\target\release" | Select-Object Name, Length, LastWriteTime
+
           $OutputZip = "$ScriptDir\target\release\$ProjectName-$OS.zip"
-          $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
+          $BuildTargetCandidates = @(
+            "$ScriptDir\target\release\$ProjectName.exe",
+            "$ScriptDir\target\release\scrcpy_mask.exe"
+          )
+          $BuildTarget = $BuildTargetCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+          if (-not $BuildTarget) {
+            throw "Release executable not found. Tried: $($BuildTargetCandidates -join ', ')"
+          }
           $AssetsDir = "$ScriptDir\assets"
           
           $PathsToCompress = @($BuildTarget, $AssetsDir)
