@@ -22,75 +22,28 @@ Since the project relies on FFmpeg, some additional steps are required to ensure
 
 [FFmpeg Compilation Guide](https://trac.ffmpeg.org/wiki/CompilationGuide)
 
-## Download FFMpeg
-
-``` bash
-# cd path/to/scrcpy-mask
-curl -L -o FFmpeg-n7.1.2.tar.gz https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n7.1.2.tar.gz
-tar -xzf FFmpeg-n7.1.2.tar.gz
-rm FFmpeg-n7.1.2.tar.gz
-mv FFmpeg-n7.1.2 ffmpeg-7.1.2
-cd ffmpeg-7.1.2
-```
-
 ## Build FFMpeg
 
 ### Windows
 
 Please use [MYSYS2](https://www.msys2.org/docs/environments/) and [MSVC](https://learn.microsoft.com/zh-cn/cpp/windows/latest-supported-vc-redist?view=msvc-170) for compilation.
 
-```bash
-make clean 2>/dev/null || true
-
-OS="windows-x64"
-./configure --prefix=./ffmpeg-$OS \
-    --disable-all --disable-doc --disable-iconv \
-    --toolchain=msvc \
-    --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
-    --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
-    --enable-gpl --enable-static --disable-shared
-
-make -j$(nproc)
-rm -rf ./ffmpeg-$OS
-make install
+```pwsh
+.\scripts\build-ffmpeg.ps1
 ```
 
-### macOS
+### macOS and Linux
 
 ```bash
-make clean 2>/dev/null || true
-OS="macos-arm64"
-./configure --prefix=./ffmpeg-$OS \
-    --disable-all --disable-doc --disable-iconv \
-    --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
-    --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
-    --enable-gpl --enable-static --disable-shared
-
-make -j$(sysctl -n hw.ncpu)
-rm -rf ./ffmpeg-$OS
-make install
+./scripts/build-ffmpeg.sh
 ```
 
-### Linux
-
-```bash
-make clean 2>/dev/null || true
-OS="linux-x64"
-./configure --prefix=./ffmpeg-$OS \
-    --disable-all --disable-doc --disable-iconv \
-    --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
-    --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
-    --enable-gpl --enable-static --disable-shared
-
-make -j$(nproc)
-rm -rf ./ffmpeg-$OS
-make install
-```
 
 ### Note:
 
-- The dynamic library filenames required at runtime can be different. Be sure to adjust the filenames as needed to match the system's expected format (e.g., `libavcodec.61.dylib` instead of `libavcodec.61.19.101.dylib`).
-- If you encounter missing dynamic library errors at runtime, please manually place the required libraries in the appropriate directory (e,g., `/assets/lib/windows-x64/libwinpthread-1.dll`)
+- The script downloads FFmpeg when `ffmpeg-7.1.2` is missing.
+- The build is static and only enables `avcodec`, `avformat`, `avutil`, and the H.264, H.265, and AV1 decoders.
+- Set `FFMPEG_VERSION` to build a different FFmpeg release tag, for example `FFMPEG_VERSION=7.1.2 ./scripts/build-ffmpeg.sh`.
 
 ## Run
 

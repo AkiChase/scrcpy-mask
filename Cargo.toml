@@ -49,8 +49,9 @@ once_cell = "1.21.3"
 copypasta = "0.10.2"
 rust-i18n = "3"
 ffmpeg-next = { version = "7.1.0", default-features = false, features = [
+    "codec",
     "format",
-    "software-scaling",
+    "static",
 ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]

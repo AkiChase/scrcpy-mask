@@ -2,9 +2,11 @@ use std::time::Duration;
 
 use ffmpeg_next::{
     Error as FfmpegError, error,
-    format::Pixel,
     frame,
-    util::color::{Range, Space},
+    util::{
+        color::{Range, Space},
+        format::Pixel,
+    },
 };
 use rust_i18n::t;
 use tokio::{

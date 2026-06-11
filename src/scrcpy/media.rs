@@ -1,6 +1,6 @@
 use std::fmt;
 
-use ffmpeg_next::{Packet, codec, decoder, format::Pixel, frame, packet};
+use ffmpeg_next::{Packet, codec, decoder, frame, packet, util::format::Pixel};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use tokio::{io::AsyncReadExt, net::TcpStream};
