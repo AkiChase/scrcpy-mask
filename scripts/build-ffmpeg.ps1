@@ -69,6 +69,19 @@ Then run:
     exit 1
 }
 
+$env:MSYS2_PATH_TYPE = "inherit"
+
+$MsysCl = & $Bash -lc "command -v cl.exe"
+if ($LASTEXITCODE -ne 0 -or -not $MsysCl) {
+    Write-Error @"
+MSVC was found in PowerShell, but MSYS2 bash cannot find cl.exe.
+
+The FFmpeg MSVC toolchain runs configure through MSYS2, so MSYS2 must inherit
+the Visual Studio Build Tools environment.
+"@
+    exit 1
+}
+
 $ProjectDirMsys = & $Bash -lc "cygpath -u '$ProjectDir'"
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
