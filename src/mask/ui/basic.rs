@@ -368,6 +368,7 @@ fn setup_ui(
                 position_type: PositionType::Absolute,
                 padding: UiRect::all(Val::Px(BORDER_THICKNESS)),
                 box_sizing: BoxSizing::BorderBox,
+                display: Display::None,
                 ..default()
             },
             ZIndex(-1),

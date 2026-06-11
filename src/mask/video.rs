@@ -1,4 +1,3 @@
-
 use bevy::asset::{Asset, RenderAssetUsages};
 use bevy::image::ImageSampler;
 use bevy::prelude::*;
@@ -266,7 +265,11 @@ pub fn handle_video_msg(
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<YuvVideoMaterial>>,
     mut video_attr: Local<VideoAttributes>,
-    mut video_node: Single<(&mut MaterialNode<YuvVideoMaterial>, &mut VideoPlayer)>,
+    mut video_node: Single<(
+        &mut MaterialNode<YuvVideoMaterial>,
+        &mut Node,
+        &mut VideoPlayer,
+    )>,
 ) {
     if let Some(msg) = v_rx.0.take() {
         match msg {
@@ -294,6 +297,7 @@ pub fn handle_video_msg(
                     &mut video_node.0,
                     &v_rx,
                 );
+                video_node.1.display = Display::Flex;
             }
             VideoMsg::Nv12 {
                 y,
@@ -317,9 +321,11 @@ pub fn handle_video_msg(
                     &mut video_node.0,
                     &v_rx,
                 );
+                video_node.1.display = Display::Flex;
             }
             VideoMsg::Close => {
                 video_attr.clear(&mut images, &v_rx);
+                video_node.1.display = Display::None;
             }
         }
     }
