@@ -3,13 +3,19 @@ import { requestPost, toCamelCase } from "../utils";
 import i18n from "../i18n";
 import { staticStore } from "./store";
 
-async function _updateLocalConfig(key: string, value: any) {
+async function _updateLocalConfig(
+  key: string,
+  value: any,
+  showSuccessMessage = true,
+) {
   try {
     const res = await requestPost("/api/config/update_config", {
       key,
       value,
     });
-    staticStore.messageApi?.success(res.message);
+    if (showSuccessMessage) {
+      staticStore.messageApi?.success(res.message);
+    }
   } catch (error: any) {
     staticStore.messageApi?.error(error);
   }
@@ -17,13 +23,18 @@ async function _updateLocalConfig(key: string, value: any) {
 
 const debounceMap = new Map<string, ReturnType<typeof setTimeout>>();
 
-function updateLocalConfig(key: string, value: any, time = 500) {
+function updateLocalConfig(
+  key: string,
+  value: any,
+  time = 500,
+  showSuccessMessage = true,
+) {
   if (debounceMap.has(key)) {
     clearTimeout(debounceMap.get(key)!);
   }
 
   const timeout = setTimeout(() => {
-    _updateLocalConfig(key, value);
+    _updateLocalConfig(key, value, showSuccessMessage);
     debounceMap.delete(key);
   }, time);
 
@@ -36,6 +47,7 @@ export interface LocalConfigState {
   controllerPort: number;
   // adb
   adbPath: string;
+  adbConnectAddress: string;
   // mask area
   alwaysOnTop: boolean;
   titlebarVisible: boolean;
@@ -61,6 +73,7 @@ const initialState: LocalConfigState = {
   webPort: 0,
   controllerPort: 0,
   adbPath: "",
+  adbConnectAddress: "",
   alwaysOnTop: true,
   titlebarVisible: true,
   verticalMaskHeight: 0,
@@ -100,6 +113,10 @@ const localConfigSlice = createSlice({
     setAdbPath: (state, action: PayloadAction<string>) => {
       state.adbPath = action.payload;
       updateLocalConfig("adb_path", action.payload, 1000);
+    },
+    setAdbConnectAddress: (state, action: PayloadAction<string>) => {
+      state.adbConnectAddress = action.payload;
+      updateLocalConfig("adb_connect_address", action.payload, 0, false);
     },
     setAlwaysOnTop: (state, action: PayloadAction<boolean>) => {
       state.alwaysOnTop = action.payload;
@@ -166,6 +183,7 @@ export const {
   setWebPort,
   setControllerPort,
   setAdbPath,
+  setAdbConnectAddress,
   setAlwaysOnTop,
   setTitlebarVisible,
   setverticalMaskHeight,

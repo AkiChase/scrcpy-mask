@@ -306,17 +306,15 @@ struct PostDataAddress {
 
 async fn adb_connect(Json(payload): Json<PostDataAddress>) -> Result<JsonResponse, WebServerError> {
     let config = LocalConfig::get();
-    match Adb::new(config.adb_path).connect_device(&payload.address) {
+    let address = payload.address.trim().to_string();
+    match Adb::new(config.adb_path).connect_device(&address) {
         Ok(_) => Ok(JsonResponse::success(
-            format!(
-                "{}",
-                t!("web.device.adbConnect", address => payload.address)
-            ),
+            format!("{}", t!("web.device.adbConnect", address => address)),
             None,
         )),
         Err(e) => Err(WebServerError::bad_request(format!(
             "{}: {}",
-            t!("web.device.adbConnectFailed", address => payload.address),
+            t!("web.device.adbConnectFailed", address => address),
             e
         ))),
     }

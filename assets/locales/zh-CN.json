@@ -87,6 +87,8 @@
       "adbPathSetSuccess": "成功设置 adb 路径",
       "adbPathSetFailed": "设置 adb 路径失败",
       "adbPathMustBeString": "adb 路径必须为字符串",
+      "setAdbConnectAddressSuccess": "成功设置 adb 连接地址",
+      "adbConnectAddressMustBeString": "adb 连接地址必须为字符串",
       "restartToApplyControllerPort": "请重启应用以应用新的控制服务端口",
       "controllerPortMustBeU16": "控制服务端口必须为 u16",
       "setVerticalMaskHeightSuccess": "竖屏蒙版高度设置成功",

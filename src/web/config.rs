@@ -183,6 +183,24 @@ async fn update_config(
                 )));
             }
         }
+        "adb_connect_address" => {
+            if let Some(value) = payload.value.as_str() {
+                let address = value.trim();
+                LocalConfig::set_adb_connect_address(address.to_string());
+                return Ok(JsonResponse::success(
+                    format!(
+                        "{}: {}",
+                        t!("web.config.setAdbConnectAddressSuccess"),
+                        address
+                    ),
+                    None,
+                ));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.adbConnectAddressMustBeString"
+                )));
+            }
+        }
         "controller_port" => {
             if let Some(value) = payload.value.as_u64() {
                 LocalConfig::set_controller_port(value as u16);
