@@ -60,6 +60,7 @@ jobs:
           install: >-
             make
             diffutils
+            gawk
             yasm
             pkg-config
           path-type: inherit
@@ -73,8 +74,8 @@ jobs:
 
       - name: Build FFmpeg
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: ./scripts/build-ffmpeg.ps1
+        shell: msys2 {0}
+        run: ./scripts/build-ffmpeg.sh
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
