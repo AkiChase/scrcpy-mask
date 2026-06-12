@@ -1,8 +1,7 @@
 use std::time::Duration;
 
 use ffmpeg_next::{
-    Error as FfmpegError, error,
-    frame,
+    Error as FfmpegError, error, frame,
     util::{
         color::{Range, Space},
         format::Pixel,
@@ -378,10 +377,7 @@ impl ScrcpyConnection {
     }
 }
 
-fn drain_video_decoder(
-    video_decoder: &mut VideoDecoder,
-    v_tx: &LatestVideoFrame,
-) -> bool {
+fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame) -> bool {
     loop {
         let mut decoded = frame::Video::empty();
         match video_decoder.decoder.receive_frame(&mut decoded) {
@@ -498,8 +494,6 @@ fn drain_video_decoder(
     }
     true
 }
-
-
 
 fn log_video_frame_metadata(video_decoder: &VideoDecoder, decoded: &frame::Video) {
     log::info!(
