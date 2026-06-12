@@ -21,6 +21,7 @@ pub struct LocalConfig {
     pub controller_port: u16,
     // adb
     pub adb_path: String,
+    pub adb_connect_address: String,
     // mask
     pub always_on_top: bool,
     pub titlebar_visible: bool,
@@ -46,6 +47,7 @@ impl Default for LocalConfig {
     fn default() -> Self {
         Self {
             adb_path: "adb".to_string(),
+            adb_connect_address: String::new(),
             web_port: 27799,
             controller_port: 27798,
             always_on_top: true,
@@ -124,6 +126,7 @@ impl LocalConfig {
         (web_port, u16),
         (controller_port, u16),
         (adb_path, String),
+        (adb_connect_address, String),
         (always_on_top, bool),
         (titlebar_visible, bool),
         (vertical_mask_height, u32),

@@ -87,6 +87,8 @@
       "adbPathSetSuccess": "Successfully set adb_path",
       "adbPathSetFailed": "Failed to set adb_path",
       "adbPathMustBeString": "The adb_path must be string",
+      "setAdbConnectAddressSuccess": "Successfully set adb_connect_address",
+      "adbConnectAddressMustBeString": "The adb_connect_address must be string",
       "restartToApplyControllerPort": "Please restart app to apply new controller_port",
       "controllerPortMustBeU16": "The controller_port must be u16",
       "setVerticalMaskHeightSuccess": "Successfully set vertical_mask_height",
