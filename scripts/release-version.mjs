@@ -116,7 +116,7 @@ function commitAndTag(version) {
 
   run(
     "git",
-    ["commit", "-m", `chore(release): bump version to ${version}`],
+    ["commit", "-m", `Scrcpy Mask v${version}`],
     { stdio: "inherit" }
   );
   run("git", ["tag", `v${version}`], { stdio: "inherit" });
