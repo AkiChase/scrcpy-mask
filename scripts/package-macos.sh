@@ -18,7 +18,7 @@ export CARGO_BUNDLE_SKIP_BUILD="1"
 
 ASSETS_DIR="$PROJECT_DIR/assets"
 BUNDLE_DIR="$PROJECT_DIR/target/release/bundle/osx/scrcpy-mask.app"
-DMG_PATH="$PROJECT_DIR/target/release/scrcpy-mask.dmg"
+DMG_PATH="$PROJECT_DIR/target/release/scrcpy-mask-$SCRCPY_MASK_OS.dmg"
 APP_BIN_DIR="$BUNDLE_DIR/Contents/MacOS"
 
 echo "Adjusting bundle files..."
