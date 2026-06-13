@@ -3,7 +3,7 @@ import type { FpsConfig, FpsTouchMode, MappingUpdater } from "./mapping";
 import { Flex, InputNumber, Select, Space, Tooltip, Typography } from "antd";
 import {
   mappingButtonDragFactory,
-  mappingButtonPresetStyle,
+  mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
 import { useAppSelector } from "../../store/store";
@@ -23,8 +23,6 @@ import {
   type MappingOverlayRectShape,
 } from "./MappingOverlay";
 import { useMappingGuideState } from "./MappingOverlayContext";
-
-const PRESET_STYLE = mappingButtonPresetStyle(52);
 
 export default function ButtonFps({
   index,
@@ -61,6 +59,11 @@ export default function ButtonFps({
       y: maskArea.height / originalSize.height,
     };
   }, [originalSize, maskArea]);
+
+  const buttonStyle = useMemo(
+    () => mappingButtonScaledPresetStyle(52, maskArea),
+    [maskArea],
+  );
 
   const boundaryShape = useMemo<MappingOverlayRectShape | null>(() => {
     if (config.max_offset_x <= 0 && config.max_offset_y <= 0) {
@@ -153,7 +156,7 @@ export default function ButtonFps({
       )}
       <Flex
         id={id}
-        style={PRESET_STYLE}
+        style={buttonStyle}
         className={className}
         onMouseDown={handleMouseDown}
         onContextMenu={handleSetting}

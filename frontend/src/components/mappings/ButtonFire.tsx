@@ -3,7 +3,7 @@ import type { FireConfig, MappingUpdater } from "./mapping";
 import { Flex, InputNumber, Space, Tooltip, Typography } from "antd";
 import {
   mappingButtonDragFactory,
-  mappingButtonPresetStyle,
+  mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
 import { useAppSelector } from "../../store/store";
@@ -19,8 +19,6 @@ import {
 } from "./Common";
 import { useTranslation } from "react-i18next";
 import { IconFont } from "../../hooks";
-
-const PRESET_STYLE = mappingButtonPresetStyle(52);
 
 export default function ButtonFire({
   index,
@@ -54,6 +52,11 @@ export default function ButtonFire({
       y: maskArea.height / originalSize.height,
     };
   }, [originalSize, maskArea]);
+
+  const buttonStyle = useMemo(
+    () => mappingButtonScaledPresetStyle(52, maskArea),
+    [maskArea],
+  );
 
   useEffect(() => {
     const element = document.getElementById(id);
@@ -103,7 +106,7 @@ export default function ButtonFire({
       </SettingModal>
       <Flex
         id={id}
-        style={PRESET_STYLE}
+        style={buttonStyle}
         className={className}
         onMouseDown={handleDrag}
         onContextMenu={handleSetting}

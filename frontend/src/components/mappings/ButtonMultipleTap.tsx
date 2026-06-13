@@ -16,7 +16,7 @@ import {
 import {
   clientPositionToMappingPosition,
   mappingButtonDragFactory,
-  mappingButtonPresetStyle,
+  mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
 import { useAppSelector } from "../../store/store";
@@ -35,8 +35,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { RollbackOutlined } from "@ant-design/icons";
 import { useMessageContext } from "../../hooks";
-
-const PRESET_STYLE = mappingButtonPresetStyle(52);
 
 export default function ButtonMultipleTap({
   index,
@@ -71,6 +69,11 @@ export default function ButtonMultipleTap({
       y: maskArea.height / originalSize.height,
     };
   }, [originalSize, maskArea]);
+
+  const buttonStyle = useMemo(
+    () => mappingButtonScaledPresetStyle(52, maskArea),
+    [maskArea],
+  );
 
   useEffect(() => {
     const element = document.getElementById(id);
@@ -125,7 +128,7 @@ export default function ButtonMultipleTap({
       </SettingModal>
       <Flex
         id={id}
-        style={PRESET_STYLE}
+        style={buttonStyle}
         className={className}
         onMouseDown={handleDrag}
         onContextMenu={handleSetting}

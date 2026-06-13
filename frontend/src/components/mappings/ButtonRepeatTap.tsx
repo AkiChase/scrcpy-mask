@@ -3,7 +3,7 @@ import type { MappingUpdater, RepeatTapConfig } from "./mapping";
 import { Flex, InputNumber, Tooltip, Typography } from "antd";
 import {
   mappingButtonDragFactory,
-  mappingButtonPresetStyle,
+  mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
 import { useAppSelector } from "../../store/store";
@@ -18,8 +18,6 @@ import {
   SettingScriptHooks,
 } from "./Common";
 import { useTranslation } from "react-i18next";
-
-const PRESET_STYLE = mappingButtonPresetStyle(52);
 
 export default function ButtonRepeatTap({
   index,
@@ -53,6 +51,11 @@ export default function ButtonRepeatTap({
       y: maskArea.height / originalSize.height,
     };
   }, [originalSize, maskArea]);
+
+  const buttonStyle = useMemo(
+    () => mappingButtonScaledPresetStyle(52, maskArea),
+    [maskArea],
+  );
 
   useEffect(() => {
     const element = document.getElementById(id);
@@ -102,7 +105,7 @@ export default function ButtonRepeatTap({
       </SettingModal>
       <Flex
         id={id}
-        style={PRESET_STYLE}
+        style={buttonStyle}
         className={className}
         onMouseDown={handleDrag}
         onContextMenu={handleSetting}

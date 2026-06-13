@@ -12,6 +12,18 @@ export function mappingButtonPresetStyle(
   };
 }
 
+export function mappingButtonScaledPresetStyle(
+  radiusX: number,
+  viewportSize: { width: number; height: number },
+  radiusY?: number,
+): React.CSSProperties {
+  const buttonScale = Math.max(viewportSize.width, viewportSize.height) / 960;
+  return mappingButtonPresetStyle(
+    Math.round(radiusX * buttonScale),
+    Math.round((radiusY ?? radiusX) * buttonScale),
+  );
+}
+
 export function clientPositionToMappingPosition(
   cX: number,
   cY: number,

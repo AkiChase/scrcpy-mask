@@ -15,7 +15,7 @@ import {
 import {
   clientPositionToMappingPosition,
   mappingButtonDragFactory,
-  mappingButtonPresetStyle,
+  mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
 import { useAppSelector } from "../../store/store";
@@ -43,8 +43,6 @@ import {
   type MappingOverlayPathGroupShape,
 } from "./MappingOverlay";
 import { useMappingGuideState } from "./MappingOverlayContext";
-
-const PRESET_STYLE = mappingButtonPresetStyle(64);
 
 function projectedCastRadii(
   radius: number,
@@ -130,6 +128,11 @@ export default function ButtonMouseCastSpell({
       y: maskArea.height / originalSize.height,
     };
   }, [originalSize, maskArea]);
+
+  const buttonStyle = useMemo(
+    () => mappingButtonScaledPresetStyle(64, maskArea),
+    [maskArea],
+  );
 
   const dragRadiusShape = useMemo<MappingOverlayCircleShape>(() => {
     return {
@@ -242,7 +245,7 @@ export default function ButtonMouseCastSpell({
       />
       <Flex
         id={id}
-        style={PRESET_STYLE}
+        style={buttonStyle}
         className={className}
         onMouseDown={handleMouseDown}
         onContextMenu={handleSetting}

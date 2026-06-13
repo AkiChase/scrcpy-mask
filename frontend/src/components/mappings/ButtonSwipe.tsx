@@ -5,7 +5,7 @@ import {
   clientPositionToMappingPosition,
   mappingButtonDragFactory,
   mappingButtonPosition,
-  mappingButtonPresetStyle,
+  mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
 import { useAppSelector } from "../../store/store";
@@ -29,8 +29,6 @@ import {
   type MappingOverlayPoint,
 } from "./MappingOverlay";
 import { useMappingGuideState } from "./MappingOverlayContext";
-
-const PRESET_STYLE = mappingButtonPresetStyle(52);
 
 type Position = { x: number; y: number };
 
@@ -68,6 +66,11 @@ export default function ButtonSwipe({
       y: maskArea.height / originalSize.height,
     };
   }, [originalSize, maskArea]);
+
+  const buttonStyle = useMemo(
+    () => mappingButtonScaledPresetStyle(52, maskArea),
+    [maskArea],
+  );
 
   const tracePoints = useMemo<MappingOverlayPoint[]>(() => {
     return config.positions.map((position) =>
@@ -139,7 +142,7 @@ export default function ButtonSwipe({
       />
       <Flex
         id={id}
-        style={PRESET_STYLE}
+        style={buttonStyle}
         className={className}
         onMouseDown={handleMouseDown}
         onContextMenu={handleSetting}

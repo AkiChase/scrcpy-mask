@@ -3,7 +3,7 @@ import type { MappingUpdater, ObservationConfig } from "./mapping";
 import { Flex, InputNumber, Space, Tooltip, Typography } from "antd";
 import {
   mappingButtonDragFactory,
-  mappingButtonPresetStyle,
+  mappingButtonScaledPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
 import { useAppSelector } from "../../store/store";
@@ -24,8 +24,6 @@ import {
   type MappingOverlayCircleShape,
 } from "./MappingOverlay";
 import { useMappingGuideState } from "./MappingOverlayContext";
-
-const PRESET_STYLE = mappingButtonPresetStyle(52);
 
 export default function ButtonObservation({
   index,
@@ -60,6 +58,11 @@ export default function ButtonObservation({
       y: maskArea.height / originalSize.height,
     };
   }, [originalSize, maskArea]);
+
+  const buttonStyle = useMemo(
+    () => mappingButtonScaledPresetStyle(52, maskArea),
+    [maskArea],
+  );
 
   const maxRadiusShape = useMemo<MappingOverlayCircleShape | null>(() => {
     if (config.max_radius <= 0) {
@@ -133,7 +136,7 @@ export default function ButtonObservation({
       )}
       <Flex
         id={id}
-        style={PRESET_STYLE}
+        style={buttonStyle}
         className={className}
         onMouseDown={handleMouseDown}
         onContextMenu={handleSetting}
