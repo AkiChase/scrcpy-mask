@@ -1,7 +1,12 @@
 import { useContext, type CSSProperties, type PropsWithChildren } from "react";
 import { MappingOverlayContext } from "./MappingOverlayContext";
 
-type MappingOverlayTone = "boundary" | "observation" | "cast" | "drag";
+type MappingOverlayTone =
+  | "boundary"
+  | "observation"
+  | "cast"
+  | "drag"
+  | "trace";
 
 const toneColors: Record<MappingOverlayTone, { border: string; fill: string }> =
   {
@@ -20,6 +25,10 @@ const toneColors: Record<MappingOverlayTone, { border: string; fill: string }> =
     drag: {
       border: "rgba(34, 197, 94, 0.9)",
       fill: "rgba(34, 197, 94, 0.08)",
+    },
+    trace: {
+      border: "rgba(6, 182, 212, 0.9)",
+      fill: "rgba(6, 182, 212, 0.12)",
     },
   };
 
@@ -219,6 +228,103 @@ export function MappingOverlayPathGroup({
           />
         ))}
       </g>
+    </svg>
+  );
+}
+
+export type MappingOverlayPoint = {
+  x: number;
+  y: number;
+};
+
+type MappingOverlayPolylineProps = {
+  points: MappingOverlayPoint[];
+  visible: boolean;
+  tone: MappingOverlayTone;
+  showLabels?: boolean;
+};
+
+export function MappingOverlayPolyline({
+  points,
+  visible,
+  tone,
+  showLabels = false,
+}: MappingOverlayPolylineProps) {
+  const { viewportOrigin, viewportSize } = useContext(MappingOverlayContext);
+
+  if (
+    !visible ||
+    points.length <= 1 ||
+    viewportSize.width <= 0 ||
+    viewportSize.height <= 0
+  ) {
+    return null;
+  }
+
+  const color = overlayColor(tone);
+  const markerId = `mapping-overlay-arrow-${tone}`;
+  const style: CSSProperties = {
+    position: viewportOrigin ? "fixed" : "absolute",
+    left: viewportOrigin?.left ?? 0,
+    top: viewportOrigin?.top ?? 0,
+    width: viewportSize.width,
+    height: viewportSize.height,
+    pointerEvents: "none",
+  };
+
+  return (
+    <svg
+      style={style}
+      viewBox={`0 0 ${viewportSize.width} ${viewportSize.height}`}
+    >
+      <defs>
+        <marker
+          id={markerId}
+          markerWidth="8"
+          markerHeight="7"
+          refX="8"
+          refY="3.5"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path d="M0,0 L8,3.5 L0,7 Z" fill={color.border} />
+        </marker>
+      </defs>
+      {points.map((point, index) => {
+        if (index === points.length - 1) {
+          return null;
+        }
+
+        const next = points[index + 1];
+        return (
+          <line
+            key={index}
+            x1={point.x}
+            y1={point.y}
+            x2={next.x}
+            y2={next.y}
+            stroke={color.border}
+            strokeWidth="2"
+            markerEnd={`url(#${markerId})`}
+          />
+        );
+      })}
+      {points.map((point, index) => (
+        <g key={index} transform={`translate(${point.x}, ${point.y})`}>
+          <circle r="6" fill={color.border} fillOpacity="0.9" />
+          {showLabels && (
+            <text
+              y="-12"
+              textAnchor="middle"
+              fill={color.border}
+              fontSize="12"
+              fontWeight="700"
+            >
+              {index + 1}
+            </text>
+          )}
+        </g>
+      ))}
     </svg>
   );
 }

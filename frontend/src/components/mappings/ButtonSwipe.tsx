@@ -24,6 +24,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { RollbackOutlined } from "@ant-design/icons";
 import { IconFont, useMessageContext } from "../../hooks";
+import {
+  MappingOverlayPolyline,
+  type MappingOverlayPoint,
+} from "./MappingOverlay";
+import { useMappingGuideState } from "./MappingOverlayContext";
 
 const PRESET_STYLE = mappingButtonPresetStyle(52);
 
@@ -55,6 +60,7 @@ export default function ButtonSwipe({
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
   const [isEditingPos, setIsEditingPos] = useState(false);
+  const mappingGuide = useMappingGuideState(showSetting && !isEditingPos);
 
   const scale = useMemo(() => {
     return {
@@ -62,6 +68,12 @@ export default function ButtonSwipe({
       y: maskArea.height / originalSize.height,
     };
   }, [originalSize, maskArea]);
+
+  const tracePoints = useMemo<MappingOverlayPoint[]>(() => {
+    return config.positions.map((position) =>
+      mappingButtonPosition(position.x, position.y, scale),
+    );
+  }, [config.positions, scale]);
 
   useEffect(() => {
     const element = document.getElementById(id);
@@ -90,6 +102,11 @@ export default function ButtonSwipe({
     }
   );
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    mappingGuide.startPointerDown(e);
+    handleDrag(e);
+  };
+
   const handleSetting = (e: React.MouseEvent) => {
     e.preventDefault();
     setShowSetting(true);
@@ -114,12 +131,19 @@ export default function ButtonSwipe({
           onIsEditingChange={(v) => setIsEditingPos(v)}
         />
       </SettingModal>
+      <MappingOverlayPolyline
+        points={tracePoints}
+        visible={mappingGuide.visible}
+        tone="trace"
+        showLabels
+      />
       <Flex
         id={id}
         style={PRESET_STYLE}
         className={className}
-        onMouseDown={handleDrag}
+        onMouseDown={handleMouseDown}
         onContextMenu={handleSetting}
+        {...mappingGuide.interactionProps}
         justify="center"
         align="center"
         vertical
@@ -131,93 +155,7 @@ export default function ButtonSwipe({
         </Tooltip>
         <IconFont type="icon-trace" className="text-4" />
       </Flex>
-      {showSetting && !isEditingPos && (
-        <Background positions={config.positions} originalSize={originalSize} />
-      )}
     </>
-  );
-}
-
-function Background({
-  positions,
-  originalSize,
-}: {
-  positions: Position[];
-  originalSize: { width: number; height: number };
-}) {
-  const maskArea = useAppSelector((state) => state.other.maskArea);
-  const scale = useMemo(() => {
-    return {
-      x: maskArea.width / originalSize.width,
-      y: maskArea.height / originalSize.height,
-    };
-  }, [originalSize, maskArea]);
-
-  return (
-    <div
-      className="fixed bg-transparent"
-      style={{
-        left: maskArea.left,
-        top: maskArea.top,
-        width: maskArea.width,
-        height: maskArea.height,
-      }}
-    >
-      <svg className="w-full h-full absolute color-primary">
-        <defs>
-          <marker
-            id="arrow"
-            markerWidth="8"
-            markerHeight="7"
-            refX="8"
-            refY="3.5"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path d="M0,0 L8,3.5 L0,7 Z" fill="currentColor" />
-          </marker>
-        </defs>
-        {positions.map((pos, index) => {
-          if (index === positions.length - 1) return null;
-          const { x: x1, y: y1 } = mappingButtonPosition(pos.x, pos.y, scale);
-          const { x: x2, y: y2 } = mappingButtonPosition(
-            positions[index + 1].x,
-            positions[index + 1].y,
-            scale
-          );
-
-          return (
-            <line
-              key={index}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="currentColor"
-              strokeWidth="2"
-              markerEnd="url(#arrow)"
-            />
-          );
-        })}
-      </svg>
-      {positions.map((position, index) => {
-        return (
-          <div
-            key={index}
-            className="rounded-full w-3 h-3 bg-primary absolute left--1.5 top--1.5 text-center text-bold"
-            style={{
-              transform: mappingButtonTransformStyle(
-                position.x,
-                position.y,
-                scale
-              ),
-            }}
-          >
-            <span className="relative bottom-5">{index + 1}</span>
-          </div>
-        );
-      })}
-    </div>
   );
 }
 
