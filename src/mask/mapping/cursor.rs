@@ -458,6 +458,7 @@ fn on_exit_cursor_fps(
 struct IgnoreFirstMotion(bool);
 
 pub const FPS_MARGIN: f32 = 25.;
+const FPS_MAX_RECENTER_ITERATIONS: usize = 4;
 
 fn run_if_handle_cursor_fps(
     window: Single<&Window>,
@@ -504,6 +505,35 @@ fn fps_effective_bounds(fps_config: &ActiveCursorFpsConfig, mask_size: Vec2) -> 
 
 fn is_out_of_bounds(pos: Vec2, min: Vec2, max: Vec2) -> bool {
     pos.x <= min.x || pos.x >= max.x || pos.y <= min.y || pos.y >= max.y
+}
+
+fn first_bounds_crossing(
+    cursor_pos: Vec2,
+    delta: Vec2,
+    min: Vec2,
+    max: Vec2,
+) -> Option<(Vec2, Vec2)> {
+    let raw_pos = cursor_pos + delta;
+    if !is_out_of_bounds(raw_pos, min, max) {
+        return None;
+    }
+
+    let mut progress: f32 = 1.0;
+    if delta.x > 0.0 && raw_pos.x >= max.x {
+        progress = progress.min((max.x - cursor_pos.x) / delta.x);
+    } else if delta.x < 0.0 && raw_pos.x <= min.x {
+        progress = progress.min((min.x - cursor_pos.x) / delta.x);
+    }
+    if delta.y > 0.0 && raw_pos.y >= max.y {
+        progress = progress.min((max.y - cursor_pos.y) / delta.y);
+    } else if delta.y < 0.0 && raw_pos.y <= min.y {
+        progress = progress.min((min.y - cursor_pos.y) / delta.y);
+    }
+
+    let progress = progress.clamp(0.0, 1.0);
+    let boundary_pos = cursor_pos + delta * progress;
+    let remaining_delta = delta * (1.0 - progress);
+    Some((boundary_pos, remaining_delta))
 }
 
 fn send_fps_touch(
@@ -583,29 +613,12 @@ fn alternate_fps_pointer_id(fps_config: &ActiveCursorFpsConfig) -> u64 {
     }
 }
 
-fn send_fps_down_and_optional_move(
-    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
-    pointer_id: u64,
-    mask_size: Vec2,
-    center_pos: Vec2,
-    new_pos: Vec2,
-) {
-    send_fps_touch(
-        cs_tx,
-        MotionEventAction::Down,
-        pointer_id,
-        mask_size,
-        center_pos,
-    );
-    if new_pos != center_pos {
-        send_fps_touch(
-            cs_tx,
-            MotionEventAction::Move,
-            pointer_id,
-            mask_size,
-            new_pos,
-        );
-    }
+enum FpsRecenterResult {
+    Continue {
+        cursor_pos: Vec2,
+        remaining_delta: Vec2,
+    },
+    Stop(Vec2),
 }
 
 fn recenter_fps_touch(
@@ -613,11 +626,9 @@ fn recenter_fps_touch(
     fps_config: &mut ActiveCursorFpsConfig,
     mask_size: Vec2,
     old_pos: Vec2,
-    physical_overflow: Vec2,
-) -> Vec2 {
+    remaining_delta: Vec2,
+) -> FpsRecenterResult {
     let center_pos = fps_center_pos(fps_config, mask_size);
-    let (physical_min, physical_max) = physical_bounds(mask_size);
-    let new_pos = clamp_to_bounds(center_pos + physical_overflow, physical_min, physical_max);
 
     if let Some(pending) = fps_config.pending_touch.take() {
         send_fps_touch(
@@ -638,12 +649,12 @@ fn recenter_fps_touch(
                 mask_size,
                 old_pos,
             );
-            send_fps_down_and_optional_move(
+            send_fps_touch(
                 cs_tx,
+                MotionEventAction::Down,
                 fps_config.active_pointer_id,
                 mask_size,
                 center_pos,
-                new_pos,
             );
         }
         FpsTouchMode::Clean { .. } => {
@@ -663,15 +674,6 @@ fn recenter_fps_touch(
                 mask_size,
                 old_pos,
             );
-            if new_pos != center_pos {
-                send_fps_touch(
-                    cs_tx,
-                    MotionEventAction::Move,
-                    new_pointer_id,
-                    mask_size,
-                    new_pos,
-                );
-            }
             fps_config.active_pointer_id = new_pointer_id;
         }
         FpsTouchMode::Delayed { interval, .. } => {
@@ -689,10 +691,10 @@ fn recenter_fps_touch(
                 pos: old_pos,
                 release_at: Some(Instant::now() + Duration::from_millis(interval)),
                 overlap: false,
-                deferred_delta: physical_overflow,
+                deferred_delta: remaining_delta,
             });
             fps_config.active_pointer_id = new_pointer_id;
-            return center_pos;
+            return FpsRecenterResult::Stop(center_pos);
         }
         FpsTouchMode::Overlap { .. } => {
             let old_pointer_id = fps_config.active_pointer_id;
@@ -709,14 +711,17 @@ fn recenter_fps_touch(
                 pos: old_pos,
                 release_at: None,
                 overlap: true,
-                deferred_delta: physical_overflow,
+                deferred_delta: remaining_delta,
             });
             fps_config.active_pointer_id = new_pointer_id;
-            return center_pos;
+            return FpsRecenterResult::Stop(center_pos);
         }
     }
 
-    new_pos
+    FpsRecenterResult::Continue {
+        cursor_pos: center_pos,
+        remaining_delta,
+    }
 }
 
 fn apply_fps_delta(
@@ -730,24 +735,55 @@ fn apply_fps_delta(
         return cursor_pos;
     }
 
-    let raw_pos = cursor_pos + delta;
-    let (bounds_min, bounds_max) = fps_effective_bounds(fps_config, mask_size);
-    let should_recenter = is_out_of_bounds(raw_pos, bounds_min, bounds_max);
     let (physical_min, physical_max) = physical_bounds(mask_size);
-    let new_pos = clamp_to_bounds(raw_pos, physical_min, physical_max);
-    let physical_overflow = raw_pos - new_pos;
-    send_fps_touch(
-        cs_tx,
-        MotionEventAction::Move,
-        fps_config.active_pointer_id,
-        mask_size,
-        new_pos,
-    );
+    let mut cursor_pos = cursor_pos;
+    let mut delta = delta;
+    let mut recenter_count = 0;
 
-    if should_recenter {
-        recenter_fps_touch(cs_tx, fps_config, mask_size, new_pos, physical_overflow)
-    } else {
-        new_pos
+    loop {
+        if delta == Vec2::ZERO {
+            return cursor_pos;
+        }
+
+        let (bounds_min, bounds_max) = fps_effective_bounds(fps_config, mask_size);
+        let Some((boundary_pos, remaining_delta)) =
+            first_bounds_crossing(cursor_pos, delta, bounds_min, bounds_max)
+        else {
+            let new_pos = clamp_to_bounds(cursor_pos + delta, physical_min, physical_max);
+            send_fps_touch(
+                cs_tx,
+                MotionEventAction::Move,
+                fps_config.active_pointer_id,
+                mask_size,
+                new_pos,
+            );
+            return new_pos;
+        };
+
+        if recenter_count >= FPS_MAX_RECENTER_ITERATIONS {
+            return cursor_pos;
+        }
+
+        let touch_pos = clamp_to_bounds(boundary_pos, physical_min, physical_max);
+        send_fps_touch(
+            cs_tx,
+            MotionEventAction::Move,
+            fps_config.active_pointer_id,
+            mask_size,
+            touch_pos,
+        );
+
+        match recenter_fps_touch(cs_tx, fps_config, mask_size, touch_pos, remaining_delta) {
+            FpsRecenterResult::Continue {
+                cursor_pos: next_cursor_pos,
+                remaining_delta: next_delta,
+            } => {
+                recenter_count += 1;
+                cursor_pos = next_cursor_pos;
+                delta = next_delta;
+            }
+            FpsRecenterResult::Stop(next_cursor_pos) => return next_cursor_pos,
+        }
     }
 }
 
@@ -845,5 +881,112 @@ fn handle_normal_left_click(
             cursor_pos.0,
         );
         return;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::broadcast::error::TryRecvError;
+
+    fn fps_config(touch_mode: FpsTouchMode) -> ActiveCursorFpsConfig {
+        ActiveCursorFpsConfig {
+            ignore_fps_motion: false,
+            sensitivity: Vec2::ONE,
+            pointer_id: 0,
+            active_pointer_id: 0,
+            original_pos: Vec2::new(500.0, 500.0),
+            original_size: Vec2::new(1000.0, 1000.0),
+            max_offset: Vec2::new(50.0, -1.0),
+            touch_mode,
+            pending_touch: None,
+        }
+    }
+
+    fn collect_touch_events(
+        rx: &mut broadcast::Receiver<ScrcpyControlMsg>,
+    ) -> Vec<(MotionEventAction, u64, i32, i32)> {
+        let mut events = Vec::new();
+        loop {
+            match rx.try_recv() {
+                Ok(ScrcpyControlMsg::InjectTouchEvent {
+                    action,
+                    pointer_id,
+                    x,
+                    y,
+                    ..
+                }) => events.push((action, pointer_id, x, y)),
+                Ok(_) => {}
+                Err(TryRecvError::Empty) => break,
+                Err(err) => panic!("unexpected broadcast receive error: {err}"),
+            }
+        }
+        events
+    }
+
+    fn assert_vec2_near(actual: Vec2, expected: Vec2) {
+        assert!(
+            (actual - expected).length_squared() < 0.001,
+            "expected {expected:?}, got {actual:?}"
+        );
+    }
+
+    #[test]
+    fn apply_fps_delta_consumes_multiple_immediate_boundaries() {
+        let (tx, mut rx) = broadcast::channel(32);
+        let mut config = fps_config(FpsTouchMode::None);
+
+        let result = apply_fps_delta(
+            &tx,
+            &mut config,
+            Vec2::new(1000.0, 1000.0),
+            Vec2::new(500.0, 500.0),
+            Vec2::new(130.0, 0.0),
+        );
+
+        assert_vec2_near(result, Vec2::new(530.0, 500.0));
+        let events = collect_touch_events(&mut rx);
+        let actions = events
+            .iter()
+            .map(|(action, _, _, _)| *action)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            actions,
+            vec![
+                MotionEventAction::Move,
+                MotionEventAction::Up,
+                MotionEventAction::Down,
+                MotionEventAction::Move,
+                MotionEventAction::Up,
+                MotionEventAction::Down,
+                MotionEventAction::Move,
+            ]
+        );
+        assert_eq!(events.last(), Some(&(MotionEventAction::Move, 0, 530, 500)));
+    }
+
+    #[test]
+    fn apply_fps_delta_limits_immediate_recenter_iterations() {
+        let (tx, mut rx) = broadcast::channel(32);
+        let mut config = fps_config(FpsTouchMode::None);
+
+        let result = apply_fps_delta(
+            &tx,
+            &mut config,
+            Vec2::new(1000.0, 1000.0),
+            Vec2::new(500.0, 500.0),
+            Vec2::new(260.0, 0.0),
+        );
+
+        assert_vec2_near(result, Vec2::new(500.0, 500.0));
+        let events = collect_touch_events(&mut rx);
+        assert_eq!(events.len(), FPS_MAX_RECENTER_ITERATIONS * 3);
+        assert_eq!(
+            events
+                .iter()
+                .filter(|(action, _, _, _)| *action == MotionEventAction::Up)
+                .count(),
+            FPS_MAX_RECENTER_ITERATIONS
+        );
     }
 }
