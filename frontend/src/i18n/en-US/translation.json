@@ -330,7 +330,8 @@
       "migrationTitle": "Migrate the config",
       "size": "Size",
       "differentName": "The new config name cannot be the same as the current config!",
-      "duplicateTitle": "Duplicate the config"
+      "duplicateTitle": "Duplicate the config",
+      "showGuides": "Guides"
     },
     "script": {
       "setting": {

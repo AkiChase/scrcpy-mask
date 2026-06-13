@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FpsConfig, FpsTouchMode, MappingUpdater } from "./mapping";
 import { Flex, InputNumber, Select, Space, Tooltip, Typography } from "antd";
 import {
@@ -18,6 +18,11 @@ import {
 } from "./Common";
 import { useTranslation } from "react-i18next";
 import { IconFont } from "../../hooks";
+import {
+  MappingOverlayRect,
+  type MappingOverlayRectShape,
+} from "./MappingOverlay";
+import { useMappingGuideVisible } from "./MappingOverlayContext";
 
 const PRESET_STYLE = mappingButtonPresetStyle(52);
 
@@ -48,6 +53,8 @@ export default function ButtonFps({
 
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPointerDown, setIsPointerDown] = useState(false);
 
   const scale = useMemo(() => {
     return {
@@ -56,7 +63,7 @@ export default function ButtonFps({
     };
   }, [originalSize, maskArea]);
 
-  const boundaryStyle = useMemo<CSSProperties | null>(() => {
+  const boundaryShape = useMemo<MappingOverlayRectShape | null>(() => {
     if (config.max_offset_x < 0 && config.max_offset_y < 0) {
       return null;
     }
@@ -79,17 +86,16 @@ export default function ButtonFps({
     const right = Math.min(maskArea.width, rawRight);
     const bottom = Math.min(maskArea.height, rawBottom);
     return {
-      position: "absolute",
       left,
       top,
       width: Math.max(0, right - left),
       height: Math.max(0, bottom - top),
-      border: "1px dashed rgba(245, 158, 11, 0.9)",
-      backgroundColor: "rgba(245, 158, 11, 0.08)",
-      pointerEvents: "none",
-      boxSizing: "border-box",
     };
   }, [config.max_offset_x, config.max_offset_y, config.position, maskArea, scale]);
+
+  const showBoundary = useMappingGuideVisible(
+    showSetting || isHovered || isPointerDown,
+  );
 
   useEffect(() => {
     const element = document.getElementById(id);
@@ -116,6 +122,24 @@ export default function ButtonFps({
     }
   );
 
+  useEffect(() => {
+    if (!isPointerDown) return;
+
+    const handleMouseUp = () => setIsPointerDown(false);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isPointerDown]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 0) {
+      setIsPointerDown(true);
+    }
+    handleDrag(e);
+  };
+
   const handleSetting = (e: React.MouseEvent) => {
     e.preventDefault();
     setShowSetting(true);
@@ -138,13 +162,17 @@ export default function ButtonFps({
           }}
         />
       </SettingModal>
-      {boundaryStyle && <div style={boundaryStyle} />}
+      {boundaryShape && (
+        <MappingOverlayRect shape={boundaryShape} visible={showBoundary} />
+      )}
       <Flex
         id={id}
         style={PRESET_STYLE}
         className={className}
-        onMouseDown={handleDrag}
+        onMouseDown={handleMouseDown}
         onContextMenu={handleSetting}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         justify="center"
         align="center"
         vertical

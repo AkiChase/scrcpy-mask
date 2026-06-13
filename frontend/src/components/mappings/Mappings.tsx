@@ -36,6 +36,7 @@ import {
   CopyOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   FileAddOutlined,
   FileSyncOutlined,
   FileTextOutlined,
@@ -72,6 +73,7 @@ import { useTranslation } from "react-i18next";
 import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
 import ButtonFire from "./ButtonFire";
 import ButtonScript from "./ButtonScript";
+import { MappingOverlayProvider } from "./MappingOverlay";
 
 type MappingFileTabelItem = {
   file: string;
@@ -573,9 +575,11 @@ function assignNextAvailablePointerId(
 function Displayer({
   state,
   setState,
+  showAllMappingGuides,
 }: {
   state: EditState;
   setState: React.Dispatch<React.SetStateAction<EditState | null>>;
+  showAllMappingGuides: boolean;
 }) {
   const dispatch = useAppDispatch();
   const maskArea = useAppSelector((state) => state.other.maskArea);
@@ -729,30 +733,32 @@ function Displayer({
             className="w-full h-full absolute bg-transparent"
           />
         </Dropdown>
-        {state.current.mappings.map((mapping, index) => {
-          const props: any = {
-            originalSize,
-            index,
-            config: mapping,
-            onConfigChange: (updater: any | ((prev: any) => any)) =>
-              updateMapping(index, updater),
-            onConfigDelete: () => deleteMappingButton(index),
-            onConfigCopy: () => copyMappingButton(index),
-            getAvailablePointerId: (reserved: number[] = []) =>
-              getNextAvailablePointerIdWithReserved(
-                state.current.mappings,
-                reserved,
-              ),
-          };
+        <MappingOverlayProvider showAllGuides={showAllMappingGuides}>
+          {state.current.mappings.map((mapping, index) => {
+            const props: any = {
+              originalSize,
+              index,
+              config: mapping,
+              onConfigChange: (updater: any | ((prev: any) => any)) =>
+                updateMapping(index, updater),
+              onConfigDelete: () => deleteMappingButton(index),
+              onConfigCopy: () => copyMappingButton(index),
+              getAvailablePointerId: (reserved: number[] = []) =>
+                getNextAvailablePointerIdWithReserved(
+                  state.current.mappings,
+                  reserved,
+                ),
+            };
 
-          if (mapping.type in mappingButtonMap) {
-            const ButtonComponent =
-              mappingButtonMap[mapping.type as keyof typeof mappingButtonMap];
-            return <ButtonComponent key={index} {...props} />;
-          }
+            if (mapping.type in mappingButtonMap) {
+              const ButtonComponent =
+                mappingButtonMap[mapping.type as keyof typeof mappingButtonMap];
+              return <ButtonComponent key={index} {...props} />;
+            }
 
-          return <div key={index}></div>;
-        })}
+            return <div key={index}></div>;
+          })}
+        </MappingOverlayProvider>
       </div>
     </div>
   );
@@ -771,6 +777,7 @@ export default function Mappings() {
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [editState, setEditState] = useState<EditState | null>(null);
   const [mappingList, setMappingList] = useState<string[]>([]);
+  const [showAllMappingGuides, setShowAllMappingGuides] = useState(false);
   const [validationDiagnostics, setValidationDiagnostics] = useState<
     MappingDiagnostic[]
   >([]);
@@ -1131,7 +1138,16 @@ export default function Mappings() {
               {t("mappings.home.manage")}
             </Button>
           </Space.Compact>
-          <RefreshImageButton />
+          <Space>
+            <Button
+              type={showAllMappingGuides ? "primary" : "default"}
+              icon={<EyeOutlined />}
+              onClick={() => setShowAllMappingGuides((value) => !value)}
+            >
+              {t("mappings.home.showGuides")}
+            </Button>
+            <RefreshImageButton />
+          </Space>
         </Flex>
       </section>
       <section className="flex-grow-1 flex-shrink-0 pb-4">
@@ -1143,7 +1159,11 @@ export default function Mappings() {
               min="5%"
               max="99%"
             >
-              <Displayer state={editState} setState={setEditState} />
+              <Displayer
+                state={editState}
+                setState={setEditState}
+                showAllMappingGuides={showAllMappingGuides}
+              />
             </Splitter.Panel>
             <Splitter.Panel />
           </Splitter>

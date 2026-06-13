@@ -330,7 +330,8 @@
       "migrationTitle": "迁移配置",
       "size": "尺寸",
       "differentName": "新配置名不能与当前文件名相同！",
-      "duplicateTitle": "复制配置"
+      "duplicateTitle": "复制配置",
+      "showGuides": "辅助范围"
     },
     "script": {
       "setting": {
