@@ -1,4 +1,9 @@
-import { default_random_offset } from "../../utils";
+import {
+  default_jitter_offset,
+  default_random_distance_max_scale,
+  default_random_distance_min_scale,
+  default_random_offset,
+} from "../../utils";
 
 export interface MappingConfig {
   version: string;
@@ -205,6 +210,12 @@ export interface DirectionPadConfig {
   note: string;
   pointer_id: number;
   position: Position;
+  random_distance_max_scale: number;
+  random_distance_min_scale: number;
+  random_offset_x: number;
+  random_offset_y: number;
+  jitter_offset_x: number;
+  jitter_offset_y: number;
   script_hooks: MappingScriptHooks;
   type: "DirectionPad";
   up_boost_key: ButtonBinding | null;
@@ -228,6 +239,12 @@ export function newDirectionPad(position: Position): DirectionPadConfig {
     note: "",
     pointer_id: 2,
     position,
+    random_distance_max_scale: default_random_distance_max_scale,
+    random_distance_min_scale: default_random_distance_min_scale,
+    random_offset_x: default_random_offset,
+    random_offset_y: default_random_offset,
+    jitter_offset_x: default_jitter_offset,
+    jitter_offset_y: default_jitter_offset,
     script_hooks: defaultScriptHooks(),
     type: "DirectionPad",
     up_boost_key: null,
@@ -494,6 +511,10 @@ function withDefaultRandomOffset(value?: number): number {
   return value ?? default_random_offset;
 }
 
+function withDefaultJitterOffset(value?: number): number {
+  return value ?? default_jitter_offset;
+}
+
 function withDefaultScriptHooks(
   value?: Partial<MappingScriptHooks>
 ): MappingScriptHooks {
@@ -594,6 +615,17 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
           return {
             ...mapping,
             id,
+            enable_randomization: mapping.enable_randomization ?? false,
+            random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
+            random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
+            random_distance_min_scale:
+              mapping.random_distance_min_scale ??
+              default_random_distance_min_scale,
+            random_distance_max_scale:
+              mapping.random_distance_max_scale ??
+              default_random_distance_max_scale,
+            jitter_offset_x: withDefaultJitterOffset(mapping.jitter_offset_x),
+            jitter_offset_y: withDefaultJitterOffset(mapping.jitter_offset_y),
             up_boost_key: mapping.up_boost_key ?? null,
             up_boost_scale: mapping.up_boost_scale ?? 1.0,
             script_hooks: withDefaultScriptHooks(mapping.script_hooks),

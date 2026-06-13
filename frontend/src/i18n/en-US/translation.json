@@ -188,7 +188,13 @@
         "upBoostKeyHint": "While this modifier key is held, pressing the up key can extend beyond the normal maximum offset range.",
         "upBoostScale": "Up boost scale",
         "upBoostScaleHint": "Multiplier applied to the upward offset while the boost key is held. E.g., 2.0 doubles the upward reach.",
-        "enableRandomizationHint": "Adds random anchor offset, arc-shaped slide paths, and continuous micro-jitter to simulate natural finger movement."
+        "enableRandomizationHint": "Adds random anchor offset, arc-shaped slide paths, and continuous drift to simulate natural finger movement.",
+        "randomOffset": "Random center offset",
+        "randomOffsetHint": "Random offset range applied to the pad center each time it is pressed.",
+        "randomDistanceScale": "Random distance scale",
+        "randomDistanceScaleHint": "Random multiplier applied to the distance from the center to the target point on each direction change.",
+        "jitterOffset": "Drift range",
+        "jitterOffsetHint": "Range for touch drift around the current target point while holding the same direction."
       },
       "name": "DirectionPad"
     },

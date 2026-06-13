@@ -189,3 +189,6 @@ export function toCamelCase(str: string): string {
 }
 
 export const default_random_offset = 10;
+export const default_random_distance_min_scale = 0.9;
+export const default_random_distance_max_scale = 1.1;
+export const default_jitter_offset = 5;

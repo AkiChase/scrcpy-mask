@@ -285,6 +285,18 @@ pub fn default_random_offset() -> f32 {
     10.0
 }
 
+pub fn default_random_distance_min_scale() -> f32 {
+    0.9
+}
+
+pub fn default_random_distance_max_scale() -> f32 {
+    1.1
+}
+
+pub fn default_jitter_offset() -> f32 {
+    5.0
+}
+
 // Apply a random offset within a fixed human-touch error range.
 pub fn random_offset_vec2(pos: Vec2, offset: Vec2) -> Vec2 {
     if offset == Vec2::ZERO {
@@ -896,5 +908,45 @@ pub fn handle_direction_jitter(
         target_base + state + jitter,
     );
     *current_jitter = jitter;
+    *next_jitter_at = next_jitter_deadline();
+}
+
+/// Apply jitter as a short synchronous move path without blocking direction changes.
+pub fn handle_direction_jitter_path(
+    state: Vec2,
+    target_base: Vec2,
+    current_jitter: &mut Vec2,
+    next_jitter_at: &mut Instant,
+    jitter_offset: Vec2,
+    pointer_id: u64,
+    original_size: Vec2,
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+) {
+    if jitter_offset == Vec2::ZERO {
+        *current_jitter = Vec2::ZERO;
+        *next_jitter_at = next_jitter_deadline();
+        return;
+    }
+
+    let next_jitter = Vec2::new(
+        (rand::random::<f32>() * 2.0 - 1.0) * jitter_offset.x,
+        (rand::random::<f32>() * 2.0 - 1.0) * jitter_offset.y,
+    );
+    let start = target_base + state + *current_jitter;
+    let target = target_base + state + next_jitter;
+    let steps = 2 + (rand::random::<u8>() % 3) as usize;
+
+    for step in 1..=steps {
+        let t = step as f32 / steps as f32;
+        ControlMsgHelper::send_touch(
+            cs_tx,
+            MotionEventAction::Move,
+            pointer_id,
+            original_size,
+            start.lerp(target, t),
+        );
+    }
+
+    *current_jitter = next_jitter;
     *next_jitter_at = next_jitter_deadline();
 }

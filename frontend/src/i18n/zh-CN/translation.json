@@ -188,7 +188,13 @@
         "maxOffsetHint": "虚拟手指从轮盘中心沿水平和垂直方向的最大拖动距离。",
         "initDuration": "首次滑动延迟",
         "initDurationHint": "轮盘响应前的初始滑动时长（毫秒）。用于规避部分游戏无法识别初始触摸的问题。",
-        "enableRandomizationHint": "添加随机锚点偏移、弧形滑动路径和持续微抖，模拟手指自然移动。"
+        "enableRandomizationHint": "添加随机锚点偏移、弧形滑动路径和持续漂移，模拟手指自然移动。",
+        "randomOffset": "随机中心偏移",
+        "randomOffsetHint": "每次按下时对轮盘中心施加的随机偏移范围。",
+        "randomDistanceScale": "随机距离倍率",
+        "randomDistanceScaleHint": "每次方向变化时，对中心到目标点的距离乘以随机倍率。",
+        "jitterOffset": "漂移范围",
+        "jitterOffsetHint": "按住方向不变时，触点在当前目标点附近漂移的范围。"
       },
       "name": "方向轮盘"
     },

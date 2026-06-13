@@ -717,6 +717,10 @@ async fn migrate_mapping(
                 m.position *= scale;
                 m.max_offset_x *= scale.x;
                 m.max_offset_y *= scale.y;
+                m.random_offset_x *= scale.x;
+                m.random_offset_y *= scale.y;
+                m.jitter_offset_x *= scale.x;
+                m.jitter_offset_y *= scale.y;
             }
             MappingType::MouseCastSpell(m) => {
                 m.position *= scale;

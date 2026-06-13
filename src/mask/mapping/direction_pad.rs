@@ -20,8 +20,10 @@ use crate::{
         script_helper::{ScriptRuntimeCommandSender, ScriptSharedState},
         utils::{
             ControlMsgHelper, DEFAULT_SWIPE_DURATION, Position, SingleSwipeStrategy,
-            anchor_random_offset, handle_direction_jitter, handle_direction_move_randomized,
-            next_jitter_deadline, random_offset_vec2, spawn_initial_swipe,
+            default_jitter_offset, default_random_distance_max_scale,
+            default_random_distance_min_scale, default_random_offset, handle_direction_jitter_path,
+            handle_direction_move_randomized, next_jitter_deadline, random_offset_vec2,
+            spawn_initial_swipe,
         },
     },
     mask::mask_command::MaskSize,
@@ -56,6 +58,12 @@ pub struct BindMappingDirectionPad {
     pub max_offset_x: f32,
     pub max_offset_y: f32,
     pub enable_randomization: bool,
+    pub random_offset_x: f32,
+    pub random_offset_y: f32,
+    pub random_distance_min_scale: f32,
+    pub random_distance_max_scale: f32,
+    pub jitter_offset_x: f32,
+    pub jitter_offset_y: f32,
     pub up_boost_key: Option<ButtonBinding>,
     pub up_boost_scale: f32,
     pub bind: DirectionBinding,
@@ -74,6 +82,12 @@ impl From<MappingDirectionPad> for BindMappingDirectionPad {
             max_offset_x: value.max_offset_x,
             max_offset_y: value.max_offset_y,
             enable_randomization: value.enable_randomization,
+            random_offset_x: value.random_offset_x,
+            random_offset_y: value.random_offset_y,
+            random_distance_min_scale: value.random_distance_min_scale,
+            random_distance_max_scale: value.random_distance_max_scale,
+            jitter_offset_x: value.jitter_offset_x,
+            jitter_offset_y: value.jitter_offset_y,
             up_boost_key: value.up_boost_key,
             up_boost_scale: value.up_boost_scale,
             bind: value.bind.clone(),
@@ -97,6 +111,36 @@ pub struct MappingDirectionPad {
     pub max_offset_y: f32,
     #[serde(default)]
     pub enable_randomization: bool,
+    #[serde(
+        default = "default_random_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
+    pub random_offset_x: f32,
+    #[serde(
+        default = "default_random_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
+    pub random_offset_y: f32,
+    #[serde(
+        default = "default_random_distance_min_scale",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
+    pub random_distance_min_scale: f32,
+    #[serde(
+        default = "default_random_distance_max_scale",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
+    pub random_distance_max_scale: f32,
+    #[serde(
+        default = "default_jitter_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
+    pub jitter_offset_x: f32,
+    #[serde(
+        default = "default_jitter_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
+    pub jitter_offset_y: f32,
     #[serde(default)]
     pub up_boost_key: Option<ButtonBinding>,
     #[serde(
@@ -115,6 +159,27 @@ fn default_up_boost_scale() -> f32 {
 
 impl ValidateMappingConfig for MappingDirectionPad {
     fn validate(&self) -> Result<(), String> {
+        if self.random_offset_x < 0.0 || self.random_offset_y < 0.0 {
+            return Err(
+                "DirectionPad random offset must be greater than or equal to 0".to_string(),
+            );
+        }
+        if self.jitter_offset_x < 0.0 || self.jitter_offset_y < 0.0 {
+            return Err(
+                "DirectionPad jitter offset must be greater than or equal to 0".to_string(),
+            );
+        }
+        if self.random_distance_min_scale < 0.0 || self.random_distance_max_scale < 0.0 {
+            return Err(
+                "DirectionPad random distance scale must be greater than or equal to 0".to_string(),
+            );
+        }
+        if self.random_distance_min_scale > self.random_distance_max_scale {
+            return Err(
+                "DirectionPad random distance minimum scale must not exceed maximum scale"
+                    .to_string(),
+            );
+        }
         self.script_hooks.validate()
     }
 }
@@ -144,7 +209,7 @@ pub struct DirectionPadItem {
     pub next_jitter_at: Instant,
     pub current_jitter: Vec2,
     pub enable_randomization: bool,
-    pub random_offset: Vec2,
+    pub jitter_offset: Vec2,
     pub move_gen: Arc<AtomicU64>,
 }
 
@@ -189,6 +254,24 @@ fn direction_pad_has_after_hook(mapping: &BindMappingDirectionPad) -> bool {
     !mapping.script_hooks.after_script_ast.empty
 }
 
+fn random_distance_scale(mapping: &BindMappingDirectionPad) -> f32 {
+    let min = mapping.random_distance_min_scale;
+    let max = mapping.random_distance_max_scale;
+    if min == max {
+        min
+    } else {
+        min + rand::random::<f32>() * (max - min)
+    }
+}
+
+fn randomize_direction_pad_state(state: Vec2, mapping: &BindMappingDirectionPad) -> Vec2 {
+    if mapping.enable_randomization {
+        state * random_distance_scale(mapping)
+    } else {
+        state
+    }
+}
+
 fn apply_direction_pad_down(
     cs_tx: &ChannelSenderCS,
     runtime: &TokioTasksRuntime,
@@ -201,12 +284,14 @@ fn apply_direction_pad_down(
     let pointer_id = mapping.pointer_id;
     let original_pos: Vec2 = mapping.position.into();
 
-    let random_offset = anchor_random_offset(mapping.max_offset_x, mapping.max_offset_y);
+    let random_offset = Vec2::new(mapping.random_offset_x, mapping.random_offset_y);
+    let jitter_offset = Vec2::new(mapping.jitter_offset_x, mapping.jitter_offset_y);
     let random_anchor = if mapping.enable_randomization {
         random_offset_vec2(original_pos, random_offset)
     } else {
         original_pos
     };
+    let actual_state = randomize_direction_pad_state(state, mapping);
 
     ControlMsgHelper::send_touch(
         &cs_tx.0,
@@ -232,7 +317,7 @@ fn apply_direction_pad_down(
         pointer_id,
         original_size,
         swipe_start,
-        swipe_start + state,
+        swipe_start + actual_state,
         mapping.initial_duration,
         DEFAULT_SWIPE_DURATION,
         strategy,
@@ -247,11 +332,11 @@ fn apply_direction_pad_down(
             original_pos,
             random_anchor,
             last_state: state,
-            last_state_actual: state,
+            last_state_actual: actual_state,
             next_jitter_at: next_jitter_deadline(),
             current_jitter: Vec2::ZERO,
             enable_randomization: mapping.enable_randomization,
-            random_offset,
+            jitter_offset,
             move_gen: Arc::new(AtomicU64::new(0)),
         },
     );
@@ -263,7 +348,7 @@ fn apply_direction_pad_tap_without_swipe(
     original_size: Vec2,
 ) {
     let original_pos: Vec2 = mapping.position.into();
-    let random_offset = anchor_random_offset(mapping.max_offset_x, mapping.max_offset_y);
+    let random_offset = Vec2::new(mapping.random_offset_x, mapping.random_offset_y);
     let random_anchor = if mapping.enable_randomization {
         random_offset_vec2(original_pos, random_offset)
     } else {
@@ -293,7 +378,7 @@ fn apply_direction_pad_up(
 ) -> bool {
     if let Some(item) = direction_pad_map.0.remove(action) {
         let last_pos = if item.enable_randomization {
-            item.random_anchor + item.last_state + item.current_jitter
+            item.random_anchor + item.last_state_actual + item.current_jitter
         } else {
             item.original_pos + item.last_state
         };
@@ -361,13 +446,14 @@ pub fn handle_direction_pad(
                         {
                             // Opposite directions canceled — move back to center, don't lift.
                             let old_state = item.last_state_actual;
+                            let actual_state = randomize_direction_pad_state(state, mapping);
                             item.last_state = state;
-                            item.last_state_actual = state;
+                            item.last_state_actual = actual_state;
 
                             if item.enable_randomization {
                                 handle_direction_move_randomized(
                                     old_state,
-                                    state,
+                                    actual_state,
                                     item.random_anchor,
                                     &mut item.current_jitter,
                                     &mut item.next_jitter_at,
@@ -422,13 +508,14 @@ pub fn handle_direction_pad(
                         }
                     } else if state != item.last_state {
                         let old_state = item.last_state_actual;
+                        let actual_state = randomize_direction_pad_state(state, mapping);
                         item.last_state = state;
-                        item.last_state_actual = state;
+                        item.last_state_actual = actual_state;
 
                         if item.enable_randomization {
                             handle_direction_move_randomized(
                                 old_state,
-                                state,
+                                actual_state,
                                 item.random_anchor,
                                 &mut item.current_jitter,
                                 &mut item.next_jitter_at,
@@ -449,12 +536,12 @@ pub fn handle_direction_pad(
                             );
                         }
                     } else if item.enable_randomization && Instant::now() > item.next_jitter_at {
-                        handle_direction_jitter(
-                            state,
+                        handle_direction_jitter_path(
+                            item.last_state_actual,
                             item.random_anchor,
                             &mut item.current_jitter,
                             &mut item.next_jitter_at,
-                            item.random_offset,
+                            item.jitter_offset,
                             mapping.pointer_id,
                             original_size,
                             &cs_tx_res.0,

@@ -382,6 +382,99 @@ function Setting({
             }
           />
         </ItemBox>
+        {config.enable_randomization && (
+          <ItemBoxContainer gap={12} className="pr-6 pl-6">
+            <ItemBox
+              label={t("mappings.directionPad.setting.randomOffset")}
+              tooltip={t("mappings.directionPad.setting.randomOffsetHint")}
+            >
+              <Space.Compact className="w-full">
+                <InputNumber
+                  className="w-full"
+                  prefix="X:"
+                  value={config.random_offset_x}
+                  min={0}
+                  onChange={(v) =>
+                    v !== null &&
+                    onConfigChange({ ...config, random_offset_x: v })
+                  }
+                />
+                <InputNumber
+                  className="w-full"
+                  prefix="Y:"
+                  value={config.random_offset_y}
+                  min={0}
+                  onChange={(v) =>
+                    v !== null &&
+                    onConfigChange({ ...config, random_offset_y: v })
+                  }
+                />
+              </Space.Compact>
+            </ItemBox>
+            <ItemBox
+              label={t("mappings.directionPad.setting.randomDistanceScale")}
+              tooltip={t("mappings.directionPad.setting.randomDistanceScaleHint")}
+            >
+              <Space.Compact className="w-full">
+                <InputNumber
+                  className="w-full"
+                  prefix="Min:"
+                  value={config.random_distance_min_scale}
+                  min={0}
+                  step={0.05}
+                  onChange={(v) =>
+                    v !== null &&
+                    onConfigChange({
+                      ...config,
+                      random_distance_min_scale: v,
+                    })
+                  }
+                />
+                <InputNumber
+                  className="w-full"
+                  prefix="Max:"
+                  value={config.random_distance_max_scale}
+                  min={0}
+                  step={0.05}
+                  onChange={(v) =>
+                    v !== null &&
+                    onConfigChange({
+                      ...config,
+                      random_distance_max_scale: v,
+                    })
+                  }
+                />
+              </Space.Compact>
+            </ItemBox>
+            <ItemBox
+              label={t("mappings.directionPad.setting.jitterOffset")}
+              tooltip={t("mappings.directionPad.setting.jitterOffsetHint")}
+            >
+              <Space.Compact className="w-full">
+                <InputNumber
+                  className="w-full"
+                  prefix="X:"
+                  value={config.jitter_offset_x}
+                  min={0}
+                  onChange={(v) =>
+                    v !== null &&
+                    onConfigChange({ ...config, jitter_offset_x: v })
+                  }
+                />
+                <InputNumber
+                  className="w-full"
+                  prefix="Y:"
+                  value={config.jitter_offset_y}
+                  min={0}
+                  onChange={(v) =>
+                    v !== null &&
+                    onConfigChange({ ...config, jitter_offset_y: v })
+                  }
+                />
+              </Space.Compact>
+            </ItemBox>
+          </ItemBoxContainer>
+        )}
         <ItemBox
           label={t("mappings.directionPad.setting.upBoostKey")}
           tooltip={t("mappings.directionPad.setting.upBoostKeyHint")}
