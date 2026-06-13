@@ -36,6 +36,13 @@ import { useTranslation } from "react-i18next";
 import { IconFont, useMessageContext } from "../../hooks";
 import { RollbackOutlined } from "@ant-design/icons";
 import { throttle } from "../../utils";
+import {
+  MappingOverlayCircle,
+  MappingOverlayEllipse,
+  type MappingOverlayCircleShape,
+  type MappingOverlayEllipseShape,
+} from "./MappingOverlay";
+import { useMappingGuideState } from "./MappingOverlayContext";
 
 const PRESET_STYLE = mappingButtonPresetStyle(64);
 
@@ -64,6 +71,7 @@ export default function ButtonMouseCastSpell({
 
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
+  const mappingGuide = useMappingGuideState(showSetting);
 
   const scale = useMemo(() => {
     return {
@@ -71,6 +79,50 @@ export default function ButtonMouseCastSpell({
       y: maskArea.height / originalSize.height,
     };
   }, [originalSize, maskArea]);
+
+  const dragRadiusShape = useMemo<MappingOverlayCircleShape>(() => {
+    return {
+      centerX: config.position.x * scale.x,
+      centerY: config.position.y * scale.y,
+      radius: config.drag_radius * scale.y,
+    };
+  }, [config.drag_radius, config.position, scale]);
+
+  const castRadiusShape = useMemo<MappingOverlayEllipseShape | null>(() => {
+    if (
+      config.cast_no_direction ||
+      config.cast_radius <= 0 ||
+      config.horizontal_scale_factor <= 0 ||
+      config.vertical_scale_factor <= 0
+    ) {
+      return null;
+    }
+
+    // Match the dedicated cast editor preview.
+    const horizontalFactor =
+      config.horizontal_scale_factor < config.vertical_scale_factor
+        ? config.vertical_scale_factor / config.horizontal_scale_factor
+        : 1;
+    const verticalFactor =
+      config.vertical_scale_factor < config.horizontal_scale_factor
+        ? config.horizontal_scale_factor / config.vertical_scale_factor
+        : 1;
+    const radius = config.cast_radius * scale.y;
+
+    return {
+      centerX: config.center.x * scale.x,
+      centerY: config.center.y * scale.y,
+      radiusX: radius * horizontalFactor,
+      radiusY: radius * verticalFactor,
+    };
+  }, [
+    config.cast_no_direction,
+    config.cast_radius,
+    config.center,
+    config.horizontal_scale_factor,
+    config.vertical_scale_factor,
+    scale,
+  ]);
 
   useEffect(() => {
     const element = document.getElementById(id);
@@ -97,6 +149,11 @@ export default function ButtonMouseCastSpell({
     },
   );
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    mappingGuide.startPointerDown(e);
+    handleDrag(e);
+  };
+
   const handleSetting = (e: React.MouseEvent) => {
     e.preventDefault();
     setShowSetting(true);
@@ -119,12 +176,25 @@ export default function ButtonMouseCastSpell({
           }}
         />
       </SettingModal>
+      {castRadiusShape && (
+        <MappingOverlayEllipse
+          shape={castRadiusShape}
+          visible={mappingGuide.visible}
+          tone="cast"
+        />
+      )}
+      <MappingOverlayCircle
+        shape={dragRadiusShape}
+        visible={mappingGuide.visible}
+        tone="drag"
+      />
       <Flex
         id={id}
         style={PRESET_STYLE}
         className={className}
-        onMouseDown={handleDrag}
+        onMouseDown={handleMouseDown}
         onContextMenu={handleSetting}
+        {...mappingGuide.interactionProps}
         justify="center"
         align="center"
         vertical

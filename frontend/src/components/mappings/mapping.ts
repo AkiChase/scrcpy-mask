@@ -424,8 +424,8 @@ export function newFps(position: Position): FpsConfig {
     position,
     sensitivity_x: 0.8,
     sensitivity_y: 0.8,
-    max_offset_x: -1,
-    max_offset_y: -1,
+    max_offset_x: 0,
+    max_offset_y: 0,
     touch_mode: { type: "none" },
     type: "Fps",
   };
@@ -654,8 +654,8 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             return {
               ...normalized,
               id,
-              max_offset_x: normalized.max_offset_x ?? -1,
-              max_offset_y: normalized.max_offset_y ?? -1,
+              max_offset_x: normalized.max_offset_x ?? 0,
+              max_offset_y: normalized.max_offset_y ?? 0,
               touch_mode: normalizeFpsTouchMode(normalized.touch_mode),
             };
           }

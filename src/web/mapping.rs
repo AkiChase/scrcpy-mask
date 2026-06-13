@@ -741,10 +741,10 @@ async fn migrate_mapping(
             }
             MappingType::Fps(m) => {
                 m.position *= scale;
-                if m.max_offset_x >= 0.0 {
+                if m.max_offset_x > 0.0 {
                     m.max_offset_x *= scale.x;
                 }
-                if m.max_offset_y >= 0.0 {
+                if m.max_offset_y > 0.0 {
                     m.max_offset_y *= scale.y;
                 }
             }

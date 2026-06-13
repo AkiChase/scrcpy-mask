@@ -45,7 +45,7 @@ pub fn fire_init(mut commands: Commands) {
 }
 
 fn default_fps_max_offset() -> f32 {
-    -1.0
+    0.0
 }
 
 #[derive(Debug, Clone)]
@@ -162,8 +162,8 @@ impl ValidateMappingConfig for MappingFps {
             )
             .to_string());
         }
-        if self.max_offset_x < -1.0 || self.max_offset_y < -1.0 {
-            return Err("FPS max_offset_x/max_offset_y must be -1 or greater".to_string());
+        if self.max_offset_x < 0.0 || self.max_offset_y < 0.0 {
+            return Err("FPS max_offset_x/max_offset_y must be 0 or greater".to_string());
         }
         if let Some(another_pointer_id) = self.touch_mode.another_pointer_id()
             && another_pointer_id == self.pointer_id

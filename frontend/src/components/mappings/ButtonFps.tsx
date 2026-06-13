@@ -22,7 +22,7 @@ import {
   MappingOverlayRect,
   type MappingOverlayRectShape,
 } from "./MappingOverlay";
-import { useMappingGuideVisible } from "./MappingOverlayContext";
+import { useMappingGuideState } from "./MappingOverlayContext";
 
 const PRESET_STYLE = mappingButtonPresetStyle(52);
 
@@ -53,8 +53,7 @@ export default function ButtonFps({
 
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPointerDown, setIsPointerDown] = useState(false);
+  const mappingGuide = useMappingGuideState(showSetting);
 
   const scale = useMemo(() => {
     return {
@@ -64,21 +63,21 @@ export default function ButtonFps({
   }, [originalSize, maskArea]);
 
   const boundaryShape = useMemo<MappingOverlayRectShape | null>(() => {
-    if (config.max_offset_x < 0 && config.max_offset_y < 0) {
+    if (config.max_offset_x <= 0 && config.max_offset_y <= 0) {
       return null;
     }
     const centerX = config.position.x * scale.x;
     const centerY = config.position.y * scale.y;
     const rawLeft =
-      config.max_offset_x >= 0 ? centerX - config.max_offset_x * scale.x : 0;
+      config.max_offset_x > 0 ? centerX - config.max_offset_x * scale.x : 0;
     const rawRight =
-      config.max_offset_x >= 0
+      config.max_offset_x > 0
         ? centerX + config.max_offset_x * scale.x
         : maskArea.width;
     const rawTop =
-      config.max_offset_y >= 0 ? centerY - config.max_offset_y * scale.y : 0;
+      config.max_offset_y > 0 ? centerY - config.max_offset_y * scale.y : 0;
     const rawBottom =
-      config.max_offset_y >= 0
+      config.max_offset_y > 0
         ? centerY + config.max_offset_y * scale.y
         : maskArea.height;
     const left = Math.max(0, rawLeft);
@@ -92,10 +91,6 @@ export default function ButtonFps({
       height: Math.max(0, bottom - top),
     };
   }, [config.max_offset_x, config.max_offset_y, config.position, maskArea, scale]);
-
-  const showBoundary = useMappingGuideVisible(
-    showSetting || isHovered || isPointerDown,
-  );
 
   useEffect(() => {
     const element = document.getElementById(id);
@@ -122,21 +117,8 @@ export default function ButtonFps({
     }
   );
 
-  useEffect(() => {
-    if (!isPointerDown) return;
-
-    const handleMouseUp = () => setIsPointerDown(false);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isPointerDown]);
-
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0) {
-      setIsPointerDown(true);
-    }
+    mappingGuide.startPointerDown(e);
     handleDrag(e);
   };
 
@@ -163,7 +145,11 @@ export default function ButtonFps({
         />
       </SettingModal>
       {boundaryShape && (
-        <MappingOverlayRect shape={boundaryShape} visible={showBoundary} />
+        <MappingOverlayRect
+          shape={boundaryShape}
+          visible={mappingGuide.visible}
+          tone="boundary"
+        />
       )}
       <Flex
         id={id}
@@ -171,8 +157,7 @@ export default function ButtonFps({
         className={className}
         onMouseDown={handleMouseDown}
         onContextMenu={handleSetting}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        {...mappingGuide.interactionProps}
         justify="center"
         align="center"
         vertical
@@ -283,7 +268,7 @@ function Setting({
               className="w-full"
               prefix="X:"
               value={config.max_offset_x}
-              min={-1}
+              min={0}
               onChange={(v) =>
                 v !== null && onConfigChange({ ...config, max_offset_x: v })
               }
@@ -292,7 +277,7 @@ function Setting({
               className="w-full"
               prefix="Y:"
               value={config.max_offset_y}
-              min={-1}
+              min={0}
               onChange={(v) =>
                 v !== null && onConfigChange({ ...config, max_offset_y: v })
               }

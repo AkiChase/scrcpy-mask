@@ -614,6 +614,15 @@ fn collect_mapping_specific_diagnostics(
                     mapping_id,
                 ));
             }
+            if mapping.max_offset_x < 0.0 || mapping.max_offset_y < 0.0 {
+                diagnostics.push(MappingDiagnostic::mapping(
+                    "mapping.fps.invalidMaxOffset",
+                    "FPS max_offset_x/max_offset_y must be 0 or greater".to_string(),
+                    mapping_type,
+                    mapping_index,
+                    mapping_id,
+                ));
+            }
         }
         MappingType::Fire(mapping) => collect_script_hook_diagnostics(
             diagnostics,

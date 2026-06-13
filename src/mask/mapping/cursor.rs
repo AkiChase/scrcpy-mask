@@ -186,7 +186,7 @@ impl Default for ActiveCursorFpsConfig {
             active_pointer_id: 0,
             original_pos: Vec2::ZERO,
             original_size: Vec2::ZERO,
-            max_offset: Vec2::splat(-1.0),
+            max_offset: Vec2::ZERO,
             touch_mode: FpsTouchMode::None,
             pending_touch: None,
         }
@@ -489,12 +489,12 @@ fn fps_effective_bounds(fps_config: &ActiveCursorFpsConfig, mask_size: Vec2) -> 
     let mut min = physical_min;
     let mut max = physical_max;
 
-    if fps_config.max_offset.x >= 0.0 {
+    if fps_config.max_offset.x > 0.0 {
         let offset = fps_config.max_offset.x * scale.x;
         min.x = (center.x - offset).max(physical_min.x);
         max.x = (center.x + offset).min(physical_max.x);
     }
-    if fps_config.max_offset.y >= 0.0 {
+    if fps_config.max_offset.y > 0.0 {
         let offset = fps_config.max_offset.y * scale.y;
         min.y = (center.y - offset).max(physical_min.y);
         max.y = (center.y + offset).min(physical_max.y);
@@ -897,7 +897,7 @@ mod tests {
             active_pointer_id: 0,
             original_pos: Vec2::new(500.0, 500.0),
             original_size: Vec2::new(1000.0, 1000.0),
-            max_offset: Vec2::new(50.0, -1.0),
+            max_offset: Vec2::new(50.0, 0.0),
             touch_mode,
             pending_touch: None,
         }

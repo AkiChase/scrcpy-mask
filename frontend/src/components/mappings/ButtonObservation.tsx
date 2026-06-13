@@ -19,6 +19,11 @@ import {
 } from "./Common";
 import { useTranslation } from "react-i18next";
 import { IconFont } from "../../hooks";
+import {
+  MappingOverlayCircle,
+  type MappingOverlayCircleShape,
+} from "./MappingOverlay";
+import { useMappingGuideState } from "./MappingOverlayContext";
 
 const PRESET_STYLE = mappingButtonPresetStyle(52);
 
@@ -47,6 +52,7 @@ export default function ButtonObservation({
 
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
+  const mappingGuide = useMappingGuideState(showSetting);
 
   const scale = useMemo(() => {
     return {
@@ -54,6 +60,18 @@ export default function ButtonObservation({
       y: maskArea.height / originalSize.height,
     };
   }, [originalSize, maskArea]);
+
+  const maxRadiusShape = useMemo<MappingOverlayCircleShape | null>(() => {
+    if (config.max_radius <= 0) {
+      return null;
+    }
+
+    return {
+      centerX: config.position.x * scale.x,
+      centerY: config.position.y * scale.y,
+      radius: config.max_radius * scale.y,
+    };
+  }, [config.max_radius, config.position, scale]);
 
   useEffect(() => {
     const element = document.getElementById(id);
@@ -80,6 +98,11 @@ export default function ButtonObservation({
     },
   );
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    mappingGuide.startPointerDown(e);
+    handleDrag(e);
+  };
+
   const handleSetting = (e: React.MouseEvent) => {
     e.preventDefault();
     setShowSetting(true);
@@ -101,12 +124,20 @@ export default function ButtonObservation({
           }}
         />
       </SettingModal>
+      {maxRadiusShape && (
+        <MappingOverlayCircle
+          shape={maxRadiusShape}
+          visible={mappingGuide.visible}
+          tone="observation"
+        />
+      )}
       <Flex
         id={id}
         style={PRESET_STYLE}
         className={className}
-        onMouseDown={handleDrag}
+        onMouseDown={handleMouseDown}
         onContextMenu={handleSetting}
+        {...mappingGuide.interactionProps}
         justify="center"
         align="center"
         vertical
