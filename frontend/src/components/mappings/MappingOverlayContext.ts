@@ -8,11 +8,15 @@ import {
 
 export type MappingOverlayContextValue = {
   showAllGuides: boolean;
+  viewportOrigin: { left: number; top: number } | null;
+  viewportSize: { width: number; height: number };
 };
 
 export const MappingOverlayContext =
   createContext<MappingOverlayContextValue>({
     showAllGuides: false,
+    viewportOrigin: null,
+    viewportSize: { width: 0, height: 0 },
   });
 
 export function useMappingGuideVisible(localVisible: boolean) {

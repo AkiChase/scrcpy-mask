@@ -38,13 +38,64 @@ import { RollbackOutlined } from "@ant-design/icons";
 import { throttle } from "../../utils";
 import {
   MappingOverlayCircle,
-  MappingOverlayEllipse,
   type MappingOverlayCircleShape,
-  type MappingOverlayEllipseShape,
+  MappingOverlayPathGroup,
+  type MappingOverlayPathGroupShape,
 } from "./MappingOverlay";
 import { useMappingGuideState } from "./MappingOverlayContext";
 
 const PRESET_STYLE = mappingButtonPresetStyle(64);
+
+function projectedCastRadii(
+  radius: number,
+  horizontalFactor: number,
+  verticalFactor: number,
+  originalSize: { height: number },
+  maskArea: { height: number },
+) {
+  // the smaller factor means stronger projection compression, so the visible
+  // projected range needs a longer axis in that direction.
+  const hF =
+    horizontalFactor < verticalFactor ? verticalFactor / horizontalFactor : 1;
+  const vF =
+    verticalFactor < horizontalFactor ? horizontalFactor / verticalFactor : 1;
+  const maskRadius = (radius / originalSize.height) * maskArea.height;
+
+  return {
+    rx: Math.round(maskRadius * hF),
+    ry: Math.round(maskRadius * vF),
+  };
+}
+
+function projectedCastSectorPaths(
+  radius: number,
+  horizontalFactor: number,
+  verticalFactor: number,
+  originalSize: { height: number },
+  maskArea: { height: number },
+) {
+  const { rx, ry } = projectedCastRadii(
+    radius,
+    horizontalFactor,
+    verticalFactor,
+    originalSize,
+    maskArea,
+  );
+
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const sectorPath = (angle1: number, angle2: number) => {
+    const x1 = rx * Math.cos(rad(angle1));
+    const y1 = -ry * Math.sin(rad(angle1));
+    const x2 = rx * Math.cos(rad(angle2));
+    const y2 = -ry * Math.sin(rad(angle2));
+    return `M0,0 L${x1},${y1} A${rx},${ry} 0 0,0 ${x2},${y2} Z`;
+  };
+
+  return {
+    d1: sectorPath(30, 150),
+    d2: sectorPath(60, 120),
+  };
+}
 
 export default function ButtonMouseCastSpell({
   index,
@@ -88,7 +139,7 @@ export default function ButtonMouseCastSpell({
     };
   }, [config.drag_radius, config.position, scale]);
 
-  const castRadiusShape = useMemo<MappingOverlayEllipseShape | null>(() => {
+  const castProjectionShape = useMemo<MappingOverlayPathGroupShape | null>(() => {
     if (
       config.cast_no_direction ||
       config.cast_radius <= 0 ||
@@ -98,22 +149,21 @@ export default function ButtonMouseCastSpell({
       return null;
     }
 
-    // Match the dedicated cast editor preview.
-    const horizontalFactor =
-      config.horizontal_scale_factor < config.vertical_scale_factor
-        ? config.vertical_scale_factor / config.horizontal_scale_factor
-        : 1;
-    const verticalFactor =
-      config.vertical_scale_factor < config.horizontal_scale_factor
-        ? config.horizontal_scale_factor / config.vertical_scale_factor
-        : 1;
-    const radius = config.cast_radius * scale.y;
+    const { d1, d2 } = projectedCastSectorPaths(
+      config.cast_radius,
+      config.horizontal_scale_factor,
+      config.vertical_scale_factor,
+      originalSize,
+      maskArea,
+    );
 
     return {
       centerX: config.center.x * scale.x,
       centerY: config.center.y * scale.y,
-      radiusX: radius * horizontalFactor,
-      radiusY: radius * verticalFactor,
+      paths: [
+        { d: d2, opacity: 0.18 },
+        { d: d1, opacity: 0.12 },
+      ],
     };
   }, [
     config.cast_no_direction,
@@ -121,6 +171,8 @@ export default function ButtonMouseCastSpell({
     config.center,
     config.horizontal_scale_factor,
     config.vertical_scale_factor,
+    maskArea,
+    originalSize,
     scale,
   ]);
 
@@ -176,9 +228,9 @@ export default function ButtonMouseCastSpell({
           }}
         />
       </SettingModal>
-      {castRadiusShape && (
-        <MappingOverlayEllipse
-          shape={castRadiusShape}
+      {castProjectionShape && (
+        <MappingOverlayPathGroup
+          shape={castProjectionShape}
           visible={mappingGuide.visible}
           tone="cast"
         />
@@ -246,29 +298,14 @@ function CastCenter({
 
   const maxRadius = Math.min(center.x, center.y);
   const { d1, d2, transform } = (() => {
-    // the smaller the factor, the longer the axis
-    const hF =
-      horizontalFactor < verticalFactor ? verticalFactor / horizontalFactor : 1;
-    const vF =
-      verticalFactor < horizontalFactor ? horizontalFactor / verticalFactor : 1;
+    const { d1, d2 } = projectedCastSectorPaths(
+      radius,
+      horizontalFactor,
+      verticalFactor,
+      originalSize,
+      maskArea,
+    );
 
-    const maskRadius = (radius / originalSize.height) * maskArea.height;
-    const rx = Math.round(maskRadius * hF);
-    const ry = Math.round(maskRadius * vF);
-
-    const rad = (deg: number) => (deg * Math.PI) / 180;
-    const d = (angle1: number, angle2: number) => {
-      const cx = 0;
-      const cy = 0;
-      const x1 = cx + rx * Math.cos(rad(angle1));
-      const y1 = cy - ry * Math.sin(rad(angle1));
-      const x2 = cx + rx * Math.cos(rad(angle2));
-      const y2 = cy - ry * Math.sin(rad(angle2));
-      return `M${cx},${cy} L${x1},${y1} A${rx},${ry} 0 0,0 ${x2},${y2} Z`;
-    };
-
-    const d1 = d(30, 150);
-    const d2 = d(60, 120);
     const scale = {
       x: maskArea.width / originalSize.width,
       y: maskArea.height / originalSize.height,

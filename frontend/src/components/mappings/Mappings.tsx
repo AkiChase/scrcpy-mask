@@ -24,6 +24,7 @@ import {
 } from "antd";
 import {
   useEffect,
+  useCallback,
   useMemo,
   useRef,
   useState,
@@ -588,28 +589,73 @@ function Displayer({
   const cursorPosRef = useRef<HTMLDivElement>(null);
   const displayerRef = useRef<HTMLDivElement>(null);
   const contextMenuPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [overlayViewportOrigin, setOverlayViewportOrigin] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
+
+  const getMappingContainerScroll = useCallback(() => {
+    const mappingContainer = document.getElementById("mappings-container");
+    return {
+      left: mappingContainer?.scrollLeft ?? 0,
+      top: mappingContainer?.scrollTop ?? 0,
+    };
+  }, []);
+
+  const updateOverlayViewportOrigin = useCallback(() => {
+    const displayerElement = displayerRef.current;
+    if (!displayerElement) return;
+
+    const rect = displayerElement.getBoundingClientRect();
+    setOverlayViewportOrigin({
+      left: rect.left + 1,
+      top: rect.top + 1,
+    });
+  }, []);
+
+  const updateMaskArea = useCallback(() => {
+    const displayerElement = displayerRef.current;
+    if (!displayerElement) return;
+
+    const rect = displayerElement.getBoundingClientRect();
+    const scroll = getMappingContainerScroll();
+    dispatch(
+      setMaskArea({
+        width: rect.width - 2,
+        height: rect.height - 2,
+        left: rect.left + scroll.left + 1,
+        top: rect.top + scroll.top + 1,
+      }),
+    );
+    updateOverlayViewportOrigin();
+  }, [dispatch, getMappingContainerScroll, updateOverlayViewportOrigin]);
 
   useEffect(() => {
     const displayerElement = displayerRef.current;
     if (!displayerElement) return;
 
-    const observer = new ResizeObserver(() => {
-      const rect = displayerElement.getBoundingClientRect();
-      dispatch(
-        setMaskArea({
-          width: rect.width - 2,
-          height: rect.height - 2,
-          left: rect.left + 1,
-          top: rect.top + 1,
-        }),
-      );
-    });
+    const observer = new ResizeObserver(updateMaskArea);
     observer.observe(displayerElement);
+    updateMaskArea();
 
     return () => {
       observer.disconnect();
     };
-  }, [displayerRef.current]);
+  }, [updateMaskArea]);
+
+  useEffect(() => {
+    const mappingContainer = document.getElementById("mappings-container");
+    mappingContainer?.addEventListener("scroll", updateOverlayViewportOrigin);
+    window.addEventListener("resize", updateMaskArea);
+
+    return () => {
+      mappingContainer?.removeEventListener(
+        "scroll",
+        updateOverlayViewportOrigin,
+      );
+      window.removeEventListener("resize", updateMaskArea);
+    };
+  }, [updateMaskArea, updateOverlayViewportOrigin]);
 
   const { ratioStyle, originalSize } = useMemo(() => {
     return {
@@ -733,7 +779,11 @@ function Displayer({
             className="w-full h-full absolute bg-transparent"
           />
         </Dropdown>
-        <MappingOverlayProvider showAllGuides={showAllMappingGuides}>
+        <MappingOverlayProvider
+          showAllGuides={showAllMappingGuides}
+          viewportOrigin={overlayViewportOrigin}
+          viewportSize={{ width: maskArea.width, height: maskArea.height }}
+        >
           {state.current.mappings.map((mapping, index) => {
             const props: any = {
               originalSize,
