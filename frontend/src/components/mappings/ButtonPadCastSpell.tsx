@@ -38,7 +38,7 @@ function BindText({ text }: { text: string }) {
     <Tooltip trigger="click" title={text}>
       <Typography.Text
         ellipsis={true}
-        className="text-2.5 font-bold text-center"
+        className="block max-w-full text-2.5 font-bold text-center leading-none"
       >
         {text}
       </Typography.Text>
@@ -61,14 +61,24 @@ function PadCastSpellContent({ padBind, bind }: PadCastSpellContentProps) {
         <Flex className="flex-1" align="center">
           <BindText text={padBindTexts.up} />
         </Flex>
-        <Flex className="w-full" justify="space-around" align="center">
-          <BindText text={padBindTexts.left} />
-          <Flex vertical align="center" justify="center">
+        <div className="grid w-full grid-cols-3 items-center">
+          <div className="min-w-0 w-full px-1 text-center">
+            <BindText text={padBindTexts.left} />
+          </div>
+          <Flex
+            vertical
+            align="center"
+            justify="center"
+            gap={2}
+            className="min-w-0 w-full px-1"
+          >
             <BindText text={bindText} />
-            <IconFont type="icon-lightning" className="text-2.5" />
+            <IconFont type="icon-lightning" className="text-2.5 leading-none" />
           </Flex>
-          <BindText text={padBindTexts.right} />
-        </Flex>
+          <div className="min-w-0 w-full px-1 text-center">
+            <BindText text={padBindTexts.right} />
+          </div>
+        </div>
         <Flex className="flex-1" align="center">
           <BindText text={padBindTexts.down} />
         </Flex>
