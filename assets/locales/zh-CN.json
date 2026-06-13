@@ -210,8 +210,6 @@
       "usingMappingConfig": "使用映射配置",
       "useDefaultMapping": "使用默认映射配置",
       "invalidPosition": "无效的位置（%{x}, %{y}），x 和 y 必须大于 %{margin}",
-      "enterFpsMode": "进入 FPS 模式",
-      "exitFpsMode": "退出 FPS 模式",
       "mappingActionExceedsMaxCount": "映射操作“%{name}”超过最大允许数量（当前：%{count}，最大：%{max}）",
       "mappingConfigValidationFailed": "映射配置校验失败:",
       "fileNameNotSafe": "文件名不安全",

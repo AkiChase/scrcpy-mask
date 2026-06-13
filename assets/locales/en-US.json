@@ -210,8 +210,6 @@
       "usingMappingConfig": "Using mapping config",
       "useDefaultMapping": "Using default mapping config",
       "invalidPosition": "Invalid position (%{x}, %{y}), x and y must be greater than %{margin}",
-      "enterFpsMode": "Enter FPS mode",
-      "exitFpsMode": "Exit FPS mode",
       "mappingActionExceedsMaxCount": "Mapping action '%{name}' exceeds the maximum allowed count (current: %{count}, max: %{max})",
       "mappingConfigValidationFailed": "Mapping config validation failed:",
       "fileNameNotSafe": "File name is not safe",

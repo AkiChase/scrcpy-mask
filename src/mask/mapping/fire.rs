@@ -19,7 +19,10 @@ use crate::{
             MappingState,
             binding::{ButtonBinding, ValidateMappingConfig},
             config::{ActiveMappingConfig, BindMappingConfig, BindMappingType},
-            cursor::{ActiveCursorFpsConfig, CursorPosition, CursorState, FPS_MARGIN},
+            cursor::{
+                ActiveCursorFpsConfig, CursorPosition, CursorState, FPS_MARGIN, FpsTouchMode,
+                release_fps_touches, restore_fps_touch,
+            },
             executor::{
                 MappingLifecycleStart, MappingLifecycleState, make_mapping_execution_context,
                 run_script_hook,
@@ -41,6 +44,10 @@ pub fn fire_init(mut commands: Commands) {
     commands.insert_resource(FireLifecycleState::default());
 }
 
+fn default_fps_max_offset() -> f32 {
+    -1.0
+}
+
 #[derive(Debug, Clone)]
 pub struct BindMappingFps {
     pub id: String,
@@ -49,6 +56,9 @@ pub struct BindMappingFps {
     pub position: Position,
     pub sensitivity_x: f32,
     pub sensitivity_y: f32,
+    pub max_offset_x: f32,
+    pub max_offset_y: f32,
+    pub touch_mode: FpsTouchMode,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
 }
@@ -62,6 +72,9 @@ impl From<MappingFps> for BindMappingFps {
             position: value.position,
             sensitivity_x: value.sensitivity_x,
             sensitivity_y: value.sensitivity_y,
+            max_offset_x: value.max_offset_x,
+            max_offset_y: value.max_offset_y,
+            touch_mode: value.touch_mode,
             bind: value.bind.clone(),
             input_binding: PulseBinding::just_pressed(value.bind).0,
         }
@@ -79,6 +92,18 @@ pub struct MappingFps {
     pub sensitivity_x: f32,
     #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub sensitivity_y: f32,
+    #[serde(
+        default = "default_fps_max_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
+    pub max_offset_x: f32,
+    #[serde(
+        default = "default_fps_max_offset",
+        serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp"
+    )]
+    pub max_offset_y: f32,
+    #[serde(default)]
+    pub touch_mode: FpsTouchMode,
     pub bind: ButtonBinding,
 }
 
@@ -91,10 +116,13 @@ pub fn enter_fps_mode(
 ) {
     let original_pos = mapping.position.into();
     fps_config.pointer_id = mapping.pointer_id;
+    fps_config.reset_touch_state();
     fps_config.original_pos = original_pos;
     fps_config.original_size = original_size;
     fps_config.ignore_fps_motion = false;
     fps_config.sensitivity = (mapping.sensitivity_x, mapping.sensitivity_y).into();
+    fps_config.max_offset = Vec2::new(mapping.max_offset_x, mapping.max_offset_y);
+    fps_config.touch_mode = mapping.touch_mode;
 
     ControlMsgHelper::send_touch(
         cs_tx,
@@ -104,7 +132,6 @@ pub fn enter_fps_mode(
         original_pos,
     );
     next_state.set(CursorState::Fps);
-    log::info!("[Cursor] {}", t!("mask.mapping.enterFpsMode"));
 }
 
 pub fn exit_fps_mode(
@@ -117,17 +144,10 @@ pub fn exit_fps_mode(
 ) -> Vec<String> {
     let released_fire_actions = release_active_fire(cs_tx, active_fire_map, mask_size);
     if released_fire_actions.is_empty() {
-        ControlMsgHelper::send_touch(
-            cs_tx,
-            MotionEventAction::Up,
-            fps_config.pointer_id,
-            mask_size,
-            cursor_pos,
-        );
+        release_fps_touches(cs_tx, fps_config, mask_size, cursor_pos);
     }
     fps_config.ignore_fps_motion = false;
     next_state.set(CursorState::Normal);
-    log::info!("[Cursor] {}", t!("mask.mapping.exitFpsMode"));
     released_fire_actions
 }
 
@@ -141,6 +161,16 @@ impl ValidateMappingConfig for MappingFps {
                 margin => FPS_MARGIN
             )
             .to_string());
+        }
+        if self.max_offset_x < -1.0 || self.max_offset_y < -1.0 {
+            return Err("FPS max_offset_x/max_offset_y must be -1 or greater".to_string());
+        }
+        if let Some(another_pointer_id) = self.touch_mode.another_pointer_id()
+            && another_pointer_id == self.pointer_id
+        {
+            return Err(
+                "FPS touch_mode another_pointer_id must differ from pointer_id".to_string(),
+            );
         }
         Ok(())
     }
@@ -404,13 +434,7 @@ fn apply_fire_begin(
     cursor_pos: Vec2,
 ) {
     fps_config.ignore_fps_motion = true;
-    ControlMsgHelper::send_touch(
-        &cs_tx.0,
-        MotionEventAction::Up,
-        fps_config.pointer_id,
-        mask_size,
-        cursor_pos,
-    );
+    release_fps_touches(&cs_tx.0, fps_config, mask_size, cursor_pos);
 
     let original_pos: Vec2 = mapping.position.into();
     let random_pos = random_offset_vec2(
@@ -453,13 +477,7 @@ fn apply_fire_end(
             mask_size,
             fire_item.current_pos,
         );
-        ControlMsgHelper::send_touch(
-            &cs_tx.0,
-            MotionEventAction::Down,
-            fps_config.pointer_id,
-            fps_config.original_size,
-            fps_config.original_pos,
-        );
+        restore_fps_touch(&cs_tx.0, fps_config);
         cursor_pos.0 = fps_config.original_pos / fps_config.original_size * mask_size;
         fps_config.ignore_fps_motion = false;
         true
@@ -574,29 +592,15 @@ pub fn handle_fire(
                                                 release.mask_size,
                                                 fire_item.current_pos,
                                             );
-                                            let (
-                                                fps_pointer_id,
-                                                fps_original_size,
-                                                fps_original_pos,
-                                            ) = {
+                                            let (fps_original_size, fps_original_pos) = {
                                                 let mut fps_config = main_ctx
                                                     .world
                                                     .resource_mut::<ActiveCursorFpsConfig>(
                                                 );
                                                 fps_config.ignore_fps_motion = false;
-                                                (
-                                                    fps_config.pointer_id,
-                                                    fps_config.original_size,
-                                                    fps_config.original_pos,
-                                                )
+                                                restore_fps_touch(&cs_tx, &mut fps_config);
+                                                (fps_config.original_size, fps_config.original_pos)
                                             };
-                                            ControlMsgHelper::send_touch(
-                                                &cs_tx,
-                                                MotionEventAction::Down,
-                                                fps_pointer_id,
-                                                fps_original_size,
-                                                fps_original_pos,
-                                            );
                                             main_ctx.world.resource_mut::<CursorPosition>().0 =
                                                 fps_original_pos / fps_original_size
                                                     * release.mask_size;

@@ -264,9 +264,21 @@
       "setting": {
         "sensitivity": "Sensitivity",
         "sensitivityHint": "View rotation speed relative to mouse movement. At screen edges, the finger auto-recenters to continue tracking.",
+        "maxOffset": "Max Offset",
+        "maxOffsetHint": "Maximum distance from the FPS start position to the local boundary. Set an axis to -1 for no local limit.",
+        "touchMode": "Touch Mode",
+        "touchModeHint": "When the touch reaches the local boundary, it returns to the start position and continues dragging. Single touch: lift the current pointer, then immediately press the same pointer at the start. Immediate handoff: immediately press the alternate pointer at the start, lift the old pointer, then move the alternate pointer. Delayed handoff: immediately press the alternate pointer, wait for the configured delay, lift the old pointer, then move the alternate pointer. Overlap handoff: immediately press the alternate pointer; on the next mouse move, both pointers participate: the old pointer moves and lifts, and the alternate pointer continues moving.",
+        "touchModeNone": "Single touch",
+        "touchModeClean": "Dual touch: immediate handoff",
+        "touchModeDelayed": "Dual touch: delayed handoff",
+        "touchModeOverlap": "Dual touch: overlap handoff",
+        "anotherPointerId": "Alternate Pointer ID",
+        "anotherPointerIdHint": "The other pointer_id alternated with the primary pointer. It must differ from the primary pointer.",
+        "touchModeInterval": "Release delay",
+        "touchModeIntervalHint": "Milliseconds to wait before lifting the old pointer in delayed handoff mode.",
         "title": "Mapping Configuration - FPS"
       },
-      "name": "Fps"
+      "name": "FPS"
     },
     "observation": {
       "setting": {

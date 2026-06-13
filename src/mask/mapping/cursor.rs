@@ -1,4 +1,7 @@
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    time::{Duration, Instant},
+};
 
 use bevy::{
     input::mouse::AccumulatedMouseMotion,
@@ -12,9 +15,11 @@ use crate::{
         mask_command::{MaskSize, TitlebarState},
         ui::basic::{MaskContentEntity, TITLEBAR_HEIGHT},
     },
-    scrcpy::constant::MotionEventAction,
+    scrcpy::{constant::MotionEventAction, control_msg::ScrcpyControlMsg},
     utils::ChannelSenderCS,
 };
+use serde::{Deserialize, Serialize};
+use tokio::sync::broadcast;
 
 #[derive(States, Clone, Copy, Default, Eq, PartialEq, Hash, Debug)]
 pub enum CursorState {
@@ -120,13 +125,118 @@ impl Plugin for CursorPlugins {
     }
 }
 
-#[derive(Resource, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum FpsTouchMode {
+    #[default]
+    None,
+    Clean {
+        another_pointer_id: u64,
+    },
+    Delayed {
+        interval: u64,
+        another_pointer_id: u64,
+    },
+    Overlap {
+        another_pointer_id: u64,
+    },
+}
+
+impl FpsTouchMode {
+    pub fn another_pointer_id(&self) -> Option<u64> {
+        match self {
+            FpsTouchMode::None => None,
+            FpsTouchMode::Clean { another_pointer_id }
+            | FpsTouchMode::Delayed {
+                another_pointer_id, ..
+            }
+            | FpsTouchMode::Overlap { another_pointer_id } => Some(*another_pointer_id),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct PendingFpsTouch {
+    pointer_id: u64,
+    pos: Vec2,
+    release_at: Option<Instant>,
+    overlap: bool,
+    deferred_delta: Vec2,
+}
+
+#[derive(Resource)]
 pub struct ActiveCursorFpsConfig {
     pub ignore_fps_motion: bool,
     pub sensitivity: Vec2,
     pub pointer_id: u64,
+    pub active_pointer_id: u64,
     pub original_pos: Vec2,
     pub original_size: Vec2,
+    pub max_offset: Vec2,
+    pub touch_mode: FpsTouchMode,
+    pending_touch: Option<PendingFpsTouch>,
+}
+
+impl Default for ActiveCursorFpsConfig {
+    fn default() -> Self {
+        Self {
+            ignore_fps_motion: false,
+            sensitivity: Vec2::ZERO,
+            pointer_id: 0,
+            active_pointer_id: 0,
+            original_pos: Vec2::ZERO,
+            original_size: Vec2::ZERO,
+            max_offset: Vec2::splat(-1.0),
+            touch_mode: FpsTouchMode::None,
+            pending_touch: None,
+        }
+    }
+}
+
+impl ActiveCursorFpsConfig {
+    pub fn reset_touch_state(&mut self) {
+        self.active_pointer_id = self.pointer_id;
+        self.pending_touch = None;
+    }
+}
+
+pub fn release_fps_touches(
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    fps_config: &mut ActiveCursorFpsConfig,
+    mask_size: Vec2,
+    active_pos: Vec2,
+) {
+    ControlMsgHelper::send_touch(
+        cs_tx,
+        MotionEventAction::Up,
+        fps_config.active_pointer_id,
+        mask_size,
+        active_pos,
+    );
+    if let Some(pending) = fps_config.pending_touch.take() {
+        ControlMsgHelper::send_touch(
+            cs_tx,
+            MotionEventAction::Up,
+            pending.pointer_id,
+            mask_size,
+            pending.pos,
+        );
+    }
+    fps_config.reset_touch_state();
+}
+
+pub fn restore_fps_touch(
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    fps_config: &mut ActiveCursorFpsConfig,
+) {
+    fps_config.reset_touch_state();
+    ControlMsgHelper::send_touch(
+        cs_tx,
+        MotionEventAction::Down,
+        fps_config.active_pointer_id,
+        fps_config.original_size,
+        fps_config.original_pos,
+    );
 }
 
 fn handle_cursor_normal(
@@ -357,115 +467,345 @@ fn run_if_handle_cursor_fps(
     !fps_config.ignore_fps_motion && window.focused
 }
 
+fn physical_bounds(mask_size: Vec2) -> (Vec2, Vec2) {
+    let max_x = (mask_size.x - FPS_MARGIN).max(FPS_MARGIN);
+    let max_y = (mask_size.y - FPS_MARGIN).max(FPS_MARGIN);
+    (Vec2::splat(FPS_MARGIN), Vec2::new(max_x, max_y))
+}
+
+fn clamp_to_bounds(pos: Vec2, min: Vec2, max: Vec2) -> Vec2 {
+    Vec2::new(pos.x.clamp(min.x, max.x), pos.y.clamp(min.y, max.y))
+}
+
+fn fps_center_pos(fps_config: &ActiveCursorFpsConfig, mask_size: Vec2) -> Vec2 {
+    fps_config.original_pos / fps_config.original_size * mask_size
+}
+
+fn fps_effective_bounds(fps_config: &ActiveCursorFpsConfig, mask_size: Vec2) -> (Vec2, Vec2) {
+    let (physical_min, physical_max) = physical_bounds(mask_size);
+    let center = fps_center_pos(fps_config, mask_size);
+    let scale = mask_size / fps_config.original_size;
+    let mut min = physical_min;
+    let mut max = physical_max;
+
+    if fps_config.max_offset.x >= 0.0 {
+        let offset = fps_config.max_offset.x * scale.x;
+        min.x = (center.x - offset).max(physical_min.x);
+        max.x = (center.x + offset).min(physical_max.x);
+    }
+    if fps_config.max_offset.y >= 0.0 {
+        let offset = fps_config.max_offset.y * scale.y;
+        min.y = (center.y - offset).max(physical_min.y);
+        max.y = (center.y + offset).min(physical_max.y);
+    }
+
+    (min, max)
+}
+
+fn is_out_of_bounds(pos: Vec2, min: Vec2, max: Vec2) -> bool {
+    pos.x <= min.x || pos.x >= max.x || pos.y <= min.y || pos.y >= max.y
+}
+
+fn send_fps_touch(
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    action: MotionEventAction,
+    pointer_id: u64,
+    mask_size: Vec2,
+    pos: Vec2,
+) {
+    ControlMsgHelper::send_touch(cs_tx, action, pointer_id, mask_size, pos);
+}
+
+fn cleanup_pending_fps_touch(
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    fps_config: &mut ActiveCursorFpsConfig,
+    mask_size: Vec2,
+) -> Option<Vec2> {
+    let should_release = fps_config
+        .pending_touch
+        .is_some_and(|pending| pending.release_at.is_some_and(|at| Instant::now() >= at));
+    if should_release {
+        if let Some(pending) = fps_config.pending_touch.take() {
+            send_fps_touch(
+                cs_tx,
+                MotionEventAction::Up,
+                pending.pointer_id,
+                mask_size,
+                pending.pos,
+            );
+            return Some(pending.deferred_delta);
+        }
+    }
+    None
+}
+
+fn consume_overlap_fps_touch(
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    fps_config: &mut ActiveCursorFpsConfig,
+    mask_size: Vec2,
+    delta: Vec2,
+) -> Option<Vec2> {
+    let Some(pending) = fps_config.pending_touch else {
+        return None;
+    };
+    if !pending.overlap {
+        return None;
+    }
+
+    let (physical_min, physical_max) = physical_bounds(mask_size);
+    let pos = clamp_to_bounds(pending.pos + delta, physical_min, physical_max);
+    send_fps_touch(
+        cs_tx,
+        MotionEventAction::Move,
+        pending.pointer_id,
+        mask_size,
+        pos,
+    );
+    send_fps_touch(
+        cs_tx,
+        MotionEventAction::Up,
+        pending.pointer_id,
+        mask_size,
+        pos,
+    );
+    fps_config.pending_touch = None;
+    Some(pending.deferred_delta + delta)
+}
+
+fn alternate_fps_pointer_id(fps_config: &ActiveCursorFpsConfig) -> u64 {
+    let Some(another_pointer_id) = fps_config.touch_mode.another_pointer_id() else {
+        return fps_config.pointer_id;
+    };
+    if fps_config.active_pointer_id == fps_config.pointer_id {
+        another_pointer_id
+    } else {
+        fps_config.pointer_id
+    }
+}
+
+fn send_fps_down_and_optional_move(
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    pointer_id: u64,
+    mask_size: Vec2,
+    center_pos: Vec2,
+    new_pos: Vec2,
+) {
+    send_fps_touch(
+        cs_tx,
+        MotionEventAction::Down,
+        pointer_id,
+        mask_size,
+        center_pos,
+    );
+    if new_pos != center_pos {
+        send_fps_touch(
+            cs_tx,
+            MotionEventAction::Move,
+            pointer_id,
+            mask_size,
+            new_pos,
+        );
+    }
+}
+
+fn recenter_fps_touch(
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    fps_config: &mut ActiveCursorFpsConfig,
+    mask_size: Vec2,
+    old_pos: Vec2,
+    physical_overflow: Vec2,
+) -> Vec2 {
+    let center_pos = fps_center_pos(fps_config, mask_size);
+    let (physical_min, physical_max) = physical_bounds(mask_size);
+    let new_pos = clamp_to_bounds(center_pos + physical_overflow, physical_min, physical_max);
+
+    if let Some(pending) = fps_config.pending_touch.take() {
+        send_fps_touch(
+            cs_tx,
+            MotionEventAction::Up,
+            pending.pointer_id,
+            mask_size,
+            pending.pos,
+        );
+    }
+
+    match fps_config.touch_mode {
+        FpsTouchMode::None => {
+            send_fps_touch(
+                cs_tx,
+                MotionEventAction::Up,
+                fps_config.active_pointer_id,
+                mask_size,
+                old_pos,
+            );
+            send_fps_down_and_optional_move(
+                cs_tx,
+                fps_config.active_pointer_id,
+                mask_size,
+                center_pos,
+                new_pos,
+            );
+        }
+        FpsTouchMode::Clean { .. } => {
+            let old_pointer_id = fps_config.active_pointer_id;
+            let new_pointer_id = alternate_fps_pointer_id(fps_config);
+            send_fps_touch(
+                cs_tx,
+                MotionEventAction::Down,
+                new_pointer_id,
+                mask_size,
+                center_pos,
+            );
+            send_fps_touch(
+                cs_tx,
+                MotionEventAction::Up,
+                old_pointer_id,
+                mask_size,
+                old_pos,
+            );
+            if new_pos != center_pos {
+                send_fps_touch(
+                    cs_tx,
+                    MotionEventAction::Move,
+                    new_pointer_id,
+                    mask_size,
+                    new_pos,
+                );
+            }
+            fps_config.active_pointer_id = new_pointer_id;
+        }
+        FpsTouchMode::Delayed { interval, .. } => {
+            let old_pointer_id = fps_config.active_pointer_id;
+            let new_pointer_id = alternate_fps_pointer_id(fps_config);
+            send_fps_touch(
+                cs_tx,
+                MotionEventAction::Down,
+                new_pointer_id,
+                mask_size,
+                center_pos,
+            );
+            fps_config.pending_touch = Some(PendingFpsTouch {
+                pointer_id: old_pointer_id,
+                pos: old_pos,
+                release_at: Some(Instant::now() + Duration::from_millis(interval)),
+                overlap: false,
+                deferred_delta: physical_overflow,
+            });
+            fps_config.active_pointer_id = new_pointer_id;
+            return center_pos;
+        }
+        FpsTouchMode::Overlap { .. } => {
+            let old_pointer_id = fps_config.active_pointer_id;
+            let new_pointer_id = alternate_fps_pointer_id(fps_config);
+            send_fps_touch(
+                cs_tx,
+                MotionEventAction::Down,
+                new_pointer_id,
+                mask_size,
+                center_pos,
+            );
+            fps_config.pending_touch = Some(PendingFpsTouch {
+                pointer_id: old_pointer_id,
+                pos: old_pos,
+                release_at: None,
+                overlap: true,
+                deferred_delta: physical_overflow,
+            });
+            fps_config.active_pointer_id = new_pointer_id;
+            return center_pos;
+        }
+    }
+
+    new_pos
+}
+
+fn apply_fps_delta(
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    fps_config: &mut ActiveCursorFpsConfig,
+    mask_size: Vec2,
+    cursor_pos: Vec2,
+    delta: Vec2,
+) -> Vec2 {
+    if delta == Vec2::ZERO {
+        return cursor_pos;
+    }
+
+    let raw_pos = cursor_pos + delta;
+    let (bounds_min, bounds_max) = fps_effective_bounds(fps_config, mask_size);
+    let should_recenter = is_out_of_bounds(raw_pos, bounds_min, bounds_max);
+    let (physical_min, physical_max) = physical_bounds(mask_size);
+    let new_pos = clamp_to_bounds(raw_pos, physical_min, physical_max);
+    let physical_overflow = raw_pos - new_pos;
+    send_fps_touch(
+        cs_tx,
+        MotionEventAction::Move,
+        fps_config.active_pointer_id,
+        mask_size,
+        new_pos,
+    );
+
+    if should_recenter {
+        recenter_fps_touch(cs_tx, fps_config, mask_size, new_pos, physical_overflow)
+    } else {
+        new_pos
+    }
+}
+
 fn handle_cursor_fps(
     accumulated_motion: Res<AccumulatedMouseMotion>,
     mut cursor_pos: ResMut<CursorPosition>,
-    fps_config: Res<ActiveCursorFpsConfig>,
+    mut fps_config: ResMut<ActiveCursorFpsConfig>,
     mut ignore_first_motion: ResMut<IgnoreFirstMotion>,
     mask_size: Res<MaskSize>,
     cs_tx_res: Res<ChannelSenderCS>,
 ) {
-    if accumulated_motion.delta.x == 0. && accumulated_motion.delta.y == 0. {
-        return;
-    }
-
     if ignore_first_motion.0 {
         ignore_first_motion.0 = false;
         return;
     }
 
-    let mut new_pos = cursor_pos.0 + accumulated_motion.delta * fps_config.sensitivity;
+    let delta = accumulated_motion.delta * fps_config.sensitivity;
 
-    let is_out_of_bounds = |pos: Vec2| -> bool {
-        pos.x < FPS_MARGIN
-            || pos.x > mask_size.0.x - FPS_MARGIN
-            || pos.y < FPS_MARGIN
-            || pos.y > mask_size.0.y - FPS_MARGIN
-    };
-
-    if is_out_of_bounds(new_pos) {
-        let center_pos = fps_config.original_pos / fps_config.original_size * mask_size.0;
-        let mut delta = new_pos - cursor_pos.0;
-        // move to the edge and touch up
-        let edge_pos = Vec2::new(
-            new_pos.x.clamp(FPS_MARGIN, mask_size.0.x - FPS_MARGIN),
-            new_pos.y.clamp(FPS_MARGIN, mask_size.0.y - FPS_MARGIN),
-        );
-        delta -= edge_pos - cursor_pos.0;
-        ControlMsgHelper::send_touch(
+    if let Some(deferred_delta) =
+        cleanup_pending_fps_touch(&cs_tx_res.0, &mut fps_config, mask_size.0)
+    {
+        cursor_pos.0 = apply_fps_delta(
             &cs_tx_res.0,
-            MotionEventAction::Move,
-            fps_config.pointer_id,
+            &mut fps_config,
             mask_size.0,
-            edge_pos,
+            cursor_pos.0,
+            deferred_delta + delta,
         );
-        ControlMsgHelper::send_touch(
-            &cs_tx_res.0,
-            MotionEventAction::Up,
-            fps_config.pointer_id,
-            mask_size.0,
-            edge_pos,
-        );
-        // touch down center
-        ControlMsgHelper::send_touch(
-            &cs_tx_res.0,
-            MotionEventAction::Down,
-            fps_config.pointer_id,
-            mask_size.0,
-            center_pos,
-        );
-        new_pos = center_pos + delta;
-        if is_out_of_bounds(new_pos) {
-            // still out of bounds
-            // move to the edge and touch up
-            let edge_pos = Vec2::new(
-                new_pos.x.clamp(FPS_MARGIN, mask_size.0.x - FPS_MARGIN),
-                new_pos.y.clamp(FPS_MARGIN, mask_size.0.y - FPS_MARGIN),
-            );
-            ControlMsgHelper::send_touch(
-                &cs_tx_res.0,
-                MotionEventAction::Move,
-                fps_config.pointer_id,
-                mask_size.0,
-                edge_pos,
-            );
-            ControlMsgHelper::send_touch(
-                &cs_tx_res.0,
-                MotionEventAction::Up,
-                fps_config.pointer_id,
-                mask_size.0,
-                edge_pos,
-            );
-            // touch down center
-            ControlMsgHelper::send_touch(
-                &cs_tx_res.0,
-                MotionEventAction::Down,
-                fps_config.pointer_id,
-                mask_size.0,
-                center_pos,
-            );
-            new_pos = edge_pos;
-        } else {
-            // move to finnal pos
-            ControlMsgHelper::send_touch(
-                &cs_tx_res.0,
-                MotionEventAction::Move,
-                fps_config.pointer_id,
-                mask_size.0,
-                new_pos,
-            );
-        }
-    } else {
-        // move to new_pos
-        ControlMsgHelper::send_touch(
-            &cs_tx_res.0,
-            MotionEventAction::Move,
-            fps_config.pointer_id,
-            mask_size.0,
-            new_pos,
-        );
+        return;
     }
-    cursor_pos.0 = new_pos;
+
+    if let Some(pending) = fps_config.pending_touch.as_mut()
+        && !pending.overlap
+    {
+        pending.deferred_delta += delta;
+        return;
+    }
+
+    if let Some(overlap_delta) =
+        consume_overlap_fps_touch(&cs_tx_res.0, &mut fps_config, mask_size.0, delta)
+    {
+        cursor_pos.0 = apply_fps_delta(
+            &cs_tx_res.0,
+            &mut fps_config,
+            mask_size.0,
+            cursor_pos.0,
+            overlap_delta,
+        );
+        return;
+    }
+
+    cursor_pos.0 = apply_fps_delta(
+        &cs_tx_res.0,
+        &mut fps_config,
+        mask_size.0,
+        cursor_pos.0,
+        delta,
+    );
 }
 
 fn handle_normal_left_click(

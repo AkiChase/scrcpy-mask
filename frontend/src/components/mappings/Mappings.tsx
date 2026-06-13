@@ -512,14 +512,38 @@ const menuItems = buttonTypes.map((key) => [
 const firstAutoPointerId = 1;
 
 function getNextAvailablePointerId(mappings: MappingType[]): number {
-  const usedPointerIds = new Set<number>();
+  return getNextAvailablePointerIdWithReserved(mappings, []);
+}
+
+function mappingPointerIds(mapping: MappingType): number[] {
+  const pointerIds: number[] = [];
+  if (
+    "pointer_id" in mapping &&
+    Number.isInteger(mapping.pointer_id) &&
+    mapping.pointer_id >= firstAutoPointerId
+  ) {
+    pointerIds.push(mapping.pointer_id);
+  }
+  if (mapping.type !== "Fps" || mapping.touch_mode.type === "none") {
+    return pointerIds;
+  }
+  if (
+    Number.isInteger(mapping.touch_mode.another_pointer_id) &&
+    mapping.touch_mode.another_pointer_id >= firstAutoPointerId
+  ) {
+    pointerIds.push(mapping.touch_mode.another_pointer_id);
+  }
+  return pointerIds;
+}
+
+function getNextAvailablePointerIdWithReserved(
+  mappings: MappingType[],
+  reserved: number[],
+): number {
+  const usedPointerIds = new Set<number>(reserved);
   for (const mapping of mappings) {
-    if (
-      "pointer_id" in mapping &&
-      Number.isInteger(mapping.pointer_id) &&
-      mapping.pointer_id >= firstAutoPointerId
-    ) {
-      usedPointerIds.add(mapping.pointer_id);
+    for (const pointerId of mappingPointerIds(mapping)) {
+      usedPointerIds.add(pointerId);
     }
   }
 
@@ -537,6 +561,13 @@ function assignNextAvailablePointerId(
   if ("pointer_id" in mapping) {
     mapping.pointer_id = getNextAvailablePointerId(mappings);
   }
+  if (mapping.type !== "Fps" || mapping.touch_mode.type === "none") {
+    return;
+  }
+  mapping.touch_mode.another_pointer_id = getNextAvailablePointerIdWithReserved(
+    mappings,
+    [mapping.pointer_id],
+  );
 }
 
 function Displayer({
@@ -619,10 +650,12 @@ function Displayer({
       if (prev === null) return null;
       const newState = { ...prev };
       newState.edited = true;
-      newState.current.mappings.push({
+      const mapping = {
         ...deepClone(newState.current.mappings[index]),
         id: newMappingId(),
-      });
+      };
+      assignNextAvailablePointerId(mapping, newState.current.mappings);
+      newState.current.mappings.push(mapping);
 
       return newState;
     });
@@ -705,6 +738,11 @@ function Displayer({
               updateMapping(index, updater),
             onConfigDelete: () => deleteMappingButton(index),
             onConfigCopy: () => copyMappingButton(index),
+            getAvailablePointerId: (reserved: number[] = []) =>
+              getNextAvailablePointerIdWithReserved(
+                state.current.mappings,
+                reserved,
+              ),
           };
 
           if (mapping.type in mappingButtonMap) {

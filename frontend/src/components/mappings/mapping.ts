@@ -386,8 +386,17 @@ export interface FpsConfig {
   position: Position;
   sensitivity_x: number;
   sensitivity_y: number;
+  max_offset_x: number;
+  max_offset_y: number;
+  touch_mode: FpsTouchMode;
   type: "Fps";
 }
+
+export type FpsTouchMode =
+  | { type: "none" }
+  | { type: "clean"; another_pointer_id: number }
+  | { type: "delayed"; interval: number; another_pointer_id: number }
+  | { type: "overlap"; another_pointer_id: number };
 
 export function newFps(position: Position): FpsConfig {
   return {
@@ -398,6 +407,9 @@ export function newFps(position: Position): FpsConfig {
     position,
     sensitivity_x: 0.8,
     sensitivity_y: 0.8,
+    max_offset_x: -1,
+    max_offset_y: -1,
+    touch_mode: { type: "none" },
     type: "Fps",
   };
 }
@@ -489,6 +501,29 @@ function withDefaultScriptHooks(
     before_script: value?.before_script ?? "",
     after_script: value?.after_script ?? "",
   };
+}
+
+function normalizeFpsTouchMode(value?: Partial<FpsTouchMode>): FpsTouchMode {
+  switch (value?.type) {
+    case "clean":
+      return {
+        type: "clean",
+        another_pointer_id: value.another_pointer_id ?? 1,
+      };
+    case "delayed":
+      return {
+        type: "delayed",
+        interval: value.interval ?? 16,
+        another_pointer_id: value.another_pointer_id ?? 1,
+      };
+    case "overlap":
+      return {
+        type: "overlap",
+        another_pointer_id: value.another_pointer_id ?? 1,
+      };
+    default:
+      return { type: "none" };
+  }
 }
 
 export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
@@ -587,6 +622,9 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             return {
               ...normalized,
               id,
+              max_offset_x: normalized.max_offset_x ?? -1,
+              max_offset_y: normalized.max_offset_y ?? -1,
+              touch_mode: normalizeFpsTouchMode(normalized.touch_mode),
             };
           }
         case "RawInput":
