@@ -218,6 +218,8 @@
         },
         "castNoDirection": "无方向施法",
         "castNoDirectionHint": "无视方向设置，仅点击施法坐标。类似点击但支持取消施法。",
+        "enableInitialSwipeRandomization": "首次滑动随机化",
+        "enableInitialSwipeRandomizationHint": "开启后首次拖动使用随机弧形轨迹；关闭后使用直线轨迹。",
         "editLabel": "高级编辑",
         "edit": "编辑",
         "editHelp": "使用鼠标左键拖动，鼠标右键进行编辑",

@@ -261,6 +261,7 @@ export interface MouseCastSpellConfig {
   cast_radius: number;
   center: Position;
   drag_radius: number;
+  enable_initial_swipe_randomization: boolean;
   horizontal_scale_factor: number;
   initial_duration: number;
   note: string;
@@ -285,6 +286,7 @@ export function newMouseCastSpell(
     cast_radius: 200,
     center,
     drag_radius: 150,
+    enable_initial_swipe_randomization: false,
     horizontal_scale_factor: 7,
     note: "",
     pointer_id: 3,
@@ -606,6 +608,8 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
           return {
             ...mapping,
             id,
+            enable_initial_swipe_randomization:
+              mapping.enable_initial_swipe_randomization ?? false,
             initial_duration: mapping.initial_duration ?? 0,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),

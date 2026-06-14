@@ -627,6 +627,14 @@ function Setting({
             }
           />
         </ItemBox>
+        <ItemBox label={t("mappings.mouseCastSpell.setting.enableInitialSwipeRandomization")} tooltip={t("mappings.mouseCastSpell.setting.enableInitialSwipeRandomizationHint")}>
+          <Switch
+            checked={config.enable_initial_swipe_randomization}
+            onChange={(enable_initial_swipe_randomization) =>
+              onConfigChange({ ...config, enable_initial_swipe_randomization })
+            }
+          />
+        </ItemBox>
         <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.common.randomOffsetXHint")}>
           <InputNumber
             className="w-full"

@@ -218,6 +218,8 @@
         },
         "castNoDirection": "Non-directional cast",
         "castNoDirectionHint": "Ignores direction settings and simply taps at the cast position. Similar to SingleTap but cancelable.",
+        "enableInitialSwipeRandomization": "Initial slide randomization",
+        "enableInitialSwipeRandomizationHint": "When enabled, the initial drag uses a randomized arc path; when disabled, it uses a straight path.",
         "editLabel": "Advanced editing",
         "edit": "Edit",
         "editHelp": "Drag with the left mouse button and edit with the right mouse button",

@@ -239,6 +239,7 @@ pub struct BindMappingMouseCastSpell {
     pub release_mode: MouseCastReleaseMode,
     pub cast_no_direction: bool,
     pub initial_duration: u64,
+    pub enable_initial_swipe_randomization: bool,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
     pub random_offset_x: f32,
@@ -261,6 +262,7 @@ impl From<MappingMouseCastSpell> for BindMappingMouseCastSpell {
             release_mode: value.release_mode,
             cast_no_direction: value.cast_no_direction,
             initial_duration: value.initial_duration,
+            enable_initial_swipe_randomization: value.enable_initial_swipe_randomization,
             bind: value.bind.clone(),
             input_binding: ContinuousBinding::hold(value.bind).0,
             random_offset_x: value.random_offset_x,
@@ -290,6 +292,8 @@ pub struct MappingMouseCastSpell {
     pub cast_no_direction: bool,
     #[serde(default)]
     pub initial_duration: u64,
+    #[serde(default)]
+    pub enable_initial_swipe_randomization: bool,
     pub bind: ButtonBinding,
     #[serde(
         default = "default_random_offset",
@@ -555,6 +559,11 @@ fn start_mouse_cast_after_before(
         current_pos
     };
 
+    let initial_swipe_strategy = if mapping.enable_initial_swipe_randomization {
+        SingleSwipeStrategy::ArcWithEaseOut
+    } else {
+        SingleSwipeStrategy::Linear
+    };
     let initial_swipe_done = spawn_initial_swipe(
         runtime,
         cs_tx,
@@ -564,7 +573,7 @@ fn start_mouse_cast_after_before(
         target_pos,
         mapping.initial_duration,
         DEFAULT_SWIPE_DURATION,
-        SingleSwipeStrategy::ArcWithEaseOut,
+        initial_swipe_strategy,
     );
 
     if matches!(release_mode, MouseCastReleaseMode::OnPress) {
