@@ -27,12 +27,35 @@ cat > "$APP_BIN_DIR/scrcpy-mask" <<'EOF'
 #!/bin/bash
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
-CMD="cd $APP_DIR && ./scrcpy-mask-bin; echo 'Done. Press any key to exit...'; read"
+printf -v CMD "cd %q && ./scrcpy-mask-bin" "$APP_DIR"
 
-osascript -e "tell application \"Terminal\" to do script \"$CMD\""
-osascript -e "tell application \"Terminal\" to activate"
+TERMINAL_WAS_RUNNING=0
+if pgrep -qx Terminal >/dev/null 2>&1; then
+    TERMINAL_WAS_RUNNING=1
+fi
+
+osascript \
+    -e 'on run argv' \
+    -e 'set shellCommand to item 1 of argv' \
+    -e 'set terminalRunning to (item 2 of argv is "1")' \
+    -e 'tell application "Terminal"' \
+    -e 'if terminalRunning then' \
+    -e 'do script shellCommand' \
+    -e 'else' \
+    -e 'activate' \
+    -e 'if (count of windows) is 0 then' \
+    -e 'do script shellCommand' \
+    -e 'else' \
+    -e 'do script shellCommand in front window' \
+    -e 'end if' \
+    -e 'end if' \
+    -e 'activate' \
+    -e 'end tell' \
+    -e 'end run' \
+    "$CMD" "$TERMINAL_WAS_RUNNING"
 EOF
 chmod +x "$APP_BIN_DIR/scrcpy-mask"
+rm -rf "$APP_BIN_DIR/assets"
 cp -R "$ASSETS_DIR" "$APP_BIN_DIR/"
 
 rm -f "$DMG_PATH"
