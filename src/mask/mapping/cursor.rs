@@ -65,8 +65,13 @@ impl NormalCursorCapture {
 #[derive(Component)]
 struct VirtualCursor;
 
-const VIRTUAL_CURSOR_SIZE: f32 = 24.0;
+const VIRTUAL_CURSOR_SIZE: f32 = 48.0;
 const VIRTUAL_CURSOR_CENTER: f32 = VIRTUAL_CURSOR_SIZE / 2.0;
+const VIRTUAL_CURSOR_OUTER_BORDER: f32 = 4.0;
+const VIRTUAL_CURSOR_INNER_INSET: f32 = 6.0;
+const VIRTUAL_CURSOR_INNER_SIZE: f32 = VIRTUAL_CURSOR_SIZE - VIRTUAL_CURSOR_INNER_INSET * 2.0;
+const VIRTUAL_CURSOR_CENTER_RING_SIZE: f32 = 12.0;
+const VIRTUAL_CURSOR_CENTER_DOT_SIZE: f32 = 8.0;
 const SYSTEM_CURSOR_RESTORE_INSET: f32 = 1.0;
 
 #[derive(SystemSet, Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -352,10 +357,10 @@ fn sync_virtual_cursor(
                             position_type: PositionType::Absolute,
                             left: Val::Px(0.0),
                             top: Val::Px(0.0),
-                            width: Val::Px(24.0),
-                            height: Val::Px(24.0),
-                            border: UiRect::all(Val::Px(2.0)),
-                            border_radius: BorderRadius::all(Val::Px(12.0)),
+                            width: Val::Px(VIRTUAL_CURSOR_SIZE),
+                            height: Val::Px(VIRTUAL_CURSOR_SIZE),
+                            border: UiRect::all(Val::Px(VIRTUAL_CURSOR_OUTER_BORDER)),
+                            border_radius: BorderRadius::all(Val::Px(VIRTUAL_CURSOR_CENTER)),
                             ..default()
                         },
                         outline_color,
@@ -364,12 +369,14 @@ fn sync_virtual_cursor(
                     cursor.spawn((
                         Node {
                             position_type: PositionType::Absolute,
-                            left: Val::Px(3.0),
-                            top: Val::Px(3.0),
-                            width: Val::Px(18.0),
-                            height: Val::Px(18.0),
-                            border: UiRect::all(Val::Px(2.0)),
-                            border_radius: BorderRadius::all(Val::Px(9.0)),
+                            left: Val::Px(VIRTUAL_CURSOR_INNER_INSET),
+                            top: Val::Px(VIRTUAL_CURSOR_INNER_INSET),
+                            width: Val::Px(VIRTUAL_CURSOR_INNER_SIZE),
+                            height: Val::Px(VIRTUAL_CURSOR_INNER_SIZE),
+                            border: UiRect::all(Val::Px(VIRTUAL_CURSOR_OUTER_BORDER)),
+                            border_radius: BorderRadius::all(Val::Px(
+                                VIRTUAL_CURSOR_INNER_SIZE / 2.0,
+                            )),
                             ..default()
                         },
                         gold_color,
@@ -378,12 +385,18 @@ fn sync_virtual_cursor(
                     cursor.spawn((
                         Node {
                             position_type: PositionType::Absolute,
-                            left: Val::Px(VIRTUAL_CURSOR_CENTER - 3.0),
-                            top: Val::Px(VIRTUAL_CURSOR_CENTER - 3.0),
-                            width: Val::Px(6.0),
-                            height: Val::Px(6.0),
-                            border: UiRect::all(Val::Px(1.0)),
-                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                            left: Val::Px(
+                                VIRTUAL_CURSOR_CENTER - VIRTUAL_CURSOR_CENTER_RING_SIZE / 2.0,
+                            ),
+                            top: Val::Px(
+                                VIRTUAL_CURSOR_CENTER - VIRTUAL_CURSOR_CENTER_RING_SIZE / 2.0,
+                            ),
+                            width: Val::Px(VIRTUAL_CURSOR_CENTER_RING_SIZE),
+                            height: Val::Px(VIRTUAL_CURSOR_CENTER_RING_SIZE),
+                            border: UiRect::all(Val::Px(1.5)),
+                            border_radius: BorderRadius::all(Val::Px(
+                                VIRTUAL_CURSOR_CENTER_RING_SIZE / 2.0,
+                            )),
                             ..default()
                         },
                         outline_color,
@@ -392,11 +405,17 @@ fn sync_virtual_cursor(
                     cursor.spawn((
                         Node {
                             position_type: PositionType::Absolute,
-                            left: Val::Px(VIRTUAL_CURSOR_CENTER - 2.0),
-                            top: Val::Px(VIRTUAL_CURSOR_CENTER - 2.0),
-                            width: Val::Px(4.0),
-                            height: Val::Px(4.0),
-                            border_radius: BorderRadius::all(Val::Px(2.0)),
+                            left: Val::Px(
+                                VIRTUAL_CURSOR_CENTER - VIRTUAL_CURSOR_CENTER_DOT_SIZE / 2.0,
+                            ),
+                            top: Val::Px(
+                                VIRTUAL_CURSOR_CENTER - VIRTUAL_CURSOR_CENTER_DOT_SIZE / 2.0,
+                            ),
+                            width: Val::Px(VIRTUAL_CURSOR_CENTER_DOT_SIZE),
+                            height: Val::Px(VIRTUAL_CURSOR_CENTER_DOT_SIZE),
+                            border_radius: BorderRadius::all(Val::Px(
+                                VIRTUAL_CURSOR_CENTER_DOT_SIZE / 2.0,
+                            )),
                             ..default()
                         },
                         BackgroundColor(Color::srgba(0.93, 0.72, 0.26, 0.96)),
