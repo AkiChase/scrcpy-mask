@@ -48,6 +48,30 @@ pub fn direction_pad_init(mut commands: Commands) {
     commands.insert_resource(DirectionPadLifecycleState::default());
 }
 
+pub fn cleanup_direction_pad_on_stop(
+    cs_tx_res: Res<ChannelSenderCS>,
+    mut direction_pad_map: ResMut<DirectionPadMap>,
+    mut block_direction_pad: ResMut<BlockDirectionPad>,
+    mut lifecycle_state: ResMut<DirectionPadLifecycleState>,
+) {
+    for (_, item) in direction_pad_map.0.drain() {
+        let last_pos = if item.enable_randomization {
+            item.random_anchor + item.last_state_actual + item.current_jitter
+        } else {
+            item.original_pos + item.last_state
+        };
+        ControlMsgHelper::send_touch(
+            &cs_tx_res.0,
+            MotionEventAction::Up,
+            item.pointer_id,
+            item.original_size,
+            last_pos,
+        );
+    }
+    block_direction_pad.0 = false;
+    lifecycle_state.0.clear_all();
+}
+
 #[derive(Debug, Clone)]
 pub struct BindMappingDirectionPad {
     pub id: String,

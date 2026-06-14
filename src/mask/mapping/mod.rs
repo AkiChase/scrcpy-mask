@@ -27,6 +27,7 @@ use crate::{
                 ActiveMappingConfig, BindMappingConfig, MappingAction, default_mapping_config,
                 load_mapping_config, save_mapping_config,
             },
+            cursor::cleanup_cursor_capture_on_stop,
             cursor::{CursorFrameSet, CursorPlugins, CursorState},
         },
     },
@@ -132,6 +133,40 @@ impl Plugin for MappingPlugins {
             .add_systems(
                 OnExit(MappingState::RawInput),
                 raw_input::on_exit_raw_input_mode,
+            )
+            .add_systems(
+                OnTransition {
+                    exited: MappingState::Normal,
+                    entered: MappingState::Stop,
+                },
+                (
+                    tap::cleanup_tap_on_stop,
+                    direction_pad::cleanup_direction_pad_on_stop,
+                    observation::cleanup_observation_on_stop,
+                    cast_spell::cleanup_cast_spell_on_stop,
+                    fire::cleanup_fire_on_stop,
+                    fire::cleanup_fps_on_stop,
+                    script::cleanup_script_on_stop,
+                    cleanup_cursor_capture_on_stop,
+                )
+                    .chain(),
+            )
+            .add_systems(
+                OnTransition {
+                    exited: MappingState::RawInput,
+                    entered: MappingState::Stop,
+                },
+                (
+                    tap::cleanup_tap_on_stop,
+                    direction_pad::cleanup_direction_pad_on_stop,
+                    observation::cleanup_observation_on_stop,
+                    cast_spell::cleanup_cast_spell_on_stop,
+                    fire::cleanup_fire_on_stop,
+                    fire::cleanup_fps_on_stop,
+                    script::cleanup_script_on_stop,
+                    cleanup_cursor_capture_on_stop,
+                )
+                    .chain(),
             );
     }
 }

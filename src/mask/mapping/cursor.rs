@@ -51,6 +51,11 @@ impl NormalCursorCapture {
         !self.owners.is_empty()
     }
 
+    pub fn clear(&mut self) {
+        self.owners.clear();
+        self.reset_grab();
+    }
+
     fn reset_grab(&mut self) {
         self.grabbed = false;
         self.skip_next_nonzero_motion = false;
@@ -125,6 +130,10 @@ impl Plugin for CursorPlugins {
     }
 }
 
+pub fn cleanup_cursor_capture_on_stop(mut normal_capture: ResMut<NormalCursorCapture>) {
+    normal_capture.clear();
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum FpsTouchMode {
@@ -166,6 +175,7 @@ struct PendingFpsTouch {
 
 #[derive(Resource)]
 pub struct ActiveCursorFpsConfig {
+    pub touch_active: bool,
     pub ignore_fps_motion: bool,
     pub sensitivity: Vec2,
     pub pointer_id: u64,
@@ -180,6 +190,7 @@ pub struct ActiveCursorFpsConfig {
 impl Default for ActiveCursorFpsConfig {
     fn default() -> Self {
         Self {
+            touch_active: false,
             ignore_fps_motion: false,
             sensitivity: Vec2::ZERO,
             pointer_id: 0,
@@ -198,6 +209,12 @@ impl ActiveCursorFpsConfig {
         self.active_pointer_id = self.pointer_id;
         self.pending_touch = None;
     }
+
+    pub fn clear_runtime_state(&mut self) {
+        self.touch_active = false;
+        self.ignore_fps_motion = false;
+        self.reset_touch_state();
+    }
 }
 
 pub fn release_fps_touches(
@@ -213,6 +230,7 @@ pub fn release_fps_touches(
         mask_size,
         active_pos,
     );
+    fps_config.touch_active = false;
     if let Some(pending) = fps_config.pending_touch.take() {
         ControlMsgHelper::send_touch(
             cs_tx,
@@ -230,6 +248,7 @@ pub fn restore_fps_touch(
     fps_config: &mut ActiveCursorFpsConfig,
 ) {
     fps_config.reset_touch_state();
+    fps_config.touch_active = true;
     ControlMsgHelper::send_touch(
         cs_tx,
         MotionEventAction::Down,
@@ -891,6 +910,7 @@ mod tests {
 
     fn fps_config(touch_mode: FpsTouchMode) -> ActiveCursorFpsConfig {
         ActiveCursorFpsConfig {
+            touch_active: true,
             ignore_fps_motion: false,
             sensitivity: Vec2::ONE,
             pointer_id: 0,

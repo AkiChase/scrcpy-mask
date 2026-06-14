@@ -123,6 +123,7 @@ pub fn enter_fps_mode(
     fps_config.sensitivity = (mapping.sensitivity_x, mapping.sensitivity_y).into();
     fps_config.max_offset = Vec2::new(mapping.max_offset_x, mapping.max_offset_y);
     fps_config.touch_mode = mapping.touch_mode;
+    fps_config.touch_active = true;
 
     ControlMsgHelper::send_touch(
         cs_tx,
@@ -333,6 +334,31 @@ fn release_active_fire(
         released_actions.push(action);
     }
     released_actions
+}
+
+pub fn cleanup_fire_on_stop(
+    cs_tx_res: Res<ChannelSenderCS>,
+    mask_size: Res<MaskSize>,
+    mut active_map: ResMut<ActiveFireMap>,
+    mut lifecycle_state: ResMut<FireLifecycleState>,
+) {
+    release_active_fire(&cs_tx_res.0, &mut active_map, mask_size.0);
+    lifecycle_state.0.clear_all();
+}
+
+pub fn cleanup_fps_on_stop(
+    cs_tx_res: Res<ChannelSenderCS>,
+    mask_size: Res<MaskSize>,
+    cursor_pos: Res<CursorPosition>,
+    mut fps_config: ResMut<ActiveCursorFpsConfig>,
+    mut next_cursor_state: ResMut<NextState<CursorState>>,
+) {
+    if fps_config.touch_active {
+        release_fps_touches(&cs_tx_res.0, &mut fps_config, mask_size.0, cursor_pos.0);
+    } else {
+        fps_config.clear_runtime_state();
+    }
+    next_cursor_state.set(CursorState::Normal);
 }
 
 pub fn spawn_fire_after_hooks_for_external_release(

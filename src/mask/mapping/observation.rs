@@ -39,6 +39,43 @@ pub fn init_observation(mut commands: Commands) {
     commands.insert_resource(ObservationLifecycleState::default());
 }
 
+pub fn cleanup_observation_on_stop(
+    active_mapping: Res<ActiveMappingConfig>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    cursor_pos: Res<CursorPosition>,
+    mask_size: Res<MaskSize>,
+    mut active_map: ResMut<ActiveObservationMap>,
+    mut lifecycle_state: ResMut<ObservationLifecycleState>,
+    mut normal_cursor_capture: ResMut<NormalCursorCapture>,
+) {
+    for (action, item) in active_map.0.drain() {
+        let mut delta = (cursor_pos.0 - item.start_cursor_pos) * item.sensitivity;
+        if item.max_radius > 0.0 {
+            let len = delta.length();
+            if len > item.max_radius {
+                delta = delta / len * item.max_radius;
+            }
+        }
+        ControlMsgHelper::send_touch(
+            &cs_tx_res.0,
+            MotionEventAction::Up,
+            item.pointer_id,
+            mask_size.0,
+            item.mask_pos + delta,
+        );
+        normal_cursor_capture.release(&observation_capture_owner(&action));
+    }
+
+    if let Some(active_mapping) = &active_mapping.0 {
+        for action in active_mapping.mappings.keys() {
+            if action.as_ref().starts_with("Observation") {
+                normal_cursor_capture.release(&observation_capture_owner(action.as_ref()));
+            }
+        }
+    }
+    lifecycle_state.0.clear_all();
+}
+
 #[derive(Debug, Clone)]
 pub struct BindMappingObservation {
     pub id: String,

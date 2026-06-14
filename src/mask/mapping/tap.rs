@@ -40,6 +40,42 @@ pub fn tap_init(mut commands: Commands) {
     commands.insert_resource(RepeatTapLifecycleState::default());
 }
 
+pub fn cleanup_tap_on_stop(
+    active_mapping: Res<ActiveMappingConfig>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    mut active_single_tap: ResMut<ActiveSingleTapMap>,
+    mut active_repeat_tap: ResMut<ActiveRepeatTapMap>,
+    mut single_lifecycle_state: ResMut<SingleTapLifecycleState>,
+    mut repeat_lifecycle_state: ResMut<RepeatTapLifecycleState>,
+) {
+    if let Some(active_mapping) = &active_mapping.0 {
+        let original_size: Vec2 = active_mapping.original_size.into();
+        for (released_action, random_pos) in active_single_tap.0.drain() {
+            let Some((_, mapping)) = active_mapping
+                .mappings
+                .iter()
+                .find(|(action, _)| action.as_ref() == released_action)
+            else {
+                continue;
+            };
+            let mapping = mapping.as_ref_singletap();
+            ControlMsgHelper::send_touch(
+                &cs_tx_res.0,
+                MotionEventAction::Up,
+                mapping.pointer_id,
+                original_size,
+                random_pos,
+            );
+        }
+    } else {
+        active_single_tap.0.clear();
+    }
+
+    active_repeat_tap.0.clear();
+    single_lifecycle_state.0.clear_all();
+    repeat_lifecycle_state.0.clear_all();
+}
+
 #[derive(Debug, Clone)]
 pub struct BindMappingSingleTap {
     pub id: String,

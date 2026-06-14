@@ -56,6 +56,43 @@ pub fn cast_spell_init(mut commands: Commands) {
     commands.insert_resource(PadCastSpellLifecycleState::default());
 }
 
+pub fn cleanup_cast_spell_on_stop(
+    active_mapping: Res<ActiveMappingConfig>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    mask_size: Res<MaskSize>,
+    mut active_cast: ResMut<ActiveCastSpell>,
+    mut block_direction_pad: ResMut<BlockDirectionPad>,
+    mut normal_cursor_capture: ResMut<NormalCursorCapture>,
+    mut mouse_lifecycle_state: ResMut<MouseCastSpellLifecycleState>,
+    mut pad_lifecycle_state: ResMut<PadCastSpellLifecycleState>,
+) {
+    if let Some(cast) = active_cast.0.take() {
+        ControlMsgHelper::send_touch(
+            &cs_tx_res.0,
+            MotionEventAction::Up,
+            cast.pointer_id,
+            mask_size.0,
+            cast.current_pos,
+        );
+        if cast.mouse_flag {
+            normal_cursor_capture.release(&mouse_cast_capture_owner(&cast.key));
+        }
+        if cast.block_direction_pad {
+            block_direction_pad.0 = false;
+        }
+    }
+
+    if let Some(active_mapping) = &active_mapping.0 {
+        for action in active_mapping.mappings.keys() {
+            if action.as_ref().starts_with("MouseCastSpell") {
+                normal_cursor_capture.release(&mouse_cast_capture_owner(action.as_ref()));
+            }
+        }
+    }
+    mouse_lifecycle_state.0.clear_all();
+    pad_lifecycle_state.0.clear_all();
+}
+
 #[derive(Resource, Default)]
 pub struct ActiveCastSpell(Option<ActiveCastSpellItem>);
 
@@ -376,6 +413,7 @@ fn release_active_cast_and_spawn_after(
     runtime: &TokioTasksRuntime,
     active_cast: &mut ActiveCastSpell,
     block_direction_pad: &mut BlockDirectionPad,
+    mut normal_cursor_capture: Option<&mut NormalCursorCapture>,
     script_command_tx: &ScriptRuntimeCommandSender,
     shared_state: &ScriptSharedState,
     cursor_pos: Vec2,
@@ -385,6 +423,11 @@ fn release_active_cast_and_spawn_after(
 ) -> Option<String> {
     let cast = take_active_cast_for_release(cs_tx, mask_size, active_cast, block_direction_pad)?;
     let released_key = cast.key.clone();
+    if cast.mouse_flag
+        && let Some(capture) = normal_cursor_capture.as_mut()
+    {
+        capture.release(&mouse_cast_capture_owner(&released_key));
+    }
     let exec_ctx = make_active_cast_after_context(
         cs_tx,
         script_command_tx,
@@ -461,6 +504,7 @@ fn start_mouse_cast_after_before(
         runtime,
         active_cast,
         block_direction_pad,
+        normal_cursor_capture.as_deref_mut(),
         script_command_tx,
         shared_state,
         cursor_pos,
@@ -468,11 +512,6 @@ fn start_mouse_cast_after_before(
         raw_input_flag,
         fps_mode_flag,
     );
-    if let Some(released_key) = released_key.as_deref()
-        && let Some(capture) = normal_cursor_capture.as_mut()
-    {
-        capture.release(&mouse_cast_capture_owner(released_key));
-    }
     if released_key.as_deref() == Some(action.as_str()) {
         return false;
     }
@@ -758,11 +797,12 @@ pub fn handle_mouse_cast_spell(
                                             normal_cursor_capture.release(&start_capture_owner);
                                         }
                                         if let Some(release) = pending_release {
-                                            let released_key = release_active_cast_and_spawn_after(
+                                            release_active_cast_and_spawn_after(
                                                 &cs_tx,
                                                 runtime,
                                                 &mut active_cast,
                                                 &mut block_direction_pad,
+                                                Some(&mut normal_cursor_capture),
                                                 &script_command_tx,
                                                 &shared_state,
                                                 release.cursor_pos,
@@ -770,11 +810,6 @@ pub fn handle_mouse_cast_spell(
                                                 release.raw_input_flag,
                                                 release.fps_mode_flag,
                                             );
-                                            if let Some(released_key) = released_key {
-                                                normal_cursor_capture.release(
-                                                    &mouse_cast_capture_owner(&released_key),
-                                                );
-                                            }
                                         }
                                     }
                                     main_ctx.world.insert_resource(active_cast);
@@ -816,6 +851,7 @@ pub fn handle_mouse_cast_spell(
                                 &runtime,
                                 &mut active_cast,
                                 &mut block_direction_pad,
+                                Some(&mut normal_cursor_capture),
                                 &script_command_tx,
                                 &shared_state,
                                 cursor_pos.0,
@@ -824,8 +860,6 @@ pub fn handle_mouse_cast_spell(
                                 cursor_state.get() == &CursorState::Fps,
                             );
                             lifecycle_state.0.clear_pending(action.as_ref());
-                            normal_cursor_capture
-                                .release(&mouse_cast_capture_owner(action.as_ref()));
                         } else if mouse_cast_has_before_hook(mapping) {
                             lifecycle_state.0.record_early_release(
                                 action.as_ref(),
@@ -875,6 +909,7 @@ pub fn handle_mouse_cast_spell_focus_lost(
             &runtime,
             &mut active_cast,
             &mut block_direction_pad,
+            Some(&mut normal_cursor_capture),
             &script_command_tx,
             &shared_state,
             cursor_pos.0,
@@ -883,7 +918,6 @@ pub fn handle_mouse_cast_spell_focus_lost(
             cursor_state.get() == &CursorState::Fps,
         )
     {
-        normal_cursor_capture.release(&mouse_cast_capture_owner(&released_key));
         lifecycle_state.0.clear_pending(&released_key);
     }
 
@@ -1060,6 +1094,7 @@ fn start_pad_cast_after_before(
     active_cast: &mut ActiveCastSpell,
     direction_pad_map: &mut DirectionPadMap,
     block_direction_pad: &mut BlockDirectionPad,
+    normal_cursor_capture: &mut NormalCursorCapture,
     script_command_tx: &ScriptRuntimeCommandSender,
     shared_state: &ScriptSharedState,
     action: String,
@@ -1074,6 +1109,7 @@ fn start_pad_cast_after_before(
         runtime,
         active_cast,
         block_direction_pad,
+        Some(normal_cursor_capture),
         script_command_tx,
         shared_state,
         cursor_pos,
@@ -1241,6 +1277,7 @@ pub fn handle_pad_cast_spell(
     mut direction_pad_map: ResMut<DirectionPadMap>,
     mut block_direction_pad: ResMut<BlockDirectionPad>,
     mut lifecycle_state: ResMut<PadCastSpellLifecycleState>,
+    mut normal_cursor_capture: ResMut<NormalCursorCapture>,
 ) {
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {
@@ -1315,6 +1352,10 @@ pub fn handle_pad_cast_spell(
                                         .world
                                         .remove_resource::<BlockDirectionPad>()
                                         .expect("BlockDirectionPad resource missing");
+                                    let mut normal_cursor_capture = main_ctx
+                                        .world
+                                        .remove_resource::<NormalCursorCapture>()
+                                        .expect("NormalCursorCapture resource missing");
                                     {
                                         let runtime =
                                             main_ctx.world.resource::<TokioTasksRuntime>();
@@ -1325,6 +1366,7 @@ pub fn handle_pad_cast_spell(
                                             &mut active_cast,
                                             &mut direction_pad_map,
                                             &mut block_direction_pad,
+                                            &mut normal_cursor_capture,
                                             &script_command_tx,
                                             &shared_state,
                                             action.clone(),
@@ -1340,6 +1382,7 @@ pub fn handle_pad_cast_spell(
                                                 runtime,
                                                 &mut active_cast,
                                                 &mut block_direction_pad,
+                                                Some(&mut normal_cursor_capture),
                                                 &script_command_tx,
                                                 &shared_state,
                                                 release.cursor_pos,
@@ -1352,6 +1395,7 @@ pub fn handle_pad_cast_spell(
                                     main_ctx.world.insert_resource(active_cast);
                                     main_ctx.world.insert_resource(direction_pad_map);
                                     main_ctx.world.insert_resource(block_direction_pad);
+                                    main_ctx.world.insert_resource(normal_cursor_capture);
                                 })
                                 .await;
                         });
@@ -1363,6 +1407,7 @@ pub fn handle_pad_cast_spell(
                             &mut active_cast,
                             &mut direction_pad_map,
                             &mut block_direction_pad,
+                            &mut normal_cursor_capture,
                             &script_command_tx,
                             &shared_state,
                             action.to_string(),
@@ -1385,6 +1430,7 @@ pub fn handle_pad_cast_spell(
                                 &runtime,
                                 &mut active_cast,
                                 &mut block_direction_pad,
+                                Some(&mut normal_cursor_capture),
                                 &script_command_tx,
                                 &shared_state,
                                 cursor_pos.0,
@@ -1458,6 +1504,7 @@ pub fn release_active_cast(
     cursor_pos: Vec2,
     active_cast: &mut ActiveCastSpell,
     block_direction_pad: &mut BlockDirectionPad,
+    normal_cursor_capture: Option<&mut NormalCursorCapture>,
     script_command_tx: &ScriptRuntimeCommandSender,
     shared_state: &ScriptSharedState,
     raw_input_flag: bool,
@@ -1468,6 +1515,7 @@ pub fn release_active_cast(
         runtime,
         active_cast,
         block_direction_pad,
+        normal_cursor_capture,
         script_command_tx,
         shared_state,
         cursor_pos,
@@ -1481,6 +1529,7 @@ pub fn cancel_active_cast(
     cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
     runtime: &TokioTasksRuntime,
     active_cast: &mut ActiveCastSpell,
+    normal_cursor_capture: Option<&mut NormalCursorCapture>,
     cancel_mapping: &BindMappingCancelCast,
     original_size: Vec2,
     mask_size: Vec2,
@@ -1494,6 +1543,7 @@ pub fn cancel_active_cast(
         cs_tx,
         runtime,
         active_cast,
+        normal_cursor_capture,
         cancel_mapping,
         original_size,
         mask_size,
@@ -1510,6 +1560,7 @@ pub fn cancel_active_cast_with_completion(
     cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
     runtime: &TokioTasksRuntime,
     active_cast: &mut ActiveCastSpell,
+    mut normal_cursor_capture: Option<&mut NormalCursorCapture>,
     cancel_mapping: &BindMappingCancelCast,
     original_size: Vec2,
     mask_size: Vec2,
@@ -1523,6 +1574,11 @@ pub fn cancel_active_cast_with_completion(
     if let Some(cast) = active_cast.0.take() {
         let mut cancel_pos: Vec2 = cancel_mapping.position.into();
         let current_pos = cast.current_pos;
+        if cast.mouse_flag
+            && let Some(capture) = normal_cursor_capture.as_mut()
+        {
+            capture.release(&mouse_cast_capture_owner(&cast.key));
+        }
 
         cancel_pos = cancel_pos / original_size * mask_size;
 

@@ -88,6 +88,10 @@ pub fn script_init(mut commands: Commands) {
     commands.insert_resource(ScriptSharedState::default());
 }
 
+pub fn cleanup_script_on_stop(mut active_map: ResMut<ActiveScriptMap>) {
+    active_map.0.clear();
+}
+
 #[derive(Debug, Clone)]
 pub struct BindMappingScript {
     pub id: String,

@@ -9,7 +9,7 @@ use std::{
 use bevy::{
     ecs::{
         resource::Resource,
-        system::{Res, ResMut},
+        system::{Res, ResMut, SystemParam},
     },
     math::Vec2,
     state::state::{NextState, State},
@@ -24,7 +24,7 @@ use crate::mask::mapping::{
     MappingState,
     cast_spell::{ActiveCastSpell, cancel_active_cast_with_completion, release_active_cast},
     config::{ActiveMappingConfig, BindMappingType},
-    cursor::{ActiveCursorFpsConfig, CursorPosition, CursorState},
+    cursor::{ActiveCursorFpsConfig, CursorPosition, CursorState, NormalCursorCapture},
     direction_pad::BlockDirectionPad,
     fire::{
         ActiveFireMap, enter_fps_mode, exit_fps_mode, spawn_fire_after_hooks_for_external_release,
@@ -58,6 +58,13 @@ pub enum ScriptRuntimeCommand {
     ReleaseCast {
         ack: oneshot::Sender<Result<(), String>>,
     },
+}
+
+#[derive(SystemParam)]
+pub struct ScriptRuntimeCastParams<'w> {
+    active_cast: ResMut<'w, ActiveCastSpell>,
+    block_direction_pad: ResMut<'w, BlockDirectionPad>,
+    normal_cursor_capture: ResMut<'w, NormalCursorCapture>,
 }
 
 #[derive(Resource, Clone)]
@@ -287,8 +294,7 @@ pub fn handle_script_runtime_commands(
     mut active_fire_map: ResMut<ActiveFireMap>,
     mut next_mapping_state: ResMut<NextState<MappingState>>,
     runtime: ResMut<TokioTasksRuntime>,
-    mut active_cast: ResMut<ActiveCastSpell>,
-    mut block_direction_pad: ResMut<BlockDirectionPad>,
+    mut cast_params: ScriptRuntimeCastParams,
 ) {
     for command in command_rx.0.try_iter() {
         match command {
@@ -413,7 +419,8 @@ pub fn handle_script_runtime_commands(
                 cancel_active_cast_with_completion(
                     &cs_tx_res.0,
                     &runtime,
-                    &mut active_cast,
+                    &mut cast_params.active_cast,
+                    Some(&mut cast_params.normal_cursor_capture),
                     mapping,
                     active_mapping.original_size.into(),
                     mask_size.0,
@@ -431,8 +438,9 @@ pub fn handle_script_runtime_commands(
                     &runtime,
                     mask_size.0,
                     cursor_pos.0,
-                    &mut active_cast,
-                    &mut block_direction_pad,
+                    &mut cast_params.active_cast,
+                    &mut cast_params.block_direction_pad,
+                    Some(&mut cast_params.normal_cursor_capture),
                     &script_command_tx,
                     &shared_state,
                     mapping_state.get() == &MappingState::RawInput,
