@@ -139,43 +139,72 @@ pub fn cleanup_cursor_capture_on_stop(mut normal_capture: ResMut<NormalCursorCap
     normal_capture.clear();
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum FpsTouchMode {
-    #[default]
-    None,
-    Clean {
-        another_pointer_id: u64,
-    },
-    Delayed {
+    Single {
         interval: u64,
-        another_pointer_id: u64,
     },
-    Overlap {
+    Dual {
         another_pointer_id: u64,
+        #[serde(flatten)]
+        strategy: FpsDualTouchStrategy,
     },
+}
+
+impl Default for FpsTouchMode {
+    fn default() -> Self {
+        Self::Single { interval: 0 }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(tag = "strategy", rename_all = "snake_case")]
+pub enum FpsDualTouchStrategy {
+    Delay { interval: u64 },
+    Overlap,
 }
 
 impl FpsTouchMode {
     pub fn another_pointer_id(&self) -> Option<u64> {
         match self {
-            FpsTouchMode::None => None,
-            FpsTouchMode::Clean { another_pointer_id }
-            | FpsTouchMode::Delayed {
+            FpsTouchMode::Single { .. } => None,
+            FpsTouchMode::Dual {
                 another_pointer_id, ..
-            }
-            | FpsTouchMode::Overlap { another_pointer_id } => Some(*another_pointer_id),
+            } => Some(*another_pointer_id),
         }
     }
 }
 
 #[derive(Clone, Copy, Debug)]
-struct PendingFpsTouch {
-    pointer_id: u64,
-    pos: Vec2,
-    release_at: Option<Instant>,
-    overlap: bool,
-    deferred_delta: Vec2,
+enum PendingFpsTouch {
+    Restore {
+        pointer_id: u64,
+        pos: Vec2,
+        down_at: Instant,
+        deferred_delta: Vec2,
+    },
+    Release {
+        pointer_id: u64,
+        pos: Vec2,
+        release_at: Instant,
+        deferred_delta: Vec2,
+    },
+    Overlap {
+        pointer_id: u64,
+        pos: Vec2,
+        deferred_delta: Vec2,
+    },
+}
+
+impl PendingFpsTouch {
+    fn add_deferred_delta(&mut self, delta: Vec2) {
+        match self {
+            PendingFpsTouch::Restore { deferred_delta, .. }
+            | PendingFpsTouch::Release { deferred_delta, .. }
+            | PendingFpsTouch::Overlap { deferred_delta, .. } => *deferred_delta += delta,
+        }
+    }
 }
 
 #[derive(Resource)]
@@ -203,7 +232,7 @@ impl Default for ActiveCursorFpsConfig {
             original_pos: Vec2::ZERO,
             original_size: Vec2::ZERO,
             max_offset: Vec2::ZERO,
-            touch_mode: FpsTouchMode::None,
+            touch_mode: FpsTouchMode::default(),
             pending_touch: None,
         }
     }
@@ -228,22 +257,34 @@ pub fn release_fps_touches(
     mask_size: Vec2,
     active_pos: Vec2,
 ) {
-    ControlMsgHelper::send_touch(
-        cs_tx,
-        MotionEventAction::Up,
-        fps_config.active_pointer_id,
-        mask_size,
-        active_pos,
-    );
-    fps_config.touch_active = false;
-    if let Some(pending) = fps_config.pending_touch.take() {
+    if fps_config.touch_active {
         ControlMsgHelper::send_touch(
             cs_tx,
             MotionEventAction::Up,
-            pending.pointer_id,
+            fps_config.active_pointer_id,
             mask_size,
-            pending.pos,
+            active_pos,
         );
+        fps_config.touch_active = false;
+    }
+    if let Some(pending) = fps_config.pending_touch.take() {
+        match pending {
+            PendingFpsTouch::Restore { .. } => {}
+            PendingFpsTouch::Release {
+                pointer_id, pos, ..
+            }
+            | PendingFpsTouch::Overlap {
+                pointer_id, pos, ..
+            } => {
+                ControlMsgHelper::send_touch(
+                    cs_tx,
+                    MotionEventAction::Up,
+                    pointer_id,
+                    mask_size,
+                    pos,
+                );
+            }
+        }
     }
     fps_config.reset_touch_state();
 }
@@ -589,22 +630,40 @@ fn cleanup_pending_fps_touch(
     fps_config: &mut ActiveCursorFpsConfig,
     mask_size: Vec2,
 ) -> Option<Vec2> {
-    let should_release = fps_config
+    let now = Instant::now();
+    let ready = fps_config
         .pending_touch
-        .is_some_and(|pending| pending.release_at.is_some_and(|at| Instant::now() >= at));
-    if should_release {
-        if let Some(pending) = fps_config.pending_touch.take() {
-            send_fps_touch(
-                cs_tx,
-                MotionEventAction::Up,
-                pending.pointer_id,
-                mask_size,
-                pending.pos,
-            );
-            return Some(pending.deferred_delta);
-        }
+        .is_some_and(|pending| match pending {
+            PendingFpsTouch::Restore { down_at, .. } => now >= down_at,
+            PendingFpsTouch::Release { release_at, .. } => now >= release_at,
+            PendingFpsTouch::Overlap { .. } => false,
+        });
+    if !ready {
+        return None;
     }
-    None
+
+    match fps_config.pending_touch.take() {
+        Some(PendingFpsTouch::Restore {
+            pointer_id,
+            pos,
+            deferred_delta,
+            ..
+        }) => {
+            send_fps_touch(cs_tx, MotionEventAction::Down, pointer_id, mask_size, pos);
+            fps_config.touch_active = true;
+            Some(deferred_delta)
+        }
+        Some(PendingFpsTouch::Release {
+            pointer_id,
+            pos,
+            deferred_delta,
+            ..
+        }) => {
+            send_fps_touch(cs_tx, MotionEventAction::Up, pointer_id, mask_size, pos);
+            Some(deferred_delta)
+        }
+        Some(PendingFpsTouch::Overlap { .. }) | None => None,
+    }
 }
 
 fn consume_overlap_fps_touch(
@@ -613,36 +672,29 @@ fn consume_overlap_fps_touch(
     mask_size: Vec2,
     delta: Vec2,
 ) -> Option<Vec2> {
-    let Some(pending) = fps_config.pending_touch else {
+    let Some(PendingFpsTouch::Overlap {
+        pointer_id,
+        pos,
+        deferred_delta,
+    }) = fps_config.pending_touch
+    else {
         return None;
     };
-    if !pending.overlap {
-        return None;
-    }
 
     let (physical_min, physical_max) = physical_bounds(mask_size);
-    let pos = clamp_to_bounds(pending.pos + delta, physical_min, physical_max);
-    send_fps_touch(
-        cs_tx,
-        MotionEventAction::Move,
-        pending.pointer_id,
-        mask_size,
-        pos,
-    );
-    send_fps_touch(
-        cs_tx,
-        MotionEventAction::Up,
-        pending.pointer_id,
-        mask_size,
-        pos,
-    );
+    let pos = clamp_to_bounds(pos + delta, physical_min, physical_max);
+    send_fps_touch(cs_tx, MotionEventAction::Move, pointer_id, mask_size, pos);
+    send_fps_touch(cs_tx, MotionEventAction::Up, pointer_id, mask_size, pos);
     fps_config.pending_touch = None;
-    Some(pending.deferred_delta + delta)
+    Some(deferred_delta + delta)
 }
 
 fn alternate_fps_pointer_id(fps_config: &ActiveCursorFpsConfig) -> u64 {
-    let Some(another_pointer_id) = fps_config.touch_mode.another_pointer_id() else {
-        return fps_config.pointer_id;
+    let FpsTouchMode::Dual {
+        another_pointer_id, ..
+    } = fps_config.touch_mode
+    else {
+        return fps_config.active_pointer_id;
     };
     if fps_config.active_pointer_id == fps_config.pointer_id {
         another_pointer_id
@@ -669,17 +721,21 @@ fn recenter_fps_touch(
     let center_pos = fps_center_pos(fps_config, mask_size);
 
     if let Some(pending) = fps_config.pending_touch.take() {
-        send_fps_touch(
-            cs_tx,
-            MotionEventAction::Up,
-            pending.pointer_id,
-            mask_size,
-            pending.pos,
-        );
+        match pending {
+            PendingFpsTouch::Restore { .. } => {}
+            PendingFpsTouch::Release {
+                pointer_id, pos, ..
+            }
+            | PendingFpsTouch::Overlap {
+                pointer_id, pos, ..
+            } => {
+                send_fps_touch(cs_tx, MotionEventAction::Up, pointer_id, mask_size, pos);
+            }
+        }
     }
 
     match fps_config.touch_mode {
-        FpsTouchMode::None => {
+        FpsTouchMode::Single { interval } => {
             send_fps_touch(
                 cs_tx,
                 MotionEventAction::Up,
@@ -687,6 +743,16 @@ fn recenter_fps_touch(
                 mask_size,
                 old_pos,
             );
+            fps_config.touch_active = false;
+            if interval > 0 {
+                fps_config.pending_touch = Some(PendingFpsTouch::Restore {
+                    pointer_id: fps_config.active_pointer_id,
+                    pos: center_pos,
+                    down_at: Instant::now() + Duration::from_millis(interval),
+                    deferred_delta: remaining_delta,
+                });
+                return FpsRecenterResult::Stop(center_pos);
+            }
             send_fps_touch(
                 cs_tx,
                 MotionEventAction::Down,
@@ -694,8 +760,12 @@ fn recenter_fps_touch(
                 mask_size,
                 center_pos,
             );
+            fps_config.touch_active = true;
         }
-        FpsTouchMode::Clean { .. } => {
+        FpsTouchMode::Dual {
+            strategy: FpsDualTouchStrategy::Delay { interval },
+            ..
+        } => {
             let old_pointer_id = fps_config.active_pointer_id;
             let new_pointer_id = alternate_fps_pointer_id(fps_config);
             send_fps_touch(
@@ -705,6 +775,16 @@ fn recenter_fps_touch(
                 mask_size,
                 center_pos,
             );
+            fps_config.active_pointer_id = new_pointer_id;
+            if interval > 0 {
+                fps_config.pending_touch = Some(PendingFpsTouch::Release {
+                    pointer_id: old_pointer_id,
+                    pos: old_pos,
+                    release_at: Instant::now() + Duration::from_millis(interval),
+                    deferred_delta: remaining_delta,
+                });
+                return FpsRecenterResult::Stop(center_pos);
+            }
             send_fps_touch(
                 cs_tx,
                 MotionEventAction::Up,
@@ -712,9 +792,11 @@ fn recenter_fps_touch(
                 mask_size,
                 old_pos,
             );
-            fps_config.active_pointer_id = new_pointer_id;
         }
-        FpsTouchMode::Delayed { interval, .. } => {
+        FpsTouchMode::Dual {
+            strategy: FpsDualTouchStrategy::Overlap,
+            ..
+        } => {
             let old_pointer_id = fps_config.active_pointer_id;
             let new_pointer_id = alternate_fps_pointer_id(fps_config);
             send_fps_touch(
@@ -724,31 +806,9 @@ fn recenter_fps_touch(
                 mask_size,
                 center_pos,
             );
-            fps_config.pending_touch = Some(PendingFpsTouch {
+            fps_config.pending_touch = Some(PendingFpsTouch::Overlap {
                 pointer_id: old_pointer_id,
                 pos: old_pos,
-                release_at: Some(Instant::now() + Duration::from_millis(interval)),
-                overlap: false,
-                deferred_delta: remaining_delta,
-            });
-            fps_config.active_pointer_id = new_pointer_id;
-            return FpsRecenterResult::Stop(center_pos);
-        }
-        FpsTouchMode::Overlap { .. } => {
-            let old_pointer_id = fps_config.active_pointer_id;
-            let new_pointer_id = alternate_fps_pointer_id(fps_config);
-            send_fps_touch(
-                cs_tx,
-                MotionEventAction::Down,
-                new_pointer_id,
-                mask_size,
-                center_pos,
-            );
-            fps_config.pending_touch = Some(PendingFpsTouch {
-                pointer_id: old_pointer_id,
-                pos: old_pos,
-                release_at: None,
-                overlap: true,
                 deferred_delta: remaining_delta,
             });
             fps_config.active_pointer_id = new_pointer_id;
@@ -854,9 +914,9 @@ fn handle_cursor_fps(
     }
 
     if let Some(pending) = fps_config.pending_touch.as_mut()
-        && !pending.overlap
+        && !matches!(pending, PendingFpsTouch::Overlap { .. })
     {
-        pending.deferred_delta += delta;
+        pending.add_deferred_delta(delta);
         return;
     }
 
@@ -973,7 +1033,7 @@ mod tests {
     #[test]
     fn apply_fps_delta_consumes_multiple_immediate_boundaries() {
         let (tx, mut rx) = broadcast::channel(32);
-        let mut config = fps_config(FpsTouchMode::None);
+        let mut config = fps_config(FpsTouchMode::Single { interval: 0 });
 
         let result = apply_fps_delta(
             &tx,
@@ -1007,7 +1067,7 @@ mod tests {
     #[test]
     fn apply_fps_delta_limits_immediate_recenter_iterations() {
         let (tx, mut rx) = broadcast::channel(32);
-        let mut config = fps_config(FpsTouchMode::None);
+        let mut config = fps_config(FpsTouchMode::Single { interval: 0 });
 
         let result = apply_fps_delta(
             &tx,
@@ -1026,6 +1086,44 @@ mod tests {
                 .filter(|(action, _, _, _)| *action == MotionEventAction::Up)
                 .count(),
             FPS_MAX_RECENTER_ITERATIONS
+        );
+    }
+
+    #[test]
+    fn single_touch_interval_defers_next_down() {
+        let (tx, mut rx) = broadcast::channel(32);
+        let mut config = fps_config(FpsTouchMode::Single { interval: 1 });
+
+        let result = apply_fps_delta(
+            &tx,
+            &mut config,
+            Vec2::new(1000.0, 1000.0),
+            Vec2::new(500.0, 500.0),
+            Vec2::new(80.0, 0.0),
+        );
+
+        assert_vec2_near(result, Vec2::new(500.0, 500.0));
+        assert!(!config.touch_active);
+        assert!(matches!(
+            config.pending_touch,
+            Some(PendingFpsTouch::Restore { .. })
+        ));
+        assert_eq!(
+            collect_touch_events(&mut rx),
+            vec![
+                (MotionEventAction::Move, 0, 550, 500),
+                (MotionEventAction::Up, 0, 550, 500),
+            ]
+        );
+
+        std::thread::sleep(Duration::from_millis(2));
+        let deferred_delta = cleanup_pending_fps_touch(&tx, &mut config, Vec2::new(1000.0, 1000.0));
+
+        assert!(config.touch_active);
+        assert_eq!(deferred_delta, Some(Vec2::new(30.0, 0.0)));
+        assert_eq!(
+            collect_touch_events(&mut rx),
+            vec![(MotionEventAction::Down, 0, 500, 500)]
         );
     }
 }

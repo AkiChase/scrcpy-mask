@@ -195,25 +195,15 @@ function Setting({
     touchMode: FpsTouchMode,
     anotherPointerId: number,
   ): FpsTouchMode {
-    switch (touchMode.type) {
-      case "clean":
-        return { type: "clean", another_pointer_id: anotherPointerId };
-      case "delayed":
-        return {
-          type: "delayed",
-          interval: touchMode.interval,
-          another_pointer_id: anotherPointerId,
-        };
-      case "overlap":
-        return { type: "overlap", another_pointer_id: anotherPointerId };
-      default:
-        return touchMode;
+    if (touchMode.type !== "dual") {
+      return touchMode;
     }
+    return { ...touchMode, another_pointer_id: anotherPointerId };
   }
 
   function handlePrimaryPointerChange(pointerId: number) {
     if (
-      config.touch_mode.type !== "none" &&
+      config.touch_mode.type === "dual" &&
       config.touch_mode.another_pointer_id === pointerId
     ) {
       onConfigChange({
@@ -230,26 +220,58 @@ function Setting({
   }
 
   function handleTouchModeChange(type: FpsTouchMode["type"]) {
-    if (type === "none") {
-      onConfigChange({ ...config, touch_mode: { type: "none" } });
+    if (type === "single") {
+      onConfigChange({
+        ...config,
+        touch_mode: {
+          type: "single",
+          interval:
+            config.touch_mode.type === "single" ? config.touch_mode.interval : 0,
+        },
+      });
       return;
     }
     const anotherPointerId =
-      config.touch_mode.type === "none"
+      config.touch_mode.type === "single"
         ? getAvailablePointerId([config.pointer_id])
         : config.touch_mode.another_pointer_id;
-    const touchMode: FpsTouchMode =
-      type === "delayed"
-        ? {
-            type,
-            interval:
-              config.touch_mode.type === "delayed"
-                ? config.touch_mode.interval
-                : 16,
-            another_pointer_id: anotherPointerId,
-          }
-        : { type, another_pointer_id: anotherPointerId };
-    onConfigChange({ ...config, touch_mode: touchMode });
+    onConfigChange({
+      ...config,
+      touch_mode:
+        config.touch_mode.type === "dual"
+          ? { ...config.touch_mode, another_pointer_id: anotherPointerId }
+          : {
+              type: "dual",
+              strategy: "delay",
+              interval: 0,
+              another_pointer_id: anotherPointerId,
+            },
+    });
+  }
+
+  function handleDualStrategyChange(strategy: "delay" | "overlap") {
+    if (config.touch_mode.type !== "dual") {
+      return;
+    }
+    onConfigChange({
+      ...config,
+      touch_mode:
+        strategy === "delay"
+          ? {
+              type: "dual",
+              strategy,
+              interval:
+                config.touch_mode.strategy === "delay"
+                  ? config.touch_mode.interval
+                  : 0,
+              another_pointer_id: config.touch_mode.another_pointer_id,
+            }
+          : {
+              type: "dual",
+              strategy,
+              another_pointer_id: config.touch_mode.another_pointer_id,
+            },
+    });
   }
 
   return (
@@ -293,14 +315,34 @@ function Setting({
             value={config.touch_mode.type}
             onChange={handleTouchModeChange}
             options={[
-              { label: t("mappings.fps.setting.touchModeNone"), value: "none" },
-              { label: t("mappings.fps.setting.touchModeClean"), value: "clean" },
-              { label: t("mappings.fps.setting.touchModeDelayed"), value: "delayed" },
-              { label: t("mappings.fps.setting.touchModeOverlap"), value: "overlap" },
+              { label: t("mappings.fps.setting.touchModeSingle"), value: "single" },
+              { label: t("mappings.fps.setting.touchModeDual"), value: "dual" },
             ]}
           />
         </ItemBox>
-        {config.touch_mode.type !== "none" && (
+        {config.touch_mode.type === "single" && (
+          <ItemBox label={t("mappings.fps.setting.touchModeInterval")} tooltip={t("mappings.fps.setting.singleTouchIntervalHint")}>
+            <InputNumber
+              className="w-full"
+              value={config.touch_mode.interval}
+              min={0}
+              step={1}
+              onChange={(v) => {
+                if (v === null || config.touch_mode.type !== "single") {
+                  return;
+                }
+                onConfigChange({
+                  ...config,
+                  touch_mode: {
+                    type: "single",
+                    interval: v,
+                  },
+                });
+              }}
+            />
+          </ItemBox>
+        )}
+        {config.touch_mode.type === "dual" && (
           <ItemBox label={t("mappings.fps.setting.anotherPointerId")} tooltip={t("mappings.fps.setting.anotherPointerIdHint")}>
             <InputNumber
               className="w-full"
@@ -310,6 +352,7 @@ function Setting({
               onChange={(v) =>
                 v !== null &&
                 v !== config.pointer_id &&
+                config.touch_mode.type === "dual" &&
                 onConfigChange({
                   ...config,
                   touch_mode: withTouchModePointer(config.touch_mode, v),
@@ -318,21 +361,39 @@ function Setting({
             />
           </ItemBox>
         )}
-        {config.touch_mode.type === "delayed" && (
-          <ItemBox label={t("mappings.fps.setting.touchModeInterval")} tooltip={t("mappings.fps.setting.touchModeIntervalHint")}>
+        {config.touch_mode.type === "dual" && (
+          <ItemBox label={t("mappings.fps.setting.dualTouchStrategy")} tooltip={t("mappings.fps.setting.dualTouchStrategyHint")}>
+            <Select
+              className="w-full"
+              value={config.touch_mode.strategy}
+              onChange={handleDualStrategyChange}
+              options={[
+                { label: t("mappings.fps.setting.dualTouchStrategyDelay"), value: "delay" },
+                { label: t("mappings.fps.setting.dualTouchStrategyOverlap"), value: "overlap" },
+              ]}
+            />
+          </ItemBox>
+        )}
+        {config.touch_mode.type === "dual" && config.touch_mode.strategy === "delay" && (
+          <ItemBox label={t("mappings.fps.setting.touchModeInterval")} tooltip={t("mappings.fps.setting.dualTouchIntervalHint")}>
             <InputNumber
               className="w-full"
               value={config.touch_mode.interval}
               min={0}
               step={1}
               onChange={(v) => {
-                if (v === null || config.touch_mode.type !== "delayed") {
+                if (
+                  v === null ||
+                  config.touch_mode.type !== "dual" ||
+                  config.touch_mode.strategy !== "delay"
+                ) {
                   return;
                 }
                 onConfigChange({
                   ...config,
                   touch_mode: {
-                    type: "delayed",
+                    type: "dual",
+                    strategy: "delay",
                     interval: v,
                     another_pointer_id: config.touch_mode.another_pointer_id,
                   },

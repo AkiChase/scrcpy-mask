@@ -527,7 +527,7 @@ function mappingPointerIds(mapping: MappingType): number[] {
   ) {
     pointerIds.push(mapping.pointer_id);
   }
-  if (mapping.type !== "Fps" || mapping.touch_mode.type === "none") {
+  if (mapping.type !== "Fps" || mapping.touch_mode.type !== "dual") {
     return pointerIds;
   }
   if (
@@ -564,7 +564,7 @@ function assignNextAvailablePointerId(
   if ("pointer_id" in mapping) {
     mapping.pointer_id = getNextAvailablePointerId(mappings);
   }
-  if (mapping.type !== "Fps" || mapping.touch_mode.type === "none") {
+  if (mapping.type !== "Fps" || mapping.touch_mode.type !== "dual") {
     return;
   }
   mapping.touch_mode.another_pointer_id = getNextAvailablePointerIdWithReserved(

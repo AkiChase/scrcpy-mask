@@ -412,10 +412,14 @@ export interface FpsConfig {
 }
 
 export type FpsTouchMode =
-  | { type: "none" }
-  | { type: "clean"; another_pointer_id: number }
-  | { type: "delayed"; interval: number; another_pointer_id: number }
-  | { type: "overlap"; another_pointer_id: number };
+  | { type: "single"; interval: number }
+  | {
+      type: "dual";
+      another_pointer_id: number;
+      strategy: "delay";
+      interval: number;
+    }
+  | { type: "dual"; another_pointer_id: number; strategy: "overlap" };
 
 export function newFps(position: Position): FpsConfig {
   return {
@@ -428,7 +432,7 @@ export function newFps(position: Position): FpsConfig {
     sensitivity_y: 0.8,
     max_offset_x: 0,
     max_offset_y: 0,
-    touch_mode: { type: "none" },
+    touch_mode: { type: "single", interval: 0 },
     type: "Fps",
   };
 }
@@ -528,24 +532,27 @@ function withDefaultScriptHooks(
 
 function normalizeFpsTouchMode(value?: Partial<FpsTouchMode>): FpsTouchMode {
   switch (value?.type) {
-    case "clean":
+    case "single":
       return {
-        type: "clean",
-        another_pointer_id: value.another_pointer_id ?? 1,
+        type: "single",
+        interval: value.interval ?? 0,
       };
-    case "delayed":
+    case "dual":
+      if (value.strategy === "overlap") {
+        return {
+          type: "dual",
+          strategy: "overlap",
+          another_pointer_id: value.another_pointer_id ?? 1,
+        };
+      }
       return {
-        type: "delayed",
-        interval: value.interval ?? 16,
-        another_pointer_id: value.another_pointer_id ?? 1,
-      };
-    case "overlap":
-      return {
-        type: "overlap",
+        type: "dual",
+        strategy: "delay",
+        interval: "interval" in value ? (value.interval ?? 0) : 0,
         another_pointer_id: value.another_pointer_id ?? 1,
       };
     default:
-      return { type: "none" };
+      return { type: "single", interval: 0 };
   }
 }
 
