@@ -271,6 +271,8 @@
       "setting": {
         "sensitivity": "Sensitivity",
         "sensitivityHint": "Only active in FPS mode. Fire button drag speed relative to mouse movement, independent from FPS sensitivity.",
+        "preserveFpsControl": "Preserve FPS control",
+        "preserveFpsControlHint": "When enabled, the fire touch stays fixed and FPS view control keeps responding to mouse movement.",
         "title": "Mapping Configuration - Fire"
       },
       "name": "Fire"

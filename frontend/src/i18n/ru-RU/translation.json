@@ -271,6 +271,8 @@
       "setting": {
         "sensitivity": "Чувствительность",
         "sensitivityHint": "Активно только в режиме FPS. Скорость перетаскивания кнопки огня относительно движения мыши, независимо от чувствительности FPS.",
+        "preserveFpsControl": "Preserve FPS control",
+        "preserveFpsControlHint": "When enabled, the fire touch stays fixed and FPS view control keeps responding to mouse movement.",
         "title": "Конфигурация раскладки - Fire"
       },
       "name": "Fire"

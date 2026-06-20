@@ -418,6 +418,17 @@ pub fn validate_mapping_config_diagnostics(
     }
 
     let mut mapping_type_map = HashMap::<String, u32>::new();
+    let fps_touch_pointer_ids: HashSet<u64> = mapping_config
+        .mappings
+        .iter()
+        .filter_map(|mapping| match mapping {
+            MappingType::Fps(mapping) => Some(mapping),
+            _ => None,
+        })
+        .flat_map(|mapping| {
+            std::iter::once(mapping.pointer_id).chain(mapping.touch_mode.another_pointer_id())
+        })
+        .collect();
     for mapping in mapping_config.mappings.iter() {
         let mapping_type = mapping.as_ref();
         let count = *mapping_type_map
@@ -464,6 +475,7 @@ pub fn validate_mapping_config_diagnostics(
         collect_mapping_specific_diagnostics(
             &mut diagnostics,
             mapping,
+            &fps_touch_pointer_ids,
             mapping_type,
             mapping_index,
             id,
@@ -508,6 +520,7 @@ fn format_mapping_diagnostic(diagnostic: &MappingDiagnostic) -> String {
 fn collect_mapping_specific_diagnostics(
     diagnostics: &mut Vec<MappingDiagnostic>,
     mapping: &MappingType,
+    fps_touch_pointer_ids: &HashSet<u64>,
     mapping_type: &str,
     mapping_index: usize,
     mapping_id: &str,
@@ -624,13 +637,24 @@ fn collect_mapping_specific_diagnostics(
                 ));
             }
         }
-        MappingType::Fire(mapping) => collect_script_hook_diagnostics(
-            diagnostics,
-            mapping_type,
-            mapping_index,
-            mapping_id,
-            &mapping.script_hooks,
-        ),
+        MappingType::Fire(mapping) => {
+            if mapping.preserve_fps_control && fps_touch_pointer_ids.contains(&mapping.pointer_id) {
+                diagnostics.push(MappingDiagnostic::mapping(
+                    "mapping.fire.pointerConflictsWithFps",
+                    "Fire preserve_fps_control requires a pointer_id different from FPS touch pointer ids.",
+                    mapping_type,
+                    mapping_index,
+                    mapping_id,
+                ));
+            }
+            collect_script_hook_diagnostics(
+                diagnostics,
+                mapping_type,
+                mapping_index,
+                mapping_id,
+                &mapping.script_hooks,
+            );
+        }
         MappingType::RawInput(_) => {}
         MappingType::Script(mapping) => {
             collect_script_field_diagnostics(

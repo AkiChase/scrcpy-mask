@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FireConfig, MappingUpdater } from "./mapping";
-import { Flex, InputNumber, Space, Tooltip, Typography } from "antd";
+import { Flex, InputNumber, Space, Switch, Tooltip, Typography } from "antd";
 import {
   mappingButtonDragFactory,
   mappingButtonScaledPresetStyle,
@@ -153,6 +153,14 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
+        <ItemBox label={t("mappings.fire.setting.preserveFpsControl")} tooltip={t("mappings.fire.setting.preserveFpsControlHint")}>
+          <Switch
+            checked={config.preserve_fps_control}
+            onChange={(v) =>
+              onConfigChange({ ...config, preserve_fps_control: v })
+            }
+          />
+        </ItemBox>
         <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.common.randomOffsetXHint")}>
           <InputNumber
             className="w-full"
@@ -173,36 +181,38 @@ function Setting({
             }
           />
         </ItemBox>
-        <ItemBox label={t("mappings.fire.setting.sensitivity")} tooltip={t("mappings.fire.setting.sensitivityHint")}>
-          <Space.Compact className="w-full">
-            <InputNumber
-              className="w-full"
-              prefix="X:"
-              value={config.sensitivity_x}
-              min={0}
-              onChange={(v) =>
-                v !== null &&
-                onConfigChange({
-                  ...config,
-                  sensitivity_x: v,
-                })
-              }
-            />
-            <InputNumber
-              className="w-full"
-              prefix="Y:"
-              value={config.sensitivity_y}
-              min={0}
-              onChange={(v) =>
-                v !== null &&
-                onConfigChange({
-                  ...config,
-                  sensitivity_y: v,
-                })
-              }
-            />
-          </Space.Compact>
-        </ItemBox>
+        {!config.preserve_fps_control && (
+          <ItemBox label={t("mappings.fire.setting.sensitivity")} tooltip={t("mappings.fire.setting.sensitivityHint")}>
+            <Space.Compact className="w-full">
+              <InputNumber
+                className="w-full"
+                prefix="X:"
+                value={config.sensitivity_x}
+                min={0}
+                onChange={(v) =>
+                  v !== null &&
+                  onConfigChange({
+                    ...config,
+                    sensitivity_x: v,
+                  })
+                }
+              />
+              <InputNumber
+                className="w-full"
+                prefix="Y:"
+                value={config.sensitivity_y}
+                min={0}
+                onChange={(v) =>
+                  v !== null &&
+                  onConfigChange({
+                    ...config,
+                    sensitivity_y: v,
+                  })
+                }
+              />
+            </Space.Compact>
+          </ItemBox>
+        )}
         <SettingNote
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}

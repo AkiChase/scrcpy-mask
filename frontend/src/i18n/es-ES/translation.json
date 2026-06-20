@@ -271,6 +271,8 @@
       "setting": {
         "sensitivity": "Sensibilidad",
         "sensitivityHint": "Solo activo en modo FPS. Velocidad de arrastre del botón de disparo relativa al movimiento del ratón, independiente de la sensibilidad FPS.",
+        "preserveFpsControl": "Preserve FPS control",
+        "preserveFpsControlHint": "When enabled, the fire touch stays fixed and FPS view control keeps responding to mouse movement.",
         "title": "Configuración de mapeo - Fire"
       },
       "name": "Fire"

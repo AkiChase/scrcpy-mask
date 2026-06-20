@@ -304,7 +304,9 @@
       "setting": {
         "title": "映射配置 - 开火",
         "sensitivity": "灵敏度",
-        "sensitivityHint": "仅在 FPS 模式下生效。开火按钮相对鼠标移动的拖动倍率，独立于 FPS 灵敏度。"
+        "sensitivityHint": "仅在 FPS 模式下生效。开火按钮相对鼠标移动的拖动倍率，独立于 FPS 灵敏度。",
+        "preserveFpsControl": "保持 FPS 视角控制",
+        "preserveFpsControlHint": "开启后开火触点保持固定，FPS 视角控制继续响应鼠标移动。"
       },
       "name": "开火"
     },

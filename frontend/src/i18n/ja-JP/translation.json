@@ -271,6 +271,8 @@
       "setting": {
         "sensitivity": "感度",
         "sensitivityHint": "FPS モードでのみ有効です。射撃ボタンのドラッグ速度はマウス移動に対する相対値で、FPS 感度とは独立しています。",
+        "preserveFpsControl": "Preserve FPS control",
+        "preserveFpsControlHint": "When enabled, the fire touch stays fixed and FPS view control keeps responding to mouse movement.",
         "title": "マッピング設定 - 射撃"
       },
       "name": "射撃"

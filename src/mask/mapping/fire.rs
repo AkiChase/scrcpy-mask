@@ -48,6 +48,10 @@ fn default_fps_max_offset() -> f32 {
     0.0
 }
 
+fn default_preserve_fps_control() -> bool {
+    true
+}
+
 #[derive(Debug, Clone)]
 pub struct BindMappingFps {
     pub id: String,
@@ -144,12 +148,12 @@ pub fn exit_fps_mode(
     cursor_pos: Vec2,
 ) -> Vec<String> {
     let released_fire_actions = release_active_fire(cs_tx, active_fire_map, mask_size);
-    if released_fire_actions.is_empty() {
+    if !released_fire_actions.interrupted_fps_control {
         release_fps_touches(cs_tx, fps_config, mask_size, cursor_pos);
     }
     fps_config.ignore_fps_motion = false;
     next_state.set(CursorState::Normal);
-    released_fire_actions
+    released_fire_actions.actions
 }
 
 impl ValidateMappingConfig for MappingFps {
@@ -244,6 +248,7 @@ pub struct BindMappingFire {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
+    pub preserve_fps_control: bool,
     pub sensitivity_x: f32,
     pub sensitivity_y: f32,
     pub bind: ButtonBinding,
@@ -260,6 +265,7 @@ impl From<MappingFire> for BindMappingFire {
             note: value.note,
             pointer_id: value.pointer_id,
             position: value.position,
+            preserve_fps_control: value.preserve_fps_control,
             sensitivity_x: value.sensitivity_x,
             sensitivity_y: value.sensitivity_y,
             bind: value.bind.clone(),
@@ -278,6 +284,8 @@ pub struct MappingFire {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
+    #[serde(default = "default_preserve_fps_control")]
+    pub preserve_fps_control: bool,
     #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub sensitivity_x: f32,
     #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
@@ -317,13 +325,20 @@ struct FireReleaseContext {
     fps_mode_flag: bool,
 }
 
+struct ReleasedFireActions {
+    actions: Vec<String>,
+    interrupted_fps_control: bool,
+}
+
 fn release_active_fire(
     cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
     active_map: &mut ActiveFireMap,
     mask_size: Vec2,
-) -> Vec<String> {
+) -> ReleasedFireActions {
     let mut released_actions = Vec::with_capacity(active_map.0.len());
+    let mut interrupted_fps_control = false;
     for (action, fire_item) in active_map.0.drain() {
+        interrupted_fps_control |= !fire_item.preserve_fps_control;
         ControlMsgHelper::send_touch(
             cs_tx,
             MotionEventAction::Up,
@@ -333,7 +348,10 @@ fn release_active_fire(
         );
         released_actions.push(action);
     }
-    released_actions
+    ReleasedFireActions {
+        actions: released_actions,
+        interrupted_fps_control,
+    }
 }
 
 pub fn cleanup_fire_on_stop(
@@ -424,6 +442,9 @@ pub fn handle_fire_trigger(
     }
 
     for (_, fire_item) in active_map.0.iter_mut() {
+        if fire_item.preserve_fps_control {
+            continue;
+        }
         fire_item.current_pos += accumulated_motion.delta * fire_item.sensitivity;
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,
@@ -439,6 +460,7 @@ struct FireItem {
     current_pos: Vec2,
     pointer_id: u64,
     sensitivity: Vec2,
+    preserve_fps_control: bool,
 }
 
 fn fire_has_before_hook(mapping: &BindMappingFire) -> bool {
@@ -459,8 +481,10 @@ fn apply_fire_begin(
     mask_size: Vec2,
     cursor_pos: Vec2,
 ) {
-    fps_config.ignore_fps_motion = true;
-    release_fps_touches(&cs_tx.0, fps_config, mask_size, cursor_pos);
+    if !mapping.preserve_fps_control {
+        fps_config.ignore_fps_motion = true;
+        release_fps_touches(&cs_tx.0, fps_config, mask_size, cursor_pos);
+    }
 
     let original_pos: Vec2 = mapping.position.into();
     let random_pos = random_offset_vec2(
@@ -483,8 +507,31 @@ fn apply_fire_begin(
             current_pos,
             pointer_id: mapping.pointer_id,
             sensitivity,
+            preserve_fps_control: mapping.preserve_fps_control,
         },
     );
+}
+
+fn release_fire_item(
+    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    fps_config: &mut ActiveCursorFpsConfig,
+    mask_size: Vec2,
+    fire_item: FireItem,
+) -> Option<Vec2> {
+    ControlMsgHelper::send_touch(
+        cs_tx,
+        MotionEventAction::Up,
+        fire_item.pointer_id,
+        mask_size,
+        fire_item.current_pos,
+    );
+    if fire_item.preserve_fps_control {
+        return None;
+    }
+
+    restore_fps_touch(cs_tx, fps_config);
+    fps_config.ignore_fps_motion = false;
+    Some(fps_config.original_pos / fps_config.original_size * mask_size)
 }
 
 fn apply_fire_end(
@@ -496,16 +543,11 @@ fn apply_fire_end(
     action: &str,
 ) -> bool {
     if let Some(fire_item) = active_map.0.remove(action) {
-        ControlMsgHelper::send_touch(
-            &cs_tx.0,
-            MotionEventAction::Up,
-            fire_item.pointer_id,
-            mask_size,
-            fire_item.current_pos,
-        );
-        restore_fps_touch(&cs_tx.0, fps_config);
-        cursor_pos.0 = fps_config.original_pos / fps_config.original_size * mask_size;
-        fps_config.ignore_fps_motion = false;
+        if let Some(restored_cursor_pos) =
+            release_fire_item(&cs_tx.0, fps_config, mask_size, fire_item)
+        {
+            cursor_pos.0 = restored_cursor_pos;
+        }
         true
     } else {
         false
@@ -611,25 +653,22 @@ pub fn handle_fire(
                                     }
                                     if let Some(release) = &pending_release {
                                         if let Some(fire_item) = active_map.0.remove(&action) {
-                                            ControlMsgHelper::send_touch(
-                                                &cs_tx,
-                                                MotionEventAction::Up,
-                                                fire_item.pointer_id,
-                                                release.mask_size,
-                                                fire_item.current_pos,
-                                            );
-                                            let (fps_original_size, fps_original_pos) = {
+                                            let restored_cursor_pos = {
                                                 let mut fps_config = main_ctx
                                                     .world
                                                     .resource_mut::<ActiveCursorFpsConfig>(
                                                 );
-                                                fps_config.ignore_fps_motion = false;
-                                                restore_fps_touch(&cs_tx, &mut fps_config);
-                                                (fps_config.original_size, fps_config.original_pos)
+                                                release_fire_item(
+                                                    &cs_tx,
+                                                    &mut fps_config,
+                                                    release.mask_size,
+                                                    fire_item,
+                                                )
                                             };
-                                            main_ctx.world.resource_mut::<CursorPosition>().0 =
-                                                fps_original_pos / fps_original_size
-                                                    * release.mask_size;
+                                            if let Some(restored_cursor_pos) = restored_cursor_pos {
+                                                main_ctx.world.resource_mut::<CursorPosition>().0 =
+                                                    restored_cursor_pos;
+                                            }
                                         }
                                     }
                                     main_ctx.world.insert_resource(active_map);
