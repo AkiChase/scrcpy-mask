@@ -24,6 +24,10 @@
       "pair": {
         "label": "Emparejamiento inalámbrico",
         "btn": "Emparejar"
+      },
+      "server": {
+        "label": "Servicio ADB",
+        "restart": "Reiniciar"
       }
     },
     "controlledDevices": {

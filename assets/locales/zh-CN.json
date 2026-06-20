@@ -62,6 +62,8 @@
       "adbConnectFailed": "Adb 连接 %{address} 失败",
       "adbPairSuccess": "Adb 设备 %{address} 使用验证码 %{code} 配对成功",
       "adbPairFailed": "Adb 设备 %{address} 使用验证码 %{code} 配对失败",
+      "adbRestartSuccess": "ADB server 重启成功",
+      "adbRestartFailed": "ADB server 重启失败",
       "screenshotError": "设备截图失败",
       "failedGetScreenshotFile": "获取截图文件失败",
       "failedRemoveScreenshot": "为设备删除截图文件失败",

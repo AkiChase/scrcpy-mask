@@ -201,6 +201,11 @@ impl Adb {
             .map_err(|e| format!("{}': {}", t!("adb.killServerFailed"), e))
     }
 
+    pub fn restart_server(&mut self) -> Result<Vec<Device>, String> {
+        self.kill_server()?;
+        self.devices()
+    }
+
     pub fn connect_device(&mut self, address: &str) -> Result<(), String> {
         let socket_addr = address
             .parse::<SocketAddrV4>()

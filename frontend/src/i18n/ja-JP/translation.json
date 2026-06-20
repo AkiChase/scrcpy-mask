@@ -24,6 +24,10 @@
       "pair": {
         "label": "ワイヤレスペアリング",
         "btn": "ペアリング"
+      },
+      "server": {
+        "label": "ADB サービス",
+        "restart": "再起動"
       }
     },
     "controlledDevices": {

@@ -24,6 +24,10 @@
       "pair": {
         "label": "Wireless pairing",
         "btn": "Pair"
+      },
+      "server": {
+        "label": "ADB service",
+        "restart": "Restart"
       }
     },
     "controlledDevices": {

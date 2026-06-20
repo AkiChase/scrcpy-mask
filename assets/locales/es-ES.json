@@ -62,6 +62,8 @@
       "adbConnectFailed": "Adb no pudo conectar con %{address}",
       "adbPairSuccess": "Adb emparejó %{address} con el código %{code} correctamente",
       "adbPairFailed": "Adb no pudo emparejar %{address} con el código %{code}",
+      "adbRestartSuccess": "ADB server reiniciado correctamente",
+      "adbRestartFailed": "No se pudo reiniciar ADB server",
       "screenshotError": "No se pudo hacer una captura de pantalla del dispositivo",
       "failedGetScreenshotFile": "No se pudo obtener el archivo de captura de pantalla",
       "failedRemoveScreenshot": "No se pudo eliminar el archivo de captura de pantalla del dispositivo",

@@ -62,6 +62,8 @@
       "adbConnectFailed": "Adb connect %{address} に失敗しました",
       "adbPairSuccess": "Adb pair %{address} とコード %{code} に成功しました",
       "adbPairFailed": "Adb pair %{address} とコード %{code} に失敗しました",
+      "adbRestartSuccess": "ADB server を再起動しました",
+      "adbRestartFailed": "ADB server の再起動に失敗しました",
       "screenshotError": "デバイスのスクリーンショット取得に失敗しました",
       "failedGetScreenshotFile": "スクリーンショットファイルの取得に失敗しました",
       "failedRemoveScreenshot": "デバイスのスクリーンショットファイル削除に失敗しました",

@@ -48,6 +48,7 @@ pub fn routers(
         .route("/reconnect_device", post(reconnect_device))
         .route("/adb_connect", post(adb_connect))
         .route("/adb_pair", post(adb_pair))
+        .route("/adb_restart", post(adb_restart))
         .route("/adb_screenshot", post(adb_screenshot))
         .route("/control/set_display_power", post(set_display_power))
         .route("/control/set_pointer_location", post(set_pointer_location))
@@ -339,6 +340,25 @@ async fn adb_pair(Json(payload): Json<PostDataAdbPair>) -> Result<JsonResponse, 
         Err(e) => Err(WebServerError::bad_request(format!(
             "{}: {}",
             t!("web.device.adbPairFailed", address => payload.address, code => payload.code),
+            e
+        ))),
+    }
+}
+
+async fn adb_restart() -> Result<JsonResponse, WebServerError> {
+    let controlled_devices = ControlledDevice::get_device_list().await;
+    let config = LocalConfig::get();
+    match Adb::new(config.adb_path).restart_server() {
+        Ok(adb_devices) => Ok(JsonResponse::success(
+            t!("web.device.adbRestartSuccess"),
+            Some(json!({
+                "controlled_devices": controlled_devices,
+                "adb_devices": adb_devices,
+            })),
+        )),
+        Err(e) => Err(WebServerError::internal_error(format!(
+            "{}: {}",
+            t!("web.device.adbRestartFailed"),
             e
         ))),
     }

@@ -24,6 +24,10 @@
       "connect": {
         "label": "无线连接",
         "btn": "连接"
+      },
+      "server": {
+        "label": "ADB 服务",
+        "restart": "重启"
       }
     },
     "controlledDevices": {

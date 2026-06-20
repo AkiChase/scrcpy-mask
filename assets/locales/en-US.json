@@ -62,6 +62,8 @@
       "adbConnectFailed": "Adb connect %{address} failed",
       "adbPairSuccess": "Adb pair %{address} with code %{code} successfully",
       "adbPairFailed": "Adb pair %{address} with code %{code} failed",
+      "adbRestartSuccess": "ADB server restarted successfully",
+      "adbRestartFailed": "Failed to restart ADB server",
       "screenshotError": "Failed to take screenshot for device",
       "failedGetScreenshotFile": "Failed to get screenshot file",
       "failedRemoveScreenshot": "Failed to remove screenshot file for device",

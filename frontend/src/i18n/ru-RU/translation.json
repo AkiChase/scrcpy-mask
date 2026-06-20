@@ -24,6 +24,10 @@
       "pair": {
         "label": "Беспроводное сопряжение",
         "btn": "Сопрячь"
+      },
+      "server": {
+        "label": "Служба ADB",
+        "restart": "Перезапустить"
       }
     },
     "controlledDevices": {

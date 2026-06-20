@@ -62,6 +62,8 @@
       "adbConnectFailed": "ADB не удалось подключиться к %{address}",
       "adbPairSuccess": "ADB успешно сопряжен с %{address} по коду %{code}",
       "adbPairFailed": "ADB не удалось сопрячь с %{address} по коду %{code}",
+      "adbRestartSuccess": "ADB server успешно перезапущен",
+      "adbRestartFailed": "Не удалось перезапустить ADB server",
       "screenshotError": "Не удалось сделать снимок экрана устройства",
       "failedGetScreenshotFile": "Не удалось получить файл снимка экрана",
       "failedRemoveScreenshot": "Не удалось удалить файл снимка экрана устройства",

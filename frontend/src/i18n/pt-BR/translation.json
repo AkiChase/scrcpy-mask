@@ -24,6 +24,10 @@
       "pair": {
         "label": "Pareamento sem fio",
         "btn": "Parear"
+      },
+      "server": {
+        "label": "Serviço ADB",
+        "restart": "Reiniciar"
       }
     },
     "controlledDevices": {

@@ -548,6 +548,22 @@ export default function Devices() {
     dispatch(setIsLoading(false));
   }
 
+  async function restartAdbServer() {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost<{
+        controlled_devices: ControlledDevice[];
+        adb_devices: AdbDevice[];
+      }>("/api/device/adb_restart");
+      dispatch(setControlledDevices(res.data.controlled_devices));
+      dispatch(setAdbDevices(res.data.adb_devices));
+      messageApi?.success(res.message);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
+
   return (
     <div className="page-container">
       <section>
@@ -581,6 +597,15 @@ export default function Devices() {
                 {t("devices.adbTools.connect.btn")}
               </Button>
             </Space.Compact>
+          </ItemBox>
+          <ItemBox label={t("devices.adbTools.server.label")}>
+            <Button
+              type="primary"
+              icon={<ReloadOutlined />}
+              onClick={restartAdbServer}
+            >
+              {t("devices.adbTools.server.restart")}
+            </Button>
           </ItemBox>
         </ItemBoxContainer>
       </section>

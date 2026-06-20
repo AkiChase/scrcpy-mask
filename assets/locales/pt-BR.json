@@ -62,6 +62,8 @@
       "adbConnectFailed": "Adb falhou ao conectar %{address}",
       "adbPairSuccess": "Adb pareou %{address} com o código %{code} com sucesso",
       "adbPairFailed": "Adb falhou ao parear %{address} com o código %{code}",
+      "adbRestartSuccess": "ADB server reiniciado com sucesso",
+      "adbRestartFailed": "Falha ao reiniciar ADB server",
       "screenshotError": "Falha ao capturar tela do dispositivo",
       "failedGetScreenshotFile": "Falha ao obter arquivo de captura de tela",
       "failedRemoveScreenshot": "Falha ao remover arquivo de captura de tela do dispositivo",
