@@ -1,0 +1,401 @@
+{
+  "_meta": {
+    "languageName": "日本語"
+  },
+  "404": {
+    "title": "ページが見つかりません。",
+    "back": "ホームに戻る"
+  },
+  "sider": {
+    "devices": "デバイス",
+    "mappings": "マッピング",
+    "settings": "設定"
+  },
+  "welcome": {
+    "main": "Scrcpy Mask へようこそ 👏🏻"
+  },
+  "devices": {
+    "adbTools": {
+      "connect": {
+        "label": "ワイヤレス接続",
+        "btn": "接続"
+      },
+      "title": "ADB ツール",
+      "pair": {
+        "label": "ワイヤレスペアリング",
+        "btn": "ペアリング"
+      }
+    },
+    "controlledDevices": {
+      "name": "名前",
+      "action": "操作",
+      "size": "サイズ",
+      "title": "制御中のデバイス",
+      "mainDevice": "メイン",
+      "actionInfo": "詳細情報",
+      "actionClose": "制御を停止",
+      "actionReconnect": "デバイスを再接続",
+      "rotation": "向き",
+      "landscape": "横向き",
+      "portrait": "縦向き"
+    },
+    "otherDevices": {
+      "title": "その他のデバイス",
+      "status": "状態",
+      "actionControl": "デバイスを制御",
+      "video": "動画"
+    },
+    "common": {
+      "refresh": "デバイスを更新"
+    },
+    "actions": {
+      "setDisplayPowerOn": "画面をオン",
+      "setDisplayPowerOff": "画面をオフ",
+      "volumeUp": "音量を上げる",
+      "volumeDown": "音量を下げる",
+      "back": "戻る",
+      "home": "ホーム",
+      "appSwitch": "アプリ切り替え",
+      "enablePointerDebug": "ポインターデバッグを有効化",
+      "disablePointerDebug": "ポインターデバッグを無効化",
+      "executing": "実行中: {{action}}",
+      "executed": "実行済み: {{action}}"
+    }
+  },
+  "mappings": {
+    "common": {
+      "bind": {
+        "autoInputPlaceholder": "ダブルクリックでボタン記録を有効化",
+        "settingLabel": "バインド",
+        "settingManual": "手動",
+        "settingAuto": "自動",
+        "manualSelectPlaceholder": "バインドを選択",
+        "hint": "複数のマッピングで同じショートカットを共有し、同時にトリガーできます。余分なキーはコンボを妨げませんが、より長く一致するコンボが優先されます。"
+      },
+      "pointerId": {
+        "label": "PointerID",
+        "hint": "各 PointerID は 1 本の仮想指に対応し、同時に触れられる座標は 1 つだけです。同じ PointerID を共有するボタンを同時に押すと競合するため、同時に押す可能性があるボタンには別々の PointerID を割り当ててください。"
+      },
+      "note": {
+        "label": "メモ"
+      },
+      "id": {
+        "label": "設定 ID",
+        "hint": "スクリプトや外部 API からこのマッピングを正確に参照するために使います。コピーアイコンをクリックするとコピーできます。"
+      },
+      "delete": {
+        "label": "削除"
+      },
+      "refreshBackground": "背景を更新",
+      "refreshBgFail": "背景画像の更新に失敗しました: {0}",
+      "refreshSuccess": "背景画像を更新しました",
+      "noMainDevice": "制御中のメインデバイスが見つかりません。デバイスページでデバイスを制御してください",
+      "copy": {
+        "label": "複製"
+      },
+      "randomOffsetX": "ランダムオフセット X",
+      "randomOffsetY": "ランダムオフセット Y",
+      "randomOffsetXHint": "各アクティベーション時に適用する水平ランダムオフセットです。[-offset, +offset] から選ばれます。0 にすると無効になります。",
+      "randomOffsetYHint": "各アクティベーション時に適用する垂直ランダムオフセットです。[-offset, +offset] から選ばれます。0 にすると無効になります。",
+      "scriptHooks": {
+        "before": "前処理スクリプト",
+        "beforeHint": "このマッピング動作の前に実行します。空のままならスキップします。スクリプトは現在のマッピング処理をブロックするため、遅いスクリプトは入力遅延やマッピングの詰まりを引き起こす可能性があります。",
+        "beforePlaceholder": "動作前に実行するスクリプト",
+        "after": "後処理スクリプト",
+        "afterHint": "このマッピング動作の後に実行します。空のままならスキップします。スクリプトは現在のマッピング処理をブロックするため、遅いスクリプトは入力遅延やマッピングの詰まりを引き起こす可能性があります。",
+        "afterPlaceholder": "動作後に実行するスクリプト"
+      },
+      "scriptEditor": {
+        "empty": "空のスクリプト",
+        "checking": "スクリプトをチェック中...",
+        "valid": "構文は有効です",
+        "errorCount": "{{count}} 件のエラー",
+        "checkFailed": "チェックに失敗しました",
+        "expand": "大きなエディターを開く",
+        "editTitle": "スクリプトを編集",
+        "run": "スクリプトを実行",
+        "runResult": "実行結果"
+      }
+    },
+    "singleTap": {
+      "setting": {
+        "title": "マッピング設定 - 単発タップ",
+        "sync": "同期",
+        "syncHint": "有効にすると、継続時間設定を無視して、ショートカットを押している間だけタッチが続きます。",
+        "duration": "継続時間",
+        "durationHint": "自動リリースまでのタッチ継続時間 (ms)。進行中のタップは、ショートカットを再度押しても中断されません。"
+      },
+      "name": "単発タップ"
+    },
+    "repeatTap": {
+      "setting": {
+        "title": "マッピング設定 - 連続タップ",
+        "duration": "継続時間",
+        "durationHint": "各タッチの継続時間 (ms)。繰り返し間隔より短くする必要があります。",
+        "interval": "間隔",
+        "intervalHint": "連続するタッチ開始間の時間 (ms)。継続時間はこの間隔より短くする必要があります。",
+        "randomOffsetXHint": "連続タップごとにランダムオフセットを再計算するため、各タップの X 座標が少しずつ変わります。",
+        "randomOffsetYHint": "連続タップごとにランダムオフセットを再計算するため、各タップの Y 座標が少しずつ変わります。"
+      },
+      "name": "連続タップ"
+    },
+    "multipleTap": {
+      "setting": {
+        "title": "マッピング設定 - 複数タップ",
+        "delete": "削除",
+        "duration": "継続時間",
+        "durationHint": "このタッチをリリースするまで保持する時間 (ms)。",
+        "keepLastOne": "少なくとも 1 つの操作を残してください！",
+        "wait": "待機",
+        "waitHint": "このタッチ操作を開始する前の待機時間 (ms)。",
+        "edit": "編集",
+        "operations": "操作シーケンス",
+        "operationsHint": "順番に実行されるタッチ操作のシーケンス: 待機 → タッチ → 継続時間だけ保持 → リリース。位置はビジュアルエディターで編集します。",
+        "operationsHelp": "左クリックでドラッグし、右クリックで追加または編集します",
+        "back": "戻る"
+      },
+      "name": "複数タップ"
+    },
+    "swipe": {
+      "setting": {
+        "keepLastOne": "少なくとも 1 つの操作を残してください！",
+        "title": "マッピング設定 - スワイプ",
+        "enableRandomization": "パスのランダム化を有効化",
+        "enableRandomizationHint": "直線セグメントをランダムな弧の曲率を持つ滑らかな曲線に置き換え、毎回のスワイプ軌跡を少しずつ変えます。",
+        "positonsHelp": "左クリックでドラッグし、右クリックで追加または編集します",
+        "duration": "継続時間",
+        "durationHint": "スワイプ動作全体を完了するまでの合計時間 (ms)。",
+        "edit": "編集",
+        "delete": "削除",
+        "positions": "位置シーケンス",
+        "back": "戻る"
+      },
+      "name": "スワイプ"
+    },
+    "directionPad": {
+      "setting": {
+        "title": "マッピング設定 - 方向パッド",
+        "joyStick": "ジョイスティック",
+        "button": "ボタン",
+        "xAxis": "X 軸",
+        "yAxis": "Y 軸",
+        "down": "下",
+        "initDuration": "初期スライド遅延",
+        "initDurationHint": "パッドが反応する前の初期スライド時間 (ms)。初回タッチを取りこぼすゲームへの対策に役立ちます。",
+        "left": "左",
+        "maxOffset": "最大オフセット",
+        "maxOffsetHint": "パッド中心から水平軸および垂直軸に沿って仮想指をドラッグできる最大距離。",
+        "right": "右",
+        "up": "上",
+        "upBoostKey": "上方向ブースト",
+        "upBoostKeyHint": "この修飾キーを押している間、上キーの入力は通常の最大オフセット範囲を超えて伸ばせます。",
+        "upBoostScale": "上方向ブースト倍率",
+        "upBoostScaleHint": "ブーストキーを押している間に上方向オフセットへ適用する倍率です。例: 2.0 で上方向の到達距離が 2 倍になります。",
+        "enableRandomizationHint": "ランダムなアンカーオフセット、弧状のスライドパス、継続的な揺らぎを追加し、自然な指の動きを再現します。",
+        "randomOffset": "ランダム中心オフセット",
+        "randomOffsetHint": "押すたびにパッド中心へ適用されるランダムオフセット範囲。",
+        "randomDistanceScale": "ランダム距離倍率",
+        "randomDistanceScaleHint": "方向変更ごとに、中心から目標点までの距離へ適用されるランダム倍率。",
+        "jitterOffset": "揺らぎ範囲",
+        "jitterOffsetHint": "同じ方向を保持している間、現在の目標点の周辺でタッチが揺らぐ範囲。"
+      },
+      "name": "方向パッド"
+    },
+    "mouseCastSpell": {
+      "setting": {
+        "title": "マッピング設定 - マウススキル発動",
+        "center": "発動中心",
+        "centerHint": "発動方向計算の基準点です。通常は画面上のキャラクター位置です。透視投影などでキャラクターが中央にない場合は調整してください。",
+        "scaleFactor": "スケール係数",
+        "scaleFactorHint": "発動方向マッピングの水平/垂直スケールを制御します。ゲームに透視歪みがある場合のマウスからゲーム方向への補正に使います (例: Honor of Kings: X=7, Y=10)。",
+        "castRadius": "発動範囲",
+        "castRadiusHint": "マウス距離がこの範囲を超えるとスキルボタンを最大半径までドラッグし、範囲内では距離に比例してスケールします。",
+        "dragRadius": "ドラッグ範囲",
+        "dragRadiusHint": "ゲーム UI 内のスキルボタンの最大ドラッグ半径。",
+        "releaseMode": {
+          "label": "リリースタイミング",
+          "hint": "OnRelease: 押下で発動し、リリースで解除。OnPress: 押下時に即リリース。OnSecondPress: 1 回目の押下で発動し、2 回目の押下でリリース。",
+          "onRelease": "OnRelease",
+          "onPress": "OnPress",
+          "onSecondPress": "onSecondPress"
+        },
+        "castNoDirection": "方向なし発動",
+        "castNoDirectionHint": "方向設定を無視し、発動位置を単純にタップします。SingleTap に似ていますが、キャンセル可能です。",
+        "enableInitialSwipeRandomization": "初期スライドのランダム化",
+        "enableInitialSwipeRandomizationHint": "有効にすると初期ドラッグにランダムな弧状パスを使い、無効にすると直線パスを使います。",
+        "editLabel": "高度な編集",
+        "edit": "編集",
+        "editHelp": "左クリックでドラッグし、右クリックで編集します",
+        "setCenter": "中心",
+        "back": "戻る"
+      },
+      "name": "マウススキル発動"
+    },
+    "padCastSpell": {
+      "setting": {
+        "button": "ボタン",
+        "down": "下",
+        "joyStick": "ジョイスティック",
+        "left": "左",
+        "padBindLabel": "パッドバインド",
+        "right": "右",
+        "title": "マッピング設定 - パッドスキル発動",
+        "up": "上",
+        "xAxis": "X 軸",
+        "yAxis": "Y 軸",
+        "dragRadius": "ドラッグ範囲",
+        "dragRadiusHint": "ゲーム UI 内のスキルボタンの最大ドラッグ半径。",
+        "block": "方向パッドをブロック",
+        "blockHint": "発動中は方向パッドのショートカットをブロックし、入力競合を防ぎます。",
+        "enableRandomizationHint": "ランダムなアンカーオフセット、弧状のスライドパス、継続的な微小揺らぎを追加し、自然な指の動きを再現します。",
+        "releaseMode": {
+          "label": "リリースタイミング",
+          "hint": "OnRelease: 押下で発動し、リリースで解除。OnSecondPress: 1 回目の押下で発動し、2 回目の押下でリリース。",
+          "onRelease": "OnRelease",
+          "onSecondPress": "OnSecondPress"
+        }
+      },
+      "name": "パッドスキル発動"
+    },
+    "cancelCast": {
+      "setting": {
+        "title": "マッピング設定 - 発動キャンセル"
+      },
+      "name": "発動キャンセル"
+    },
+    "fire": {
+      "setting": {
+        "sensitivity": "感度",
+        "sensitivityHint": "FPS モードでのみ有効です。射撃ボタンのドラッグ速度はマウス移動に対する相対値で、FPS 感度とは独立しています。",
+        "title": "マッピング設定 - 射撃"
+      },
+      "name": "射撃"
+    },
+    "fps": {
+      "setting": {
+        "sensitivity": "感度",
+        "sensitivityHint": "視点回転速度はマウス移動に対する相対値です。画面端では、追跡を続けるために指が自動的に中心へ戻ります。",
+        "maxOffset": "最大オフセット",
+        "maxOffsetHint": "FPS 開始位置からローカル境界までの最大距離です。軸を 0 にすると、その軸のローカル制限はなくなります。",
+        "touchMode": "タッチモード",
+        "touchModeHint": "タッチがローカル境界に到達すると、開始位置に戻ってドラッグを続けます。シングルタッチは同じポインターを再利用し、デュアルタッチは別のポインターへ引き継ぎます。",
+        "touchModeSingle": "シングルタッチ",
+        "touchModeDual": "デュアルタッチ",
+        "anotherPointerId": "代替 Pointer ID",
+        "anotherPointerIdHint": "プライマリポインターと交互に使う別の pointer_id です。プライマリポインターとは異なる必要があります。",
+        "dualTouchStrategy": "引き継ぎ方式",
+        "dualTouchStrategyHint": "Delay は待機後に古いポインターを離す前に代替ポインターを押します。Overlap は次の移動時に一時的に両方のポインターを参加させます。",
+        "dualTouchStrategyDelay": "Delay",
+        "dualTouchStrategyOverlap": "Overlap",
+        "touchModeInterval": "間隔",
+        "singleTouchIntervalHint": "現在のポインターを離してから、開始位置で同じポインターを押すまで待つミリ秒数です。0 にすると即時押下します。",
+        "dualTouchIntervalHint": "代替ポインターを押してから古いポインターを離すまで待つミリ秒数です。0 にすると即時リフトします。",
+        "title": "マッピング設定 - FPS"
+      },
+      "name": "FPS"
+    },
+    "observation": {
+      "setting": {
+        "sensitivity": "感度",
+        "sensitivityHint": "視点ドラッグ速度はマウス移動に対する相対値です。大きいほど速くなります。",
+        "title": "マッピング設定 - 視点操作",
+        "maxRadius": "最大半径",
+        "maxRadiusHint": "開始位置からの最大ドラッグ距離です。0 にすると制限なしになります。"
+      },
+      "name": "視点操作"
+    },
+    "rawInput": {
+      "setting": {
+        "title": "マッピング設定 - 直接入力"
+      },
+      "name": "直接入力"
+    },
+    "home": {
+      "emptyBind": "バインド設定のないボタンがあります！",
+      "activate": "有効化",
+      "manage": "管理",
+      "refresh": "更新",
+      "restore": "復元",
+      "save": "保存",
+      "action": "操作",
+      "active": "有効",
+      "create": "作成",
+      "delete": "削除",
+      "duplicate": "複製",
+      "edit": "編集",
+      "file": "ファイル",
+      "manager": "設定管理",
+      "migration": "現在のメインデバイスサイズへ移行",
+      "editing": "編集中",
+      "rename": "名前変更",
+      "confirmNo": "いいえ",
+      "confirmYes": "はい",
+      "createTitle": "新しい設定を作成",
+      "fileInputPlaceholder": "新しい設定名を入力してください",
+      "renameTitle": "設定の名前を変更",
+      "deletePrompt": "本当に削除しますか？",
+      "deleteTitle": "設定を削除",
+      "migrationTitle": "設定を移行",
+      "size": "サイズ",
+      "differentName": "新しい設定名は現在の設定名と同じにできません！",
+      "duplicateTitle": "設定を複製",
+      "showGuides": "ガイド"
+    },
+    "script": {
+      "setting": {
+        "title": "マッピング設定 - スクリプト",
+        "pressed_script": "押下スクリプト",
+        "pressed_script_placeholder": "ホットキーを押したときに 1 回実行されます",
+        "pressedScriptHint": "押下時に 1 回実行します。完全なスクリプト DSL をサポートします。",
+        "interval": "保持中の繰り返し間隔",
+        "intervalHint": "押し続けている間のスクリプト繰り返し間隔 (ms)。スクリプト実行時間はこの間隔より短くする必要があります。",
+        "run_script": "スクリプト実行をテスト",
+        "held_script": "保持スクリプト",
+        "held_script_placeholder": "ホットキーを押し続けている間、繰り返し実行されます",
+        "heldScriptHint": "押し続けている間、指定された間隔で繰り返し実行します。実行時間は間隔より短くする必要があります。",
+        "released_script": "リリーススクリプト",
+        "released_script_placeholder": "ホットキーを離したときに 1 回実行されます",
+        "releasedScriptHint": "リリース時に 1 回実行します。完全なスクリプト DSL をサポートします。",
+        "result": "実行結果"
+      },
+      "name": "スクリプト"
+    }
+  },
+  "settings": {
+    "title": {
+      "header": "設定",
+      "basic": "基本",
+      "mask": "マスク",
+      "video": "動画",
+      "advance": "詳細"
+    },
+    "language": "言語",
+    "webPort": "Web ポート",
+    "controllerPort": "コントローラーポート",
+    "adbPath": "Adb パス",
+    "horizontalMaskWidth": "横向きマスク幅",
+    "horizontalMaskPosition": "横向きマスク位置",
+    "verticalMaskHeight": "縦向きマスク高さ",
+    "verticalMaskPosition": "縦向きマスク位置",
+    "mappingLabelOpacity": "マッピングラベルの不透明度",
+    "clipboardSync": "クリップボード同期",
+    "videoCodec": "動画 codec",
+    "videoBitRate": "動画ビットレート",
+    "videoMaxSize": "動画最大サイズ",
+    "zeroUnlimitedTip": "0 に設定すると無制限",
+    "videoMaxFps": "動画最大 FPS",
+    "alwaysOnTop": "マスクを常に最前面に表示",
+    "titlebarVisible": "タイトルバーを表示",
+    "openDataPath": "データパスを開く",
+    "about": {
+      "title": "情報",
+      "intro": "Rust、Bevy、React で構築された Scrcpy クライアントです。ゲームエミュレーターのように Android デバイスを操作できます。",
+      "currentVersion": "現在のバージョン",
+      "latestVersion": "最新バージョン",
+      "checkUpdate": "更新を確認",
+      "showUpdateDialog": "更新詳細",
+      "download": "ダウンロード",
+      "cancel": "キャンセル"
+    }
+  }
+}

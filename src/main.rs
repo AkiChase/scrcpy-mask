@@ -6,7 +6,9 @@ use bevy::{
     window::{PresentMode, WindowLevel},
 };
 use scrcpy_mask::{
+    DEFAULT_LANGUAGE,
     config::LocalConfig,
+    is_available_language,
     mask::{MaskPlugins, mask_command::MaskCommand},
     scrcpy::{
         control_msg::ScrcpyControlMsg,
@@ -41,8 +43,7 @@ fn log_custom_layer(_app: &mut App) -> Option<BoxedLayer> {
 }
 
 fn main() {
-    let default_language = "en-US";
-    rust_i18n::set_locale(default_language);
+    rust_i18n::set_locale(DEFAULT_LANGUAGE);
 
     if let Err(e) = LocalConfig::load() {
         println!("LocalConfig load failed. {}", e);
@@ -51,13 +52,12 @@ fn main() {
     let mut local_config = LocalConfig::get();
     // update language
     let language = local_config.language;
-    match language.as_str() {
-        "zh-CN" | "en-US" => rust_i18n::set_locale(&language),
-        _ => {
-            rust_i18n::set_locale(default_language);
-            LocalConfig::set_language(default_language.to_string());
-            local_config = LocalConfig::get();
-        }
+    if is_available_language(&language) {
+        rust_i18n::set_locale(&language);
+    } else {
+        rust_i18n::set_locale(DEFAULT_LANGUAGE);
+        LocalConfig::set_language(DEFAULT_LANGUAGE.to_string());
+        local_config = LocalConfig::get();
     }
     // update config file
     LocalConfig::save().unwrap();

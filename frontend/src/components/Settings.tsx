@@ -38,7 +38,7 @@ import {
   setUpdateInfo,
 } from "../store/other";
 import { requestGet } from "../utils";
-import i18n from "../i18n";
+import i18n, { languageOptions } from "../i18n";
 import { useMessageContext } from "../hooks";
 import {
   BilibiliFilled,
@@ -47,17 +47,6 @@ import {
   InfoCircleOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
-
-const languageOptions = [
-  {
-    label: "简体中文",
-    value: "zh-CN",
-  },
-  {
-    label: "English",
-    value: "en-US",
-  },
-];
 
 const videoCodecOptions = ["H264", "H265", "AV1"].map((v) => ({
   value: v,

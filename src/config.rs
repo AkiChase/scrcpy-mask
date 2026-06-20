@@ -4,7 +4,7 @@ use std::{
     sync::RwLock,
 };
 
-use crate::{scrcpy::media::VideoCodec, utils::relate_to_data_path};
+use crate::{DEFAULT_LANGUAGE, scrcpy::media::VideoCodec, utils::relate_to_data_path};
 use once_cell::sync::Lazy;
 use paste::paste;
 use rust_i18n::t;
@@ -58,7 +58,7 @@ impl Default for LocalConfig {
             horizontal_position: (100, 100),
             active_mapping_file: "default.json".to_string(),
             mapping_label_opacity: 0.3,
-            language: "en-US".to_string(),
+            language: DEFAULT_LANGUAGE.to_string(),
             clipboard_sync: true,
             video_codec: VideoCodec::H264,
             video_bit_rate: 8_000000, // 8M

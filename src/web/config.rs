@@ -9,6 +9,7 @@ use tokio::sync::oneshot;
 
 use crate::{
     config::LocalConfig,
+    is_available_language,
     mask::mask_command::MaskCommand,
     scrcpy::{adb::Adb, media::VideoCodec},
     utils::{
@@ -127,7 +128,7 @@ async fn update_config(
     match payload.key.as_str() {
         "language" => {
             if let Some(value) = payload.value.as_str() {
-                if !matches!(value, "zh-CN" | "en-US") {
+                if !is_available_language(value) {
                     return Err(WebServerError::bad_request(format!(
                         "{}: {}",
                         t!("web.config.invalidLanguage"),

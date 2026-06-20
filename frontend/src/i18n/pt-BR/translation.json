@@ -1,0 +1,401 @@
+{
+  "_meta": {
+    "languageName": "Português (Brasil)"
+  },
+  "404": {
+    "title": "Parece que a página desapareceu sem deixar rastros.",
+    "back": "Voltar ao início"
+  },
+  "sider": {
+    "devices": "Dispositivos",
+    "mappings": "Mapeamentos",
+    "settings": "Configurações"
+  },
+  "welcome": {
+    "main": "Boas-vindas ao Scrcpy Mask 👏🏻"
+  },
+  "devices": {
+    "adbTools": {
+      "connect": {
+        "label": "Conexão sem fio",
+        "btn": "Conectar"
+      },
+      "title": "Ferramentas ADB",
+      "pair": {
+        "label": "Pareamento sem fio",
+        "btn": "Parear"
+      }
+    },
+    "controlledDevices": {
+      "name": "Nome",
+      "action": "Ação",
+      "size": "Tamanho",
+      "title": "Dispositivos controlados",
+      "mainDevice": "principal",
+      "actionInfo": "Mais informações",
+      "actionClose": "Parar controle",
+      "actionReconnect": "Reconectar dispositivo",
+      "rotation": "Orientação",
+      "landscape": "Paisagem",
+      "portrait": "Retrato"
+    },
+    "otherDevices": {
+      "title": "Outros dispositivos",
+      "status": "Status",
+      "actionControl": "Controlar dispositivo",
+      "video": "Vídeo"
+    },
+    "common": {
+      "refresh": "Atualizar dispositivos"
+    },
+    "actions": {
+      "setDisplayPowerOn": "Ligar tela",
+      "setDisplayPowerOff": "Desligar tela",
+      "volumeUp": "Aumentar volume",
+      "volumeDown": "Diminuir volume",
+      "back": "Voltar",
+      "home": "Início",
+      "appSwitch": "Alternar app",
+      "enablePointerDebug": "Ativar depuração de ponteiro",
+      "disablePointerDebug": "Desativar depuração de ponteiro",
+      "executing": "Executando: {{action}}",
+      "executed": "Executado: {{action}}"
+    }
+  },
+  "mappings": {
+    "common": {
+      "bind": {
+        "autoInputPlaceholder": "Clique duas vezes para ativar a gravação de botões",
+        "settingLabel": "Vínculo",
+        "settingManual": "Manual",
+        "settingAuto": "Automático",
+        "manualSelectPlaceholder": "Selecione vínculos",
+        "hint": "Vários mapeamentos podem compartilhar o mesmo atalho e disparar juntos. Teclas extras não bloqueiam um combo, mas um combo correspondente mais longo tem prioridade."
+      },
+      "pointerId": {
+        "label": "PointerID",
+        "hint": "Cada PointerID representa um único dedo virtual, que só pode tocar uma coordenada por vez. Botões que compartilham o mesmo PointerID entrarão em conflito se forem pressionados simultaneamente; atribua PointerIDs diferentes a botões que possam ser pressionados juntos."
+      },
+      "note": {
+        "label": "Nota"
+      },
+      "id": {
+        "label": "ID da configuração",
+        "hint": "Usado por scripts ou APIs externas para referenciar este mapeamento com precisão. Clique no ícone de cópia para copiar."
+      },
+      "delete": {
+        "label": "Excluir"
+      },
+      "refreshBackground": "Atualizar fundo",
+      "refreshBgFail": "Falha ao atualizar imagem de fundo: {0}",
+      "refreshSuccess": "Imagem de fundo atualizada com sucesso",
+      "noMainDevice": "Dispositivo principal controlado não encontrado; controle o dispositivo na página de dispositivos",
+      "copy": {
+        "label": "Duplicar"
+      },
+      "randomOffsetX": "Deslocamento aleatório X",
+      "randomOffsetY": "Deslocamento aleatório Y",
+      "randomOffsetXHint": "Deslocamento horizontal aleatório aplicado a cada ativação, escolhido em [-deslocamento, +deslocamento]. Defina como 0 para desativar.",
+      "randomOffsetYHint": "Deslocamento vertical aleatório aplicado a cada ativação, escolhido em [-deslocamento, +deslocamento]. Defina como 0 para desativar.",
+      "scriptHooks": {
+        "before": "Script anterior",
+        "beforeHint": "Executa antes desta ação de mapeamento. Deixe vazio para ignorar. Scripts bloqueiam o fluxo do mapeamento atual, então scripts lentos podem causar latência de entrada ou mapeamentos presos.",
+        "beforePlaceholder": "Script a executar antes da ação",
+        "after": "Script posterior",
+        "afterHint": "Executa após esta ação de mapeamento. Deixe vazio para ignorar. Scripts bloqueiam o fluxo do mapeamento atual, então scripts lentos podem causar latência de entrada ou mapeamentos presos.",
+        "afterPlaceholder": "Script a executar após a ação"
+      },
+      "scriptEditor": {
+        "empty": "Script vazio",
+        "checking": "Verificando script...",
+        "valid": "Sintaxe válida",
+        "errorCount": "{{count}} erros",
+        "checkFailed": "Verificação falhou",
+        "expand": "Abrir editor grande",
+        "editTitle": "Editar script",
+        "run": "Executar script",
+        "runResult": "Resultado da execução"
+      }
+    },
+    "singleTap": {
+      "setting": {
+        "title": "Configuração de mapeamento - Toque único",
+        "sync": "Sincronizar",
+        "syncHint": "Quando ativado, o toque dura enquanto o atalho estiver pressionado, ignorando a configuração de duração.",
+        "duration": "Duração",
+        "durationHint": "Duração do toque antes da liberação automática (ms). Um toque em andamento não será interrompido ao pressionar o atalho novamente."
+      },
+      "name": "Toque único"
+    },
+    "repeatTap": {
+      "setting": {
+        "title": "Configuração de mapeamento - Toque repetido",
+        "duration": "Duração",
+        "durationHint": "Quanto tempo cada toque dura (ms). Deve ser menor que o intervalo de repetição.",
+        "interval": "Intervalo",
+        "intervalHint": "Tempo entre o início de toques consecutivos (ms). A duração deve ser menor que este intervalo.",
+        "randomOffsetXHint": "O deslocamento aleatório é recalculado para cada toque repetido, então cada toque cai em uma coordenada X ligeiramente diferente.",
+        "randomOffsetYHint": "O deslocamento aleatório é recalculado para cada toque repetido, então cada toque cai em uma coordenada Y ligeiramente diferente."
+      },
+      "name": "Toque repetido"
+    },
+    "multipleTap": {
+      "setting": {
+        "title": "Configuração de mapeamento - Toques múltiplos",
+        "delete": "Excluir",
+        "duration": "Duração",
+        "durationHint": "Quanto tempo este toque fica pressionado antes de liberar (ms).",
+        "keepLastOne": "Mantenha pelo menos uma operação!",
+        "wait": "Aguardar",
+        "waitHint": "Tempo de espera antes desta operação de toque começar (ms).",
+        "edit": "Editar",
+        "operations": "Sequência de operações",
+        "operationsHint": "Sequência de operações de toque executadas em ordem: aguardar → tocar → manter pela duração → liberar. Edite posições no editor visual.",
+        "operationsHelp": "Arraste com o botão esquerdo do mouse e adicione ou edite com o botão direito",
+        "back": "Voltar"
+      },
+      "name": "Toques múltiplos"
+    },
+    "swipe": {
+      "setting": {
+        "keepLastOne": "Mantenha pelo menos uma operação!",
+        "title": "Configuração de mapeamento - Deslizar",
+        "enableRandomization": "Ativar randomização de caminho",
+        "enableRandomizationHint": "Substitui segmentos de linha reta por curvas suaves com curvatura de arco aleatória, tornando cada trajetória de deslize ligeiramente diferente.",
+        "positonsHelp": "Arraste com o botão esquerdo do mouse e adicione ou edite com o botão direito",
+        "duration": "Duração",
+        "durationHint": "Tempo total para completar todo o movimento de deslize (ms).",
+        "edit": "Editar",
+        "delete": "Excluir",
+        "positions": "Sequência de posições",
+        "back": "Voltar"
+      },
+      "name": "Deslizar"
+    },
+    "directionPad": {
+      "setting": {
+        "title": "Configuração de mapeamento - Direcional",
+        "joyStick": "Joystick",
+        "button": "Botão",
+        "xAxis": "Eixo X",
+        "yAxis": "Eixo Y",
+        "down": "Baixo",
+        "initDuration": "Atraso inicial do deslize",
+        "initDurationHint": "Duração inicial do deslize antes de o direcional responder (ms). Ajuda a contornar jogos que perdem o toque inicial.",
+        "left": "Esquerda",
+        "maxOffset": "Deslocamento máximo",
+        "maxOffsetHint": "Distância máxima de arrasto do dedo virtual a partir do centro do direcional nos eixos horizontal e vertical.",
+        "right": "Direita",
+        "up": "Cima",
+        "upBoostKey": "Impulso para cima",
+        "upBoostKeyHint": "Enquanto esta tecla modificadora estiver pressionada, pressionar a tecla para cima pode ultrapassar o intervalo normal de deslocamento máximo.",
+        "upBoostScale": "Escala do impulso para cima",
+        "upBoostScaleHint": "Multiplicador aplicado ao deslocamento para cima enquanto a tecla de impulso estiver pressionada. Ex.: 2.0 dobra o alcance para cima.",
+        "enableRandomizationHint": "Adiciona deslocamento aleatório da âncora, caminhos de deslize em arco e deriva contínua para simular movimento natural do dedo.",
+        "randomOffset": "Deslocamento aleatório do centro",
+        "randomOffsetHint": "Intervalo de deslocamento aleatório aplicado ao centro do direcional cada vez que ele é pressionado.",
+        "randomDistanceScale": "Escala aleatória de distância",
+        "randomDistanceScaleHint": "Multiplicador aleatório aplicado à distância do centro até o ponto de destino a cada mudança de direção.",
+        "jitterOffset": "Intervalo de deriva",
+        "jitterOffsetHint": "Intervalo de deriva do toque ao redor do ponto de destino atual enquanto mantém a mesma direção."
+      },
+      "name": "Direcional"
+    },
+    "mouseCastSpell": {
+      "setting": {
+        "title": "Configuração de mapeamento - Conjurar com mouse",
+        "center": "Centro da conjuração",
+        "centerHint": "Ponto de referência para calcular a direção da conjuração, geralmente a posição do personagem na tela. Ajuste se o personagem não estiver centralizado devido à projeção de perspectiva.",
+        "scaleFactor": "Fatores de escala",
+        "scaleFactorHint": "Controla a escala horizontal/vertical do mapeamento da direção de conjuração. Use para calibrar a direção mouse-para-jogo quando o jogo tiver distorção de perspectiva (ex.: Honor of Kings: X=7, Y=10).",
+        "castRadius": "Alcance da conjuração",
+        "castRadiusHint": "A distância do mouse além deste alcance arrasta o botão de habilidade até o raio máximo; abaixo dele, a distância escala proporcionalmente.",
+        "dragRadius": "Alcance de arrasto",
+        "dragRadiusHint": "O raio máximo de arrasto do botão de habilidade na UI do jogo.",
+        "releaseMode": {
+          "label": "Momento de liberar",
+          "hint": "OnRelease: ativa ao pressionar, libera ao soltar. OnPress: libera imediatamente ao pressionar. OnSecondPress: primeiro pressionamento ativa, segundo pressionamento libera.",
+          "onRelease": "OnRelease",
+          "onPress": "OnPress",
+          "onSecondPress": "onSecondPress"
+        },
+        "castNoDirection": "Conjuração sem direção",
+        "castNoDirectionHint": "Ignora configurações de direção e simplesmente toca na posição de conjuração. Similar ao Toque único, mas cancelável.",
+        "enableInitialSwipeRandomization": "Randomização do deslize inicial",
+        "enableInitialSwipeRandomizationHint": "Quando ativado, o arrasto inicial usa um caminho em arco randomizado; quando desativado, usa um caminho reto.",
+        "editLabel": "Edição avançada",
+        "edit": "Editar",
+        "editHelp": "Arraste com o botão esquerdo do mouse e edite com o botão direito",
+        "setCenter": "Centro",
+        "back": "Voltar"
+      },
+      "name": "Conjurar com mouse"
+    },
+    "padCastSpell": {
+      "setting": {
+        "button": "Botão",
+        "down": "Baixo",
+        "joyStick": "Joystick",
+        "left": "Esquerda",
+        "padBindLabel": "Vínculo do direcional",
+        "right": "Direita",
+        "title": "Configuração de mapeamento - Conjurar com direcional",
+        "up": "Cima",
+        "xAxis": "Eixo X",
+        "yAxis": "Eixo Y",
+        "dragRadius": "Alcance de arrasto",
+        "dragRadiusHint": "O raio máximo de arrasto do botão de habilidade na UI do jogo.",
+        "block": "Bloquear direcional",
+        "blockHint": "Bloqueia atalhos do direcional durante a conjuração para evitar conflitos de entrada.",
+        "enableRandomizationHint": "Adiciona deslocamento aleatório da âncora, caminhos de deslize em arco e microjitter contínuo para simular movimento natural do dedo.",
+        "releaseMode": {
+          "label": "Momento de liberar",
+          "hint": "OnRelease: ativa ao pressionar, libera ao soltar. OnSecondPress: primeiro pressionamento ativa, segundo pressionamento libera.",
+          "onRelease": "OnRelease",
+          "onSecondPress": "OnSecondPress"
+        }
+      },
+      "name": "Conjurar com direcional"
+    },
+    "cancelCast": {
+      "setting": {
+        "title": "Configuração de mapeamento - Cancelar conjuração"
+      },
+      "name": "Cancelar conjuração"
+    },
+    "fire": {
+      "setting": {
+        "sensitivity": "Sensibilidade",
+        "sensitivityHint": "Ativo apenas no modo FPS. Velocidade de arrasto do botão de disparo relativa ao movimento do mouse, independente da sensibilidade do FPS.",
+        "title": "Configuração de mapeamento - Disparo"
+      },
+      "name": "Disparo"
+    },
+    "fps": {
+      "setting": {
+        "sensitivity": "Sensibilidade",
+        "sensitivityHint": "Velocidade de rotação da visão relativa ao movimento do mouse. Nas bordas da tela, o dedo recentraliza automaticamente para continuar rastreando.",
+        "maxOffset": "Deslocamento máximo",
+        "maxOffsetHint": "Distância máxima da posição inicial do FPS até o limite local. Defina um eixo como 0 para não ter limite local.",
+        "touchMode": "Modo de toque",
+        "touchModeHint": "Quando o toque alcança o limite local, ele retorna à posição inicial e continua arrastando. Toque único reutiliza o mesmo ponteiro; toque duplo transfere para um ponteiro alternativo.",
+        "touchModeSingle": "Toque único",
+        "touchModeDual": "Toque duplo",
+        "anotherPointerId": "ID de ponteiro alternativo",
+        "anotherPointerIdHint": "O outro pointer_id alternado com o ponteiro principal. Ele deve ser diferente do ponteiro principal.",
+        "dualTouchStrategy": "Estratégia de transferência",
+        "dualTouchStrategyHint": "Atraso pressiona o ponteiro alternativo antes de levantar o ponteiro antigo após uma espera. Sobreposição permite que ambos os ponteiros participem brevemente no próximo movimento.",
+        "dualTouchStrategyDelay": "Atraso",
+        "dualTouchStrategyOverlap": "Sobreposição",
+        "touchModeInterval": "Intervalo",
+        "singleTouchIntervalHint": "Milissegundos a aguardar após levantar o ponteiro atual antes de pressionar o mesmo ponteiro no início. Defina como 0 para pressionar imediatamente.",
+        "dualTouchIntervalHint": "Milissegundos a aguardar após pressionar o ponteiro alternativo antes de levantar o ponteiro antigo. Defina como 0 para levantar imediatamente.",
+        "title": "Configuração de mapeamento - FPS"
+      },
+      "name": "FPS"
+    },
+    "observation": {
+      "setting": {
+        "sensitivity": "Sensibilidade",
+        "sensitivityHint": "Velocidade de arrasto da visão relativa ao movimento do mouse. Maior = mais rápido.",
+        "title": "Configuração de mapeamento - Observação",
+        "maxRadius": "Raio máximo",
+        "maxRadiusHint": "Distância máxima de arrasto a partir da posição inicial. Defina como 0 para não limitar."
+      },
+      "name": "Observação"
+    },
+    "rawInput": {
+      "setting": {
+        "title": "Configuração de mapeamento - Entrada direta"
+      },
+      "name": "Entrada direta"
+    },
+    "home": {
+      "emptyBind": "Há botões sem configuração de vínculo!",
+      "activate": "Ativar",
+      "manage": "Gerenciar",
+      "refresh": "Atualizar",
+      "restore": "Restaurar",
+      "save": "Salvar",
+      "action": "Ação",
+      "active": "Ativo",
+      "create": "Criar",
+      "delete": "Excluir",
+      "duplicate": "Duplicar",
+      "edit": "Editar",
+      "file": "Arquivo",
+      "manager": "Gerenciar configurações",
+      "migration": "Migrar para o tamanho atual do dispositivo principal",
+      "editing": "Editando",
+      "rename": "Renomear",
+      "confirmNo": "Não",
+      "confirmYes": "Sim",
+      "createTitle": "Criar nova configuração",
+      "fileInputPlaceholder": "Digite o nome da nova configuração",
+      "renameTitle": "Renomear a configuração",
+      "deletePrompt": "Tem certeza de que deseja excluir isto?",
+      "deleteTitle": "Excluir a configuração",
+      "migrationTitle": "Migrar a configuração",
+      "size": "Tamanho",
+      "differentName": "O nome da nova configuração não pode ser igual ao da configuração atual!",
+      "duplicateTitle": "Duplicar a configuração",
+      "showGuides": "Guias"
+    },
+    "script": {
+      "setting": {
+        "title": "Configuração de mapeamento - Script",
+        "pressed_script": "Script ao pressionar",
+        "pressed_script_placeholder": "Executado uma vez quando a tecla de atalho é pressionada",
+        "pressedScriptHint": "Executa uma vez ao pressionar. Suporta todo o DSL de scripting.",
+        "interval": "Intervalo de repetição ao segurar",
+        "intervalHint": "Intervalo entre repetições do script enquanto segura (ms). O tempo de execução do script deve ser menor que este intervalo.",
+        "run_script": "Testar execução do script",
+        "held_script": "Script ao segurar",
+        "held_script_placeholder": "Executado repetidamente enquanto a tecla de atalho é mantida pressionada",
+        "heldScriptHint": "Executa repetidamente no intervalo especificado enquanto estiver segurando. O tempo de execução deve ser menor que o intervalo.",
+        "released_script": "Script ao soltar",
+        "released_script_placeholder": "Executado uma vez quando a tecla de atalho é solta",
+        "releasedScriptHint": "Executa uma vez ao soltar. Suporta todo o DSL de scripting.",
+        "result": "Resultado da execução"
+      },
+      "name": "Script"
+    }
+  },
+  "settings": {
+    "title": {
+      "header": "Configurações",
+      "basic": "Básico",
+      "mask": "Máscara",
+      "video": "Vídeo",
+      "advance": "Avançado"
+    },
+    "language": "Idioma",
+    "webPort": "Porta web",
+    "controllerPort": "Porta do controlador",
+    "adbPath": "Caminho do ADB",
+    "horizontalMaskWidth": "Largura horizontal da máscara",
+    "horizontalMaskPosition": "Posição horizontal da máscara",
+    "verticalMaskHeight": "Altura vertical da máscara",
+    "verticalMaskPosition": "Posição vertical da máscara",
+    "mappingLabelOpacity": "Opacidade do rótulo de mapeamento",
+    "clipboardSync": "Sincronização da área de transferência",
+    "videoCodec": "Codec de vídeo",
+    "videoBitRate": "Taxa de bits de vídeo",
+    "videoMaxSize": "Tamanho máximo do vídeo",
+    "zeroUnlimitedTip": "Defina como 0 para ilimitado",
+    "videoMaxFps": "FPS máximo do vídeo",
+    "alwaysOnTop": "Máscara sempre no topo",
+    "titlebarVisible": "Mostrar barra de título",
+    "openDataPath": "Abrir caminho de dados",
+    "about": {
+      "title": "Sobre",
+      "intro": "Um cliente Scrcpy criado com Rust, Bevy e React que permite controlar seu dispositivo Android como se você estivesse usando um emulador de jogos.",
+      "currentVersion": "Versão atual",
+      "latestVersion": "Versão mais recente",
+      "checkUpdate": "Verificar atualização",
+      "showUpdateDialog": "Detalhes da atualização",
+      "download": "Baixar",
+      "cancel": "Cancelar"
+    }
+  }
+}
