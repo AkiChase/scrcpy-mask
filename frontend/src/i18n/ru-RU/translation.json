@@ -375,6 +375,7 @@
     },
     "language": "Язык",
     "webPort": "Web-порт",
+    "webBindAddr": "Web bind address",
     "controllerPort": "Порт контроллера",
     "adbPath": "Путь к adb",
     "horizontalMaskWidth": "Ширина горизонтальной маски",
@@ -390,6 +391,7 @@
     "videoMaxFps": "Макс. FPS видео",
     "alwaysOnTop": "Маска всегда поверх окон",
     "titlebarVisible": "Показывать заголовок окна",
+    "webBindAddrTip": "127.0.0.1 allows local access only; 0.0.0.0 allows LAN access. Use it only on trusted networks.",
     "openDataPath": "Открыть путь данных",
     "about": {
       "title": "О программе",

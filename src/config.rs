@@ -1,6 +1,7 @@
 use std::{
     fs::{File, create_dir_all},
     io::Write,
+    net::Ipv4Addr,
     sync::RwLock,
 };
 
@@ -13,11 +14,17 @@ use serde_json::to_string_pretty;
 
 static CONFIG: Lazy<RwLock<LocalConfig>> = Lazy::new(|| RwLock::default());
 
+fn default_web_bind_addr() -> Ipv4Addr {
+    Ipv4Addr::new(127, 0, 0, 1)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LocalConfig {
     // port
     pub web_port: u16,
+    #[serde(default = "default_web_bind_addr")]
+    pub web_bind_addr: Ipv4Addr,
     pub controller_port: u16,
     // adb
     pub adb_path: String,
@@ -49,6 +56,7 @@ impl Default for LocalConfig {
             adb_path: "adb".to_string(),
             adb_connect_address: String::new(),
             web_port: 27799,
+            web_bind_addr: default_web_bind_addr(),
             controller_port: 27798,
             always_on_top: true,
             titlebar_visible: true,
@@ -124,6 +132,7 @@ impl LocalConfig {
 
     define_setter!(
         (web_port, u16),
+        (web_bind_addr, Ipv4Addr),
         (controller_port, u16),
         (adb_path, String),
         (adb_connect_address, String),

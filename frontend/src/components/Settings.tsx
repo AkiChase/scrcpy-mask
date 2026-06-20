@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../store/store";
 import { ItemBox, ItemBoxContainer } from "./common/ItemBox";
 import {
+  AutoComplete,
   Badge,
   Button,
   Flex,
@@ -31,6 +32,7 @@ import {
   setVideoMaxFps,
   setAlwaysOnTop,
   setTitlebarVisible,
+  setWebBindAddr,
 } from "../store/localConfig";
 import {
   setIsLoading,
@@ -52,6 +54,11 @@ const videoCodecOptions = ["H264", "H265", "AV1"].map((v) => ({
   value: v,
   label: v,
 }));
+
+const webBindAddrOptions = [
+  { value: "127.0.0.1", label: "127.0.0.1" },
+  { value: "0.0.0.0", label: "0.0.0.0" },
+];
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -297,6 +304,17 @@ export default function Settings() {
 
         <h3 className="title-with-line-sub">{t("settings.title.advance")}</h3>
         <ItemBoxContainer className="mb-6">
+          <ItemBox
+            label={t("settings.webBindAddr")}
+            tooltip={t("settings.webBindAddrTip")}
+          >
+            <AutoComplete
+              className="w-sm"
+              options={webBindAddrOptions}
+              value={localConfig.webBindAddr}
+              onChange={(v) => dispatch(setWebBindAddr(v))}
+            />
+          </ItemBox>
           <ItemBox label={t("settings.webPort")}>
             <InputNumber
               className="w-sm"

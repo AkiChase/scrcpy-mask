@@ -1,4 +1,8 @@
-use std::{fs::File, net::SocketAddrV4, sync::OnceLock};
+use std::{
+    fs::File,
+    net::{Ipv4Addr, SocketAddrV4},
+    sync::OnceLock,
+};
 
 use bevy::{
     log::{BoxedLayer, LogPlugin, tracing_subscriber::Layer},
@@ -130,10 +134,8 @@ fn macos_menu(executor: Res<bevy::ecs::schedule::MainThreadExecutor>) {
 
 fn start_servers(mut commands: Commands) {
     let config = LocalConfig::get();
-    let web_addr: SocketAddrV4 = format!("127.0.0.1:{}", config.web_port).parse().unwrap();
-    let controller_addr: SocketAddrV4 = format!("127.0.0.1:{}", config.controller_port)
-        .parse()
-        .unwrap();
+    let web_addr = SocketAddrV4::new(config.web_bind_addr, config.web_port);
+    let controller_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.controller_port);
 
     let (cs_tx, _) = broadcast::channel::<ScrcpyControlMsg>(1000);
     let (ws_tx, _) = broadcast::channel::<WebSocketNotification>(1000);

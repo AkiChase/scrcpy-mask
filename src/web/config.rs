@@ -5,6 +5,7 @@ use axum::{
 };
 use rust_i18n::t;
 use serde::Deserialize;
+use std::net::Ipv4Addr;
 use tokio::sync::oneshot;
 
 use crate::{
@@ -157,6 +158,27 @@ async fn update_config(
             } else {
                 return Err(WebServerError::bad_request(t!(
                     "web.config.webPortMustBeU16"
+                )));
+            }
+        }
+        "web_bind_addr" => {
+            if let Some(value) = payload.value.as_str() {
+                let value = value.trim();
+                let addr = value.parse::<Ipv4Addr>().map_err(|_| {
+                    WebServerError::bad_request(format!(
+                        "{}: {}",
+                        t!("web.config.webBindAddrMustBeIpv4"),
+                        value
+                    ))
+                })?;
+                LocalConfig::set_web_bind_addr(addr);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.restartToApplyWebBindAddr"), addr),
+                    None,
+                ));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.webBindAddrMustBeIpv4"
                 )));
             }
         }

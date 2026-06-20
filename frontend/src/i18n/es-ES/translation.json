@@ -375,6 +375,7 @@
     },
     "language": "Idioma",
     "webPort": "Puerto web",
+    "webBindAddr": "Web bind address",
     "controllerPort": "Puerto del controlador",
     "adbPath": "Ruta de ADB",
     "horizontalMaskWidth": "Anchura de máscara horizontal",
@@ -390,6 +391,7 @@
     "videoMaxFps": "FPS máximos de vídeo",
     "alwaysOnTop": "Máscara siempre encima",
     "titlebarVisible": "Mostrar barra de título",
+    "webBindAddrTip": "127.0.0.1 allows local access only; 0.0.0.0 allows LAN access. Use it only on trusted networks.",
     "openDataPath": "Abrir ruta de datos",
     "about": {
       "title": "Acerca de",

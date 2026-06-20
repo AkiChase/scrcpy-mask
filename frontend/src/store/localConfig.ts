@@ -44,6 +44,7 @@ function updateLocalConfig(
 export interface LocalConfigState {
   // port
   webPort: number;
+  webBindAddr: string;
   controllerPort: number;
   // adb
   adbPath: string;
@@ -71,6 +72,7 @@ export interface LocalConfigState {
 
 const initialState: LocalConfigState = {
   webPort: 0,
+  webBindAddr: "127.0.0.1",
   controllerPort: 0,
   adbPath: "",
   adbConnectAddress: "",
@@ -105,6 +107,10 @@ const localConfigSlice = createSlice({
     setWebPort: (state, action: PayloadAction<number>) => {
       state.webPort = action.payload;
       updateLocalConfig("web_port", action.payload);
+    },
+    setWebBindAddr: (state, action: PayloadAction<string>) => {
+      state.webBindAddr = action.payload;
+      updateLocalConfig("web_bind_addr", action.payload, 1000);
     },
     setControllerPort: (state, action: PayloadAction<number>) => {
       state.controllerPort = action.payload;
@@ -181,6 +187,7 @@ const localConfigSlice = createSlice({
 export const {
   forceSetLocalConfig,
   setWebPort,
+  setWebBindAddr,
   setControllerPort,
   setAdbPath,
   setAdbConnectAddress,

@@ -375,6 +375,7 @@
     },
     "language": "语言",
     "webPort": "Web 端口",
+    "webBindAddr": "Web 监听地址",
     "controllerPort": "控制服务端口",
     "adbPath": "Adb 路径",
     "horizontalMaskWidth": "横屏蒙版宽度",
@@ -390,6 +391,7 @@
     "videoMaxFps": "视频最大FPS",
     "alwaysOnTop": "蒙版置顶",
     "titlebarVisible": "显示标题栏",
+    "webBindAddrTip": "127.0.0.1 仅本机可访问；0.0.0.0 允许局域网访问，请只在可信网络使用",
     "openDataPath": "打开数据目录",
     "about": {
       "title": "关于",

@@ -375,6 +375,7 @@
     },
     "language": "Language",
     "webPort": "Web port",
+    "webBindAddr": "Web bind address",
     "controllerPort": "Controller port",
     "adbPath": "Adb path",
     "horizontalMaskWidth": "Horizontal mask width",
@@ -390,6 +391,7 @@
     "videoMaxFps": "Video max FPS",
     "alwaysOnTop": "Mask always on top",
     "titlebarVisible": "Show titlebar",
+    "webBindAddrTip": "127.0.0.1 allows local access only; 0.0.0.0 allows LAN access. Use it only on trusted networks.",
     "openDataPath": "Open data path",
     "about": {
       "title": "About",

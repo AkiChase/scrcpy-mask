@@ -375,6 +375,7 @@
     },
     "language": "言語",
     "webPort": "Web ポート",
+    "webBindAddr": "Web bind address",
     "controllerPort": "コントローラーポート",
     "adbPath": "Adb パス",
     "horizontalMaskWidth": "横向きマスク幅",
@@ -390,6 +391,7 @@
     "videoMaxFps": "動画最大 FPS",
     "alwaysOnTop": "マスクを常に最前面に表示",
     "titlebarVisible": "タイトルバーを表示",
+    "webBindAddrTip": "127.0.0.1 allows local access only; 0.0.0.0 allows LAN access. Use it only on trusted networks.",
     "openDataPath": "データパスを開く",
     "about": {
       "title": "情報",
