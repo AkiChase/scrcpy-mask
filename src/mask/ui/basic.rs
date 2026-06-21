@@ -24,6 +24,7 @@ pub const BORDER_THICKNESS: f32 = 1.0;
 pub const TITLEBAR_HEIGHT: f32 = 30.0;
 
 const RESIZE_HANDLE_SIZE: f32 = 5.0;
+const TITLEBAR_TITLE_MIN_WINDOW_WIDTH: f32 = 360.0;
 
 #[derive(Component)]
 struct ResizeHandle(CompassOctant);
@@ -33,6 +34,9 @@ pub struct MaskContentMarker;
 
 #[derive(Component)]
 pub struct TitlebarMarker;
+
+#[derive(Component)]
+struct TitlebarTitleMarker;
 
 #[derive(Component)]
 struct MinimizeButton;
@@ -79,6 +83,7 @@ impl Plugin for BasicPlugin {
                     handle_resize.in_set(MaskFrameSet::Resize),
                     sync_resize_cursor,
                     sync_titlebar_visibility,
+                    sync_titlebar_title_visibility,
                     sync_pushpin_style,
                 ),
             );
@@ -233,6 +238,7 @@ fn setup_ui(
 
                 left.spawn((
                     Text::new("scrcpy-mask"),
+                    TextLayout::no_wrap(),
                     TextFont {
                         font_size: FontSize::Px(14.),
                         ..default()
@@ -242,6 +248,7 @@ fn setup_ui(
                         margin: UiRect::px(5., 0., 0., 0.),
                         ..default()
                     },
+                    TitlebarTitleMarker,
                 ));
             });
 
@@ -748,6 +755,23 @@ fn sync_titlebar_visibility(
         } else {
             Display::None
         };
+    }
+}
+
+fn sync_titlebar_title_visibility(
+    window: Single<&Window, Changed<Window>>,
+    mut title_query: Query<&mut Node, With<TitlebarTitleMarker>>,
+) {
+    let display = if window.resolution.width() >= TITLEBAR_TITLE_MIN_WINDOW_WIDTH {
+        Display::Flex
+    } else {
+        Display::None
+    };
+
+    for mut node in title_query.iter_mut() {
+        if node.display != display {
+            node.display = display;
+        }
     }
 }
 
