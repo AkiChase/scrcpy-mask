@@ -4,6 +4,8 @@ scrcpy-mask.code-workspace
 .vscode
 /local
 assets/web
+assets/platform-tools
+android-platform-tools
 ffmpeg-7.1.2
 assets/lib
 .claude

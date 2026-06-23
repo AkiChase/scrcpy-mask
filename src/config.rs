@@ -2,10 +2,15 @@ use std::{
     fs::{File, create_dir_all},
     io::Write,
     net::Ipv4Addr,
+    path::PathBuf,
     sync::RwLock,
 };
 
-use crate::{DEFAULT_LANGUAGE, scrcpy::media::VideoCodec, utils::relate_to_data_path};
+use crate::{
+    DEFAULT_LANGUAGE,
+    scrcpy::media::VideoCodec,
+    utils::{relate_to_data_path, relate_to_root_path},
+};
 use once_cell::sync::Lazy;
 use paste::paste;
 use rust_i18n::t;
@@ -16,6 +21,24 @@ static CONFIG: Lazy<RwLock<LocalConfig>> = Lazy::new(|| RwLock::default());
 
 fn default_web_bind_addr() -> Ipv4Addr {
     Ipv4Addr::new(127, 0, 0, 1)
+}
+
+fn bundled_adb_path() -> PathBuf {
+    let adb_name = if cfg!(target_os = "windows") {
+        "adb.exe"
+    } else {
+        "adb"
+    };
+    relate_to_root_path(["assets", "platform-tools", adb_name])
+}
+
+fn default_adb_path() -> String {
+    let path = bundled_adb_path();
+    if path.is_file() {
+        path.to_string_lossy().into_owned()
+    } else {
+        "adb".to_string()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,7 +76,7 @@ pub struct LocalConfig {
 impl Default for LocalConfig {
     fn default() -> Self {
         Self {
-            adb_path: "adb".to_string(),
+            adb_path: default_adb_path(),
             adb_connect_address: String::new(),
             web_port: 27799,
             web_bind_addr: default_web_bind_addr(),
@@ -90,6 +113,18 @@ macro_rules! define_setter {
 }
 
 impl LocalConfig {
+    pub fn prefer_bundled_adb() {
+        let path = bundled_adb_path();
+        if !path.is_file() {
+            return;
+        }
+
+        let mut config = CONFIG.write().unwrap();
+        if config.adb_path == "adb" {
+            config.adb_path = path.to_string_lossy().into_owned();
+        }
+    }
+
     pub fn save() -> Result<(), String> {
         let config_json = to_string_pretty(&Self::get())
             .map_err(|e| format!("{}: {}", t!("localConfig.serializeConfigError"), e))?;

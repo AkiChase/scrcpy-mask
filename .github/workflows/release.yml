@@ -25,6 +25,9 @@ on:
 permissions:
   contents: write
 
+env:
+  ANDROID_PLATFORM_TOOLS_VERSION: '37.0.0'
+
 jobs:
   windows:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'windows' }}
@@ -76,6 +79,29 @@ jobs:
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
         shell: msys2 {0}
         run: ./scripts/build-ffmpeg.sh
+
+      - name: Cache Android platform tools
+        id: android-platform-tools-cache
+        uses: actions/cache@v5
+        with:
+          path: android-platform-tools/windows/platform-tools
+          key: android-platform-tools-windows-x64-${{ env.ANDROID_PLATFORM_TOOLS_VERSION }}
+
+      - name: Install Android platform tools
+        if: steps.android-platform-tools-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path android-platform-tools/windows | Out-Null
+          Invoke-WebRequest `
+            -Uri "https://dl.google.com/android/repository/platform-tools-latest-windows.zip" `
+            -OutFile "$env:RUNNER_TEMP\platform-tools.zip"
+          Expand-Archive "$env:RUNNER_TEMP\platform-tools.zip" -DestinationPath android-platform-tools/windows -Force
+
+      - name: Add Android platform tools to PATH
+        shell: pwsh
+        run: |
+          "$env:GITHUB_WORKSPACE\android-platform-tools\windows\platform-tools" |
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -133,6 +159,27 @@ jobs:
         shell: bash
         run: ./scripts/build-ffmpeg.sh
 
+      - name: Cache Android platform tools
+        id: android-platform-tools-cache
+        uses: actions/cache@v5
+        with:
+          path: android-platform-tools/macos/platform-tools
+          key: android-platform-tools-macos-arm64-${{ env.ANDROID_PLATFORM_TOOLS_VERSION }}
+
+      - name: Install Android platform tools
+        if: steps.android-platform-tools-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p android-platform-tools/macos
+          curl -fsSL \
+            "https://dl.google.com/android/repository/platform-tools-latest-darwin.zip" \
+            -o "$RUNNER_TEMP/platform-tools.zip"
+          unzip -q "$RUNNER_TEMP/platform-tools.zip" -d android-platform-tools/macos
+
+      - name: Add Android platform tools to PATH
+        shell: bash
+        run: echo "$GITHUB_WORKSPACE/android-platform-tools/macos/platform-tools" >> "$GITHUB_PATH"
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -187,6 +234,7 @@ jobs:
             ninja-build \
             pkg-config \
             texinfo \
+            unzip \
             yasm \
             zip \
             zlib1g-dev
@@ -202,6 +250,27 @@ jobs:
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
         shell: bash
         run: ./scripts/build-ffmpeg.sh
+
+      - name: Cache Android platform tools
+        id: android-platform-tools-cache
+        uses: actions/cache@v5
+        with:
+          path: android-platform-tools/linux/platform-tools
+          key: android-platform-tools-linux-x64-${{ env.ANDROID_PLATFORM_TOOLS_VERSION }}
+
+      - name: Install Android platform tools
+        if: steps.android-platform-tools-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p android-platform-tools/linux
+          curl -fsSL \
+            "https://dl.google.com/android/repository/platform-tools-latest-linux.zip" \
+            -o "$RUNNER_TEMP/platform-tools.zip"
+          unzip -q "$RUNNER_TEMP/platform-tools.zip" -d android-platform-tools/linux
+
+      - name: Add Android platform tools to PATH
+        shell: bash
+        run: echo "$GITHUB_WORKSPACE/android-platform-tools/linux/platform-tools" >> "$GITHUB_PATH"
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2

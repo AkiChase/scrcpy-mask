@@ -10,6 +10,7 @@ if [[ "$SCRCPY_MASK_OS" != "linux-x64" ]]; then
     exit 1
 fi
 
+"$SCRIPT_DIR/prepare-adb.sh"
 (cd "$PROJECT_DIR/frontend" && pnpm build)
 (cd "$PROJECT_DIR" && cargo build --release)
 

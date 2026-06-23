@@ -8,6 +8,8 @@ $OutputZip = Join-Path $ProjectDir "target\release\$ProjectName-$env:SCRCPY_MASK
 $BuildTarget = Join-Path $ProjectDir "target\release\$ProjectName.exe"
 $AssetsDir = Join-Path $ProjectDir "assets"
 
+& "$PSScriptRoot\prepare-adb.ps1"
+
 Push-Location (Join-Path $ProjectDir "frontend")
 pnpm build
 if ($LASTEXITCODE -ne 0) {

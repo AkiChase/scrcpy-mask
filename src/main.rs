@@ -52,6 +52,7 @@ fn main() {
     if let Err(e) = LocalConfig::load() {
         println!("LocalConfig load failed. {}", e);
     }
+    LocalConfig::prefer_bundled_adb();
 
     let mut local_config = LocalConfig::get();
     // update language

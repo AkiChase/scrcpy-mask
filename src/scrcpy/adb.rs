@@ -162,9 +162,17 @@ pub struct Adb {
 
 impl Adb {
     pub fn check_adb_path(adb_path: &str) -> Result<(), String> {
-        match which::which(&adb_path) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(format!("{}: {}", t!("adb.adbNotFound"), adb_path)),
+        let path = Path::new(adb_path);
+        if path.is_absolute() || path.components().count() > 1 {
+            if path.is_file() {
+                return Ok(());
+            }
+            return Err(format!("{}: {}", t!("adb.adbNotFound"), adb_path));
+        }
+
+        match which::which(adb_path) {
+            Ok(path) if path.is_file() => Ok(()),
+            _ => Err(format!("{}: {}", t!("adb.adbNotFound"), adb_path)),
         }
     }
 
