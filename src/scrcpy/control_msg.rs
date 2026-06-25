@@ -40,12 +40,12 @@ impl Binary {
     }
 
     pub fn write_string(utf8: &str, max_len: usize, buf: &mut Vec<u8>) {
-        let len = Self::str_utf8_truncation_index(utf8, max_len) as u32;
+        let len = Self::str_utf8_truncation_index(utf8, max_len);
         // first 4 bytes for length
-        let len_bytes = len.to_be_bytes();
+        let len_bytes = (len as u32).to_be_bytes();
         buf.extend_from_slice(&len_bytes);
         // then [len] bytes for the string
-        buf.extend_from_slice(utf8.as_bytes())
+        buf.extend_from_slice(&utf8.as_bytes()[..len])
     }
 
     // truncate utf8 string to max_len bytes
@@ -55,7 +55,7 @@ impl Binary {
             return len;
         }
         let mut len = max_len;
-        while utf8.is_char_boundary(len) {
+        while !utf8.is_char_boundary(len) {
             len -= 1;
         }
         len

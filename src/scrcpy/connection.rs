@@ -259,47 +259,60 @@ impl ScrcpyConnection {
     }
 
     async fn video_handler(&mut self, v_tx: LatestVideoFrame) {
-        // read metadata
-        let mut buf: [u8; 12] = [0; 12];
-        let mut video_decoder = match self.socket.read_exact(&mut buf).await {
-            Err(_) => {
-                log::error!("[Controller] {}", t!("scrcpy.failedToReadVideoMetadata"));
+        let raw_codec_id = match self.socket.read_u32().await {
+            Ok(raw_codec_id) => raw_codec_id,
+            Err(e) => {
+                log::error!(
+                    "[Controller] {}: {}",
+                    t!("scrcpy.failedToReadVideoMetadata"),
+                    e
+                );
                 return;
             }
-            Ok(_) => {
-                let raw_codec_id = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
-                let width = u32::from_be_bytes([buf[4], buf[5], buf[6], buf[7]]);
-                let height = u32::from_be_bytes([buf[8], buf[9], buf[10], buf[11]]);
+        };
+        let codec_id = match raw_codec_id {
+            SC_CODEC_ID_H264 => {
+                log::info!("[Controller] {}: H264", t!("scrcpy.videoCodec"));
+                VideoCodec::H264
+            }
+            SC_CODEC_ID_H265 => {
+                log::info!("[Controller] {}: H265", t!("scrcpy.videoCodec"));
+                VideoCodec::H265
+            }
+            SC_CODEC_ID_AV1 => {
+                log::info!("[Controller] {}: AV1", t!("scrcpy.videoCodec"));
+                VideoCodec::AV1
+            }
+            _ => {
+                log::error!(
+                    "[Controller] {}: 0x{:x}",
+                    t!("scrcpy.invalidVideoCodec"),
+                    raw_codec_id
+                );
+                return;
+            }
+        };
 
-                let codec_id = match raw_codec_id {
-                    SC_CODEC_ID_H264 => {
-                        log::info!("[Controller] {}: H264", t!("scrcpy.videoCodec"));
-                        VideoCodec::H264
+        let (width, height) = loop {
+            match read_media_packet(&mut self.socket).await {
+                Ok(media_packet) => {
+                    if let Some(session) = media_packet.session() {
+                        break (session.width, session.height);
                     }
-                    SC_CODEC_ID_H265 => {
-                        log::info!("[Controller] {}: H265", t!("scrcpy.videoCodec"));
-                        VideoCodec::H265
-                    }
-                    SC_CODEC_ID_AV1 => {
-                        log::info!("[Controller] {}: AV1", t!("scrcpy.videoCodec"));
-                        VideoCodec::AV1
-                    }
-                    _ => {
-                        log::error!(
-                            "[Controller] {}: 0x{:x}",
-                            t!("scrcpy.invalidVideoCodec"),
-                            raw_codec_id
-                        );
-                        return;
-                    }
-                };
-                match VideoDecoder::new(codec_id, width, height) {
-                    Ok(video_decoder) => video_decoder,
-                    Err(e) => {
-                        log::error!("[Controller] {}", e);
-                        return;
-                    }
+                    log::warn!("[Controller] Video stream packet received before session metadata");
                 }
+                Err(e) => {
+                    log::error!("[Controller] {}", e);
+                    return;
+                }
+            }
+        };
+
+        let mut video_decoder = match VideoDecoder::new(codec_id, width, height) {
+            Ok(video_decoder) => video_decoder,
+            Err(e) => {
+                log::error!("[Controller] {}", e);
+                return;
             }
         };
 
@@ -307,6 +320,16 @@ impl ScrcpyConnection {
         loop {
             match read_media_packet(&mut self.socket).await {
                 Ok(media_packet) => {
+                    if let Some(session) = media_packet.session() {
+                        log::info!(
+                            "[Controller] Video session: {}x{}, client_resize={}",
+                            session.width,
+                            session.height,
+                            session.is_client_resize
+                        );
+                        continue;
+                    }
+
                     let packet = if video_decoder.must_merge_config {
                         video_decoder.packet_merger.merge(media_packet)
                     } else if media_packet.is_config() {

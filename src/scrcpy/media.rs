@@ -1,26 +1,41 @@
 use std::fmt;
 
 use ffmpeg_next::{
-    Packet, codec, decoder, ffi, frame, packet,
+    ChannelLayout, Packet, Rational, codec, decoder, ffi, frame, packet,
     util::format::{Pixel, Sample},
 };
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use tokio::{io::AsyncReadExt, net::TcpStream};
 
-const SC_PACKET_FLAG_CONFIG: u64 = 1u64 << 63;
-const SC_PACKET_FLAG_KEY_FRAME: u64 = 1u64 << 62;
+const SC_PACKET_FLAG_SESSION: u64 = 1u64 << 63;
+const SC_PACKET_FLAG_CONFIG: u64 = 1u64 << 62;
+const SC_PACKET_FLAG_KEY_FRAME: u64 = 1u64 << 61;
 const SC_PACKET_PTS_MASK: u64 = SC_PACKET_FLAG_KEY_FRAME - 1;
 const MAX_MEDIA_PACKET_SIZE: usize = 64 * 1024 * 1024;
+const SC_PACKET_TIME_BASE: Rational = Rational(1, 1_000_000);
+const SC_AUDIO_SAMPLE_RATE: i32 = 48_000;
 
 pub struct MediaPacket {
     data: Vec<u8>,
     pts: Option<i64>,
     is_config: bool,
     is_key_frame: bool,
+    session: Option<MediaSession>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MediaSession {
+    pub width: u32,
+    pub height: u32,
+    pub is_client_resize: bool,
 }
 
 impl MediaPacket {
+    pub fn session(&self) -> Option<MediaSession> {
+        self.session
+    }
+
     pub fn is_config(&self) -> bool {
         self.is_config
     }
@@ -60,6 +75,21 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> std::result::Result<Me
 
     let pts_flags = u64::from_be_bytes(header[0..8].try_into().unwrap());
     let len = u32::from_be_bytes(header[8..12].try_into().unwrap()) as usize;
+
+    if (pts_flags & SC_PACKET_FLAG_SESSION) != 0 {
+        return Ok(MediaPacket {
+            data: Vec::new(),
+            pts: None,
+            is_config: false,
+            is_key_frame: false,
+            session: Some(MediaSession {
+                width: pts_flags as u32,
+                height: len as u32,
+                is_client_resize: (pts_flags & (1u64 << 32)) != 0,
+            }),
+        });
+    }
+
     if len > MAX_MEDIA_PACKET_SIZE {
         return Err(format!(
             "{}: packet too large ({len})",
@@ -86,6 +116,7 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> std::result::Result<Me
         pts,
         is_config,
         is_key_frame: (pts_flags & SC_PACKET_FLAG_KEY_FRAME) != 0,
+        session: None,
     })
 }
 
@@ -199,11 +230,13 @@ impl AudioDecoder {
         let codec = decoder::find(codec_id.into())
             .ok_or_else(|| format!("FFmpeg decoder not found: {codec_id}"))?;
         let mut codec_context = codec::Context::new_with_codec(codec);
+        configure_audio_decoder_context(&mut codec_context);
         if let Some(config) = config {
             set_decoder_extradata(&mut codec_context, config)?;
         }
-        let audio_decoder = codec_context
-            .decoder()
+        let mut decoder = codec_context.decoder();
+        decoder.set_packet_time_base(SC_PACKET_TIME_BASE);
+        let audio_decoder = decoder
             .audio()
             .map_err(|e| format!("Failed to open FFmpeg decoder: {e}"))?;
 
@@ -215,6 +248,14 @@ impl AudioDecoder {
 
     pub fn output_sample_format() -> Sample {
         Sample::F32(ffmpeg_next::format::sample::Type::Packed)
+    }
+}
+
+fn configure_audio_decoder_context(codec_context: &mut codec::Context) {
+    unsafe {
+        let raw = codec_context.as_mut_ptr();
+        (*raw).sample_rate = SC_AUDIO_SAMPLE_RATE;
+        (*raw).ch_layout = ChannelLayout::STEREO.into();
     }
 }
 

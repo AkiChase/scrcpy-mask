@@ -30,6 +30,8 @@ use crate::{
     web::{JsonResponse, WebServerError, ws::WebSocketNotification},
 };
 
+const SCRCPY_SERVER_VERSION: &str = "4.0";
+
 #[derive(Debug, Clone)]
 pub struct AppStateDevice {
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
@@ -118,8 +120,10 @@ async fn _control_device(
 
     // prepare for scrcpy app
     let scid = gen_scid();
-    let version = "2.4";
-    let scrcpy_path = relate_to_root_path(["assets", &format!("scrcpy-mask-server-v{}", version)]);
+    let scrcpy_path = relate_to_root_path([
+        "assets",
+        &format!("scrcpy-mask-server-v{}", SCRCPY_SERVER_VERSION),
+    ]);
     Device::push(
         &device_id,
         scrcpy_path.to_str().unwrap(),
@@ -146,7 +150,7 @@ async fn _control_device(
     .map(|arg| arg.to_string())
     .collect::<Vec<String>>();
 
-    args.push(version.to_string());
+    args.push(SCRCPY_SERVER_VERSION.to_string());
     args.push(format!("scid={}", scid));
     args.push(format!("video={}", video));
     args.push(format!("display_id={}", display_id));
