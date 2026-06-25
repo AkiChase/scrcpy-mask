@@ -427,7 +427,7 @@ impl ScrcpyConnection {
         };
         log::info!("[Controller] Audio codec: {}", codec_id);
 
-        let player = match ScrcpyAudioPlayer::new() {
+        let player = match ScrcpyAudioPlayer::new(codec_id) {
             Ok(player) => player,
             Err(e) => {
                 return Err(e);
