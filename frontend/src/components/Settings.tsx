@@ -33,6 +33,8 @@ import {
   setAlwaysOnTop,
   setTitlebarVisible,
   setWebBindAddr,
+  setAudioCodec,
+  setAudioBitRate,
 } from "../store/localConfig";
 import {
   setIsLoading,
@@ -54,6 +56,13 @@ const videoCodecOptions = ["H264", "H265", "AV1"].map((v) => ({
   value: v,
   label: v,
 }));
+
+const audioCodecOptions = ["OPUS", "AAC", "FLAC", "RAW"].map((v) => ({
+  value: v,
+  label: v,
+}));
+
+const audioBitRateMin = 16000;
 
 const webBindAddrOptions = [
   { value: "127.0.0.1", label: "127.0.0.1" },
@@ -298,6 +307,29 @@ export default function Settings() {
               min={0}
               value={localConfig.videoMaxFps}
               onChange={(v) => v !== null && dispatch(setVideoMaxFps(v))}
+            />
+          </ItemBox>
+        </ItemBoxContainer>
+
+        <h3 className="title-with-line-sub">{t("settings.title.audio")}</h3>
+        <ItemBoxContainer className="mb-6">
+          <ItemBox label={t("settings.audioCodec")}>
+            <Select
+              className="w-sm"
+              value={localConfig.audioCodec}
+              options={audioCodecOptions}
+              onChange={(v) => dispatch(setAudioCodec(v))}
+            />
+          </ItemBox>
+          <ItemBox label={t("settings.audioBitRate")}>
+            <InputNumber
+              className="w-sm"
+              controls={false}
+              disabled={localConfig.audioCodec === "RAW"}
+              min={audioBitRateMin}
+              suffix="bps"
+              value={localConfig.audioBitRate}
+              onChange={(v) => v !== null && dispatch(setAudioBitRate(v))}
             />
           </ItemBox>
         </ItemBoxContainer>

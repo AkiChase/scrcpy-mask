@@ -51,8 +51,10 @@ rust-i18n = "3"
 ffmpeg-next = { version = "7.1.0", default-features = false, features = [
     "codec",
     "format",
+    "software-resampling",
     "static",
 ] }
+rodio = { version = "0.22.2", default-features = false, features = ["playback"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 muda = "0.17"

@@ -28,6 +28,7 @@ use crate::{
 pub enum ControllerCommand {
     ConnectMainControl(String, bool),
     ConnectMainVideo(String, bool),
+    ConnectMainAudio(String, bool),
     ConnectSubControl(String),
     ShutdownMain(String),
     ShutdownSub(String),
@@ -248,6 +249,49 @@ impl Controller {
                             }
                         }
                     }
+                    ControllerCommand::ConnectMainAudio(scid, meta_flag) => {
+                        let socket_id = "main_audio".to_string();
+
+                        if !ControlledDevice::is_scid_controlled(&scid).await {
+                            panic!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid)
+                        }
+
+                        let token = CancellationToken::new();
+                        signal_map.insert(socket_id.clone(), token.clone());
+
+                        log::info!("[Controller] Creating main audio connection: {}", scid);
+                        match listener.accept().await {
+                            Ok((socket, _)) => {
+                                thread::spawn(move || {
+                                    tokio::runtime::Builder::new_current_thread()
+                                        .enable_all()
+                                        .build()
+                                        .unwrap()
+                                        .block_on(async move {
+                                            ScrcpyConnection::new(socket)
+                                                .handle_audio(token, meta_flag, &scid)
+                                                .await;
+                                        });
+                                });
+                            }
+                            Err(e) => {
+                                log::error!(
+                                    "[Controller] {}: {}",
+                                    t!("scrcpy.errorAcceptingConnection"),
+                                    e
+                                );
+                                ws_tx
+                                    .send(WebSocketNotification::ScrcpyDeviceConnection {
+                                        scid: scid.clone(),
+                                        main: true,
+                                        connected: false,
+                                    })
+                                    .ok();
+                                ControlledDevice::remove_device(&scid).await;
+                                signal_map.remove(&socket_id);
+                            }
+                        }
+                    }
                     ControllerCommand::ConnectSubControl(scid) => {
                         let socket_id = format!("sub_control_{}", scid);
 
@@ -311,7 +355,7 @@ impl Controller {
                             log::warn!("[Controller] {}", t!("scrcpy.mainConnectionNotExist"));
                         } else {
                             log::info!("[Controller] {}: {}", t!("scrcpy.shutdownMain"), scid);
-                            for socket_id in ["main_control", "main_video"] {
+                            for socket_id in ["main_control", "main_video", "main_audio"] {
                                 if let Some(token) = signal_map.get(socket_id) {
                                     token.cancel();
                                     signal_map.remove(socket_id);

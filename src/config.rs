@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     DEFAULT_LANGUAGE,
-    scrcpy::media::VideoCodec,
+    scrcpy::media::{AudioCodec, VideoCodec},
     utils::{relate_to_data_path, relate_to_root_path},
 };
 use once_cell::sync::Lazy;
@@ -18,6 +18,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
 
 static CONFIG: Lazy<RwLock<LocalConfig>> = Lazy::new(|| RwLock::default());
+
+pub const AUDIO_BIT_RATE_MIN: u32 = 16_000;
 
 fn default_web_bind_addr() -> Ipv4Addr {
     Ipv4Addr::new(127, 0, 0, 1)
@@ -71,6 +73,9 @@ pub struct LocalConfig {
     pub video_bit_rate: u32,
     pub video_max_size: u32,
     pub video_max_fps: u32,
+    // audio config
+    pub audio_codec: AudioCodec,
+    pub audio_bit_rate: u32,
 }
 
 impl Default for LocalConfig {
@@ -95,6 +100,8 @@ impl Default for LocalConfig {
             video_bit_rate: 8_000000, // 8M
             video_max_size: 0,        // default no limit
             video_max_fps: 0,         // default no limit
+            audio_codec: AudioCodec::Opus,
+            audio_bit_rate: 128_000,
         }
     }
 }
@@ -185,5 +192,7 @@ impl LocalConfig {
         (video_bit_rate, u32),
         (video_max_size, u32),
         (video_max_fps, u32),
+        (audio_codec, AudioCodec),
+        (audio_bit_rate, u32),
     );
 }

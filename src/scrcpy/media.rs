@@ -1,6 +1,9 @@
 use std::fmt;
 
-use ffmpeg_next::{Packet, codec, decoder, frame, packet, util::format::Pixel};
+use ffmpeg_next::{
+    Packet, codec, decoder, ffi, frame, packet,
+    util::format::{Pixel, Sample},
+};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use tokio::{io::AsyncReadExt, net::TcpStream};
@@ -24,6 +27,10 @@ impl MediaPacket {
 
     pub fn data_len(&self) -> usize {
         self.data.len()
+    }
+
+    pub fn data(&self) -> &[u8] {
+        &self.data
     }
 
     fn ffmpeg_packet(data: Vec<u8>, pts: Option<i64>, is_key_frame: bool) -> Packet {
@@ -86,6 +93,10 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> std::result::Result<Me
 pub const SC_CODEC_ID_H264: u32 = 0x68_32_36_34;
 pub const SC_CODEC_ID_H265: u32 = 0x68_32_36_35;
 pub const SC_CODEC_ID_AV1: u32 = 0x00_61_76_31;
+pub const SC_CODEC_ID_OPUS: u32 = 0x6f_70_75_73;
+pub const SC_CODEC_ID_AAC: u32 = 0x00_61_61_63;
+pub const SC_CODEC_ID_FLAC: u32 = 0x66_6c_61_63;
+pub const SC_CODEC_ID_RAW: u32 = 0x00_72_61_77;
 
 pub struct PacketMerger {
     config: Option<Vec<u8>>,
@@ -144,6 +155,91 @@ impl fmt::Display for VideoCodec {
         };
         write!(f, "{}", s)
     }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum AudioCodec {
+    Opus,
+    Aac,
+    Flac,
+    Raw,
+}
+
+impl From<AudioCodec> for codec::Id {
+    fn from(codec: AudioCodec) -> Self {
+        match codec {
+            AudioCodec::Opus => Self::OPUS,
+            AudioCodec::Aac => Self::AAC,
+            AudioCodec::Flac => Self::FLAC,
+            AudioCodec::Raw => Self::PCM_S16LE,
+        }
+    }
+}
+
+impl fmt::Display for AudioCodec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            AudioCodec::Opus => "opus",
+            AudioCodec::Aac => "aac",
+            AudioCodec::Flac => "flac",
+            AudioCodec::Raw => "raw",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+pub struct AudioDecoder {
+    pub decoder: decoder::Audio,
+    pub codec_id: AudioCodec,
+}
+
+impl AudioDecoder {
+    pub fn new(codec_id: AudioCodec, config: Option<&[u8]>) -> std::result::Result<Self, String> {
+        let codec = decoder::find(codec_id.into())
+            .ok_or_else(|| format!("FFmpeg decoder not found: {codec_id}"))?;
+        let mut codec_context = codec::Context::new_with_codec(codec);
+        if let Some(config) = config {
+            set_decoder_extradata(&mut codec_context, config)?;
+        }
+        let audio_decoder = codec_context
+            .decoder()
+            .audio()
+            .map_err(|e| format!("Failed to open FFmpeg decoder: {e}"))?;
+
+        Ok(Self {
+            decoder: audio_decoder,
+            codec_id,
+        })
+    }
+
+    pub fn output_sample_format() -> Sample {
+        Sample::F32(ffmpeg_next::format::sample::Type::Packed)
+    }
+}
+
+fn set_decoder_extradata(
+    codec_context: &mut codec::Context,
+    config: &[u8],
+) -> std::result::Result<(), String> {
+    if config.is_empty() {
+        return Ok(());
+    }
+
+    let allocation_size = config.len() + ffi::AV_INPUT_BUFFER_PADDING_SIZE as usize;
+    unsafe {
+        let extradata = ffi::av_mallocz(allocation_size);
+        if extradata.is_null() {
+            return Err("Failed to allocate FFmpeg extradata".to_string());
+        }
+
+        std::ptr::copy_nonoverlapping(config.as_ptr(), extradata as *mut u8, config.len());
+        let raw = codec_context.as_mut_ptr();
+        (*raw).extradata = extradata as *mut u8;
+        (*raw).extradata_size = config.len() as i32;
+    }
+
+    Ok(())
 }
 
 pub struct VideoDecoder {

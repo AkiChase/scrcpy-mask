@@ -49,9 +49,11 @@ import { setAdbConnectAddress } from "../store/localConfig";
 function ControlledDevices({
   displayID,
   isVideo,
+  isAudio,
 }: {
   displayID: number;
   isVideo: boolean;
+  isAudio: boolean;
 }) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
@@ -207,6 +209,7 @@ function ControlledDevices({
         device_id,
         display_id: displayID,
         video: isVideo,
+        audio: isAudio,
       });
       messageApi?.success(res.message);
     } catch (error) {
@@ -369,10 +372,12 @@ function ControlledDevices({
 function OtherDevices({
   otherDevices,
   videoState,
+  audioState,
   displayIDState,
 }: {
   otherDevices: AdbDevice[];
   videoState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
+  audioState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
   displayIDState: [number, React.Dispatch<React.SetStateAction<number>>];
 }) {
   const { t } = useTranslation();
@@ -380,6 +385,7 @@ function OtherDevices({
   const messageApi = useMessageContext();
 
   const [isVideo, setIsVideo] = videoState;
+  const [isAudio, setIsAudio] = audioState;
   const [displayID, setDisplayID] = displayIDState;
 
   async function controlDevice(device: AdbDevice) {
@@ -389,6 +395,7 @@ function OtherDevices({
         device_id: device.id,
         display_id: displayID,
         video: isVideo,
+        audio: isAudio,
       });
       messageApi?.success(res.message);
     } catch (error) {
@@ -421,13 +428,21 @@ function OtherDevices({
           }
           title="Display id"
         >
-          <Flex justify="center" align="center">
-            <Checkbox
-              checked={isVideo}
-              onChange={(e) => setIsVideo(e.target.checked)}
-            >
-              {t("devices.otherDevices.video")}
-            </Checkbox>
+          <Flex vertical align="center" gap={4}>
+            <Space size="small">
+              <Checkbox
+                checked={isVideo}
+                onChange={(e) => setIsVideo(e.target.checked)}
+              >
+                {t("devices.otherDevices.video")}
+              </Checkbox>
+              <Checkbox
+                checked={isAudio}
+                onChange={(e) => setIsAudio(e.target.checked)}
+              >
+                {t("devices.otherDevices.audio")}
+              </Checkbox>
+            </Space>
           </Flex>
         </Popover>
       ),
@@ -482,6 +497,7 @@ export default function Devices() {
   }, [controlledDevices, adbDevices]);
 
   const videoState = useState(false);
+  const audioState = useState(false);
   const displayIDState = useState(0);
 
   useEffect(() => {
@@ -625,6 +641,7 @@ export default function Devices() {
         <ControlledDevices
           displayID={displayIDState[0]}
           isVideo={videoState[0]}
+          isAudio={audioState[0]}
         />
       </section>
       <section className="mt-4">
@@ -632,6 +649,7 @@ export default function Devices() {
         <OtherDevices
           otherDevices={otherDevices}
           videoState={videoState}
+          audioState={audioState}
           displayIDState={displayIDState}
         />
       </section>

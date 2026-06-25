@@ -24,6 +24,7 @@ use crate::{
         control_msg::ScrcpyControlMsg,
         controller::ControllerCommand,
         device_action,
+        media::AudioCodec,
     },
     utils::{relate_to_root_path, share::ControlledDevice},
     web::{JsonResponse, WebServerError, ws::WebSocketNotification},
@@ -85,12 +86,15 @@ struct PostDataControlDevice {
     device_id: String,
     display_id: i32,
     video: bool,
+    #[serde(default)]
+    audio: bool,
 }
 
 async fn _control_device(
     device_id: &str,
     display_id: i32,
     video: bool,
+    audio: bool,
     d_tx: &UnboundedSender<ControllerCommand>,
     ws_tx: &broadcast::Sender<WebSocketNotification>,
 ) -> Result<JsonResponse, WebServerError> {
@@ -109,6 +113,8 @@ async fn _control_device(
             device_id
         )));
     }
+    let main = device_list.len() == 0;
+    let audio = audio && main;
 
     // prepare for scrcpy app
     let scid = gen_scid();
@@ -144,10 +150,9 @@ async fn _control_device(
     args.push(format!("scid={}", scid));
     args.push(format!("video={}", video));
     args.push(format!("display_id={}", display_id));
-    args.push("audio=false".to_string());
+    args.push(format!("audio={}", audio));
 
     // create device
-    let main = device_list.len() == 0;
     let mut socket_id: Vec<String> = Vec::new();
     let mut commands: Vec<ControllerCommand> = Vec::new();
     if main {
@@ -167,6 +172,18 @@ async fn _control_device(
             }
             if local_config.video_max_fps > 0 {
                 args.push(format!("max_fps={}", local_config.video_max_fps));
+            }
+        }
+        if audio {
+            socket_id.push("main_audio".to_string());
+            commands.push(ControllerCommand::ConnectMainAudio(scid.clone(), meta_flag));
+            if meta_flag {
+                meta_flag = false;
+            }
+
+            args.push(format!("audio_codec={}", local_config.audio_codec));
+            if !matches!(local_config.audio_codec, AudioCodec::Raw) {
+                args.push(format!("audio_bit_rate={}", local_config.audio_bit_rate));
             }
         }
         socket_id.push("main_control".to_string());
@@ -218,9 +235,18 @@ async fn control_device(
 ) -> Result<JsonResponse, WebServerError> {
     let device_id = payload.device_id;
     let video = payload.video;
+    let audio = payload.audio;
     let display_id = payload.display_id;
 
-    _control_device(&device_id, display_id, video, &state.d_tx, &state.ws_tx).await
+    _control_device(
+        &device_id,
+        display_id,
+        video,
+        audio,
+        &state.d_tx,
+        &state.ws_tx,
+    )
+    .await
 }
 
 #[derive(Deserialize)]
@@ -228,6 +254,8 @@ struct PostDataReconnectDevice {
     device_id: String,
     display_id: i32,
     video: bool,
+    #[serde(default)]
+    audio: bool,
 }
 
 async fn reconnect_device(
@@ -243,6 +271,7 @@ async fn reconnect_device(
                 &device_id,
                 payload.display_id,
                 payload.video,
+                payload.audio,
                 &state.d_tx,
                 &state.ws_tx,
             )

@@ -6233,6 +6233,7 @@ dependencies = [
  "pollster",
  "rand 0.9.1",
  "reqwest",
+ "rodio",
  "rust-i18n",
  "semver",
  "seq-macro",

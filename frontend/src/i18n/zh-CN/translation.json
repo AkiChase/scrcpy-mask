@@ -47,7 +47,8 @@
       "title": "其他设备",
       "status": "状态",
       "actionControl": "控制设备",
-      "video": "视频"
+      "video": "视频",
+      "audio": "音频"
     },
     "common": {
       "refresh": "刷新设备"
@@ -373,6 +374,7 @@
       "basic": "基本",
       "mask": "蒙版",
       "video": "视频",
+      "audio": "音频",
       "advance": "高级"
     },
     "language": "语言",
@@ -391,6 +393,8 @@
     "videoMaxSize": "视频最大尺寸",
     "zeroUnlimitedTip": "设为 0 表示无限制",
     "videoMaxFps": "视频最大FPS",
+    "audioCodec": "音频编码",
+    "audioBitRate": "音频码率",
     "alwaysOnTop": "蒙版置顶",
     "titlebarVisible": "显示标题栏",
     "webBindAddrTip": "127.0.0.1 仅本机可访问；0.0.0.0 允许局域网访问，请只在可信网络使用",

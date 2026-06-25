@@ -9,10 +9,13 @@ use std::net::Ipv4Addr;
 use tokio::sync::oneshot;
 
 use crate::{
-    config::LocalConfig,
+    config::{AUDIO_BIT_RATE_MIN, LocalConfig},
     is_available_language,
     mask::mask_command::MaskCommand,
-    scrcpy::{adb::Adb, media::VideoCodec},
+    scrcpy::{
+        adb::Adb,
+        media::{AudioCodec, VideoCodec},
+    },
     utils::{
         IDENTIFIER, check_for_update, get_mask_scale_factor, mask_win_move_helper,
         share::{ControlledDevice, UpdateInfo},
@@ -476,6 +479,46 @@ async fn update_config(
             return Err(WebServerError::bad_request(t!(
                 "web.config.videoMaxFpsTypeError"
             )));
+        }
+        "audio_codec" => {
+            if let Some(value) = payload.value.as_str() {
+                let codec = match value {
+                    "OPUS" => AudioCodec::Opus,
+                    "AAC" => AudioCodec::Aac,
+                    "FLAC" => AudioCodec::Flac,
+                    "RAW" => AudioCodec::Raw,
+                    _ => {
+                        return Err(WebServerError::bad_request(format!(
+                            "Invalid audio codec: {}",
+                            value
+                        )));
+                    }
+                };
+                LocalConfig::set_audio_codec(codec);
+                return Ok(JsonResponse::success(
+                    format!("Audio codec set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request("Audio codec must be string"));
+        }
+        "audio_bit_rate" => {
+            if let Some(value) = payload.value.as_u64() {
+                let value = u32::try_from(value)
+                    .map_err(|_| WebServerError::bad_request("Audio bit rate must be u32"))?;
+                if value < AUDIO_BIT_RATE_MIN {
+                    return Err(WebServerError::bad_request(format!(
+                        "Audio bit rate must be at least {}",
+                        AUDIO_BIT_RATE_MIN
+                    )));
+                }
+                LocalConfig::set_audio_bit_rate(value);
+                return Ok(JsonResponse::success(
+                    format!("Audio bit rate set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request("Audio bit rate must be u32"));
         }
         _ => Err(WebServerError::bad_request(format!(
             "{}: {}",

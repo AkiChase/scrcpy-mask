@@ -47,7 +47,8 @@
       "title": "Other Devices",
       "status": "Status",
       "actionControl": "Control device",
-      "video": "Video"
+      "video": "Video",
+      "audio": "Audio"
     },
     "common": {
       "refresh": "Refresh devices"
@@ -373,6 +374,7 @@
       "basic": "Basic",
       "mask": "Mask",
       "video": "Video",
+      "audio": "Audio",
       "advance": "Advance"
     },
     "language": "Language",
@@ -391,6 +393,8 @@
     "videoMaxSize": "Video max size",
     "zeroUnlimitedTip": "Set to 0 for unlimited",
     "videoMaxFps": "Video max FPS",
+    "audioCodec": "Audio codec",
+    "audioBitRate": "Audio bit rate",
     "alwaysOnTop": "Mask always on top",
     "titlebarVisible": "Show titlebar",
     "webBindAddrTip": "127.0.0.1 allows local access only; 0.0.0.0 allows LAN access. Use it only on trusted networks.",

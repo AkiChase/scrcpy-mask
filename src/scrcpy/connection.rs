@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use ffmpeg_next::{
-    Error as FfmpegError, error, frame,
+    ChannelLayout, Error as FfmpegError, error, frame,
+    software::resampling,
     util::{
         color::{Range, Space},
         format::Pixel,
@@ -26,10 +27,13 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{
+        audio::{AUDIO_SAMPLE_RATE, AudioSampleQueue, ScrcpyAudioPlayer},
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
         media::{
-            SC_CODEC_ID_AV1, SC_CODEC_ID_H264, SC_CODEC_ID_H265, VideoCodec, VideoDecoder,
-            VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout, YuvRange, read_media_packet,
+            AudioCodec, AudioDecoder, SC_CODEC_ID_AAC, SC_CODEC_ID_AV1, SC_CODEC_ID_FLAC,
+            SC_CODEC_ID_H264, SC_CODEC_ID_H265, SC_CODEC_ID_OPUS, SC_CODEC_ID_RAW, VideoCodec,
+            VideoDecoder, VideoMsg, YuvColorInfo, YuvMatrix, YuvPlaneLayout, YuvRange,
+            read_media_packet,
         },
     },
     utils::{LatestVideoFrame, share::ControlledDevice},
@@ -375,6 +379,149 @@ impl ScrcpyConnection {
         log::info!("[Controller] {}", t!("scrcpy.videoConnectionClosed"));
         self.socket.shutdown().await.unwrap();
     }
+
+    async fn audio_handler(&mut self) -> Result<(), String> {
+        let mut buf = [0u8; 4];
+        if let Err(e) = self.socket.read_exact(&mut buf).await {
+            return Err(format!("Failed to read audio metadata: {e}"));
+        }
+
+        let raw_codec_id = u32::from_be_bytes(buf);
+        let codec_id = match raw_codec_id {
+            0 => {
+                return Err("Audio disabled by scrcpy-server".to_string());
+            }
+            1 => {
+                return Err("Audio configuration rejected by scrcpy-server".to_string());
+            }
+            SC_CODEC_ID_OPUS => AudioCodec::Opus,
+            SC_CODEC_ID_AAC => AudioCodec::Aac,
+            SC_CODEC_ID_FLAC => AudioCodec::Flac,
+            SC_CODEC_ID_RAW => AudioCodec::Raw,
+            _ => {
+                return Err(format!("Invalid audio codec: 0x{raw_codec_id:x}"));
+            }
+        };
+        log::info!("[Controller] Audio codec: {}", codec_id);
+
+        let player = match ScrcpyAudioPlayer::new() {
+            Ok(player) => player,
+            Err(e) => {
+                return Err(e);
+            }
+        };
+        let audio_queue = player.queue();
+
+        match codec_id {
+            AudioCodec::Raw => self.raw_audio_handler(audio_queue).await?,
+            AudioCodec::Opus | AudioCodec::Aac | AudioCodec::Flac => {
+                self.encoded_audio_handler(codec_id, audio_queue).await?
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn raw_audio_handler(&mut self, audio_queue: AudioSampleQueue) -> Result<(), String> {
+        loop {
+            match read_media_packet(&mut self.socket).await {
+                Ok(media_packet) => {
+                    if media_packet.is_config() {
+                        continue;
+                    }
+                    let samples = media_packet.data().chunks_exact(2).map(|sample| {
+                        let sample = i16::from_le_bytes([sample[0], sample[1]]);
+                        sample as f32 / 32768.0
+                    });
+                    audio_queue.push_samples(samples);
+                }
+                Err(e) => {
+                    return Err(format!("Failed to read raw audio packet: {e}"));
+                }
+            }
+        }
+    }
+
+    async fn encoded_audio_handler(
+        &mut self,
+        codec_id: AudioCodec,
+        audio_queue: AudioSampleQueue,
+    ) -> Result<(), String> {
+        let mut decoder: Option<AudioDecoder> = None;
+        let mut config: Option<Vec<u8>> = None;
+        let mut resampler: Option<resampling::Context> = None;
+
+        loop {
+            match read_media_packet(&mut self.socket).await {
+                Ok(media_packet) => {
+                    if media_packet.is_config() {
+                        config = Some(media_packet.data().to_vec());
+                        continue;
+                    }
+
+                    if decoder.is_none() {
+                        decoder = match AudioDecoder::new(codec_id, config.as_deref()) {
+                            Ok(decoder) => Some(decoder),
+                            Err(e) => {
+                                return Err(e);
+                            }
+                        };
+                    }
+
+                    let Some(audio_decoder) = decoder.as_mut() else {
+                        continue;
+                    };
+                    let packet = media_packet.into_ffmpeg_packet();
+                    match audio_decoder.decoder.send_packet(&packet) {
+                        Ok(()) => {}
+                        Err(e) if is_ffmpeg_again(e) => {
+                            drain_audio_decoder(audio_decoder, &audio_queue, &mut resampler);
+                            if let Err(e) = audio_decoder.decoder.send_packet(&packet) {
+                                log::warn!("[Controller] Failed to send audio packet: {}", e);
+                                continue;
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("[Controller] Failed to send audio packet: {}", e);
+                            continue;
+                        }
+                    }
+
+                    drain_audio_decoder(audio_decoder, &audio_queue, &mut resampler);
+                }
+                Err(e) => {
+                    return Err(format!("Failed to read encoded audio packet: {e}"));
+                }
+            }
+        }
+    }
+
+    pub async fn handle_audio(mut self, token: CancellationToken, meta_flag: bool, scid: &str) {
+        log::info!("[Controller] Handle audio connection");
+        if meta_flag {
+            if let Err(e) = self.read_device_metadata(scid.to_string()).await {
+                log::error!("[Controller] {}", e);
+                token.cancel();
+                return;
+            }
+        }
+
+        let final_token = token.clone();
+        tokio::select! {
+            _ = token.cancelled()=>{
+                log::info!("[Controller] Audio connection reader cancelled");
+            }
+            result = self.audio_handler()=>{
+                match result {
+                    Ok(()) => log::error!("[Controller] Audio read shutdown unexpectedly"),
+                    Err(e) => log::error!("[Controller] Audio connection failed: {}", e),
+                }
+                final_token.cancel();
+            }
+        }
+        log::info!("[Controller] Audio connection closed");
+        self.socket.shutdown().await.unwrap();
+    }
 }
 
 fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame) -> bool {
@@ -493,6 +640,72 @@ fn drain_video_decoder(video_decoder: &mut VideoDecoder, v_tx: &LatestVideoFrame
         }
     }
     true
+}
+
+fn drain_audio_decoder(
+    audio_decoder: &mut AudioDecoder,
+    audio_queue: &AudioSampleQueue,
+    resampler: &mut Option<resampling::Context>,
+) {
+    loop {
+        let mut decoded = frame::Audio::empty();
+        match audio_decoder.decoder.receive_frame(&mut decoded) {
+            Ok(()) => {
+                let needs_resampler = resampler
+                    .as_ref()
+                    .map(|resampler| {
+                        resampler.input().format != decoded.format()
+                            || resampler.input().channel_layout != decoded.channel_layout()
+                            || resampler.input().rate != decoded.rate()
+                    })
+                    .unwrap_or(true);
+
+                if needs_resampler {
+                    match decoded.resampler(
+                        AudioDecoder::output_sample_format(),
+                        ChannelLayout::STEREO,
+                        AUDIO_SAMPLE_RATE,
+                    ) {
+                        Ok(next_resampler) => {
+                            log::info!(
+                                "[Controller] Audio frame format: codec={}, format={:?}, channels={}, rate={}",
+                                audio_decoder.codec_id,
+                                decoded.format(),
+                                decoded.channels(),
+                                decoded.rate(),
+                            );
+                            *resampler = Some(next_resampler);
+                        }
+                        Err(e) => {
+                            log::warn!("[Controller] Failed to create audio resampler: {}", e);
+                            continue;
+                        }
+                    }
+                }
+
+                let Some(resampler) = resampler.as_mut() else {
+                    continue;
+                };
+                let mut output = frame::Audio::empty();
+                if let Err(e) = resampler.run(&decoded, &mut output) {
+                    log::warn!("[Controller] Failed to resample audio frame: {}", e);
+                    continue;
+                }
+
+                let samples = output
+                    .plane::<(f32, f32)>(0)
+                    .iter()
+                    .flat_map(|&(left, right)| [left, right]);
+                audio_queue.push_samples(samples);
+            }
+            Err(e) if is_ffmpeg_again(e) => break,
+            Err(FfmpegError::Eof) => break,
+            Err(e) => {
+                log::warn!("[Controller] Failed to receive audio frame: {}", e);
+                break;
+            }
+        }
+    }
 }
 
 fn log_video_frame_metadata(video_decoder: &VideoDecoder, decoded: &frame::Video) {

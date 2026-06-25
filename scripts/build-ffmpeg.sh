@@ -48,9 +48,13 @@ CONFIGURE_ARGS=(
     "--enable-avcodec"
     "--enable-avformat"
     "--enable-avutil"
+    "--enable-swresample"
     "--enable-decoder=h264"
     "--enable-decoder=hevc"
     "--enable-decoder=av1"
+    "--enable-decoder=opus"
+    "--enable-decoder=aac"
+    "--enable-decoder=flac"
 )
 
 if [[ "$TARGET_OS" == "windows-x64" ]]; then

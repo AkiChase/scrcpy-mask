@@ -47,7 +47,8 @@
       "title": "Другие устройства",
       "status": "Статус",
       "actionControl": "Управлять устройством",
-      "video": "Видео"
+      "video": "Видео",
+      "audio": "Аудио"
     },
     "common": {
       "refresh": "Обновить устройства"
@@ -373,6 +374,7 @@
       "basic": "Основные",
       "mask": "Маска",
       "video": "Видео",
+      "audio": "Аудио",
       "advance": "Дополнительно"
     },
     "language": "Язык",
@@ -391,6 +393,8 @@
     "videoMaxSize": "Макс. размер видео",
     "zeroUnlimitedTip": "Установите 0 для без ограничений",
     "videoMaxFps": "Макс. FPS видео",
+    "audioCodec": "Аудиокодек",
+    "audioBitRate": "Битрейт аудио",
     "alwaysOnTop": "Маска всегда поверх окон",
     "titlebarVisible": "Показывать заголовок окна",
     "webBindAddrTip": "127.0.0.1 allows local access only; 0.0.0.0 allows LAN access. Use it only on trusted networks.",

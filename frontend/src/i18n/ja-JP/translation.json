@@ -47,7 +47,8 @@
       "title": "その他のデバイス",
       "status": "状態",
       "actionControl": "デバイスを制御",
-      "video": "動画"
+      "video": "動画",
+      "audio": "音声"
     },
     "common": {
       "refresh": "デバイスを更新"
@@ -373,6 +374,7 @@
       "basic": "基本",
       "mask": "マスク",
       "video": "動画",
+      "audio": "音声",
       "advance": "詳細"
     },
     "language": "言語",
@@ -391,6 +393,8 @@
     "videoMaxSize": "動画最大サイズ",
     "zeroUnlimitedTip": "0 に設定すると無制限",
     "videoMaxFps": "動画最大 FPS",
+    "audioCodec": "音声 codec",
+    "audioBitRate": "音声ビットレート",
     "alwaysOnTop": "マスクを常に最前面に表示",
     "titlebarVisible": "タイトルバーを表示",
     "webBindAddrTip": "127.0.0.1 allows local access only; 0.0.0.0 allows LAN access. Use it only on trusted networks.",
