@@ -48,6 +48,10 @@ impl MediaPacket {
         &self.data
     }
 
+    pub fn pts(&self) -> Option<i64> {
+        self.pts
+    }
+
     fn ffmpeg_packet(data: Vec<u8>, pts: Option<i64>, is_key_frame: bool) -> Packet {
         let mut packet = Packet::copy(&data);
         packet.set_pts(pts);

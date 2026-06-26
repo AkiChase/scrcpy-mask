@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use ffmpeg_next::{
-    ChannelLayout, Error as FfmpegError, error, frame,
+    ChannelLayout, Error as FfmpegError, error, ffi, frame,
     software::resampling,
     util::{
         color::{Range, Space},
@@ -27,7 +27,10 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{
-        audio::{AUDIO_SAMPLE_RATE, AudioSampleQueue, ScrcpyAudioPlayer},
+        audio::{
+            AUDIO_CHANNELS, AUDIO_SAMPLE_RATE, AudioCompensation, AudioSampleQueue,
+            ScrcpyAudioPlayer,
+        },
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
         media::{
             AudioCodec, AudioDecoder, SC_CODEC_ID_AAC, SC_CODEC_ID_AV1, SC_CODEC_ID_FLAC,
@@ -452,11 +455,14 @@ impl ScrcpyConnection {
                     if media_packet.is_config() {
                         continue;
                     }
+                    let input_frames = media_packet.data().len() / (2 * AUDIO_CHANNELS as usize);
+                    audio_queue.prepare_push(input_frames, media_packet.pts());
                     let samples = media_packet.data().chunks_exact(2).map(|sample| {
                         let sample = i16::from_le_bytes([sample[0], sample[1]]);
                         sample as f32 / 32768.0
                     });
-                    audio_queue.push_samples(samples);
+                    let stats = audio_queue.push_samples(samples);
+                    audio_queue.finish_push(input_frames, stats);
                 }
                 Err(e) => {
                     return Err(format!("Failed to read raw audio packet: {e}"));
@@ -709,17 +715,24 @@ fn drain_audio_decoder(
                 let Some(resampler) = resampler.as_mut() else {
                     continue;
                 };
-                let mut output = frame::Audio::empty();
-                if let Err(e) = resampler.run(&decoded, &mut output) {
-                    log::warn!("[Controller] Failed to resample audio frame: {}", e);
-                    continue;
+
+                let input_frames = decoded.samples();
+                if let Some(compensation) = audio_queue.prepare_push(input_frames, decoded.pts()) {
+                    apply_audio_compensation(resampler, compensation);
                 }
 
-                let samples = output
-                    .plane::<(f32, f32)>(0)
-                    .iter()
-                    .flat_map(|&(left, right)| [left, right]);
-                audio_queue.push_samples(samples);
+                let samples = match resample_audio_frame(resampler, &decoded) {
+                    Ok(samples) => samples,
+                    Err(e) => {
+                        log::warn!("[Controller] Failed to resample audio frame: {}", e);
+                        continue;
+                    }
+                };
+
+                let stats = audio_queue.push_samples(samples);
+                if let Some(compensation) = audio_queue.finish_push(input_frames, stats) {
+                    apply_audio_compensation(resampler, compensation);
+                }
             }
             Err(e) if is_ffmpeg_again(e) => break,
             Err(FfmpegError::Eof) => break,
@@ -728,6 +741,51 @@ fn drain_audio_decoder(
                 break;
             }
         }
+    }
+}
+
+fn resample_audio_frame(
+    resampler: &mut resampling::Context,
+    input: &frame::Audio,
+) -> Result<Vec<f32>, FfmpegError> {
+    let out_frames = unsafe {
+        let delay = ffi::swr_get_delay(resampler.as_mut_ptr(), AUDIO_SAMPLE_RATE as i64).max(0);
+        delay as usize + input.samples() + 256
+    };
+    let mut samples = vec![0.0; out_frames * AUDIO_CHANNELS as usize];
+    let mut out = [samples.as_mut_ptr().cast::<u8>()];
+    let in_data = unsafe { (*input.as_ptr()).data.as_ptr().cast::<*const u8>() };
+    let converted = unsafe {
+        ffi::swr_convert(
+            resampler.as_mut_ptr(),
+            out.as_mut_ptr(),
+            out_frames as i32,
+            in_data,
+            input.samples() as i32,
+        )
+    };
+
+    if converted < 0 {
+        return Err(FfmpegError::from(converted));
+    }
+
+    samples.truncate(converted as usize * AUDIO_CHANNELS as usize);
+    Ok(samples)
+}
+
+fn apply_audio_compensation(resampler: &mut resampling::Context, compensation: AudioCompensation) {
+    let result = unsafe {
+        ffi::swr_set_compensation(
+            resampler.as_mut_ptr(),
+            compensation.sample_delta,
+            compensation.distance,
+        )
+    };
+    if result < 0 {
+        log::warn!(
+            "[Controller] Audio resampling compensation failed: {}",
+            FfmpegError::from(result)
+        );
     }
 }
 
