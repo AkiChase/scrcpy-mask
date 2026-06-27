@@ -14,7 +14,7 @@ use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{
         adb::Adb,
-        media::{AudioCodec, VideoCodec},
+        media::{AudioCodec, AudioSource, VideoCodec},
     },
     utils::{
         IDENTIFIER, check_for_update, get_mask_scale_factor, mask_win_move_helper,
@@ -519,6 +519,47 @@ async fn update_config(
                 ));
             }
             return Err(WebServerError::bad_request("Audio bit rate must be u32"));
+        }
+        "audio_source" => {
+            if let Some(value) = payload.value.as_str() {
+                let source = match value {
+                    "OUTPUT" => AudioSource::Output,
+                    "PLAYBACK" => AudioSource::Playback,
+                    "MIC" => AudioSource::Mic,
+                    _ => {
+                        return Err(WebServerError::bad_request(format!(
+                            "Invalid audio source: {}",
+                            value
+                        )));
+                    }
+                };
+                LocalConfig::set_audio_source(source);
+                if !source.is_playback() {
+                    LocalConfig::set_audio_dup(false);
+                }
+                return Ok(JsonResponse::success(
+                    format!("Audio source set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request("Audio source must be string"));
+        }
+        "audio_dup" => {
+            if let Some(value) = payload.value.as_bool() {
+                if value && !LocalConfig::get().audio_source.is_playback() {
+                    return Err(WebServerError::bad_request(
+                        "Audio duplication requires playback source",
+                    ));
+                }
+                LocalConfig::set_audio_dup(value);
+                return Ok(JsonResponse::success(
+                    format!("Audio duplication set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "Audio duplication must be bool",
+            ));
         }
         _ => Err(WebServerError::bad_request(format!(
             "{}: {}",

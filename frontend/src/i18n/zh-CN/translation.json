@@ -395,6 +395,8 @@
     "videoMaxFps": "视频最大FPS",
     "audioCodec": "音频编码",
     "audioBitRate": "音频码率",
+    "audioSource": "音频来源",
+    "audioDup": "设备继续播放",
     "alwaysOnTop": "蒙版置顶",
     "titlebarVisible": "显示标题栏",
     "webBindAddrTip": "127.0.0.1 仅本机可访问；0.0.0.0 允许局域网访问，请只在可信网络使用",

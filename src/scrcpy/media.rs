@@ -224,6 +224,31 @@ impl fmt::Display for AudioCodec {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum AudioSource {
+    Output,
+    Playback,
+    Mic,
+}
+
+impl AudioSource {
+    pub fn is_playback(self) -> bool {
+        matches!(self, Self::Playback)
+    }
+}
+
+impl fmt::Display for AudioSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            AudioSource::Output => "output",
+            AudioSource::Playback => "playback",
+            AudioSource::Mic => "mic",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 pub struct AudioDecoder {
     pub decoder: decoder::Audio,
     pub codec_id: AudioCodec,

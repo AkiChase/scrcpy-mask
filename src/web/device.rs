@@ -186,6 +186,11 @@ async fn _control_device(
             }
 
             args.push(format!("audio_codec={}", local_config.audio_codec));
+            args.push(format!("audio_source={}", local_config.audio_source));
+            args.push(format!(
+                "audio_dup={}",
+                local_config.audio_source.is_playback() && local_config.audio_dup
+            ));
             if !matches!(local_config.audio_codec, AudioCodec::Raw) {
                 args.push(format!("audio_bit_rate={}", local_config.audio_bit_rate));
             }

@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     DEFAULT_LANGUAGE,
-    scrcpy::media::{AudioCodec, VideoCodec},
+    scrcpy::media::{AudioCodec, AudioSource, VideoCodec},
     utils::{relate_to_data_path, relate_to_root_path},
 };
 use once_cell::sync::Lazy;
@@ -76,6 +76,8 @@ pub struct LocalConfig {
     // audio config
     pub audio_codec: AudioCodec,
     pub audio_bit_rate: u32,
+    pub audio_source: AudioSource,
+    pub audio_dup: bool,
 }
 
 impl Default for LocalConfig {
@@ -102,6 +104,8 @@ impl Default for LocalConfig {
             video_max_fps: 0,         // default no limit
             audio_codec: AudioCodec::Opus,
             audio_bit_rate: 128_000,
+            audio_source: AudioSource::Output,
+            audio_dup: false,
         }
     }
 }
@@ -194,5 +198,7 @@ impl LocalConfig {
         (video_max_fps, u32),
         (audio_codec, AudioCodec),
         (audio_bit_rate, u32),
+        (audio_source, AudioSource),
+        (audio_dup, bool),
     );
 }

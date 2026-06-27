@@ -35,6 +35,8 @@ import {
   setWebBindAddr,
   setAudioCodec,
   setAudioBitRate,
+  setAudioSource,
+  setAudioDup,
 } from "../store/localConfig";
 import {
   setIsLoading,
@@ -58,6 +60,11 @@ const videoCodecOptions = ["H264", "H265", "AV1"].map((v) => ({
 }));
 
 const audioCodecOptions = ["OPUS", "AAC", "FLAC", "RAW"].map((v) => ({
+  value: v,
+  label: v,
+}));
+
+const audioSourceOptions = ["OUTPUT", "PLAYBACK", "MIC"].map((v) => ({
   value: v,
   label: v,
 }));
@@ -330,6 +337,21 @@ export default function Settings() {
               suffix="bps"
               value={localConfig.audioBitRate}
               onChange={(v) => v !== null && dispatch(setAudioBitRate(v))}
+            />
+          </ItemBox>
+          <ItemBox label={t("settings.audioSource")}>
+            <Select
+              className="w-sm"
+              value={localConfig.audioSource}
+              options={audioSourceOptions}
+              onChange={(v) => dispatch(setAudioSource(v))}
+            />
+          </ItemBox>
+          <ItemBox label={t("settings.audioDup")}>
+            <Switch
+              checked={localConfig.audioSource === "PLAYBACK" && localConfig.audioDup}
+              disabled={localConfig.audioSource !== "PLAYBACK"}
+              onChange={(v) => dispatch(setAudioDup(v))}
             />
           </ItemBox>
         </ItemBoxContainer>

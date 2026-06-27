@@ -395,6 +395,8 @@
     "videoMaxFps": "動画最大 FPS",
     "audioCodec": "音声 codec",
     "audioBitRate": "音声ビットレート",
+    "audioSource": "音声ソース",
+    "audioDup": "端末でも再生",
     "alwaysOnTop": "マスクを常に最前面に表示",
     "titlebarVisible": "タイトルバーを表示",
     "webBindAddrTip": "127.0.0.1 allows local access only; 0.0.0.0 allows LAN access. Use it only on trusted networks.",

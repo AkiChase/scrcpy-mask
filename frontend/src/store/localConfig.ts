@@ -71,6 +71,8 @@ export interface LocalConfigState {
   // audio
   audioCodec: string;
   audioBitRate: number;
+  audioSource: string;
+  audioDup: boolean;
 }
 
 const initialState: LocalConfigState = {
@@ -94,7 +96,9 @@ const initialState: LocalConfigState = {
   videoMaxSize: 0,
   videoMaxFps: 0,
   audioCodec: "OPUS",
-  audioBitRate: 128000
+  audioBitRate: 128000,
+  audioSource: "OUTPUT",
+  audioDup: false,
 };
 
 const localConfigSlice = createSlice({
@@ -194,6 +198,18 @@ const localConfigSlice = createSlice({
       state.audioBitRate = action.payload;
       updateLocalConfig("audio_bit_rate", action.payload);
     },
+    setAudioSource: (state, action: PayloadAction<string>) => {
+      state.audioSource = action.payload;
+      if (action.payload !== "PLAYBACK") {
+        state.audioDup = false;
+        updateLocalConfig("audio_dup", false);
+      }
+      updateLocalConfig("audio_source", action.payload);
+    },
+    setAudioDup: (state, action: PayloadAction<boolean>) => {
+      state.audioDup = action.payload;
+      updateLocalConfig("audio_dup", action.payload);
+    },
   },
 });
 
@@ -220,6 +236,8 @@ export const {
   setVideoMaxFps,
   setAudioCodec,
   setAudioBitRate,
+  setAudioSource,
+  setAudioDup,
 } = localConfigSlice.actions;
 
 export default localConfigSlice.reducer;

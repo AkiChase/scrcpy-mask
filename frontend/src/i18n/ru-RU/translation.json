@@ -395,6 +395,8 @@
     "videoMaxFps": "Макс. FPS видео",
     "audioCodec": "Аудиокодек",
     "audioBitRate": "Битрейт аудио",
+    "audioSource": "Источник аудио",
+    "audioDup": "Продолжать воспроизведение на устройстве",
     "alwaysOnTop": "Маска всегда поверх окон",
     "titlebarVisible": "Показывать заголовок окна",
     "webBindAddrTip": "127.0.0.1 allows local access only; 0.0.0.0 allows LAN access. Use it only on trusted networks.",

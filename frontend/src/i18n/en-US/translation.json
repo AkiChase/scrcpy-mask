@@ -395,6 +395,8 @@
     "videoMaxFps": "Video max FPS",
     "audioCodec": "Audio codec",
     "audioBitRate": "Audio bit rate",
+    "audioSource": "Audio source",
+    "audioDup": "Keep playing on device",
     "alwaysOnTop": "Mask always on top",
     "titlebarVisible": "Show titlebar",
     "webBindAddrTip": "127.0.0.1 allows local access only; 0.0.0.0 allows LAN access. Use it only on trusted networks.",
