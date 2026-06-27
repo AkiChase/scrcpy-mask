@@ -78,6 +78,10 @@ pub struct LocalConfig {
     pub audio_bit_rate: u32,
     pub audio_source: AudioSource,
     pub audio_dup: bool,
+    // device behavior
+    pub stay_awake: bool,
+    pub screen_off_timeout: i32,
+    pub power_off_on_close: bool,
 }
 
 impl Default for LocalConfig {
@@ -106,6 +110,9 @@ impl Default for LocalConfig {
             audio_bit_rate: 128_000,
             audio_source: AudioSource::Output,
             audio_dup: false,
+            stay_awake: false,
+            screen_off_timeout: -1, // default keep device setting
+            power_off_on_close: false,
         }
     }
 }
@@ -200,5 +207,8 @@ impl LocalConfig {
         (audio_bit_rate, u32),
         (audio_source, AudioSource),
         (audio_dup, bool),
+        (stay_awake, bool),
+        (screen_off_timeout, i32),
+        (power_off_on_close, bool),
     );
 }

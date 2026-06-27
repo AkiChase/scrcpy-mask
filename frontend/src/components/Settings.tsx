@@ -37,6 +37,9 @@ import {
   setAudioBitRate,
   setAudioSource,
   setAudioDup,
+  setStayAwake,
+  setScreenOffTimeout,
+  setPowerOffOnClose,
 } from "../store/localConfig";
 import {
   setIsLoading,
@@ -347,7 +350,10 @@ export default function Settings() {
               onChange={(v) => dispatch(setAudioSource(v))}
             />
           </ItemBox>
-          <ItemBox label={t("settings.audioDup")}>
+          <ItemBox
+            label={t("settings.audioDup")}
+            tooltip={t("settings.audioDupTip")}
+          >
             <Switch
               checked={localConfig.audioSource === "PLAYBACK" && localConfig.audioDup}
               disabled={localConfig.audioSource !== "PLAYBACK"}
@@ -358,6 +364,31 @@ export default function Settings() {
 
         <h3 className="title-with-line-sub">{t("settings.title.advance")}</h3>
         <ItemBoxContainer className="mb-6">
+          <ItemBox label={t("settings.stayAwake")}>
+            <Switch
+              checked={localConfig.stayAwake}
+              onChange={(v) => dispatch(setStayAwake(v))}
+            />
+          </ItemBox>
+          <ItemBox
+            label={t("settings.screenOffTimeout")}
+            tooltip={t("settings.screenOffTimeoutTip")}
+          >
+            <InputNumber
+              className="w-sm"
+              controls={false}
+              min={-1}
+              suffix="ms"
+              value={localConfig.screenOffTimeout}
+              onChange={(v) => v !== null && dispatch(setScreenOffTimeout(v))}
+            />
+          </ItemBox>
+          <ItemBox label={t("settings.powerOffOnClose")}>
+            <Switch
+              checked={localConfig.powerOffOnClose}
+              onChange={(v) => dispatch(setPowerOffOnClose(v))}
+            />
+          </ItemBox>
           <ItemBox
             label={t("settings.webBindAddr")}
             tooltip={t("settings.webBindAddrTip")}

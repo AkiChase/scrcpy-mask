@@ -561,6 +561,48 @@ async fn update_config(
                 "Audio duplication must be bool",
             ));
         }
+        "stay_awake" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_stay_awake(value);
+                return Ok(JsonResponse::success(
+                    format!("Stay awake set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request("Stay awake must be bool"));
+        }
+        "screen_off_timeout" => {
+            if let Some(value) = payload.value.as_i64() {
+                let value = i32::try_from(value).map_err(|_| {
+                    WebServerError::bad_request("Screen off timeout must be i32")
+                })?;
+                if value < -1 {
+                    return Err(WebServerError::bad_request(
+                        "Screen off timeout must be -1 or greater",
+                    ));
+                }
+                LocalConfig::set_screen_off_timeout(value);
+                return Ok(JsonResponse::success(
+                    format!("Screen off timeout set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "Screen off timeout must be i32",
+            ));
+        }
+        "power_off_on_close" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_power_off_on_close(value);
+                return Ok(JsonResponse::success(
+                    format!("Power off on close set: {}", value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(
+                "Power off on close must be bool",
+            ));
+        }
         _ => Err(WebServerError::bad_request(format!(
             "{}: {}",
             t!("web.config.invalidMappingKey"),

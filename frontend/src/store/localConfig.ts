@@ -73,6 +73,10 @@ export interface LocalConfigState {
   audioBitRate: number;
   audioSource: string;
   audioDup: boolean;
+  // device behavior
+  stayAwake: boolean;
+  screenOffTimeout: number;
+  powerOffOnClose: boolean;
 }
 
 const initialState: LocalConfigState = {
@@ -99,6 +103,9 @@ const initialState: LocalConfigState = {
   audioBitRate: 128000,
   audioSource: "OUTPUT",
   audioDup: false,
+  stayAwake: false,
+  screenOffTimeout: -1,
+  powerOffOnClose: false,
 };
 
 const localConfigSlice = createSlice({
@@ -210,6 +217,18 @@ const localConfigSlice = createSlice({
       state.audioDup = action.payload;
       updateLocalConfig("audio_dup", action.payload);
     },
+    setStayAwake: (state, action: PayloadAction<boolean>) => {
+      state.stayAwake = action.payload;
+      updateLocalConfig("stay_awake", action.payload);
+    },
+    setScreenOffTimeout: (state, action: PayloadAction<number>) => {
+      state.screenOffTimeout = action.payload;
+      updateLocalConfig("screen_off_timeout", action.payload);
+    },
+    setPowerOffOnClose: (state, action: PayloadAction<boolean>) => {
+      state.powerOffOnClose = action.payload;
+      updateLocalConfig("power_off_on_close", action.payload);
+    },
   },
 });
 
@@ -238,6 +257,9 @@ export const {
   setAudioBitRate,
   setAudioSource,
   setAudioDup,
+  setStayAwake,
+  setScreenOffTimeout,
+  setPowerOffOnClose,
 } = localConfigSlice.actions;
 
 export default localConfigSlice.reducer;

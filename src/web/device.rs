@@ -155,6 +155,15 @@ async fn _control_device(
     args.push(format!("video={}", video));
     args.push(format!("display_id={}", display_id));
     args.push(format!("audio={}", audio));
+    args.push(format!("stay_awake={}", local_config.stay_awake));
+    args.push(format!(
+        "screen_off_timeout={}",
+        local_config.screen_off_timeout
+    ));
+    args.push(format!(
+        "power_off_on_close={}",
+        local_config.power_off_on_close
+    ));
 
     // create device
     let mut socket_id: Vec<String> = Vec::new();
