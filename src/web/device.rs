@@ -699,15 +699,14 @@ async fn adb_start_app(
 
     let display_id = payload.display_id.to_string();
     if payload.force_stop {
-        Device::shell(
+        Device::shell_logged(
             &payload.device_id,
             ["am", "force-stop", &payload.package_name],
-            &mut std::io::stdout(),
         )
         .map_err(WebServerError::bad_request)?;
     }
 
-    Device::shell(
+    Device::shell_logged(
         &payload.device_id,
         [
             "am",
@@ -721,7 +720,6 @@ async fn adb_start_app(
             "-n",
             &payload.component,
         ],
-        &mut std::io::stdout(),
     )
     .map_err(WebServerError::bad_request)?;
 
@@ -822,12 +820,7 @@ async fn adb_screenshot(
         .nth(1)
         .ok_or_else(|| WebServerError::bad_request("invalid display line"))?;
 
-    Device::shell(
-        &payload.id,
-        ["screencap", "-p", "-d", display_id, src],
-        &mut std::io::stdout(),
-    )
-    .map_err(|e| {
+    Device::shell_logged(&payload.id, ["screencap", "-p", "-d", display_id, src]).map_err(|e| {
         WebServerError::bad_request(format!(
             "{} {}: {}",
             t!("web.device.screenshotError"),
@@ -845,7 +838,7 @@ async fn adb_screenshot(
         ))
     })?;
 
-    Device::shell(&payload.id, ["rm", src], &mut std::io::stdout()).map_err(|e| {
+    Device::shell_logged(&payload.id, ["rm", src]).map_err(|e| {
         WebServerError::bad_request(format!(
             "{} {}: {}",
             t!("web.device.failedRemoveScreenshot"),

@@ -124,6 +124,21 @@ impl Device {
             .map_err(|e| e.to_string())
     }
 
+    pub fn shell_logged<S>(id: &str, shell_args: S) -> Result<(), String>
+    where
+        S: IntoIterator,
+        S::Item: Into<String>,
+    {
+        let mut output = Vec::<u8>::new();
+        Self::shell(id, shell_args, &mut output)?;
+        for line in String::from_utf8_lossy(&output).lines() {
+            if !line.trim().is_empty() {
+                log::info!("[Adb] {}", line);
+            }
+        }
+        Ok(())
+    }
+
     pub fn screen_size(id: &str) -> Result<(u32, u32), String> {
         let mut device = Device::new_server_device(id);
 
