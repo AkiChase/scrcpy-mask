@@ -72,7 +72,13 @@
       "startingScrcpyApp": "Start scrcpy app...",
       "sendKeySuccess": "Send key to all controlled devices successfully",
       "setPointerLocationSuccess": "Set pointer debugging for all controlled devices successfully",
-      "setPointerLocationFailed": "Failed to set pointer debugging"
+      "setPointerLocationFailed": "Failed to set pointer debugging",
+      "getAdbAppsSuccess": "Obtained app list successfully",
+      "getAdbDisplaysSuccess": "Obtained display list successfully",
+      "startAdbAppSuccess": "Started app successfully",
+      "noAppFound": "No launchable app found",
+      "noDisplayFound": "No display found",
+      "invalidStartAppParams": "Invalid start app parameters"
     },
     "script": {
       "validateScriptSuccess": "Script syntax is valid",

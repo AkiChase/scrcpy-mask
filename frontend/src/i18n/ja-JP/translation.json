@@ -39,6 +39,7 @@
       "actionInfo": "詳細情報",
       "actionClose": "制御を停止",
       "actionReconnect": "デバイスを再接続",
+      "actionStartApp": "アプリを起動",
       "rotation": "向き",
       "landscape": "横向き",
       "portrait": "縦向き"
@@ -65,6 +66,19 @@
       "disablePointerDebug": "ポインターデバッグを無効化",
       "executing": "実行中: {{action}}",
       "executed": "実行済み: {{action}}"
+    },
+    "startApp": {
+      "title": "アプリを起動",
+      "start": "起動",
+      "cancel": "キャンセル",
+      "appPlaceholder": "アプリを選択",
+      "displayPlaceholder": "ディスプレイを選択",
+      "forceStop": "起動前に強制停止",
+      "rotation": "回転",
+      "unknownSize": "サイズ不明",
+      "unknownDensity": "DPI不明",
+      "unknownRotation": "回転不明",
+      "noSelectedApp": "選択したアプリが見つかりません"
     }
   },
   "mappings": {

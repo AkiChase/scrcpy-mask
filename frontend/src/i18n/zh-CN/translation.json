@@ -39,6 +39,7 @@
       "actionInfo": "更多信息",
       "actionClose": "终止控制",
       "actionReconnect": "重新连接设备",
+      "actionStartApp": "启动应用",
       "rotation": "方向",
       "landscape": "横屏",
       "portrait": "竖屏"
@@ -65,6 +66,19 @@
       "disablePointerDebug": "关闭指针调试",
       "executing": "正在执行：{{action}}",
       "executed": "已执行：{{action}}"
+    },
+    "startApp": {
+      "title": "启动应用",
+      "start": "启动",
+      "cancel": "取消",
+      "appPlaceholder": "选择应用",
+      "displayPlaceholder": "选择显示",
+      "forceStop": "启动前强制停止应用",
+      "rotation": "旋转",
+      "unknownSize": "尺寸未知",
+      "unknownDensity": "DPI未知",
+      "unknownRotation": "旋转未知",
+      "noSelectedApp": "未找到选择的应用"
     }
   },
   "mappings": {

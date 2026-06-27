@@ -72,7 +72,13 @@
       "startingScrcpyApp": "scrcpy アプリを起動中...",
       "sendKeySuccess": "制御中のすべてのデバイスへキーを送信しました",
       "setPointerLocationSuccess": "制御中のすべてのデバイスのポインターデバッグを設定しました",
-      "setPointerLocationFailed": "ポインターデバッグの設定に失敗しました"
+      "setPointerLocationFailed": "ポインターデバッグの設定に失敗しました",
+      "getAdbAppsSuccess": "アプリ一覧を取得しました",
+      "getAdbDisplaysSuccess": "ディスプレイ一覧を取得しました",
+      "startAdbAppSuccess": "アプリを起動しました",
+      "noAppFound": "起動可能なアプリが見つかりません",
+      "noDisplayFound": "ディスプレイが見つかりません",
+      "invalidStartAppParams": "アプリ起動パラメータが無効です"
     },
     "script": {
       "validateScriptSuccess": "スクリプト構文は有効です",

@@ -72,7 +72,13 @@
       "startingScrcpyApp": "Iniciando app scrcpy...",
       "sendKeySuccess": "Tecla enviada para todos os dispositivos controlados com sucesso",
       "setPointerLocationSuccess": "Depuração de ponteiro definida para todos os dispositivos controlados com sucesso",
-      "setPointerLocationFailed": "Falha ao definir depuração de ponteiro"
+      "setPointerLocationFailed": "Falha ao definir depuração de ponteiro",
+      "getAdbAppsSuccess": "Lista de apps obtida com sucesso",
+      "getAdbDisplaysSuccess": "Lista de displays obtida com sucesso",
+      "startAdbAppSuccess": "App iniciado com sucesso",
+      "noAppFound": "Nenhum app iniciável encontrado",
+      "noDisplayFound": "Nenhum display encontrado",
+      "invalidStartAppParams": "Parâmetros para iniciar app inválidos"
     },
     "script": {
       "validateScriptSuccess": "A sintaxe do script é válida",

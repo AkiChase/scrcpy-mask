@@ -86,6 +86,21 @@ export interface AdbDevice {
   status: string;
 }
 
+export interface AndroidApp {
+  package_name: string;
+  activity_name: string;
+  component: string;
+}
+
+export interface AndroidDisplay {
+  display_id: number;
+  width?: number;
+  height?: number;
+  density?: number;
+  rotation?: number;
+  name?: string;
+}
+
 export function deepClone<T>(value: T, cache = new WeakMap()): T {
   if (value === null || typeof value !== "object") {
     return value;

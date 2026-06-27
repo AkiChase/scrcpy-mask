@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{collections::BTreeMap, time::Duration};
 
 use axum::{
     Json, Router,
@@ -9,7 +9,7 @@ use axum::{
 };
 use rand::Rng;
 use rust_i18n::t;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::{
     sync::{broadcast, mpsc::UnboundedSender},
@@ -53,6 +53,9 @@ pub fn routers(
         .route("/adb_pair", post(adb_pair))
         .route("/adb_restart", post(adb_restart))
         .route("/adb_screenshot", post(adb_screenshot))
+        .route("/adb_apps", post(adb_apps))
+        .route("/adb_displays", post(adb_displays))
+        .route("/adb_start_app", post(adb_start_app))
         .route("/control/set_display_power", post(set_display_power))
         .route("/control/set_pointer_location", post(set_pointer_location))
         .route("/control/send_key", post(send_key))
@@ -345,6 +348,387 @@ async fn decontrol_device(
 ) -> Result<JsonResponse, WebServerError> {
     let device_id = payload.device_id;
     _decontrol_device(&device_id, &state.d_tx).await
+}
+
+#[derive(Deserialize)]
+struct PostDataAdbDevice {
+    device_id: String,
+}
+
+#[derive(Deserialize)]
+struct PostDataStartApp {
+    device_id: String,
+    package_name: String,
+    component: String,
+    display_id: i32,
+    force_stop: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct AndroidApp {
+    package_name: String,
+    activity_name: String,
+    component: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct AndroidDisplay {
+    display_id: i32,
+    width: Option<u32>,
+    height: Option<u32>,
+    density: Option<u32>,
+    rotation: Option<u32>,
+    name: Option<String>,
+}
+
+async fn ensure_device_controlled(device_id: &str) -> Result<(), WebServerError> {
+    let device_list = ControlledDevice::get_device_list().await;
+    if device_list
+        .iter()
+        .any(|device| device.device_id == device_id)
+    {
+        Ok(())
+    } else {
+        Err(WebServerError::bad_request(format!(
+            "{}: {}",
+            t!("web.device.deviceNotFound"),
+            device_id
+        )))
+    }
+}
+
+fn adb_shell_text<S>(device_id: &str, args: S) -> Result<String, String>
+where
+    S: IntoIterator,
+    S::Item: Into<String>,
+{
+    let mut output = Vec::<u8>::new();
+    Device::shell(device_id, args, &mut output)?;
+    Ok(String::from_utf8_lossy(&output).to_string())
+}
+
+fn is_package_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_' || c == '.'
+}
+
+fn is_activity_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '$')
+}
+
+fn is_valid_package_name(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 255
+        && value.split('.').all(|part| {
+            !part.is_empty() && part.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        })
+}
+
+fn parse_component(component: &str) -> Option<AndroidApp> {
+    let (package_name, activity_name) = component.split_once('/')?;
+    if !is_valid_package_name(package_name)
+        || activity_name.is_empty()
+        || activity_name.len() > 255
+        || !activity_name.chars().all(is_activity_char)
+    {
+        return None;
+    }
+
+    Some(AndroidApp {
+        package_name: package_name.to_string(),
+        activity_name: activity_name.to_string(),
+        component: component.to_string(),
+    })
+}
+
+fn is_valid_component(component: &str, package_name: &str) -> bool {
+    parse_component(component)
+        .map(|app| app.package_name == package_name)
+        .unwrap_or(false)
+}
+
+fn parse_launcher_apps(output: &str) -> Vec<AndroidApp> {
+    let mut apps = BTreeMap::new();
+    for line in output.lines() {
+        for candidate in
+            line.split(|c: char| !(is_package_char(c) || is_activity_char(c) || c == '/'))
+        {
+            if !candidate.contains('/') {
+                continue;
+            }
+            if let Some(app) = parse_component(candidate) {
+                apps.entry(app.component.clone()).or_insert(app);
+            }
+        }
+    }
+    apps.into_values().collect()
+}
+
+fn parse_after_i32(text: &str, marker: &str) -> Option<i32> {
+    let start = text.find(marker)? + marker.len();
+    let rest = text[start..].trim_start();
+    let end = rest
+        .char_indices()
+        .find(|(_, c)| !c.is_ascii_digit() && *c != '-')
+        .map(|(index, _)| index)
+        .unwrap_or(rest.len());
+    rest[..end].parse().ok()
+}
+
+fn parse_after_u32(text: &str, marker: &str) -> Option<u32> {
+    parse_after_i32(text, marker).and_then(|value| value.try_into().ok())
+}
+
+fn parse_display_name(line: &str) -> Option<String> {
+    let start = line.find("DisplayInfo{\"")? + "DisplayInfo{\"".len();
+    let rest = &line[start..];
+    let end = rest.find('"')?;
+    Some(rest[..end].to_string())
+}
+
+fn parse_display_size_after(line: &str, marker: &str) -> (Option<u32>, Option<u32>) {
+    let Some(real_start) = line.find(marker) else {
+        return (None, None);
+    };
+    let rest = &line[real_start + marker.len()..];
+    let Some((width, rest)) = rest.split_once(" x ") else {
+        return (None, None);
+    };
+    let width = width.trim().parse::<u32>().ok();
+    let height_end = rest
+        .char_indices()
+        .find(|(_, c)| !c.is_ascii_digit())
+        .map(|(index, _)| index)
+        .unwrap_or(rest.len());
+    let height = rest[..height_end].parse::<u32>().ok();
+    (width, height)
+}
+
+fn parse_display_size(line: &str) -> (Option<u32>, Option<u32>) {
+    let real_size = parse_display_size_after(line, "real ");
+    if real_size.0.is_some() && real_size.1.is_some() {
+        return real_size;
+    }
+
+    parse_display_size_after(line, "app ")
+}
+
+fn parse_display_header_id(line: &str) -> Option<i32> {
+    let rest = line.trim_start().strip_prefix("Display ")?;
+    let end = rest
+        .char_indices()
+        .find(|(_, c)| !c.is_ascii_digit())
+        .map(|(index, _)| index)
+        .unwrap_or(rest.len());
+    if end == 0 {
+        return None;
+    }
+    rest[..end].parse().ok()
+}
+
+fn display_from_id(display_id: i32) -> Option<AndroidDisplay> {
+    if display_id < 0 {
+        return None;
+    }
+
+    Some(AndroidDisplay {
+        display_id,
+        width: None,
+        height: None,
+        density: None,
+        rotation: None,
+        name: None,
+    })
+}
+
+fn merge_display(current: &mut AndroidDisplay, display: AndroidDisplay) {
+    if current.width.is_none() {
+        current.width = display.width;
+    }
+    if current.height.is_none() {
+        current.height = display.height;
+    }
+    if current.density.is_none() {
+        current.density = display.density;
+    }
+    if current.rotation.is_none() {
+        current.rotation = display.rotation;
+    }
+    if current.name.is_none() {
+        current.name = display.name;
+    }
+}
+
+fn parse_displays(output: &str) -> Vec<AndroidDisplay> {
+    let mut displays = BTreeMap::new();
+    for line in output.lines() {
+        let display = if line.contains("DisplayInfo{") && line.contains("displayId ") {
+            let Some(display_id) = parse_after_i32(line, "displayId ") else {
+                continue;
+            };
+            if display_id < 0 {
+                continue;
+            }
+
+            let (width, height) = parse_display_size(line);
+            AndroidDisplay {
+                display_id,
+                width,
+                height,
+                density: parse_after_u32(line, "density "),
+                rotation: parse_after_u32(line, "rotation "),
+                name: parse_display_name(line),
+            }
+        } else if let Some(display_id) = parse_display_header_id(line) {
+            let Some(display) = display_from_id(display_id) else {
+                continue;
+            };
+            display
+        } else if let Some(display_id) = parse_after_i32(line, "mDisplayId=") {
+            let Some(display) = display_from_id(display_id) else {
+                continue;
+            };
+            display
+        } else {
+            continue;
+        };
+
+        displays
+            .entry(display.display_id)
+            .and_modify(|current| merge_display(current, display.clone()))
+            .or_insert(display);
+    }
+    displays.into_values().collect()
+}
+
+fn query_launcher_apps(device_id: &str) -> Result<Vec<AndroidApp>, String> {
+    let commands: [&[&str]; 3] = [
+        &[
+            "cmd",
+            "package",
+            "query-activities",
+            "--brief",
+            "-a",
+            "android.intent.action.MAIN",
+            "-c",
+            "android.intent.category.LAUNCHER",
+        ],
+        &[
+            "cmd",
+            "package",
+            "query-intent-activities",
+            "--brief",
+            "-a",
+            "android.intent.action.MAIN",
+            "-c",
+            "android.intent.category.LAUNCHER",
+        ],
+        &[
+            "pm",
+            "query-intent-activities",
+            "-a",
+            "android.intent.action.MAIN",
+            "-c",
+            "android.intent.category.LAUNCHER",
+        ],
+    ];
+
+    let mut last_error = None;
+    for command in commands {
+        match adb_shell_text(device_id, command.iter().copied()) {
+            Ok(output) => {
+                let apps = parse_launcher_apps(&output);
+                if !apps.is_empty() {
+                    return Ok(apps);
+                }
+            }
+            Err(error) => last_error = Some(error),
+        }
+    }
+
+    if let Some(error) = last_error {
+        Err(error)
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+async fn adb_apps(Json(payload): Json<PostDataAdbDevice>) -> Result<JsonResponse, WebServerError> {
+    ensure_device_controlled(&payload.device_id).await?;
+
+    let apps = query_launcher_apps(&payload.device_id).map_err(WebServerError::bad_request)?;
+    if apps.is_empty() {
+        return Err(WebServerError::bad_request(t!("web.device.noAppFound")));
+    }
+
+    Ok(JsonResponse::success(
+        t!("web.device.getAdbAppsSuccess"),
+        Some(json!({ "apps": apps })),
+    ))
+}
+
+async fn adb_displays(
+    Json(payload): Json<PostDataAdbDevice>,
+) -> Result<JsonResponse, WebServerError> {
+    ensure_device_controlled(&payload.device_id).await?;
+
+    let output = adb_shell_text(&payload.device_id, ["dumpsys", "display"])
+        .map_err(WebServerError::bad_request)?;
+    let displays = parse_displays(&output);
+    if displays.is_empty() {
+        return Err(WebServerError::bad_request(t!("web.device.noDisplayFound")));
+    }
+
+    Ok(JsonResponse::success(
+        t!("web.device.getAdbDisplaysSuccess"),
+        Some(json!({ "displays": displays })),
+    ))
+}
+
+async fn adb_start_app(
+    Json(payload): Json<PostDataStartApp>,
+) -> Result<JsonResponse, WebServerError> {
+    ensure_device_controlled(&payload.device_id).await?;
+    if !is_valid_package_name(&payload.package_name)
+        || !is_valid_component(&payload.component, &payload.package_name)
+        || payload.display_id < 0
+    {
+        return Err(WebServerError::bad_request(t!(
+            "web.device.invalidStartAppParams"
+        )));
+    }
+
+    let display_id = payload.display_id.to_string();
+    if payload.force_stop {
+        Device::shell(
+            &payload.device_id,
+            ["am", "force-stop", &payload.package_name],
+            &mut std::io::stdout(),
+        )
+        .map_err(WebServerError::bad_request)?;
+    }
+
+    Device::shell(
+        &payload.device_id,
+        [
+            "am",
+            "start",
+            "--display",
+            &display_id,
+            "-a",
+            "android.intent.action.MAIN",
+            "-c",
+            "android.intent.category.LAUNCHER",
+            "-n",
+            &payload.component,
+        ],
+        &mut std::io::stdout(),
+    )
+    .map_err(WebServerError::bad_request)?;
+
+    Ok(JsonResponse::success(
+        t!("web.device.startAdbAppSuccess"),
+        None,
+    ))
 }
 
 #[derive(Deserialize)]

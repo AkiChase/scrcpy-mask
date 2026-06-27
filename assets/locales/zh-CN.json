@@ -72,7 +72,13 @@
       "startingScrcpyApp": "启动 scrcpy 应用...",
       "sendKeySuccess": "成功发送按键到所有受控设备",
       "setPointerLocationSuccess": "成功设置所有受控设备的指针调试",
-      "setPointerLocationFailed": "设置指针调试失败"
+      "setPointerLocationFailed": "设置指针调试失败",
+      "getAdbAppsSuccess": "成功获取应用列表",
+      "getAdbDisplaysSuccess": "成功获取显示列表",
+      "startAdbAppSuccess": "成功启动应用",
+      "noAppFound": "未找到可启动应用",
+      "noDisplayFound": "未找到显示",
+      "invalidStartAppParams": "启动应用参数无效"
     },
     "script": {
       "validateScriptSuccess": "脚本语法检查通过",

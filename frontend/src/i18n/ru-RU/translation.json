@@ -39,6 +39,7 @@
       "actionInfo": "Подробнее",
       "actionClose": "Остановить управление",
       "actionReconnect": "Переподключить устройство",
+      "actionStartApp": "Запустить приложение",
       "rotation": "Ориентация",
       "landscape": "Альбомная",
       "portrait": "Портретная"
@@ -65,6 +66,19 @@
       "disablePointerDebug": "Отключить отладку указателя",
       "executing": "Выполняется: {{action}}",
       "executed": "Выполнено: {{action}}"
+    },
+    "startApp": {
+      "title": "Запустить приложение",
+      "start": "Запустить",
+      "cancel": "Отмена",
+      "appPlaceholder": "Выберите приложение",
+      "displayPlaceholder": "Выберите дисплей",
+      "forceStop": "Принудительно остановить перед запуском",
+      "rotation": "поворот",
+      "unknownSize": "размер неизвестен",
+      "unknownDensity": "DPI неизвестен",
+      "unknownRotation": "поворот неизвестен",
+      "noSelectedApp": "Выбранное приложение не найдено"
     }
   },
   "mappings": {

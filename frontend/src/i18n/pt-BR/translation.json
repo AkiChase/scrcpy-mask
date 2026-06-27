@@ -39,6 +39,7 @@
       "actionInfo": "Mais informações",
       "actionClose": "Parar controle",
       "actionReconnect": "Reconectar dispositivo",
+      "actionStartApp": "Iniciar app",
       "rotation": "Orientação",
       "landscape": "Paisagem",
       "portrait": "Retrato"
@@ -65,6 +66,19 @@
       "disablePointerDebug": "Desativar depuração de ponteiro",
       "executing": "Executando: {{action}}",
       "executed": "Executado: {{action}}"
+    },
+    "startApp": {
+      "title": "Iniciar app",
+      "start": "Iniciar",
+      "cancel": "Cancelar",
+      "appPlaceholder": "Selecionar app",
+      "displayPlaceholder": "Selecionar display",
+      "forceStop": "Forçar parada antes de iniciar",
+      "rotation": "rotação",
+      "unknownSize": "tamanho desconhecido",
+      "unknownDensity": "DPI desconhecido",
+      "unknownRotation": "rotação desconhecida",
+      "noSelectedApp": "O app selecionado não foi encontrado"
     }
   },
   "mappings": {

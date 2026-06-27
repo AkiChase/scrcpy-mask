@@ -6,7 +6,9 @@ import {
   Dropdown,
   Flex,
   Input,
+  Modal,
   Popover,
+  Select,
   Space,
   Table,
   Tag,
@@ -18,10 +20,13 @@ import {
   requestGet,
   requestPost,
   type AdbDevice,
+  type AndroidApp,
+  type AndroidDisplay,
   type ControlledDevice,
 } from "../utils";
 import {
   AimOutlined,
+  AppstoreOutlined,
   BorderOutlined,
   BulbFilled,
   BulbOutlined,
@@ -61,7 +66,18 @@ function ControlledDevices({
   const deviceRotations = useAppSelector(
     (state) => state.other.deviceRotations,
   );
+  const displayId = useAppSelector((state) => state.localConfig.displayId);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const [startAppDevice, setStartAppDevice] = useState<ControlledDevice | null>(
+    null,
+  );
+  const [startAppLoading, setStartAppLoading] = useState(false);
+  const [startAppSubmitting, setStartAppSubmitting] = useState(false);
+  const [startAppForceStop, setStartAppForceStop] = useState(false);
+  const [apps, setApps] = useState<AndroidApp[]>([]);
+  const [displays, setDisplays] = useState<AndroidDisplay[]>([]);
+  const [selectedComponent, setSelectedComponent] = useState<string>();
+  const [selectedDisplayId, setSelectedDisplayId] = useState<number>();
   const actionMessageKey = "controlled-device-action";
 
   const handleMenuOpenChange: DropdownProps["onOpenChange"] = (
@@ -99,6 +115,90 @@ function ControlledDevices({
         content: error as string,
         duration: 4,
       });
+    }
+  }
+
+  function getDefaultDisplayId(displayList: AndroidDisplay[]) {
+    return (
+      displayList.find((item) => item.display_id === displayId)?.display_id ??
+      displayList.find((item) => item.display_id === 0)?.display_id ??
+      displayList[0]?.display_id
+    );
+  }
+
+  function formatDisplayLabel(display: AndroidDisplay) {
+    const size =
+      display.width !== undefined && display.height !== undefined
+        ? `${display.width}x${display.height}`
+        : t("devices.startApp.unknownSize");
+    const density =
+      display.density !== undefined
+        ? `${display.density} dpi`
+        : t("devices.startApp.unknownDensity");
+    const rotation =
+      display.rotation !== undefined
+        ? `${t("devices.startApp.rotation")} ${display.rotation}`
+        : t("devices.startApp.unknownRotation");
+    const name = display.name ? ` - ${display.name}` : "";
+    return `${display.display_id}${name} - ${size} / ${density} / ${rotation}`;
+  }
+
+  async function openStartAppModal(device: ControlledDevice) {
+    setStartAppDevice(device);
+    setStartAppLoading(true);
+    setStartAppForceStop(false);
+    setSelectedComponent(undefined);
+    setSelectedDisplayId(undefined);
+    setApps([]);
+    setDisplays([]);
+
+    try {
+      const [appsRes, displaysRes] = await Promise.all([
+        requestPost<{ apps: AndroidApp[] }>("/api/device/adb_apps", {
+          device_id: device.device_id,
+        }),
+        requestPost<{ displays: AndroidDisplay[] }>("/api/device/adb_displays", {
+          device_id: device.device_id,
+        }),
+      ]);
+
+      setApps(appsRes.data.apps);
+      setDisplays(displaysRes.data.displays);
+      setSelectedComponent(appsRes.data.apps[0]?.component);
+      setSelectedDisplayId(getDefaultDisplayId(displaysRes.data.displays));
+    } catch (error) {
+      messageApi?.error(error as string);
+    } finally {
+      setStartAppLoading(false);
+    }
+  }
+
+  async function startSelectedApp() {
+    if (!startAppDevice || !selectedComponent || selectedDisplayId === undefined) {
+      return;
+    }
+
+    const app = apps.find((item) => item.component === selectedComponent);
+    if (!app) {
+      messageApi?.error(t("devices.startApp.noSelectedApp"));
+      return;
+    }
+
+    setStartAppSubmitting(true);
+    try {
+      const res = await requestPost("/api/device/adb_start_app", {
+        device_id: startAppDevice.device_id,
+        package_name: app.package_name,
+        component: app.component,
+        display_id: selectedDisplayId,
+        force_stop: startAppForceStop,
+      });
+      messageApi?.success(res.message);
+      setStartAppDevice(null);
+    } catch (error) {
+      messageApi?.error(error as string);
+    } finally {
+      setStartAppSubmitting(false);
     }
   }
 
@@ -344,6 +444,13 @@ function ControlledDevices({
             onClick={() => reconnectDevice(record.device_id)}
           />
           <IconButton
+            tooltip={t("devices.controlledDevices.actionStartApp")}
+            size={18}
+            color="success"
+            icon={<AppstoreOutlined />}
+            onClick={() => openStartAppModal(record)}
+          />
+          <IconButton
             tooltip={t("devices.controlledDevices.actionClose")}
             size={18}
             color="primary"
@@ -356,12 +463,68 @@ function ControlledDevices({
   ];
 
   return (
-    <Table<ControlledDevice>
-      rowKey={(record) => record.device_id}
-      pagination={{ pageSize: 5 }}
-      columns={columns}
-      dataSource={controlledDevices}
-    />
+    <>
+      <Table<ControlledDevice>
+        rowKey={(record) => record.device_id}
+        pagination={{ pageSize: 5 }}
+        columns={columns}
+        dataSource={controlledDevices}
+      />
+      <Modal
+        title={t("devices.startApp.title")}
+        open={startAppDevice !== null}
+        onCancel={() => setStartAppDevice(null)}
+        onOk={startSelectedApp}
+        okText={t("devices.startApp.start")}
+        cancelText={t("devices.startApp.cancel")}
+        confirmLoading={startAppSubmitting}
+        okButtonProps={{
+          disabled:
+            startAppLoading ||
+            !selectedComponent ||
+            selectedDisplayId === undefined,
+        }}
+      >
+        <Space direction="vertical" size="middle" className="w-full">
+          <Select
+            showSearch
+            loading={startAppLoading}
+            disabled={startAppLoading}
+            className="w-full"
+            placeholder={t("devices.startApp.appPlaceholder")}
+            value={selectedComponent}
+            onChange={setSelectedComponent}
+            filterOption={(input, option) =>
+              String(option?.label ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+            options={apps.map((app) => ({
+              value: app.component,
+              label: app.component,
+            }))}
+          />
+          <Select
+            loading={startAppLoading}
+            disabled={startAppLoading}
+            className="w-full"
+            placeholder={t("devices.startApp.displayPlaceholder")}
+            value={selectedDisplayId}
+            onChange={setSelectedDisplayId}
+            options={displays.map((display) => ({
+              value: display.display_id,
+              label: formatDisplayLabel(display),
+            }))}
+          />
+          <Checkbox
+            checked={startAppForceStop}
+            onChange={(event) => setStartAppForceStop(event.target.checked)}
+          >
+            {t("devices.startApp.forceStop")}
+          </Checkbox>
+        </Space>
+      </Modal>
+    </>
   );
 }
 

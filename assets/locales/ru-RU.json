@@ -72,7 +72,13 @@
       "startingScrcpyApp": "Запуск приложения scrcpy...",
       "sendKeySuccess": "Клавиша успешно отправлена на все управляемые устройства",
       "setPointerLocationSuccess": "Отладка указателя успешно настроена для всех управляемых устройств",
-      "setPointerLocationFailed": "Не удалось настроить отладку указателя"
+      "setPointerLocationFailed": "Не удалось настроить отладку указателя",
+      "getAdbAppsSuccess": "Список приложений успешно получен",
+      "getAdbDisplaysSuccess": "Список дисплеев успешно получен",
+      "startAdbAppSuccess": "Приложение успешно запущено",
+      "noAppFound": "Запускаемые приложения не найдены",
+      "noDisplayFound": "Дисплей не найден",
+      "invalidStartAppParams": "Недопустимые параметры запуска приложения"
     },
     "script": {
       "validateScriptSuccess": "Синтаксис скрипта корректен",
