@@ -480,6 +480,101 @@ async fn update_config(
                 "web.config.videoMaxFpsTypeError"
             )));
         }
+        "display_id" => {
+            if let Some(value) = payload.value.as_i64() {
+                let value = i32::try_from(value).map_err(|_| {
+                    WebServerError::bad_request(t!("web.config.displayIdTypeError"))
+                })?;
+                LocalConfig::set_display_id(value);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.setDisplayIdSuccess"), value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.displayIdTypeError"
+            )));
+        }
+        "new_display_enabled" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_new_display_enabled(value);
+                return Ok(JsonResponse::success(
+                    format!(
+                        "{}: {}",
+                        t!("web.config.setNewDisplayEnabledSuccess"),
+                        value
+                    ),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.newDisplayEnabledTypeError"
+            )));
+        }
+        "new_display_use_main_size" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_new_display_use_main_size(value);
+                return Ok(JsonResponse::success(
+                    format!(
+                        "{}: {}",
+                        t!("web.config.setNewDisplayUseMainSizeSuccess"),
+                        value
+                    ),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.newDisplayUseMainSizeTypeError"
+            )));
+        }
+        "new_display_width" => {
+            if let Some(value) = payload.value.as_u64() {
+                if let Ok(value) = u32::try_from(value) {
+                    if value > 0 {
+                        LocalConfig::set_new_display_width(value);
+                        return Ok(JsonResponse::success(
+                            format!("{}: {}", t!("web.config.setNewDisplayWidthSuccess"), value),
+                            None,
+                        ));
+                    }
+                }
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.newDisplayWidthTypeError"
+            )));
+        }
+        "new_display_height" => {
+            if let Some(value) = payload.value.as_u64() {
+                if let Ok(value) = u32::try_from(value) {
+                    if value > 0 {
+                        LocalConfig::set_new_display_height(value);
+                        return Ok(JsonResponse::success(
+                            format!("{}: {}", t!("web.config.setNewDisplayHeightSuccess"), value),
+                            None,
+                        ));
+                    }
+                }
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.newDisplayHeightTypeError"
+            )));
+        }
+        "new_display_dpi" => {
+            if let Some(value) = payload.value.as_u64() {
+                if let Ok(value) = u32::try_from(value) {
+                    if value > 0 {
+                        LocalConfig::set_new_display_dpi(value);
+                        return Ok(JsonResponse::success(
+                            format!("{}: {}", t!("web.config.setNewDisplayDpiSuccess"), value),
+                            None,
+                        ));
+                    }
+                }
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.newDisplayDpiTypeError"
+            )));
+        }
         "audio_codec" => {
             if let Some(value) = payload.value.as_str() {
                 let codec = match value {
@@ -573,9 +668,8 @@ async fn update_config(
         }
         "screen_off_timeout" => {
             if let Some(value) = payload.value.as_i64() {
-                let value = i32::try_from(value).map_err(|_| {
-                    WebServerError::bad_request("Screen off timeout must be i32")
-                })?;
+                let value = i32::try_from(value)
+                    .map_err(|_| WebServerError::bad_request("Screen off timeout must be i32"))?;
                 if value < -1 {
                     return Err(WebServerError::bad_request(
                         "Screen off timeout must be -1 or greater",

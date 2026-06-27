@@ -73,6 +73,12 @@ pub struct LocalConfig {
     pub video_bit_rate: u32,
     pub video_max_size: u32,
     pub video_max_fps: u32,
+    pub display_id: i32,
+    pub new_display_enabled: bool,
+    pub new_display_use_main_size: bool,
+    pub new_display_width: u32,
+    pub new_display_height: u32,
+    pub new_display_dpi: u32,
     // audio config
     pub audio_codec: AudioCodec,
     pub audio_bit_rate: u32,
@@ -106,6 +112,12 @@ impl Default for LocalConfig {
             video_bit_rate: 8_000000, // 8M
             video_max_size: 0,        // default no limit
             video_max_fps: 0,         // default no limit
+            display_id: 0,
+            new_display_enabled: false,
+            new_display_use_main_size: true,
+            new_display_width: 1280,
+            new_display_height: 720,
+            new_display_dpi: 240,
             audio_codec: AudioCodec::Opus,
             audio_bit_rate: 128_000,
             audio_source: AudioSource::Output,
@@ -203,6 +215,12 @@ impl LocalConfig {
         (video_bit_rate, u32),
         (video_max_size, u32),
         (video_max_fps, u32),
+        (display_id, i32),
+        (new_display_enabled, bool),
+        (new_display_use_main_size, bool),
+        (new_display_width, u32),
+        (new_display_height, u32),
+        (new_display_dpi, u32),
         (audio_codec, AudioCodec),
         (audio_bit_rate, u32),
         (audio_source, AudioSource),

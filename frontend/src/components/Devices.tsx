@@ -6,7 +6,6 @@ import {
   Dropdown,
   Flex,
   Input,
-  InputNumber,
   Popover,
   Space,
   Table,
@@ -47,11 +46,9 @@ import { useLocation } from "react-router-dom";
 import { setAdbConnectAddress } from "../store/localConfig";
 
 function ControlledDevices({
-  displayID,
   isVideo,
   isAudio,
 }: {
-  displayID: number;
   isVideo: boolean;
   isAudio: boolean;
 }) {
@@ -207,7 +204,6 @@ function ControlledDevices({
     try {
       const res = await requestPost("/api/device/reconnect_device", {
         device_id,
-        display_id: displayID,
         video: isVideo,
         audio: isAudio,
       });
@@ -373,12 +369,10 @@ function OtherDevices({
   otherDevices,
   videoState,
   audioState,
-  displayIDState,
 }: {
   otherDevices: AdbDevice[];
   videoState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
   audioState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
-  displayIDState: [number, React.Dispatch<React.SetStateAction<number>>];
 }) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
@@ -386,14 +380,12 @@ function OtherDevices({
 
   const [isVideo, setIsVideo] = videoState;
   const [isAudio, setIsAudio] = audioState;
-  const [displayID, setDisplayID] = displayIDState;
 
   async function controlDevice(device: AdbDevice) {
     dispatch(setIsLoading(true));
     try {
       const res = await requestPost("/api/device/control_device", {
         device_id: device.id,
-        display_id: displayID,
         video: isVideo,
         audio: isAudio,
       });
@@ -417,34 +409,22 @@ function OtherDevices({
     },
     {
       title: (
-        <Popover
-          trigger="hover"
-          content={
-            <InputNumber
-              className="w-full"
-              value={displayID}
-              onChange={(v) => v !== null && setDisplayID(v)}
-            />
-          }
-          title="Display id"
-        >
-          <Flex vertical align="center" gap={4}>
-            <Space size="small">
-              <Checkbox
-                checked={isVideo}
-                onChange={(e) => setIsVideo(e.target.checked)}
-              >
-                {t("devices.otherDevices.video")}
-              </Checkbox>
-              <Checkbox
-                checked={isAudio}
-                onChange={(e) => setIsAudio(e.target.checked)}
-              >
-                {t("devices.otherDevices.audio")}
-              </Checkbox>
-            </Space>
-          </Flex>
-        </Popover>
+        <Flex vertical align="center" gap={4}>
+          <Space size="small">
+            <Checkbox
+              checked={isVideo}
+              onChange={(e) => setIsVideo(e.target.checked)}
+            >
+              {t("devices.otherDevices.video")}
+            </Checkbox>
+            <Checkbox
+              checked={isAudio}
+              onChange={(e) => setIsAudio(e.target.checked)}
+            >
+              {t("devices.otherDevices.audio")}
+            </Checkbox>
+          </Space>
+        </Flex>
       ),
       key: "action",
       align: "center",
@@ -498,7 +478,6 @@ export default function Devices() {
 
   const videoState = useState(false);
   const audioState = useState(false);
-  const displayIDState = useState(0);
 
   useEffect(() => {
     if (location.pathname === "/devices") refreshDevices();
@@ -639,7 +618,6 @@ export default function Devices() {
           </Button>
         </Flex>
         <ControlledDevices
-          displayID={displayIDState[0]}
           isVideo={videoState[0]}
           isAudio={audioState[0]}
         />
@@ -650,7 +628,6 @@ export default function Devices() {
           otherDevices={otherDevices}
           videoState={videoState}
           audioState={audioState}
-          displayIDState={displayIDState}
         />
       </section>
     </div>

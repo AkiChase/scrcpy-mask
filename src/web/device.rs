@@ -86,7 +86,6 @@ fn gen_scid() -> String {
 #[derive(Deserialize)]
 struct PostDataControlDevice {
     device_id: String,
-    display_id: i32,
     video: bool,
     #[serde(default)]
     audio: bool,
@@ -94,7 +93,6 @@ struct PostDataControlDevice {
 
 async fn _control_device(
     device_id: &str,
-    display_id: i32,
     video: bool,
     audio: bool,
     d_tx: &UnboundedSender<ControllerCommand>,
@@ -153,7 +151,20 @@ async fn _control_device(
     args.push(SCRCPY_SERVER_VERSION.to_string());
     args.push(format!("scid={}", scid));
     args.push(format!("video={}", video));
-    args.push(format!("display_id={}", display_id));
+    if video && local_config.new_display_enabled {
+        if local_config.new_display_use_main_size {
+            args.push("new_display=".to_string());
+        } else {
+            args.push(format!(
+                "new_display={}x{}/{}",
+                local_config.new_display_width,
+                local_config.new_display_height,
+                local_config.new_display_dpi
+            ));
+        }
+    } else {
+        args.push(format!("display_id={}", local_config.display_id));
+    }
     args.push(format!("audio={}", audio));
     args.push(format!("stay_awake={}", local_config.stay_awake));
     args.push(format!(
@@ -254,23 +265,13 @@ async fn control_device(
     let device_id = payload.device_id;
     let video = payload.video;
     let audio = payload.audio;
-    let display_id = payload.display_id;
 
-    _control_device(
-        &device_id,
-        display_id,
-        video,
-        audio,
-        &state.d_tx,
-        &state.ws_tx,
-    )
-    .await
+    _control_device(&device_id, video, audio, &state.d_tx, &state.ws_tx).await
 }
 
 #[derive(Deserialize)]
 struct PostDataReconnectDevice {
     device_id: String,
-    display_id: i32,
     video: bool,
     #[serde(default)]
     audio: bool,
@@ -287,7 +288,6 @@ async fn reconnect_device(
             _decontrol_device(&device_id, &state.d_tx).await?;
             _control_device(
                 &device_id,
-                payload.display_id,
                 payload.video,
                 payload.audio,
                 &state.d_tx,

@@ -30,6 +30,12 @@ import {
   setVideoBitRate,
   setVideoMaxSize,
   setVideoMaxFps,
+  setDisplayId,
+  setNewDisplayEnabled,
+  setNewDisplayUseMainSize,
+  setNewDisplayWidth,
+  setNewDisplayHeight,
+  setNewDisplayDpi,
   setAlwaysOnTop,
   setTitlebarVisible,
   setWebBindAddr,
@@ -317,6 +323,79 @@ export default function Settings() {
               min={0}
               value={localConfig.videoMaxFps}
               onChange={(v) => v !== null && dispatch(setVideoMaxFps(v))}
+            />
+          </ItemBox>
+          <ItemBox
+            label={t("settings.displayId")}
+            tooltip={t("settings.displayIdTip")}
+          >
+            <InputNumber
+              className="w-sm"
+              controls={false}
+              disabled={localConfig.newDisplayEnabled}
+              value={localConfig.displayId}
+              onChange={(v) => v !== null && dispatch(setDisplayId(v))}
+            />
+          </ItemBox>
+          <ItemBox
+            label={t("settings.newDisplayEnabled")}
+            tooltip={t("settings.newDisplayEnabledTip")}
+          >
+            <Switch
+              checked={localConfig.newDisplayEnabled}
+              onChange={(v) => dispatch(setNewDisplayEnabled(v))}
+            />
+          </ItemBox>
+          <ItemBox label={t("settings.newDisplayUseMainSize")}>
+            <Switch
+              checked={localConfig.newDisplayUseMainSize}
+              disabled={!localConfig.newDisplayEnabled}
+              onChange={(v) => dispatch(setNewDisplayUseMainSize(v))}
+            />
+          </ItemBox>
+          <ItemBox label={t("settings.newDisplaySize")}>
+            <Space.Compact className="w-sm">
+              <InputNumber
+                prefix="W:"
+                className="w-50%"
+                controls={false}
+                min={1}
+                disabled={
+                  !localConfig.newDisplayEnabled ||
+                  localConfig.newDisplayUseMainSize
+                }
+                value={localConfig.newDisplayWidth}
+                onChange={(v) =>
+                  v !== null && dispatch(setNewDisplayWidth(v))
+                }
+              />
+              <InputNumber
+                prefix="H:"
+                className="w-50%"
+                controls={false}
+                min={1}
+                disabled={
+                  !localConfig.newDisplayEnabled ||
+                  localConfig.newDisplayUseMainSize
+                }
+                value={localConfig.newDisplayHeight}
+                onChange={(v) =>
+                  v !== null && dispatch(setNewDisplayHeight(v))
+                }
+              />
+            </Space.Compact>
+          </ItemBox>
+          <ItemBox label={t("settings.newDisplayDpi")}>
+            <InputNumber
+              className="w-sm"
+              controls={false}
+              min={1}
+              disabled={
+                !localConfig.newDisplayEnabled ||
+                localConfig.newDisplayUseMainSize
+              }
+              value={localConfig.newDisplayDpi}
+              onChange={(v) => v !== null && dispatch(setNewDisplayDpi(v))}
             />
           </ItemBox>
         </ItemBoxContainer>

@@ -68,6 +68,12 @@ export interface LocalConfigState {
   videoBitRate: number;
   videoMaxSize: number;
   videoMaxFps: number;
+  displayId: number;
+  newDisplayEnabled: boolean;
+  newDisplayUseMainSize: boolean;
+  newDisplayWidth: number;
+  newDisplayHeight: number;
+  newDisplayDpi: number;
   // audio
   audioCodec: string;
   audioBitRate: number;
@@ -99,6 +105,12 @@ const initialState: LocalConfigState = {
   videoBitRate: 8000000,
   videoMaxSize: 0,
   videoMaxFps: 0,
+  displayId: 0,
+  newDisplayEnabled: false,
+  newDisplayUseMainSize: true,
+  newDisplayWidth: 1280,
+  newDisplayHeight: 720,
+  newDisplayDpi: 240,
   audioCodec: "OPUS",
   audioBitRate: 128000,
   audioSource: "OUTPUT",
@@ -197,6 +209,30 @@ const localConfigSlice = createSlice({
       state.videoMaxFps = action.payload;
       updateLocalConfig("video_max_fps", action.payload);
     },
+    setDisplayId: (state, action: PayloadAction<number>) => {
+      state.displayId = action.payload;
+      updateLocalConfig("display_id", action.payload);
+    },
+    setNewDisplayEnabled: (state, action: PayloadAction<boolean>) => {
+      state.newDisplayEnabled = action.payload;
+      updateLocalConfig("new_display_enabled", action.payload);
+    },
+    setNewDisplayUseMainSize: (state, action: PayloadAction<boolean>) => {
+      state.newDisplayUseMainSize = action.payload;
+      updateLocalConfig("new_display_use_main_size", action.payload);
+    },
+    setNewDisplayWidth: (state, action: PayloadAction<number>) => {
+      state.newDisplayWidth = action.payload;
+      updateLocalConfig("new_display_width", action.payload);
+    },
+    setNewDisplayHeight: (state, action: PayloadAction<number>) => {
+      state.newDisplayHeight = action.payload;
+      updateLocalConfig("new_display_height", action.payload);
+    },
+    setNewDisplayDpi: (state, action: PayloadAction<number>) => {
+      state.newDisplayDpi = action.payload;
+      updateLocalConfig("new_display_dpi", action.payload);
+    },
     setAudioCodec: (state, action: PayloadAction<string>) => {
       state.audioCodec = action.payload;
       updateLocalConfig("audio_codec", action.payload);
@@ -253,6 +289,12 @@ export const {
   setVideoBitRate,
   setVideoMaxSize,
   setVideoMaxFps,
+  setDisplayId,
+  setNewDisplayEnabled,
+  setNewDisplayUseMainSize,
+  setNewDisplayWidth,
+  setNewDisplayHeight,
+  setNewDisplayDpi,
   setAudioCodec,
   setAudioBitRate,
   setAudioSource,
