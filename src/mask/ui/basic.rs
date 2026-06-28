@@ -1,11 +1,9 @@
-use std::time::Duration;
-
 use bevy::{
     math::CompassOctant,
     prelude::IntoScheduleConfigs,
     prelude::*,
     window::{CursorIcon, SystemCursorIcon, WindowLevel},
-    winit::{UpdateMode, WinitSettings},
+    winit::WinitSettings,
 };
 use bevy_ui_render::prelude::MaterialNode;
 
@@ -68,10 +66,7 @@ pub struct BasicPlugin;
 impl Plugin for BasicPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::NONE))
-            .insert_resource(WinitSettings {
-                focused_mode: UpdateMode::Continuous,
-                unfocused_mode: UpdateMode::reactive_low_power(Duration::from_millis(100)),
-            })
+            .insert_resource(WinitSettings::continuous())
             .add_systems(Startup, setup_ui)
             .add_systems(
                 Update,
