@@ -11,13 +11,13 @@ use tokio::sync::oneshot;
 use crate::{
     config::{AUDIO_BIT_RATE_MIN, LocalConfig, TouchBackend},
     is_available_language,
-    mask::mask_command::MaskCommand,
+    mask::mask_command::{MaskCommand, MaskLayoutUpdate},
     scrcpy::{
         adb::Adb,
         media::{AudioCodec, AudioSource, VideoCodec},
     },
     utils::{
-        IDENTIFIER, check_for_update, get_mask_scale_factor, mask_win_move_helper,
+        IDENTIFIER, check_for_update, get_mask_scale_factor,
         share::{ControlledDevice, UpdateInfo},
     },
     web::{JsonResponse, WebServerError},
@@ -122,6 +122,29 @@ fn u32_to_logical(value: u64, scale_factor: f32) -> u32 {
 
 fn i32_to_logical(value: i64, scale_factor: f32) -> i32 {
     (value as f32 / scale_factor).round() as i32
+}
+
+async fn send_mask_command(
+    state: &AppStatConfig,
+    command: MaskCommand,
+) -> Result<String, WebServerError> {
+    let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+    state
+        .m_tx
+        .send((command, oneshot_tx))
+        .map_err(|e| WebServerError::bad_request(e.to_string()))?;
+    oneshot_rx
+        .await
+        .map_err(|e| WebServerError::bad_request(e.to_string()))?
+        .map_err(WebServerError::bad_request)
+}
+
+fn append_command_msg(prefix: String, msg: String) -> String {
+    if msg.is_empty() {
+        prefix
+    } else {
+        format!("{}. {}", prefix, msg)
+    }
 }
 
 async fn update_config(
@@ -246,13 +269,8 @@ async fn update_config(
         }
         "always_on_top" => {
             if let Some(value) = payload.value.as_bool() {
-                LocalConfig::set_always_on_top(value);
-                let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-                state
-                    .m_tx
-                    .send((MaskCommand::WinSwitchLevel { top: value }, oneshot_tx))
-                    .unwrap();
-                let msg = oneshot_rx.await.unwrap().unwrap();
+                let msg = send_mask_command(&state, MaskCommand::SetAlwaysOnTop { enabled: value })
+                    .await?;
                 return Ok(JsonResponse::success(msg, None));
             } else {
                 return Err(WebServerError::bad_request(t!(
@@ -262,13 +280,9 @@ async fn update_config(
         }
         "titlebar_visible" => {
             if let Some(value) = payload.value.as_bool() {
-                LocalConfig::set_titlebar_visible(value);
-                let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-                state
-                    .m_tx
-                    .send((MaskCommand::ToggleTitlebar, oneshot_tx))
-                    .unwrap();
-                let msg = oneshot_rx.await.unwrap().unwrap();
+                let msg =
+                    send_mask_command(&state, MaskCommand::SetTitlebarVisible { visible: value })
+                        .await?;
                 return Ok(JsonResponse::success(msg, None));
             } else {
                 return Err(WebServerError::bad_request(t!(
@@ -279,17 +293,23 @@ async fn update_config(
         "vertical_mask_height" => {
             if let Some(value) = payload.value.as_u64() {
                 let scale_factor = scale_factor_for_pixel_space(payload.space, &state).await?;
-                LocalConfig::set_vertical_mask_height(u32_to_logical(value, scale_factor));
-                if let Some(main_device) = ControlledDevice::get_main_device().await {
-                    let (device_w, device_h) = main_device.device_size;
-                    let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
-                    return Ok(JsonResponse::success(
-                        format!("{}. {}", t!("web.config.setVerticalMaskHeightSuccess"), msg),
-                        None,
-                    ));
-                }
+                let value = u32_to_logical(value, scale_factor);
+                let device_size = ControlledDevice::get_main_device()
+                    .await
+                    .map(|device| device.device_size);
+                let msg = send_mask_command(
+                    &state,
+                    MaskCommand::UpdateMaskLayout {
+                        update: MaskLayoutUpdate::VerticalMaskHeight(value),
+                        device_size,
+                    },
+                )
+                .await?;
                 return Ok(JsonResponse::success(
-                    format!("{}", t!("web.config.setVerticalMaskHeightSuccess")),
+                    append_command_msg(
+                        t!("web.config.setVerticalMaskHeightSuccess").to_string(),
+                        msg,
+                    ),
                     None,
                 ));
             }
@@ -300,21 +320,23 @@ async fn update_config(
         "horizontal_mask_width" => {
             if let Some(value) = payload.value.as_u64() {
                 let scale_factor = scale_factor_for_pixel_space(payload.space, &state).await?;
-                LocalConfig::set_horizontal_mask_width(u32_to_logical(value, scale_factor));
-                if let Some(main_device) = ControlledDevice::get_main_device().await {
-                    let (device_w, device_h) = main_device.device_size;
-                    let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
-                    return Ok(JsonResponse::success(
-                        format!(
-                            "{}. {}",
-                            t!("web.config.setHorizontalMaskWidthSuccess"),
-                            msg
-                        ),
-                        None,
-                    ));
-                }
+                let value = u32_to_logical(value, scale_factor);
+                let device_size = ControlledDevice::get_main_device()
+                    .await
+                    .map(|device| device.device_size);
+                let msg = send_mask_command(
+                    &state,
+                    MaskCommand::UpdateMaskLayout {
+                        update: MaskLayoutUpdate::HorizontalMaskWidth(value),
+                        device_size,
+                    },
+                )
+                .await?;
                 return Ok(JsonResponse::success(
-                    t!("web.config.setHorizontalMaskWidthSuccess"),
+                    append_command_msg(
+                        t!("web.config.setHorizontalMaskWidthSuccess").to_string(),
+                        msg,
+                    ),
                     None,
                 ));
             }
@@ -328,20 +350,26 @@ async fn update_config(
                     if let (Some(x), Some(y)) = (value[0].as_i64(), value[1].as_i64()) {
                         let scale_factor =
                             scale_factor_for_pixel_space(payload.space, &state).await?;
-                        LocalConfig::set_vertical_position((
+                        let position = (
                             i32_to_logical(x, scale_factor),
                             i32_to_logical(y, scale_factor),
-                        ));
-                        if let Some(main_device) = ControlledDevice::get_main_device().await {
-                            let (device_w, device_h) = main_device.device_size;
-                            let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
-                            return Ok(JsonResponse::success(
-                                format!("{}. {}", t!("web.config.setVerticalPositionSuccess"), msg),
-                                None,
-                            ));
-                        }
+                        );
+                        let device_size = ControlledDevice::get_main_device()
+                            .await
+                            .map(|device| device.device_size);
+                        let msg = send_mask_command(
+                            &state,
+                            MaskCommand::UpdateMaskLayout {
+                                update: MaskLayoutUpdate::VerticalPosition(position),
+                                device_size,
+                            },
+                        )
+                        .await?;
                         return Ok(JsonResponse::success(
-                            format!("{}", t!("web.config.setVerticalPositionSuccess")),
+                            append_command_msg(
+                                t!("web.config.setVerticalPositionSuccess").to_string(),
+                                msg,
+                            ),
                             None,
                         ));
                     }
@@ -357,24 +385,26 @@ async fn update_config(
                     if let (Some(x), Some(y)) = (value[0].as_i64(), value[1].as_i64()) {
                         let scale_factor =
                             scale_factor_for_pixel_space(payload.space, &state).await?;
-                        LocalConfig::set_horizontal_position((
+                        let position = (
                             i32_to_logical(x, scale_factor),
                             i32_to_logical(y, scale_factor),
-                        ));
-                        if let Some(main_device) = ControlledDevice::get_main_device().await {
-                            let (device_w, device_h) = main_device.device_size;
-                            let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
-                            return Ok(JsonResponse::success(
-                                format!(
-                                    "{}. {}",
-                                    t!("web.config.setHorizontalPositionSuccess"),
-                                    msg
-                                ),
-                                None,
-                            ));
-                        }
+                        );
+                        let device_size = ControlledDevice::get_main_device()
+                            .await
+                            .map(|device| device.device_size);
+                        let msg = send_mask_command(
+                            &state,
+                            MaskCommand::UpdateMaskLayout {
+                                update: MaskLayoutUpdate::HorizontalPosition(position),
+                                device_size,
+                            },
+                        )
+                        .await?;
                         return Ok(JsonResponse::success(
-                            format!("{}", t!("web.config.setHorizontalPositionSuccess")),
+                            append_command_msg(
+                                t!("web.config.setHorizontalPositionSuccess").to_string(),
+                                msg,
+                            ),
                             None,
                         ));
                     }

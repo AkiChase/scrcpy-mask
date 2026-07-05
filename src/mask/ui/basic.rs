@@ -11,12 +11,13 @@ use crate::{
     config::LocalConfig,
     mask::{
         MaskFrameSet, MaskResizeState,
-        mask_command::TitlebarState,
+        mask_command::{MaskCommand, TitlebarState},
         video::{VideoPlayer, YuvVideoMaterial, create_initial_yuv_material},
     },
     scrcpy::{constant::Keycode, controller::ControllerCommand, device_action},
-    utils::{ChannelSenderCS, ChannelSenderD, share::ControlledDevice},
+    utils::{ChannelSenderCS, ChannelSenderD, ChannelSenderM, share::ControlledDevice},
 };
+use tokio::sync::oneshot;
 
 pub const BORDER_THICKNESS: f32 = 1.0;
 pub const TITLEBAR_HEIGHT: f32 = 30.0;
@@ -544,6 +545,7 @@ fn handle_titlebar_buttons(
     pushpin_query: Query<&Interaction, (With<PushpinButton>, Changed<Interaction>)>,
     close_query: Query<&Interaction, (With<CloseButton>, Changed<Interaction>)>,
     d_tx: Res<ChannelSenderD>,
+    m_tx: Res<ChannelSenderM>,
 ) {
     for interaction in minimize_query.iter() {
         if *interaction == Interaction::Pressed {
@@ -552,13 +554,11 @@ fn handle_titlebar_buttons(
     }
     for interaction in pushpin_query.iter() {
         if *interaction == Interaction::Pressed {
-            let top = window.window_level != WindowLevel::AlwaysOnTop;
-            if top {
-                window.window_level = WindowLevel::AlwaysOnTop;
-            } else {
-                window.window_level = WindowLevel::Normal;
-            }
-            LocalConfig::set_always_on_top(top);
+            let enabled = window.window_level != WindowLevel::AlwaysOnTop;
+            let (oneshot_tx, _oneshot_rx) = oneshot::channel::<Result<String, String>>();
+            let _ = m_tx
+                .0
+                .send((MaskCommand::SetAlwaysOnTop { enabled }, oneshot_tx));
         }
     }
     for interaction in close_query.iter() {

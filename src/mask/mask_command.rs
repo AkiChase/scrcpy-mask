@@ -18,7 +18,7 @@ use crate::{
         ui::basic::TITLEBAR_HEIGHT,
     },
     tokio_tasks::TokioTasksRuntime,
-    utils::{ChannelReceiverM, ChannelSenderCS},
+    utils::{ChannelReceiverM, ChannelSenderCS, mask_rect_from_config},
 };
 
 #[derive(Debug)]
@@ -29,8 +29,15 @@ pub enum MaskCommand {
         right: i32,
         bottom: i32,
     },
-    WinSwitchLevel {
-        top: bool,
+    SetAlwaysOnTop {
+        enabled: bool,
+    },
+    SetTitlebarVisible {
+        visible: bool,
+    },
+    UpdateMaskLayout {
+        update: MaskLayoutUpdate,
+        device_size: Option<(u32, u32)>,
     },
     DeviceConnectionChange {
         connect: bool,
@@ -43,7 +50,14 @@ pub enum MaskCommand {
     RunScript {
         script: String,
     },
-    ToggleTitlebar,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum MaskLayoutUpdate {
+    VerticalMaskHeight(u32),
+    HorizontalMaskWidth(u32),
+    VerticalPosition((i32, i32)),
+    HorizontalPosition((i32, i32)),
 }
 
 #[derive(Resource)]
@@ -136,17 +150,42 @@ pub fn handle_mask_command(
                 .to_string();
 
                 log::info!("[Mask] {}", msg);
-                oneshot_tx.send(Ok(msg)).unwrap();
+                let _ = oneshot_tx.send(Ok(msg));
             }
-            MaskCommand::WinSwitchLevel { top } => {
-                if top {
-                    window.window_level = WindowLevel::AlwaysOnTop;
-                } else {
-                    window.window_level = WindowLevel::Normal;
-                }
-                let msg = format!("[Mask] {}: {}", t!("mask.windowLevelChanged"), top);
+            MaskCommand::SetAlwaysOnTop { enabled } => {
+                let msg = apply_always_on_top(&mut window, enabled);
+                LocalConfig::set_always_on_top(enabled);
                 log::info!("{}", msg);
-                oneshot_tx.send(Ok(msg)).unwrap();
+                let _ = oneshot_tx.send(Ok(msg));
+            }
+            MaskCommand::SetTitlebarVisible { visible } => {
+                let msg = apply_titlebar_visible(
+                    &mut window,
+                    &mut mask_size,
+                    &mut titlebar_state,
+                    visible,
+                );
+                LocalConfig::set_titlebar_visible(visible);
+                log::info!("{}", msg);
+                let _ = oneshot_tx.send(Ok(msg));
+            }
+            MaskCommand::UpdateMaskLayout {
+                update,
+                device_size,
+            } => {
+                let result = apply_mask_layout_update(
+                    &mut window,
+                    &mut mask_size,
+                    titlebar_state.visible,
+                    update,
+                    device_size,
+                );
+                match &result {
+                    Ok(msg) if !msg.is_empty() => log::info!("[Mask] {}", msg),
+                    Ok(_) => {}
+                    Err(e) => log::error!("[Mask] {}", e),
+                }
+                let _ = oneshot_tx.send(result);
             }
             MaskCommand::DeviceConnectionChange { connect } => {
                 let msg = if connect {
@@ -166,15 +205,13 @@ pub fn handle_mask_command(
                     t!("mask.mainDeviceDisconnected").to_string()
                 };
                 log::info!("[Mask] {}", msg);
-                oneshot_tx.send(Ok(msg)).unwrap();
+                let _ = oneshot_tx.send(Ok(msg));
             }
             MaskCommand::GetActiveMapping => {
-                oneshot_tx.send(Ok(active_mapping.1.clone())).unwrap();
+                let _ = oneshot_tx.send(Ok(active_mapping.1.clone()));
             }
             MaskCommand::GetScaleFactor => {
-                oneshot_tx
-                    .send(Ok(window.resolution.scale_factor().to_string()))
-                    .unwrap();
+                let _ = oneshot_tx.send(Ok(window.resolution.scale_factor().to_string()));
             }
             MaskCommand::LoadAndActivateMappingConfig { file_name } => {
                 log::info!(
@@ -187,17 +224,17 @@ pub fn handle_mask_command(
                         ineffable.set_config(&input_config);
                         active_mapping.0 = Some(mapping_config);
                         active_mapping.1 = file_name;
-                        oneshot_tx.send(Ok(String::new())).unwrap();
+                        let _ = oneshot_tx.send(Ok(String::new()));
                     }
                     Err(e) => {
-                        oneshot_tx.send(Err(e)).unwrap();
+                        let _ = oneshot_tx.send(Err(e));
                     }
                 }
             }
             MaskCommand::RunScript { script } => {
                 let ast = match ScriptAST::new(&script) {
                     Err(e) => {
-                        oneshot_tx.send(Err(e)).unwrap();
+                        let _ = oneshot_tx.send(Err(e));
                         return;
                     }
                     Ok(ast) => ast,
@@ -231,46 +268,8 @@ pub fn handle_mask_command(
                         let _ = oneshot_tx.send(result);
                     });
                 } else {
-                    oneshot_tx
-                        .send(Err(t!("mask.runScriptnoMappingError").to_string()))
-                        .unwrap();
+                    let _ = oneshot_tx.send(Err(t!("mask.runScriptnoMappingError").to_string()));
                 }
-            }
-            MaskCommand::ToggleTitlebar => {
-                let new_visible = !titlebar_state.visible;
-                LocalConfig::set_titlebar_visible(new_visible);
-                titlebar_state.visible = new_visible;
-
-                let bevy::window::WindowPosition::At(pos) = window.position else {
-                    unreachable!("window position should always be At")
-                };
-                let scale_factor = window.resolution.scale_factor() as f32;
-
-                let content_top = if titlebar_state.visible {
-                    // titlebar_state is already new_visible; we need content_top from OLD state.
-                    // new_visible=true (old was hidden): content_top = pos.y
-                    // new_visible=false (old was visible): content_top = pos.y + titlebar_physical
-                    physical_to_logical_i32(pos.y, scale_factor)
-                } else {
-                    physical_to_logical_i32(pos.y, scale_factor) + TITLEBAR_HEIGHT.round() as i32
-                };
-                let content_left = physical_to_logical_i32(pos.x, scale_factor);
-
-                let content_width = mask_size.0.x;
-                let content_height = mask_size.0.y;
-
-                apply_titlebar_dimensions(
-                    &mut window,
-                    &mut mask_size,
-                    new_visible,
-                    content_width,
-                    content_height,
-                    content_left,
-                    content_top,
-                );
-
-                let msg = format!("[Mask] Titlebar visible: {}", new_visible);
-                oneshot_tx.send(Ok(msg)).unwrap();
             }
         }
     }
@@ -288,6 +287,108 @@ pub fn apply_pending_window_focus(
     if pending_focus.frames_remaining == 0 {
         window.focused = true;
     }
+}
+
+fn apply_always_on_top(window: &mut Window, enabled: bool) -> String {
+    window.window_level = if enabled {
+        WindowLevel::AlwaysOnTop
+    } else {
+        WindowLevel::Normal
+    };
+    format!("[Mask] {}: {}", t!("mask.windowLevelChanged"), enabled)
+}
+
+fn apply_titlebar_visible(
+    window: &mut Window,
+    mask_size: &mut MaskSize,
+    titlebar_state: &mut TitlebarState,
+    visible: bool,
+) -> String {
+    if titlebar_state.visible == visible {
+        return format!("[Mask] Titlebar visible: {}", visible);
+    }
+
+    let bevy::window::WindowPosition::At(pos) = window.position else {
+        unreachable!("window position should always be At")
+    };
+    let scale_factor = window.resolution.scale_factor() as f32;
+    let old_visible = titlebar_state.visible;
+    let content_top = if old_visible {
+        physical_to_logical_i32(pos.y, scale_factor) + TITLEBAR_HEIGHT.round() as i32
+    } else {
+        physical_to_logical_i32(pos.y, scale_factor)
+    };
+    let content_left = physical_to_logical_i32(pos.x, scale_factor);
+    let content_width = mask_size.0.x;
+    let content_height = mask_size.0.y;
+
+    titlebar_state.visible = visible;
+    apply_titlebar_dimensions(
+        window,
+        mask_size,
+        visible,
+        content_width,
+        content_height,
+        content_left,
+        content_top,
+    );
+
+    format!("[Mask] Titlebar visible: {}", visible)
+}
+
+fn apply_mask_layout_update(
+    window: &mut Window,
+    mask_size: &mut MaskSize,
+    titlebar_visible: bool,
+    update: MaskLayoutUpdate,
+    device_size: Option<(u32, u32)>,
+) -> Result<String, String> {
+    let mut config = LocalConfig::get();
+    match update {
+        MaskLayoutUpdate::VerticalMaskHeight(value) => config.vertical_mask_height = value,
+        MaskLayoutUpdate::HorizontalMaskWidth(value) => config.horizontal_mask_width = value,
+        MaskLayoutUpdate::VerticalPosition(value) => config.vertical_position = value,
+        MaskLayoutUpdate::HorizontalPosition(value) => config.horizontal_position = value,
+    }
+
+    let msg = if let Some(device_size) = device_size {
+        let (device_w, device_h) = device_size;
+        let (left, top, right, bottom) = mask_rect_from_config(&config, device_w, device_h)?;
+        let content_width = (right - left) as f32;
+        let content_height = (bottom - top) as f32;
+
+        apply_titlebar_dimensions(
+            window,
+            mask_size,
+            titlebar_visible,
+            content_width,
+            content_height,
+            left,
+            top,
+        );
+
+        t!(
+            "mask.windowMovedAndResized",
+            left => left,
+            top => top,
+            width => mask_size.0.x,
+            height => mask_size.0.y
+        )
+        .to_string()
+    } else {
+        String::new()
+    };
+
+    match update {
+        MaskLayoutUpdate::VerticalMaskHeight(value) => LocalConfig::set_vertical_mask_height(value),
+        MaskLayoutUpdate::HorizontalMaskWidth(value) => {
+            LocalConfig::set_horizontal_mask_width(value)
+        }
+        MaskLayoutUpdate::VerticalPosition(value) => LocalConfig::set_vertical_position(value),
+        MaskLayoutUpdate::HorizontalPosition(value) => LocalConfig::set_horizontal_position(value),
+    }
+
+    Ok(msg)
 }
 
 fn apply_titlebar_dimensions(
