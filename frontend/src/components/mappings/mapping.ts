@@ -11,6 +11,7 @@ export interface MappingConfig {
     width: number;
     height: number;
   };
+  pin_order?: number | null;
   mappings: MappingType[];
 }
 

@@ -20,6 +20,7 @@ import {
   Space,
   Splitter,
   Table,
+  Tooltip,
   type TableProps,
 } from "antd";
 import {
@@ -41,6 +42,8 @@ import {
   FileAddOutlined,
   FileSyncOutlined,
   FileTextOutlined,
+  PushpinFilled,
+  PushpinOutlined,
   RollbackOutlined,
   SaveOutlined,
   SettingOutlined,
@@ -78,8 +81,14 @@ import { MappingOverlayProvider } from "./MappingOverlay";
 
 type MappingFileTabelItem = {
   file: string;
+  pin_order?: number | null;
   active: boolean;
   displayed: boolean;
+};
+
+type MappingFileInfo = {
+  file: string;
+  pin_order?: number | null;
 };
 
 type ScriptDiagnostic = {
@@ -207,10 +216,11 @@ function Manager({
   onCreateAction,
   onRenameAction,
   onMigrateAction,
+  onPinAction,
 }: {
   open: boolean;
   onCancel: () => void;
-  mappingList: string[];
+  mappingList: MappingFileInfo[];
   displayedMapping: string;
   onActiveAction: (file: string) => void;
   onDisplayAction: (file: string) => void;
@@ -226,6 +236,7 @@ function Manager({
     newFile: string,
     size: { width: number; height: number },
   ) => void;
+  onPinAction: (file: string, pinned: boolean) => void;
 }) {
   const { t } = useTranslation();
   const messageApi = useMessageContext();
@@ -242,9 +253,10 @@ function Manager({
   });
 
   const mappingFiles = useMemo<MappingFileTabelItem[]>(() => {
-    return mappingList.map((file) => {
+    return mappingList.map(({ file, pin_order }) => {
       return {
         file,
+        pin_order,
         active: file === activeMappingFile,
         displayed: file === displayedMapping,
       };
@@ -304,15 +316,21 @@ function Manager({
       ),
       dataIndex: "file",
       key: "file",
+      ellipsis: true,
       render: (_, record) => (
-        <Flex align="center" justify="space-between" className="p-r-3">
-          <span>{record.file}</span>
-          <Space size={32}>
+        <Flex align="center" justify="space-between" gap={16}>
+          <Tooltip title={record.file}>
+            <span className="min-w-0 flex-1 truncate">{record.file}</span>
+          </Tooltip>
+          <Space size={16}>
             {record.displayed && (
               <Badge status="processing" text={t("mappings.home.editing")} />
             )}
             {record.active && (
               <Badge status="success" text={t("mappings.home.active")} />
+            )}
+            {record.pin_order != null && (
+              <Badge color="gold" text={t("mappings.home.pinned")} />
             )}
           </Space>
         </Flex>
@@ -322,9 +340,21 @@ function Manager({
       title: t("mappings.home.action"),
       key: "action",
       align: "center",
-      width: 1,
+      width: 260,
       render: (_, record) => (
         <Space size="middle" className="text-4">
+          <IconButton
+            color={record.pin_order != null ? "warning" : "default"}
+            icon={
+              record.pin_order != null ? <PushpinFilled /> : <PushpinOutlined />
+            }
+            tooltip={
+              record.pin_order != null
+                ? t("mappings.home.unpin")
+                : t("mappings.home.pin")
+            }
+            onClick={() => onPinAction(record.file, record.pin_order == null)}
+          />
           <IconButton
             color="info"
             icon={<FileTextOutlined />}
@@ -446,6 +476,7 @@ function Manager({
     <Modal
       title={t("mappings.home.manager")}
       className="min-w-50vw"
+      width={800}
       open={open}
       onCancel={onCancel}
       footer={null}
@@ -453,7 +484,9 @@ function Manager({
       <Table<MappingFileTabelItem>
         size="small"
         rowKey={(record) => record.file}
-        pagination={{ pageSize: 7 }}
+        pagination={false}
+        tableLayout="fixed"
+        scroll={{ y: "60vh" }}
         columns={columns}
         dataSource={mappingFiles}
       />
@@ -826,7 +859,7 @@ export default function Mappings() {
   const [displayedMappingFile, setDisplayedMappingFile] = useState("");
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [editState, setEditState] = useState<EditState | null>(null);
-  const [mappingList, setMappingList] = useState<string[]>([]);
+  const [mappingList, setMappingList] = useState<MappingFileInfo[]>([]);
   const [showAllMappingGuides, setShowAllMappingGuides] = useState(false);
   const [validationDiagnostics, setValidationDiagnostics] = useState<
     MappingDiagnostic[]
@@ -836,13 +869,13 @@ export default function Mappings() {
     return mappingList.map((item) => ({
       label: (
         <Flex justify="space-between" align="center">
-          <span>{item}</span>
-          {activeMappingFile === item && (
+          <span>{item.file}</span>
+          {activeMappingFile === item.file && (
             <Badge color="green" text={t("mappings.home.active")} />
           )}
         </Flex>
       ),
-      value: item,
+      value: item.file,
     }));
   }, [mappingList, activeMappingFile]);
 
@@ -861,7 +894,7 @@ export default function Mappings() {
     if (!silent) dispatch(setIsLoading(true));
     try {
       const res = await requestGet<{
-        mapping_list: string[];
+        mapping_list: MappingFileInfo[];
         active_mapping: string;
       }>("/api/mapping/get_mapping_list");
       setMappingList(res.data.mapping_list);
@@ -871,7 +904,7 @@ export default function Mappings() {
       // current displayed file is not in the list
       if (
         res.data.mapping_list.findIndex(
-          (file) => file === displayedMappingFile,
+          (item) => item.file === displayedMappingFile,
         ) == -1
       ) {
         setDisplayedMappingFile(res.data.active_mapping);
@@ -1076,6 +1109,21 @@ export default function Mappings() {
     dispatch(setIsLoading(false));
   }
 
+  async function setMappingPin(file: string, pinned: boolean) {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/mapping/set_mapping_pin", {
+        file,
+        pinned,
+      });
+      await loadMappingList(true);
+      messageApi?.success(res.message);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
+
   async function migrateMappingFile(
     file: string,
     newFile: string,
@@ -1138,6 +1186,7 @@ export default function Mappings() {
         onCreateAction={createMappingFile}
         onRenameAction={renameMappingFile}
         onMigrateAction={migrateMappingFile}
+        onPinAction={setMappingPin}
       />
       <section>
         <Flex justify="space-between" align="center">

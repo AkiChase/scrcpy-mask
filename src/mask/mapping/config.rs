@@ -217,6 +217,8 @@ impl_mapping_related! {
 pub struct MappingConfig {
     pub version: String,
     pub original_size: Size,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pin_order: Option<i64>,
     pub mappings: Vec<MappingType>,
 }
 
@@ -394,6 +396,7 @@ pub fn default_mapping_config() -> MappingConfig {
             width: 2560,
             height: 1440,
         },
+        pin_order: None,
         mappings: vec![],
     }
 }

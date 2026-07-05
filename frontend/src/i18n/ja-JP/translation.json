@@ -360,7 +360,10 @@
       "size": "サイズ",
       "differentName": "新しい設定名は現在の設定名と同じにできません！",
       "duplicateTitle": "設定を複製",
-      "showGuides": "ガイド"
+      "showGuides": "ガイド",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "pinned": "Pinned"
     },
     "script": {
       "setting": {

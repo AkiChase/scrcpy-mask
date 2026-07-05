@@ -1,4 +1,8 @@
-use std::fs;
+use std::{
+    fs,
+    path::Path,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use axum::{
     Json, Router,
@@ -7,7 +11,7 @@ use axum::{
 };
 use bevy::math::Vec2;
 use rust_i18n::t;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::sync::oneshot;
 
@@ -38,6 +42,7 @@ pub fn routers(
         .route("/duplicate_mapping", post(duplicate_mapping))
         .route("/delete_mapping", post(delete_mapping))
         .route("/update_mapping", post(update_mapping))
+        .route("/set_mapping_pin", post(set_mapping_pin))
         .route("/validate", post(validate_mapping))
         .route("/read_mapping", post(read_mapping))
         .route("/get_mapping_list", get(get_mapping_list))
@@ -167,6 +172,7 @@ async fn create_mapping(
     }
 
     // save to file
+    payload.config.pin_order = None;
     save_mapping_config(&payload.config, &config_path)
         .map_err(|e| WebServerError::bad_request(e))?;
 
@@ -188,6 +194,32 @@ async fn create_mapping(
 #[derive(Deserialize)]
 struct PostDataMappingFile {
     file: String,
+}
+
+#[derive(Serialize)]
+struct MappingListItem {
+    file: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pin_order: Option<i64>,
+}
+
+#[derive(Deserialize)]
+struct MappingConfigMetadata {
+    #[serde(default)]
+    pin_order: Option<i64>,
+}
+
+fn read_mapping_pin_order(path: &Path) -> Option<i64> {
+    let config_string = std::fs::read_to_string(path).ok()?;
+    let metadata: MappingConfigMetadata = serde_json::from_str(&config_string).ok()?;
+    metadata.pin_order
+}
+
+fn current_pin_order() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as i64
 }
 
 async fn delete_mapping(
@@ -406,7 +438,25 @@ async fn duplicate_mapping(
             new_path.to_str().unwrap()
         ));
     }
-    fs::copy(old_path, new_path).map_err(|e| WebServerError::internal_error(e.to_string()))?;
+    let config_string = std::fs::read_to_string(old_path).map_err(|e| {
+        WebServerError::bad_request(format!(
+            "{} {}: {}",
+            t!("web.mapping.cannotReadMappingConfig"),
+            payload.file,
+            e
+        ))
+    })?;
+    let mut mapping_config: MappingConfig = serde_json::from_str(&config_string).map_err(|e| {
+        WebServerError::bad_request(format!(
+            "{} {}: {}",
+            t!("web.mapping.cannotDeserializeConfig"),
+            payload.file,
+            e
+        ))
+    })?;
+    mapping_config.pin_order = None;
+    save_mapping_config(&mapping_config, &new_path).map_err(|e| WebServerError::bad_request(e))?;
+
     log::info!(
         "[WebServer] {}",
         t!(
@@ -450,6 +500,7 @@ async fn update_mapping(
 
     // save to file
     let config_path = relate_to_data_path(["mapping", &payload.file]);
+    payload.config.pin_order = read_mapping_pin_order(&config_path);
     save_mapping_config(&payload.config, &config_path)
         .map_err(|e| WebServerError::bad_request(e))?;
 
@@ -498,6 +549,65 @@ async fn update_mapping(
     }
 }
 
+#[derive(Deserialize)]
+struct PostDataSetMappingPin {
+    file: String,
+    pinned: bool,
+}
+
+async fn set_mapping_pin(
+    Json(mut payload): Json<PostDataSetMappingPin>,
+) -> Result<JsonResponse, WebServerError> {
+    if !payload.file.ends_with(".json") {
+        payload.file.push_str(".json");
+    }
+
+    let bad_request =
+        |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
+
+    if !is_safe_file_name(payload.file.as_ref()) {
+        return bad_request(format!(
+            "{}: {}",
+            t!("web.mapping.nameNotSafe"),
+            payload.file
+        ));
+    }
+
+    let config_path = relate_to_data_path(["mapping", &payload.file]);
+    if !config_path.exists() {
+        return bad_request(format!(
+            "{}: {}",
+            t!("web.mapping.mappingConfigNotExists"),
+            payload.file
+        ));
+    }
+
+    let config_string = std::fs::read_to_string(&config_path).map_err(|e| {
+        WebServerError::bad_request(format!(
+            "{} {}: {}",
+            t!("web.mapping.cannotReadMappingConfig"),
+            payload.file,
+            e
+        ))
+    })?;
+    let mut mapping_config: MappingConfig = serde_json::from_str(&config_string).map_err(|e| {
+        WebServerError::bad_request(format!(
+            "{} {}: {}",
+            t!("web.mapping.cannotDeserializeConfig"),
+            payload.file,
+            e
+        ))
+    })?;
+
+    mapping_config.pin_order = payload.pinned.then(current_pin_order);
+    save_mapping_config(&mapping_config, &config_path)
+        .map_err(|e| WebServerError::bad_request(e))?;
+
+    let msg = format!("{} {}", t!("web.mapping.updateMappingConfig"), payload.file);
+    log::info!("[WebServer] {}", msg);
+    Ok(JsonResponse::success(msg, None))
+}
+
 async fn get_mapping_list(
     State(state): State<AppStatMapping>,
 ) -> Result<JsonResponse, WebServerError> {
@@ -510,7 +620,7 @@ async fn get_mapping_list(
         ))
     })?;
 
-    let mut mapping_files: Vec<String> = Vec::new();
+    let mut mapping_files: Vec<MappingListItem> = Vec::new();
     for entry in entries.filter_map(Result::ok) {
         let path = entry.path();
 
@@ -518,12 +628,21 @@ async fn get_mapping_list(
             if path.extension().map_or(false, |ext| ext == "json") {
                 if let Some(file_name) = path.file_name() {
                     if let Some(name_str) = file_name.to_str() {
-                        mapping_files.push(name_str.to_string());
+                        mapping_files.push(MappingListItem {
+                            file: name_str.to_string(),
+                            pin_order: read_mapping_pin_order(&path),
+                        });
                     }
                 }
             }
         }
     }
+    mapping_files.sort_by(|a, b| match (a.pin_order, b.pin_order) {
+        (Some(a_order), Some(b_order)) => b_order.cmp(&a_order).then_with(|| a.file.cmp(&b.file)),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => a.file.cmp(&b.file),
+    });
 
     // get active mapping file
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
@@ -686,6 +805,7 @@ async fn migrate_mapping(
 
     mapping_config.original_size.width = payload.width;
     mapping_config.original_size.height = payload.height;
+    mapping_config.pin_order = None;
 
     mapping_config
         .mappings
