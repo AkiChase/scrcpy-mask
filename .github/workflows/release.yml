@@ -120,10 +120,24 @@ jobs:
 
   macos:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'macos' }}
-    runs-on: macos-latest
+    name: macOS (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-latest
+            target: macos-arm64
+          - arch: x86_64
+            runner: macos-15-intel
+            target: macos-x64
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout codes
         uses: actions/checkout@v6
+
+      - name: Verify runner architecture
+        shell: bash
+        run: test "$(uname -m)" = "${{ matrix.arch }}"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -151,8 +165,8 @@ jobs:
         id: ffmpeg-cache
         uses: actions/cache@v5
         with:
-          path: ffmpeg-7.1.2/ffmpeg-macos-arm64
-          key: ffmpeg-macos-arm64-7.1.2-v0.6
+          path: ffmpeg-7.1.2/ffmpeg-${{ matrix.target }}
+          key: ffmpeg-${{ matrix.target }}-7.1.2-v0.6
 
       - name: Build FFmpeg
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
@@ -164,7 +178,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: android-platform-tools/macos/platform-tools
-          key: android-platform-tools-macos-arm64-${{ env.ANDROID_PLATFORM_TOOLS_VERSION }}
+          key: android-platform-tools-${{ matrix.target }}-${{ env.ANDROID_PLATFORM_TOOLS_VERSION }}
 
       - name: Install Android platform tools
         if: steps.android-platform-tools-cache.outputs.cache-hit != 'true'
@@ -183,7 +197,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          key: macos-arm64
+          key: ${{ matrix.target }}
 
       - name: Build package
         shell: bash
@@ -192,8 +206,8 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
-          path: target/release/scrcpy-mask-macos-arm64.dmg
-          name: scrcpy-mask-macos-arm64
+          path: target/release/scrcpy-mask-${{ matrix.target }}.dmg
+          name: scrcpy-mask-${{ matrix.target }}
 
   linux:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'linux' }}
@@ -305,3 +319,4 @@ jobs:
             scrcpy-mask-linux-x64/**
             scrcpy-mask-windows-x64/**
             scrcpy-mask-macos-arm64/**
+            scrcpy-mask-macos-x64/**

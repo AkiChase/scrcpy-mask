@@ -5,10 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 . "$SCRIPT_DIR/ffmpeg-env.sh"
 
-if [[ "$SCRCPY_MASK_OS" != "macos-arm64" ]]; then
-    echo "scripts/package-macos.sh only supports macos-arm64" >&2
-    exit 1
-fi
+case "$SCRCPY_MASK_OS" in
+    macos-arm64|macos-x64)
+        ;;
+    *)
+        echo "scripts/package-macos.sh only supports macos-arm64 and macos-x64" >&2
+        exit 1
+        ;;
+esac
 
 "$SCRIPT_DIR/prepare-adb.sh"
 (cd "$PROJECT_DIR/frontend" && pnpm build)
