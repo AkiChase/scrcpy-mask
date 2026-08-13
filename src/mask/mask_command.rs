@@ -284,17 +284,20 @@ pub struct WindowedState {
     pub resolution: Vec2,
     pub position: WindowPosition,
     pub titlebar_visible: bool,
+    pub mask_size: Vec2,
 }
 
 pub fn enter_fullscreen(
     window: &mut Window,
     fullscreen_state: &mut FullscreenState,
     titlebar_state: &mut TitlebarState,
+    mask_size: &MaskSize,
 ) {
     fullscreen_state.windowed = Some(WindowedState {
         resolution: window.size(),
         position: window.position.clone(),
         titlebar_visible: titlebar_state.visible,
+        mask_size: mask_size.0,
     });
     fullscreen_state.active = true;
     titlebar_state.visible = false;
@@ -305,6 +308,7 @@ pub fn exit_fullscreen(
     window: &mut Window,
     fullscreen_state: &mut FullscreenState,
     titlebar_state: &mut TitlebarState,
+    mask_size: &mut MaskSize,
 ) {
     let Some(windowed) = fullscreen_state.windowed.take() else {
         return;
@@ -313,6 +317,7 @@ pub fn exit_fullscreen(
     fullscreen_state.active = false;
     fullscreen_state.restore_guard_frames = 3;
     titlebar_state.visible = windowed.titlebar_visible;
+    mask_size.0 = windowed.mask_size;
     window.mode = WindowMode::Windowed;
     window
         .resolution

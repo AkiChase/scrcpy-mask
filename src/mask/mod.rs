@@ -332,6 +332,7 @@ fn handle_fullscreen_shortcuts(
     mut window: Single<&mut Window>,
     mut fullscreen_state: ResMut<FullscreenState>,
     mut titlebar_state: ResMut<TitlebarState>,
+    mut mask_size: ResMut<MaskSize>,
     mapping_state: Res<State<MappingState>>,
 ) {
     // RawInput intentionally forwards every key to Android. Do not steal shortcuts there.
@@ -351,13 +352,28 @@ fn handle_fullscreen_shortcuts(
     if let Some(toggle_key) = toggle_key {
         key_input.reset(toggle_key);
         if fullscreen_state.active {
-            exit_fullscreen(&mut window, &mut fullscreen_state, &mut titlebar_state);
+            exit_fullscreen(
+                &mut window,
+                &mut fullscreen_state,
+                &mut titlebar_state,
+                &mut mask_size,
+            );
         } else {
-            enter_fullscreen(&mut window, &mut fullscreen_state, &mut titlebar_state);
+            enter_fullscreen(
+                &mut window,
+                &mut fullscreen_state,
+                &mut titlebar_state,
+                &mask_size,
+            );
         }
     } else if exit_requested {
         key_input.reset(KeyCode::Escape);
-        exit_fullscreen(&mut window, &mut fullscreen_state, &mut titlebar_state);
+        exit_fullscreen(
+            &mut window,
+            &mut fullscreen_state,
+            &mut titlebar_state,
+            &mut mask_size,
+        );
     }
 }
 
