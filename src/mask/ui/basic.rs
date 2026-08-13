@@ -33,6 +33,9 @@ struct ResizeHandle(CompassOctant);
 pub struct MaskContentMarker;
 
 #[derive(Component)]
+pub struct RootMarker;
+
+#[derive(Component)]
 pub struct TitlebarMarker;
 
 #[derive(Component)]
@@ -134,12 +137,16 @@ fn setup_ui(
 
     // Root container
     let root_entity = commands
-        .spawn(Node {
-            width: Val::Percent(100.),
-            height: Val::Percent(100.),
-            flex_direction: FlexDirection::Column,
-            ..default()
-        })
+        .spawn((
+            Node {
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
+                flex_direction: FlexDirection::Column,
+                ..default()
+            },
+            BackgroundColor(Color::NONE),
+            RootMarker,
+        ))
         .id();
 
     // Titlebar
@@ -702,7 +709,11 @@ fn handle_resize(
     mut window: Single<&mut Window>,
     mut resize_state: ResMut<MaskResizeState>,
     query: Query<(&ResizeHandle, &Interaction), Changed<Interaction>>,
+    fullscreen_state: Res<crate::mask::FullscreenState>,
 ) {
+    if fullscreen_state.active {
+        return;
+    }
     let Some(handle) = query
         .iter()
         .filter_map(|(handle, interaction)| {
@@ -731,10 +742,15 @@ fn active_resize_handle(
 fn sync_resize_cursor(
     resize_query: Query<(&ResizeHandle, &Interaction)>,
     mut cursor_query: Single<&mut CursorIcon, With<Window>>,
+    fullscreen_state: Res<crate::mask::FullscreenState>,
 ) {
-    let resize_cursor = active_resize_handle(resize_query)
-        .map(cursor_for_resize_direction)
-        .unwrap_or(SystemCursorIcon::Default);
+    let resize_cursor = if fullscreen_state.active {
+        SystemCursorIcon::Default
+    } else {
+        active_resize_handle(resize_query)
+            .map(cursor_for_resize_direction)
+            .unwrap_or(SystemCursorIcon::Default)
+    };
 
     let next_cursor = CursorIcon::from(resize_cursor);
     if **cursor_query != next_cursor {

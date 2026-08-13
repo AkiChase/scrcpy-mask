@@ -12,7 +12,10 @@ use bevy::{
         system::{Commands, Local, Res, ResMut, Single},
     },
     math::Vec2,
-    prelude::{ButtonInput, IntoScheduleConfigs, MouseButton, Resource, SystemSet},
+    prelude::{
+        BackgroundColor, ButtonInput, Color, IntoScheduleConfigs, KeyCode, MouseButton, Node,
+        Resource, State, SystemSet, With, Without,
+    },
     time::{Time, Timer, TimerMode},
     window::{Window, WindowMoved, WindowPosition, WindowResized},
 };
@@ -21,12 +24,12 @@ use bevy_ui_render::prelude::UiMaterialPlugin;
 use crate::{
     config::LocalConfig,
     mask::{
-        mapping::cursor::CursorFrameSet,
+        mapping::{MappingState, cursor::CursorFrameSet},
         mask_command::{
-            MaskSize, PendingWindowFocus, TitlebarState, apply_pending_window_focus,
-            handle_mask_command, physical_to_logical_i32,
+            MaskSize, PendingWindowFocus, TitlebarState, VideoViewport, apply_pending_window_focus,
+            enter_fullscreen, exit_fullscreen, handle_mask_command, physical_to_logical_i32,
         },
-        ui::basic::TITLEBAR_HEIGHT,
+        ui::basic::{MaskContentMarker, RootMarker, TITLEBAR_HEIGHT},
         video::{YuvVideoMaterial, handle_video_msg},
     },
     utils::{ChannelSenderWS, DeviceOrientation, share::ControlledDevice},
@@ -38,6 +41,13 @@ pub enum MaskFrameSet {
     Resize,
 }
 
+#[derive(Resource, Default)]
+pub struct FullscreenState {
+    pub active: bool,
+    pub windowed: Option<mask_command::WindowedState>,
+    pub restore_guard_frames: u8,
+}
+
 pub struct MaskPlugins;
 
 impl Plugin for MaskPlugins {
@@ -46,6 +56,8 @@ impl Plugin for MaskPlugins {
             .add_plugins((ui::UiPlugins, mapping::MappingPlugins))
             .init_resource::<PendingWindowFocus>()
             .init_resource::<MaskResizeState>()
+            .init_resource::<FullscreenState>()
+            .init_resource::<VideoViewport>()
             .configure_sets(
                 Update,
                 (MaskFrameSet::Resize, CursorFrameSet::UpdatePosition).chain(),
@@ -54,7 +66,13 @@ impl Plugin for MaskPlugins {
             .add_systems(
                 Update,
                 (
-                    sync_mask_size.in_set(MaskFrameSet::Resize),
+                    (
+                        handle_fullscreen_shortcuts,
+                        sync_mask_size,
+                        sync_video_viewport,
+                    )
+                        .chain()
+                        .in_set(MaskFrameSet::Resize),
                     sync_mask_position,
                     handle_mask_command,
                     apply_pending_window_focus.after(handle_mask_command),
@@ -115,6 +133,12 @@ impl MaskResizeState {
         self.active
     }
 
+    fn cancel(&mut self) {
+        self.active = false;
+        self.pending_apply = false;
+        self.timer.reset();
+    }
+
     fn tick(&mut self, delta: Duration, mouse_input: &ButtonInput<MouseButton>) -> bool {
         if !self.active {
             return false;
@@ -158,7 +182,20 @@ fn sync_mask_size(
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut resize_state: ResMut<MaskResizeState>,
     ws_tx: Res<ChannelSenderWS>,
+    mut fullscreen_state: ResMut<FullscreenState>,
 ) {
+    if fullscreen_state.active {
+        resize_reader.clear();
+        resize_state.cancel();
+        return;
+    }
+    if fullscreen_state.restore_guard_frames > 0 {
+        resize_reader.clear();
+        resize_state.cancel();
+        fullscreen_state.restore_guard_frames -= 1;
+        return;
+    }
+
     for e in resize_reader.read() {
         let h = (e.height - titlebar_state.offset()).max(0.0);
         mask_size.0 = Vec2::new(e.width, h);
@@ -236,7 +273,14 @@ fn sync_mask_position(
     time: Res<Time>,
     mut debounce: Local<MoveDebounce>,
     ws_tx: Res<ChannelSenderWS>,
+    fullscreen_state: Res<FullscreenState>,
 ) {
+    if fullscreen_state.active || fullscreen_state.restore_guard_frames > 0 {
+        move_reader.clear();
+        debounce.pending = false;
+        return;
+    }
+
     debounce.ensure_init();
 
     for _ in move_reader.read() {
@@ -280,5 +324,123 @@ fn sync_mask_position(
                 }
             }
         }
+    }
+}
+
+fn handle_fullscreen_shortcuts(
+    mut key_input: ResMut<ButtonInput<KeyCode>>,
+    mut window: Single<&mut Window>,
+    mut fullscreen_state: ResMut<FullscreenState>,
+    mut titlebar_state: ResMut<TitlebarState>,
+    mapping_state: Res<State<MappingState>>,
+) {
+    // RawInput intentionally forwards every key to Android. Do not steal shortcuts there.
+    if mapping_state.get() == &MappingState::RawInput {
+        return;
+    }
+    let alt_pressed = key_input.any_pressed([KeyCode::AltLeft, KeyCode::AltRight]);
+    let toggle_key = if key_input.just_pressed(KeyCode::F11) {
+        Some(KeyCode::F11)
+    } else if alt_pressed && key_input.just_pressed(KeyCode::Enter) {
+        Some(KeyCode::Enter)
+    } else {
+        None
+    };
+    let exit_requested = fullscreen_state.active && key_input.just_pressed(KeyCode::Escape);
+
+    if let Some(toggle_key) = toggle_key {
+        key_input.reset(toggle_key);
+        if fullscreen_state.active {
+            exit_fullscreen(&mut window, &mut fullscreen_state, &mut titlebar_state);
+        } else {
+            enter_fullscreen(&mut window, &mut fullscreen_state, &mut titlebar_state);
+        }
+    } else if exit_requested {
+        key_input.reset(KeyCode::Escape);
+        exit_fullscreen(&mut window, &mut fullscreen_state, &mut titlebar_state);
+    }
+}
+
+fn sync_video_viewport(
+    window: Single<&Window>,
+    fullscreen_state: Res<FullscreenState>,
+    mut viewport: ResMut<VideoViewport>,
+    mut mask_size: ResMut<MaskSize>,
+    mut content: Single<&mut Node, (With<MaskContentMarker>, Without<RootMarker>)>,
+    mut root: Single<&mut BackgroundColor, With<RootMarker>>,
+) {
+    if fullscreen_state.active {
+        let available = window.size();
+        let device_size = ControlledDevice::get_main_device_blocking()
+            .map(|device| Vec2::new(device.device_size.0 as f32, device.device_size.1 as f32))
+            .filter(|size| size.x > 0.0 && size.y > 0.0)
+            .unwrap_or(available);
+        let next = contain_viewport(available, device_size);
+
+        viewport.origin = next.origin;
+        viewport.size = next.size;
+        mask_size.0 = next.size;
+
+        content.position_type = bevy::ui::PositionType::Absolute;
+        content.left = bevy::ui::Val::Px(next.origin.x);
+        content.top = bevy::ui::Val::Px(next.origin.y);
+        content.width = bevy::ui::Val::Px(next.size.x);
+        content.height = bevy::ui::Val::Px(next.size.y);
+        content.flex_grow = 0.0;
+        **root = BackgroundColor(Color::BLACK);
+    } else {
+        viewport.origin = Vec2::ZERO;
+        viewport.size = mask_size.0;
+
+        if content.position_type != bevy::ui::PositionType::Relative {
+            content.position_type = bevy::ui::PositionType::Relative;
+            content.left = bevy::ui::Val::Auto;
+            content.top = bevy::ui::Val::Auto;
+            content.width = bevy::ui::Val::Percent(100.0);
+            content.height = bevy::ui::Val::Auto;
+            content.flex_grow = 1.0;
+        }
+        if root.0 != Color::NONE {
+            **root = BackgroundColor(Color::NONE);
+        }
+    }
+}
+
+fn contain_viewport(available: Vec2, content: Vec2) -> VideoViewport {
+    if available.x <= 0.0 || available.y <= 0.0 || content.x <= 0.0 || content.y <= 0.0 {
+        return VideoViewport {
+            origin: Vec2::ZERO,
+            size: available.max(Vec2::ZERO),
+        };
+    }
+
+    let scale = (available.x / content.x).min(available.y / content.y);
+    let size = content * scale;
+    VideoViewport {
+        origin: (available - size) * 0.5,
+        size,
+    }
+}
+
+#[cfg(test)]
+mod fullscreen_tests {
+    use super::*;
+
+    fn assert_vec2_close(actual: Vec2, expected: Vec2) {
+        assert!((actual - expected).abs().max_element() < 0.001);
+    }
+
+    #[test]
+    fn contain_wide_video_adds_letterboxing() {
+        let viewport = contain_viewport(Vec2::new(1920.0, 1080.0), Vec2::new(2400.0, 1080.0));
+        assert_vec2_close(viewport.size, Vec2::new(1920.0, 864.0));
+        assert_vec2_close(viewport.origin, Vec2::new(0.0, 108.0));
+    }
+
+    #[test]
+    fn contain_portrait_video_adds_pillarboxing() {
+        let viewport = contain_viewport(Vec2::new(1920.0, 1080.0), Vec2::new(1080.0, 2400.0));
+        assert_vec2_close(viewport.size, Vec2::new(486.0, 1080.0));
+        assert_vec2_close(viewport.origin, Vec2::new(717.0, 0.0));
     }
 }

@@ -1,10 +1,14 @@
-use bevy::{prelude::*, window::WindowLevel};
+use bevy::{
+    prelude::*,
+    window::{MonitorSelection, WindowLevel, WindowMode, WindowPosition},
+};
 use bevy_ineffable::prelude::IneffableCommands;
 use rust_i18n::t;
 
 use crate::{
     config::LocalConfig,
     mask::{
+        FullscreenState,
         mapping::{
             MappingState,
             config::{ActiveMappingConfig, load_mapping_config},
@@ -44,6 +48,21 @@ pub enum MaskCommand {
 
 #[derive(Resource)]
 pub struct MaskSize(pub Vec2);
+
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq)]
+pub struct VideoViewport {
+    pub origin: Vec2,
+    pub size: Vec2,
+}
+
+impl VideoViewport {
+    pub fn contains(&self, position: Vec2) -> bool {
+        position.x >= 0.0
+            && position.y >= 0.0
+            && position.x <= self.size.x
+            && position.y <= self.size.y
+    }
+}
 
 #[derive(Resource)]
 pub struct TitlebarState {
@@ -90,15 +109,17 @@ pub fn handle_mask_command(
                 let content_width = (right - left) as f32;
                 let content_height = (bottom - top) as f32;
 
-                apply_titlebar_dimensions(
-                    &mut window,
-                    &mut mask_size,
-                    titlebar_state.visible,
-                    content_width,
-                    content_height,
-                    left,
-                    top,
-                );
+                if window.mode == WindowMode::Windowed {
+                    apply_titlebar_dimensions(
+                        &mut window,
+                        &mut mask_size,
+                        titlebar_state.visible,
+                        content_width,
+                        content_height,
+                        left,
+                        top,
+                    );
+                }
 
                 let msg = t!(
                     "mask.windowMovedAndResized",
@@ -211,6 +232,14 @@ pub fn handle_mask_command(
                 }
             }
             MaskCommand::ToggleTitlebar => {
+                if window.mode != WindowMode::Windowed {
+                    oneshot_tx
+                        .send(Err(
+                            "Cannot toggle the titlebar while fullscreen".to_string()
+                        ))
+                        .unwrap();
+                    continue;
+                }
                 let new_visible = !titlebar_state.visible;
                 LocalConfig::set_titlebar_visible(new_visible);
                 titlebar_state.visible = new_visible;
@@ -248,6 +277,47 @@ pub fn handle_mask_command(
             }
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct WindowedState {
+    pub resolution: Vec2,
+    pub position: WindowPosition,
+    pub titlebar_visible: bool,
+}
+
+pub fn enter_fullscreen(
+    window: &mut Window,
+    fullscreen_state: &mut FullscreenState,
+    titlebar_state: &mut TitlebarState,
+) {
+    fullscreen_state.windowed = Some(WindowedState {
+        resolution: window.size(),
+        position: window.position.clone(),
+        titlebar_visible: titlebar_state.visible,
+    });
+    fullscreen_state.active = true;
+    titlebar_state.visible = false;
+    window.mode = WindowMode::BorderlessFullscreen(MonitorSelection::Current);
+}
+
+pub fn exit_fullscreen(
+    window: &mut Window,
+    fullscreen_state: &mut FullscreenState,
+    titlebar_state: &mut TitlebarState,
+) {
+    let Some(windowed) = fullscreen_state.windowed.take() else {
+        return;
+    };
+
+    fullscreen_state.active = false;
+    fullscreen_state.restore_guard_frames = 3;
+    titlebar_state.visible = windowed.titlebar_visible;
+    window.mode = WindowMode::Windowed;
+    window
+        .resolution
+        .set(windowed.resolution.x, windowed.resolution.y);
+    window.position = windowed.position;
 }
 
 pub fn apply_pending_window_focus(

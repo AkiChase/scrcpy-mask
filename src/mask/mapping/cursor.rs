@@ -12,7 +12,7 @@ use bevy::{
 use crate::{
     mask::{
         mapping::{MappingState, mask_not_resizing, utils::ControlMsgHelper},
-        mask_command::{MaskSize, TitlebarState},
+        mask_command::{MaskSize, TitlebarState, VideoViewport},
         ui::basic::{MaskContentEntity, TITLEBAR_HEIGHT},
     },
     scrcpy::{constant::MotionEventAction, control_msg::ScrcpyControlMsg},
@@ -311,6 +311,7 @@ fn handle_cursor_normal(
     titlebar_state: Res<TitlebarState>,
     mut normal_capture: ResMut<NormalCursorCapture>,
     mask_size: Res<MaskSize>,
+    viewport: Res<VideoViewport>,
 ) {
     let mut new_pos = cursor_pos.0;
     if normal_capture.grabbed {
@@ -322,7 +323,7 @@ fn handle_cursor_normal(
             new_pos = clamped_virtual_cursor_pos(new_pos, mask_size.0);
         }
     } else if let Some(pos) = window.cursor_position() {
-        new_pos = pos - Vec2::new(0., titlebar_state.offset());
+        new_pos = pos - Vec2::new(0., titlebar_state.offset()) - viewport.origin;
     } else {
         new_pos += accumulated_motion.delta;
     }
@@ -337,6 +338,7 @@ fn sync_normal_cursor_capture_window(
     mut cursor_pos: ResMut<CursorPosition>,
     mask_size: Res<MaskSize>,
     titlebar_state: Res<TitlebarState>,
+    viewport: Res<VideoViewport>,
 ) {
     let (mut window, mut cursor_options) = window.into_inner();
     let active = normal_capture.is_active() && window.focused;
@@ -344,7 +346,7 @@ fn sync_normal_cursor_capture_window(
     if active && !normal_capture.grabbed {
         if let Some(pos) = window.cursor_position() {
             cursor_pos.0 = clamped_virtual_cursor_pos(
-                pos - Vec2::new(0., titlebar_state.offset()),
+                pos - Vec2::new(0., titlebar_state.offset()) - viewport.origin,
                 mask_size.0,
             );
         }
@@ -359,7 +361,9 @@ fn sync_normal_cursor_capture_window(
         let restore_pos = clamped_system_cursor_restore_pos(cursor_pos.0, mask_size.0);
         cursor_pos.0 = restore_pos;
         cursor_options.grab_mode = CursorGrabMode::None;
-        window.set_cursor_position(Some(restore_pos + Vec2::new(0., titlebar_state.offset())));
+        window.set_cursor_position(Some(
+            restore_pos + Vec2::new(0., titlebar_state.offset()) + viewport.origin,
+        ));
         cursor_options.visible = true;
         normal_capture.grabbed = false;
         normal_capture.skip_next_nonzero_motion = false;
@@ -499,6 +503,7 @@ fn on_enter_cursor_fps(
     mask_size: Res<MaskSize>,
     titlebar_state: Res<TitlebarState>,
     mut normal_capture: ResMut<NormalCursorCapture>,
+    viewport: Res<VideoViewport>,
 ) {
     let center_pos = fps_config.original_pos / fps_config.original_size * mask_size.0;
     let (mut window, mut cursor_options) = window.into_inner();
@@ -508,7 +513,9 @@ fn on_enter_cursor_fps(
     cursor_options.visible = false;
 
     if window.cursor_position().is_none() {
-        window.set_cursor_position(Some(center_pos + Vec2::new(0., titlebar_state.offset())));
+        window.set_cursor_position(Some(
+            center_pos + Vec2::new(0., titlebar_state.offset()) + viewport.origin,
+        ));
         ignore_first_motion.0 = true;
     }
 
@@ -522,11 +529,14 @@ fn on_exit_cursor_fps(
     mask_size: Res<MaskSize>,
     titlebar_state: Res<TitlebarState>,
     mut normal_capture: ResMut<NormalCursorCapture>,
+    viewport: Res<VideoViewport>,
 ) {
     let center_pos = fps_config.original_pos / fps_config.original_size * mask_size.0;
     let (mut window, mut cursor_options) = window.into_inner();
 
-    window.set_cursor_position(Some(center_pos + Vec2::new(0., titlebar_state.offset())));
+    window.set_cursor_position(Some(
+        center_pos + Vec2::new(0., titlebar_state.offset()) + viewport.origin,
+    ));
     cursor_pos.0 = center_pos;
     cursor_options.grab_mode = CursorGrabMode::None;
     cursor_options.visible = true;
@@ -948,11 +958,17 @@ fn handle_normal_left_click(
     cs_tx_res: Res<ChannelSenderCS>,
     mask_size: Res<MaskSize>,
     titlebar_state: Res<TitlebarState>,
+    viewport: Res<VideoViewport>,
+    mut touch_active: Local<bool>,
 ) {
     if titlebar_state.visible && cursor_pos.0.y < 0. && cursor_pos.0.y >= -TITLEBAR_HEIGHT {
         return;
     }
     if mouse_button_input.just_pressed(MouseButton::Left) {
+        if !viewport.contains(cursor_pos.0) {
+            return;
+        }
+        *touch_active = true;
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,
             MotionEventAction::Down,
@@ -961,22 +977,25 @@ fn handle_normal_left_click(
             cursor_pos.0,
         );
         return;
-    } else if mouse_button_input.pressed(MouseButton::Left) {
+    } else if mouse_button_input.pressed(MouseButton::Left) && *touch_active {
+        let position = cursor_pos.0.clamp(Vec2::ZERO, mask_size.0);
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,
             MotionEventAction::Move,
             0,
             mask_size.0,
-            cursor_pos.0,
+            position,
         );
         return;
-    } else if mouse_button_input.just_released(MouseButton::Left) {
+    } else if mouse_button_input.just_released(MouseButton::Left) && *touch_active {
+        *touch_active = false;
+        let position = cursor_pos.0.clamp(Vec2::ZERO, mask_size.0);
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,
             MotionEventAction::Up,
             0,
             mask_size.0,
-            cursor_pos.0,
+            position,
         );
         return;
     }

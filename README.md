@@ -21,6 +21,7 @@ To better support the interaction between **Scrcpy Mask** and Android devices, w
 * [x] Wired and wireless Android device connection
 * [x] Scrcpy control protocol (input mapping)
 * [x] Scrcpy video protocol (screen mirroring)
+* [x] Aspect-ratio-preserving borderless fullscreen (`F11` or `Alt+Enter`, `Escape` to exit; shortcuts are left untouched in RawInput mode)
 * [x] Visual key mapping configuration
 * [x] Built-in scripting support — see [Script Syntax Guide](./scripts-help.md)
 * [x] Mouse and keyboard mapping with taps, repeat taps, multi-taps, swipes, direction pads, cast-spell controls, FPS/fire, RawInput, scripts, and more
