@@ -58,4 +58,4 @@ The [build-help](./build-help.md) provides a brief description of how to run and
 If you’re interested in this project, feel free to submit a **PR** or open an **Issue**.
 Due to limited personal time and resources, I may not be able to respond to all feedback promptly — thank you for your understanding.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=AkiChase/scrcpy-mask\&type=Date)](https://star-history.com/#AkiChase/scrcpy-mask&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=AkiChase/scrcpy-mask\&type=Date)](https://star-history.dera.page/#AkiChase/scrcpy-mask&Date)

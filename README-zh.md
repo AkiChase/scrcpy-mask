@@ -57,4 +57,4 @@ Scrcpy Mask 基于其优秀架构，针对鼠标与键盘控制进行了进一�
 如果你对本项目感兴趣，欢迎提交 PR 或 Issue。
 由于个人时间和精力有限，可能无法及时处理所有反馈，敬请谅解。
 
-[![Star History Chart](https://api.star-history.com/svg?repos=AkiChase/scrcpy-mask&type=Date)](https://star-history.com/#AkiChase/scrcpy-mask&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=AkiChase/scrcpy-mask&type=Date)](https://star-history.dera.page/#AkiChase/scrcpy-mask&Date)
