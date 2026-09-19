@@ -9,12 +9,12 @@ use bevy::{
     app::{App, Plugin, Startup, Update},
     ecs::{
         message::MessageReader,
-        system::{Commands, Local, Res, ResMut, Single},
+        system::{Commands, Local, Query, Res, ResMut, Single},
     },
     math::Vec2,
     prelude::{ButtonInput, IntoScheduleConfigs, MouseButton, Resource, SystemSet},
     time::{Time, Timer, TimerMode},
-    window::{Window, WindowMoved, WindowPosition, WindowResized},
+    window::{Monitor, Window, WindowMoved, WindowPosition, WindowResized},
 };
 use bevy_ui_render::prelude::UiMaterialPlugin;
 
@@ -24,7 +24,7 @@ use crate::{
         mapping::cursor::CursorFrameSet,
         mask_command::{
             MaskSize, PendingWindowFocus, TitlebarState, apply_pending_window_focus,
-            handle_mask_command, physical_to_logical_i32,
+            handle_mask_command, physical_to_logical_i32, rect_intersects_monitor,
         },
         ui::basic::TITLEBAR_HEIGHT,
         video::{YuvVideoMaterial, handle_video_msg},
@@ -157,6 +157,7 @@ fn sync_mask_size(
     time: Res<Time>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut resize_state: ResMut<MaskResizeState>,
+    monitors: Query<&Monitor>,
     ws_tx: Res<ChannelSenderWS>,
 ) {
     for e in resize_reader.read() {
@@ -209,6 +210,26 @@ fn sync_mask_size(
             };
             let content_left = physical_to_logical_i32(pos.x, scale_factor);
 
+            // Never persist a position outside every monitor: Windows reports
+            // transient off-screen coordinates while a window is minimized,
+            // hidden or being restored, and restoring such a value parks the
+            // mask window permanently outside the desktop.
+            if !rect_intersects_monitor(
+                content_left,
+                content_top,
+                content_w as f32,
+                content_h as f32,
+                scale_factor,
+                &monitors,
+            ) {
+                log::warn!(
+                    "[Mask] Ignoring off-screen window position ({}, {}); keeping previous value",
+                    content_left,
+                    content_top
+                );
+                return;
+            }
+
             match orientation {
                 DeviceOrientation::Landscape => {
                     LocalConfig::set_horizontal_mask_width(content_w);
@@ -233,8 +254,10 @@ fn sync_mask_position(
     mut move_reader: MessageReader<WindowMoved>,
     window: Single<&Window>,
     titlebar_state: Res<TitlebarState>,
+    mask_size: Res<MaskSize>,
     time: Res<Time>,
     mut debounce: Local<MoveDebounce>,
+    monitors: Query<&Monitor>,
     ws_tx: Res<ChannelSenderWS>,
 ) {
     debounce.ensure_init();
@@ -263,6 +286,24 @@ fn sync_mask_position(
                     physical_to_logical_i32(pos.y, scale_factor)
                 };
                 let content_left = physical_to_logical_i32(pos.x, scale_factor);
+
+                // See sync_mask_size: transient off-screen coordinates must not
+                // be persisted, or the window becomes unreachable after restart.
+                if !rect_intersects_monitor(
+                    content_left,
+                    content_top,
+                    mask_size.0.x,
+                    mask_size.0.y,
+                    scale_factor,
+                    &monitors,
+                ) {
+                    log::warn!(
+                        "[Mask] Ignoring off-screen window position ({}, {}); keeping previous value",
+                        content_left,
+                        content_top
+                    );
+                    return;
+                }
 
                 match DeviceOrientation::from_size(dw, dh) {
                     DeviceOrientation::Landscape => {
