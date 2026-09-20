@@ -636,6 +636,21 @@ fn collect_mapping_specific_diagnostics(
                     mapping_id,
                 ));
             }
+            if let Some(interaction) = mapping.interaction
+                && (interaction.pointer_id == mapping.pointer_id
+                    || mapping
+                        .touch_mode
+                        .another_pointer_id()
+                        .is_some_and(|id| id == interaction.pointer_id))
+            {
+                diagnostics.push(MappingDiagnostic::mapping(
+                    "mapping.fps.interactionPointerConflict",
+                    "FPS interaction pointer_id must differ from FPS touch pointer ids.",
+                    mapping_type,
+                    mapping_index,
+                    mapping_id,
+                ));
+            }
         }
         MappingType::Fire(mapping) => {
             if mapping.preserve_fps_control && fps_touch_pointer_ids.contains(&mapping.pointer_id) {

@@ -63,6 +63,7 @@ pub struct BindMappingFps {
     pub max_offset_x: f32,
     pub max_offset_y: f32,
     pub touch_mode: FpsTouchMode,
+    pub interaction: Option<FpsInteraction>,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
 }
@@ -79,6 +80,7 @@ impl From<MappingFps> for BindMappingFps {
             max_offset_x: value.max_offset_x,
             max_offset_y: value.max_offset_y,
             touch_mode: value.touch_mode,
+            interaction: value.interaction,
             bind: value.bind.clone(),
             input_binding: PulseBinding::just_pressed(value.bind).0,
         }
@@ -108,7 +110,17 @@ pub struct MappingFps {
     pub max_offset_y: f32,
     #[serde(default)]
     pub touch_mode: FpsTouchMode,
+    #[serde(default)]
+    pub interaction: Option<FpsInteraction>,
     pub bind: ButtonBinding,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct FpsInteraction {
+    pub pointer_id: u64,
+    pub open_position: Position,
+    #[serde(default)]
+    pub close_position: Option<Position>,
 }
 
 pub fn enter_fps_mode(
@@ -177,8 +189,42 @@ impl ValidateMappingConfig for MappingFps {
                 "FPS touch_mode another_pointer_id must differ from pointer_id".to_string(),
             );
         }
+        if let Some(interaction) = self.interaction
+            && (interaction.pointer_id == self.pointer_id
+                || self
+                    .touch_mode
+                    .another_pointer_id()
+                    .is_some_and(|id| id == interaction.pointer_id))
+        {
+            return Err(
+                "FPS interaction pointer_id must differ from FPS touch pointer ids".to_string(),
+            );
+        }
         Ok(())
     }
+}
+
+fn send_interaction_tap(
+    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    pointer_id: u64,
+    original_size: Vec2,
+    position: Position,
+) {
+    let position = position.into();
+    ControlMsgHelper::send_touch(
+        cs_tx,
+        MotionEventAction::Down,
+        pointer_id,
+        original_size,
+        position,
+    );
+    ControlMsgHelper::send_touch(
+        cs_tx,
+        MotionEventAction::Up,
+        pointer_id,
+        original_size,
+        position,
+    );
 }
 
 pub fn handle_fps(
@@ -204,6 +250,16 @@ pub fn handle_fps(
                     match state.get() {
                         CursorState::Normal => {
                             let mapping = mapping.as_ref_fps();
+                            if let Some(interaction) = mapping.interaction
+                                && let Some(position) = interaction.close_position
+                            {
+                                send_interaction_tap(
+                                    &cs_tx_res.0,
+                                    interaction.pointer_id,
+                                    original_size,
+                                    position,
+                                );
+                            }
                             enter_fps_mode(
                                 &cs_tx_res.0,
                                 &mut fps_config,
@@ -213,6 +269,7 @@ pub fn handle_fps(
                             );
                         }
                         CursorState::Fps => {
+                            let interaction = mapping.as_ref_fps().interaction;
                             let released_fire_actions = exit_fps_mode(
                                 &cs_tx_res.0,
                                 &mut fps_config,
@@ -233,6 +290,14 @@ pub fn handle_fps(
                                 mapping_state.get() == &MappingState::RawInput,
                                 true,
                             );
+                            if let Some(interaction) = interaction {
+                                send_interaction_tap(
+                                    &cs_tx_res.0,
+                                    interaction.pointer_id,
+                                    original_size,
+                                    interaction.open_position,
+                                );
+                            }
                         }
                     };
                     return;

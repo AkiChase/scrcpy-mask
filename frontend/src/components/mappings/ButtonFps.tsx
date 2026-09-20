@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FpsConfig, FpsTouchMode, MappingUpdater } from "./mapping";
-import { Flex, InputNumber, Select, Space, Tooltip, Typography } from "antd";
+import {
+  Flex,
+  InputNumber,
+  Select,
+  Space,
+  Switch,
+  Tooltip,
+  Typography,
+} from "antd";
 import {
   mappingButtonDragFactory,
   mappingButtonScaledPresetStyle,
@@ -287,6 +295,164 @@ function Setting({
           pointerId={config.pointer_id}
           onPointerIdChange={handlePrimaryPointerChange}
         />
+        <ItemBox
+          label={t("mappings.fps.setting.interaction")}
+          tooltip={t("mappings.fps.setting.interactionHint")}
+        >
+          <Switch
+            checked={config.interaction !== null}
+            onChange={(checked) =>
+              onConfigChange({
+                ...config,
+                interaction: checked
+                  ? {
+                      pointer_id: getAvailablePointerId([
+                        config.pointer_id,
+                        ...(config.touch_mode.type === "dual"
+                          ? [config.touch_mode.another_pointer_id]
+                          : []),
+                      ]),
+                      open_position: { ...config.position },
+                      close_position: null,
+                    }
+                  : null,
+              })
+            }
+          />
+        </ItemBox>
+        {config.interaction && (
+          <>
+            <SettingPointerId
+              pointerId={config.interaction.pointer_id}
+              onPointerIdChange={(pointerId) =>
+                onConfigChange({
+                  ...config,
+                  interaction: config.interaction
+                    ? { ...config.interaction, pointer_id: pointerId }
+                    : null,
+                })
+              }
+            />
+            <ItemBox
+              label={t("mappings.fps.setting.interactionOpenPosition")}
+              tooltip={t("mappings.fps.setting.interactionOpenPositionHint")}
+            >
+              <Space.Compact className="w-full">
+                <InputNumber
+                  className="w-full"
+                  prefix="X:"
+                  value={config.interaction.open_position.x}
+                  min={0}
+                  onChange={(x) =>
+                    x !== null &&
+                    config.interaction &&
+                    onConfigChange({
+                      ...config,
+                      interaction: {
+                        ...config.interaction,
+                        open_position: {
+                          ...config.interaction.open_position,
+                          x,
+                        },
+                      },
+                    })
+                  }
+                />
+                <InputNumber
+                  className="w-full"
+                  prefix="Y:"
+                  value={config.interaction.open_position.y}
+                  min={0}
+                  onChange={(y) =>
+                    y !== null &&
+                    config.interaction &&
+                    onConfigChange({
+                      ...config,
+                      interaction: {
+                        ...config.interaction,
+                        open_position: {
+                          ...config.interaction.open_position,
+                          y,
+                        },
+                      },
+                    })
+                  }
+                />
+              </Space.Compact>
+            </ItemBox>
+            <ItemBox
+              label={t("mappings.fps.setting.interactionClose")}
+              tooltip={t("mappings.fps.setting.interactionCloseHint")}
+            >
+              <Switch
+                checked={config.interaction.close_position !== null}
+                onChange={(checked) =>
+                  config.interaction &&
+                  onConfigChange({
+                    ...config,
+                    interaction: {
+                      ...config.interaction,
+                      close_position: checked
+                        ? { ...config.interaction.open_position }
+                        : null,
+                    },
+                  })
+                }
+              />
+            </ItemBox>
+            {config.interaction.close_position && (
+              <ItemBox
+                label={t("mappings.fps.setting.interactionClosePosition")}
+                tooltip={t(
+                  "mappings.fps.setting.interactionClosePositionHint",
+                )}
+              >
+                <Space.Compact className="w-full">
+                  <InputNumber
+                    className="w-full"
+                    prefix="X:"
+                    value={config.interaction.close_position.x}
+                    min={0}
+                    onChange={(x) =>
+                      x !== null &&
+                      config.interaction?.close_position &&
+                      onConfigChange({
+                        ...config,
+                        interaction: {
+                          ...config.interaction,
+                          close_position: {
+                            ...config.interaction.close_position,
+                            x,
+                          },
+                        },
+                      })
+                    }
+                  />
+                  <InputNumber
+                    className="w-full"
+                    prefix="Y:"
+                    value={config.interaction.close_position.y}
+                    min={0}
+                    onChange={(y) =>
+                      y !== null &&
+                      config.interaction?.close_position &&
+                      onConfigChange({
+                        ...config,
+                        interaction: {
+                          ...config.interaction,
+                          close_position: {
+                            ...config.interaction.close_position,
+                            y,
+                          },
+                        },
+                      })
+                    }
+                  />
+                </Space.Compact>
+              </ItemBox>
+            )}
+          </>
+        )}
         <ItemBox label={t("mappings.fps.setting.maxOffset")} tooltip={t("mappings.fps.setting.maxOffsetHint")}>
           <Space.Compact className="w-full">
             <InputNumber

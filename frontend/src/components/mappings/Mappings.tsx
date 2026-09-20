@@ -527,14 +527,22 @@ function mappingPointerIds(mapping: MappingType): number[] {
   ) {
     pointerIds.push(mapping.pointer_id);
   }
-  if (mapping.type !== "Fps" || mapping.touch_mode.type !== "dual") {
+  if (mapping.type !== "Fps") {
     return pointerIds;
   }
   if (
+    mapping.touch_mode.type === "dual" &&
     Number.isInteger(mapping.touch_mode.another_pointer_id) &&
     mapping.touch_mode.another_pointer_id >= firstAutoPointerId
   ) {
     pointerIds.push(mapping.touch_mode.another_pointer_id);
+  }
+  if (
+    mapping.interaction &&
+    Number.isInteger(mapping.interaction.pointer_id) &&
+    mapping.interaction.pointer_id >= firstAutoPointerId
+  ) {
+    pointerIds.push(mapping.interaction.pointer_id);
   }
   return pointerIds;
 }

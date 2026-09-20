@@ -408,7 +408,14 @@ export interface FpsConfig {
   max_offset_x: number;
   max_offset_y: number;
   touch_mode: FpsTouchMode;
+  interaction: FpsInteractionConfig | null;
   type: "Fps";
+}
+
+export interface FpsInteractionConfig {
+  pointer_id: number;
+  open_position: Position;
+  close_position: Position | null;
 }
 
 export type FpsTouchMode =
@@ -433,6 +440,7 @@ export function newFps(position: Position): FpsConfig {
     max_offset_x: 0,
     max_offset_y: 0,
     touch_mode: { type: "single", interval: 0 },
+    interaction: null,
     type: "Fps",
   };
 }
@@ -671,6 +679,7 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
               max_offset_x: normalized.max_offset_x ?? 0,
               max_offset_y: normalized.max_offset_y ?? 0,
               touch_mode: normalizeFpsTouchMode(normalized.touch_mode),
+              interaction: normalized.interaction ?? null,
             };
           }
         case "RawInput":

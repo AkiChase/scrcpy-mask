@@ -747,6 +747,12 @@ async fn migrate_mapping(
                 if m.max_offset_y > 0.0 {
                     m.max_offset_y *= scale.y;
                 }
+                if let Some(interaction) = &mut m.interaction {
+                    interaction.open_position *= scale;
+                    if let Some(close_position) = &mut interaction.close_position {
+                        *close_position *= scale;
+                    }
+                }
             }
             MappingType::Fire(m) => {
                 m.position *= scale;
