@@ -287,7 +287,9 @@
         "sensitivity": "Sensitivity",
         "sensitivityHint": "Only active in FPS mode. Fire button drag speed relative to mouse movement, independent from FPS sensitivity.",
         "preserveFpsControl": "Preserve FPS control",
-        "preserveFpsControlHint": "When enabled, the fire touch stays fixed and FPS view control keeps responding to mouse movement.",
+        "preserveFpsControlHint": "Keep FPS view control active while firing.",
+        "followFpsMotion": "Move fire touch with aim",
+        "followFpsMotionHint": "Compatibility option for games that briefly stall the camera when the fire touch stays fixed. Enable only when needed.",
         "title": "Mapping Configuration - Fire"
       },
       "name": "Fire"

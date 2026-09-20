@@ -321,7 +321,9 @@
         "sensitivity": "灵敏度",
         "sensitivityHint": "仅在 FPS 模式下生效。开火按钮相对鼠标移动的拖动倍率，独立于 FPS 灵敏度。",
         "preserveFpsControl": "保持 FPS 视角控制",
-        "preserveFpsControlHint": "开启后开火触点保持固定，FPS 视角控制继续响应鼠标移动。"
+        "preserveFpsControlHint": "开火时继续响应 FPS 视角控制。",
+        "followFpsMotion": "开火触点跟随视角",
+        "followFpsMotionHint": "用于修复部分游戏在固定开火触点时出现的短暂视角停顿，仅在需要时开启。"
       },
       "name": "开火"
     },

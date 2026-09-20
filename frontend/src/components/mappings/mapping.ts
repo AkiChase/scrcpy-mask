@@ -444,6 +444,7 @@ export interface FireConfig {
   pointer_id: number;
   position: Position;
   preserve_fps_control: boolean;
+  follow_fps_motion: boolean;
   random_offset_x: number;
   random_offset_y: number;
   sensitivity_x: number;
@@ -460,6 +461,7 @@ export function newFire(position: Position): FireConfig {
     pointer_id: 0,
     position,
     preserve_fps_control: true,
+    follow_fps_motion: false,
     random_offset_x: default_random_offset,
     random_offset_y: default_random_offset,
     sensitivity_x: 0.8,
@@ -602,6 +604,7 @@ export function normalizeMappingConfig(config: MappingConfig): MappingConfig {
             ...mapping,
             id,
             preserve_fps_control: mapping.preserve_fps_control ?? true,
+            follow_fps_motion: mapping.follow_fps_motion ?? false,
             random_offset_x: withDefaultRandomOffset(mapping.random_offset_x),
             random_offset_y: withDefaultRandomOffset(mapping.random_offset_y),
             script_hooks: withDefaultScriptHooks(mapping.script_hooks),
