@@ -8,6 +8,8 @@ pub mod control_msg;
 pub mod controller;
 pub mod device_action;
 pub mod media;
+pub mod touch_router;
+pub mod uhid_touch;
 
 #[derive(Clone, Serialize, Debug)]
 pub struct ScrcpyDevice {

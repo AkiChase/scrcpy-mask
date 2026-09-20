@@ -383,6 +383,11 @@
     }
   },
   "settings": {
+    "touchBackend": "Touch backend",
+    "touchSdk": "SDK touch injection (default)",
+    "touchUhid": "UHID virtual touchscreen (experimental)",
+    "touchBackendHint": "Disconnect all devices before changing. UHID supports the main display and up to 10 contacts; device support is required. It does not hide input origin. Reconnect to apply.",
+
     "title": {
       "header": "Settings",
       "basic": "Basic",

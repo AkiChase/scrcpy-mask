@@ -63,6 +63,7 @@ export interface LocalConfigState {
   language: string;
   // clipboard sync
   clipboardSync: boolean;
+  touchBackend: "sdk" | "uhid";
   // video
   videoCodec: string;
   videoBitRate: number;
@@ -101,6 +102,7 @@ const initialState: LocalConfigState = {
   mappingLabelOpacity: 0,
   language: "en-US",
   clipboardSync: true,
+  touchBackend: "sdk",
   videoCodec: "H264",
   videoBitRate: 8000000,
   videoMaxSize: 0,

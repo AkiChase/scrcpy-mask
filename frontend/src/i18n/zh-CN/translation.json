@@ -383,6 +383,11 @@
     }
   },
   "settings": {
+    "touchBackend": "触控后端",
+    "touchSdk": "SDK 触摸注入（默认）",
+    "touchUhid": "UHID 虚拟触摸屏（实验）",
+    "touchBackendHint": "先断开所有设备再切换。UHID 支持主屏幕与最多 10 个触点；依赖手机系统支持，不代表隐藏输入来源。切换后需要重新连接。",
+
     "title": {
       "header": "设置",
       "basic": "基本",

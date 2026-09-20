@@ -21,6 +21,39 @@ static CONFIG: Lazy<RwLock<LocalConfig>> = Lazy::new(|| RwLock::default());
 
 pub const AUDIO_BIT_RATE_MIN: u32 = 16_000;
 
+// Old configuration files retain SDK injection.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TouchBackend {
+    #[default]
+    Sdk,
+    Uhid,
+}
+
+#[cfg(test)]
+mod uhid_config_tests {
+    use super::*;
+
+    #[test]
+    fn old_config_retains_sdk_backend() {
+        let config: LocalConfig =
+            serde_json::from_str(r#"{"active_mapping_file":"existing.json"}"#).unwrap();
+        assert_eq!(config.touch_backend, TouchBackend::Sdk);
+        assert_eq!(config.active_mapping_file, "existing.json");
+    }
+
+    #[test]
+    fn uhid_setting_roundtrips_and_rejects_unknown_backend() {
+        let config: LocalConfig = serde_json::from_str(r#"{"touch_backend":"uhid"}"#).unwrap();
+        assert_eq!(config.touch_backend, TouchBackend::Uhid);
+        assert_eq!(
+            serde_json::to_value(config).unwrap()["touch_backend"],
+            "uhid"
+        );
+        assert!(serde_json::from_str::<LocalConfig>(r#"{"touch_backend":"unknown"}"#).is_err());
+    }
+}
+
 fn default_web_bind_addr() -> Ipv4Addr {
     Ipv4Addr::new(127, 0, 0, 1)
 }
@@ -68,6 +101,7 @@ pub struct LocalConfig {
     pub language: String,
     // clipboard sync
     pub clipboard_sync: bool,
+    pub touch_backend: TouchBackend,
     // video config
     pub video_codec: VideoCodec,
     pub video_bit_rate: u32,
@@ -108,6 +142,7 @@ impl Default for LocalConfig {
             mapping_label_opacity: 0.3,
             language: DEFAULT_LANGUAGE.to_string(),
             clipboard_sync: true,
+            touch_backend: TouchBackend::Sdk,
             video_codec: VideoCodec::H264,
             video_bit_rate: 8_000000, // 8M
             video_max_size: 0,        // default no limit
@@ -211,6 +246,7 @@ impl LocalConfig {
         (mapping_label_opacity, f32),
         (language, String),
         (clipboard_sync, bool),
+        (touch_backend, TouchBackend),
         (video_codec, VideoCodec),
         (video_bit_rate, u32),
         (video_max_size, u32),

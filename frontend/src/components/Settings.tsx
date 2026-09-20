@@ -52,7 +52,8 @@ import {
   setShowUpdateDialog,
   setUpdateInfo,
 } from "../store/other";
-import { requestGet } from "../utils";
+import { requestGet, requestPost } from "../utils";
+import { useState } from "react";
 import i18n, { languageOptions } from "../i18n";
 import { useMessageContext } from "../hooks";
 import {
@@ -91,6 +92,24 @@ export default function Settings() {
   const messageApi = useMessageContext();
   const localConfig = useAppSelector((state) => state.localConfig);
   const updateInfo = useAppSelector((state) => state.other.updateInfo);
+  const [touchSaving, setTouchSaving] = useState(false);
+
+  // Unlike optimistic/debounced settings, don't show a backend as active if
+  // the server rejected a switch while devices are connected.
+  async function changeTouchBackend(value: "sdk" | "uhid") {
+    setTouchSaving(true);
+    try {
+      const res = await requestPost("/api/config/update_config", {
+        key: "touch_backend", value,
+      });
+      dispatch(forceSetLocalConfig({ touch_backend: value }));
+      messageApi?.success(res.message);
+    } catch (err: unknown) {
+      messageApi?.error(String(err));
+    } finally {
+      setTouchSaving(false);
+    }
+  }
 
   async function loadLocalConfig() {
     dispatch(setIsLoading(true));
@@ -165,6 +184,19 @@ export default function Settings() {
               className="w-sm"
               value={localConfig.adbPath}
               onChange={(e) => dispatch(setAdbPath(e.target.value))}
+            />
+          </ItemBox>
+          <ItemBox label={t("settings.touchBackend")} extra={t("settings.touchBackendHint")}>
+            <Select
+              className="w-sm"
+              value={localConfig.touchBackend}
+              loading={touchSaving}
+              disabled={touchSaving}
+              options={[
+                { value: "sdk", label: t("settings.touchSdk") },
+                { value: "uhid", label: t("settings.touchUhid") },
+              ]}
+              onChange={changeTouchBackend}
             />
           </ItemBox>
           <ItemBox label={t("settings.clipboardSync")}>
