@@ -23,7 +23,7 @@ use tower_http::{
 use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{control_msg::ScrcpyControlMsg, controller::ControllerCommand},
-    utils::relate_to_root_path,
+    utils::{relate_to_root_path, socket::disable_inheritance},
     web::ws::WebSocketNotification,
 };
 
@@ -57,7 +57,21 @@ impl Server {
     ) {
         log::info!("[WebServe] {}: {}", t!("web.server.startingOn"), addr);
 
-        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        let listener = match tokio::net::TcpListener::bind(addr).await {
+            Ok(listener) => listener,
+            Err(e) => {
+                log::error!("[WebServe] Failed to bind {}: {}", addr, e);
+                return;
+            }
+        };
+        if let Err(e) = disable_inheritance(&listener) {
+            log::error!(
+                "[WebServe] Failed to disable socket inheritance for {}: {}",
+                addr,
+                e
+            );
+            return;
+        }
 
         let ip_str = if addr.ip().is_unspecified() || addr.ip().is_loopback() {
             "localhost"
@@ -75,9 +89,9 @@ impl Server {
             log::error!("[WebServe] {}: {}", t!("web.server.failedToOpenBrowser"), e)
         });
 
-        axum::serve(listener, Self::app(cs_tx, d_tx, m_tx, ws_tx))
-            .await
-            .unwrap();
+        if let Err(e) = axum::serve(listener, Self::app(cs_tx, d_tx, m_tx, ws_tx)).await {
+            log::error!("[WebServe] Server stopped with an error: {}", e);
+        }
     }
 
     fn app(
