@@ -360,7 +360,10 @@
       "size": "Размер",
       "differentName": "Имя новой конфигурации не может совпадать с текущим!",
       "duplicateTitle": "Дублировать конфигурацию",
-      "showGuides": "Направляющие"
+      "showGuides": "Направляющие",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "pinned": "Pinned"
     },
     "script": {
       "setting": {

@@ -13,6 +13,9 @@ case "$(uname -s):$(uname -m)" in
     Darwin:arm64)
         SCRCPY_MASK_OS="macos-arm64"
         ;;
+    Darwin:x86_64)
+        SCRCPY_MASK_OS="macos-x64"
+        ;;
     Linux:x86_64)
         SCRCPY_MASK_OS="linux-x64"
         ;;

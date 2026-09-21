@@ -360,7 +360,10 @@
       "size": "Tamanho",
       "differentName": "O nome da nova configuração não pode ser igual ao da configuração atual!",
       "duplicateTitle": "Duplicar a configuração",
-      "showGuides": "Guias"
+      "showGuides": "Guias",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "pinned": "Pinned"
     },
     "script": {
       "setting": {

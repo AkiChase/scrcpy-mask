@@ -31,6 +31,15 @@ just build-ffmpeg
 
 The FFmpeg build script downloads the FFmpeg source archive when `ffmpeg-7.1.2` is missing, then builds and installs static libraries for the current target.
 
+Supported targets and local FFmpeg directories:
+
+| Host | Target name | FFmpeg directory |
+| --- | --- | --- |
+| macOS on Apple Silicon | `macos-arm64` | `ffmpeg-7.1.2/ffmpeg-macos-arm64` |
+| macOS on Intel | `macos-x64` | `ffmpeg-7.1.2/ffmpeg-macos-x64` |
+| Linux x86_64 | `linux-x64` | `ffmpeg-7.1.2/ffmpeg-linux-x64` |
+| Windows x86_64 | `windows-x64` | `ffmpeg-7.1.2/ffmpeg-windows-x64` |
+
 On Windows, `scripts/build-ffmpeg.ps1` checks for MSYS2 bash, loads the MSVC C++ build tools environment with `VsDevCmd.bat`, sets `MSYS2_PATH_TYPE=inherit`, and verifies that MSYS2 bash can resolve `cl.exe` before running FFmpeg configure. MSYS2 provides the shell used to run FFmpeg's build scripts; MSVC provides the compiler selected by `--toolchain=msvc`. The script does not fall back to an arbitrary `bash` executable.
 
 Notes:
@@ -87,6 +96,8 @@ just build
 
 The package scripts build the frontend, build the Rust app in release mode, and create the platform package. They require FFmpeg to have been built already.
 
+On macOS, packaging runs natively for the host architecture. Apple Silicon produces `scrcpy-mask-macos-arm64.dmg`, while Intel produces `scrcpy-mask-macos-x64.dmg`. The release workflow builds and publishes both variants.
+
 ## Rust Analyzer
 
 To ensure that `rust-analyzer` can locate FFmpeg dependencies, add the matching local FFmpeg paths to VS Code `settings.json`:
@@ -98,4 +109,4 @@ To ensure that `rust-analyzer` can locate FFmpeg dependencies, add the matching 
 }
 ```
 
-Replace `/path/to/scrcpy-mask/` and `ffmpeg-macos-arm64` with the actual local path and target directory.
+Replace `/path/to/scrcpy-mask/` and `ffmpeg-macos-arm64` with the actual local path and target directory. On an Intel Mac, use `ffmpeg-macos-x64` instead.

@@ -12,6 +12,9 @@ if [[ -z "$TARGET_OS" ]]; then
         Darwin:arm64)
             TARGET_OS="macos-arm64"
             ;;
+        Darwin:x86_64)
+            TARGET_OS="macos-x64"
+            ;;
         Linux:x86_64)
             TARGET_OS="linux-x64"
             ;;
@@ -63,8 +66,12 @@ fi
 
 if command -v nproc >/dev/null 2>&1; then
     JOBS="$(nproc)"
+elif JOBS="$(sysctl -n hw.ncpu 2>/dev/null)"; then
+    :
+elif JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null)"; then
+    :
 else
-    JOBS="$(sysctl -n hw.ncpu)"
+    JOBS=1
 fi
 
 echo "Building FFmpeg $FFMPEG_VERSION for $TARGET_OS"

@@ -360,7 +360,10 @@
       "size": "尺寸",
       "differentName": "新配置名不能与当前文件名相同！",
       "duplicateTitle": "复制配置",
-      "showGuides": "辅助范围"
+      "showGuides": "辅助范围",
+      "pin": "置顶",
+      "unpin": "取消置顶",
+      "pinned": "置顶"
     },
     "script": {
       "setting": {
