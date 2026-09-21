@@ -52,6 +52,14 @@ fn default_preserve_fps_control() -> bool {
     true
 }
 
+fn default_follow_fps_motion() -> bool {
+    false
+}
+
+fn should_move_fire_touch(preserve_fps_control: bool, follow_fps_motion: bool) -> bool {
+    !preserve_fps_control || follow_fps_motion
+}
+
 #[derive(Debug, Clone)]
 pub struct BindMappingFps {
     pub id: String,
@@ -314,6 +322,7 @@ pub struct BindMappingFire {
     pub pointer_id: u64,
     pub position: Position,
     pub preserve_fps_control: bool,
+    pub follow_fps_motion: bool,
     pub sensitivity_x: f32,
     pub sensitivity_y: f32,
     pub bind: ButtonBinding,
@@ -331,6 +340,7 @@ impl From<MappingFire> for BindMappingFire {
             pointer_id: value.pointer_id,
             position: value.position,
             preserve_fps_control: value.preserve_fps_control,
+            follow_fps_motion: value.follow_fps_motion,
             sensitivity_x: value.sensitivity_x,
             sensitivity_y: value.sensitivity_y,
             bind: value.bind.clone(),
@@ -351,6 +361,8 @@ pub struct MappingFire {
     pub position: Position,
     #[serde(default = "default_preserve_fps_control")]
     pub preserve_fps_control: bool,
+    #[serde(default = "default_follow_fps_motion")]
+    pub follow_fps_motion: bool,
     #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
     pub sensitivity_x: f32,
     #[serde(serialize_with = "crate::mask::mapping::serde_float::serialize_f32_3dp")]
@@ -507,9 +519,13 @@ pub fn handle_fire_trigger(
     }
 
     for (_, fire_item) in active_map.0.iter_mut() {
-        if fire_item.preserve_fps_control {
+        if !should_move_fire_touch(fire_item.preserve_fps_control, fire_item.follow_fps_motion) {
             continue;
         }
+
+        // Some games follow the fire pointer while firing. Let an opted-in
+        // fire mapping move that pointer with the FPS drag, while keeping the
+        // historical fixed-pointer behavior as the default.
         fire_item.current_pos += accumulated_motion.delta * fire_item.sensitivity;
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,
@@ -521,11 +537,25 @@ pub fn handle_fire_trigger(
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::should_move_fire_touch;
+
+    #[test]
+    fn fire_touch_motion_policy_preserves_existing_configs() {
+        assert!(should_move_fire_touch(false, false));
+        assert!(should_move_fire_touch(false, true));
+        assert!(!should_move_fire_touch(true, false));
+        assert!(should_move_fire_touch(true, true));
+    }
+}
+
 struct FireItem {
     current_pos: Vec2,
     pointer_id: u64,
     sensitivity: Vec2,
     preserve_fps_control: bool,
+    follow_fps_motion: bool,
 }
 
 fn fire_has_before_hook(mapping: &BindMappingFire) -> bool {
@@ -573,6 +603,7 @@ fn apply_fire_begin(
             pointer_id: mapping.pointer_id,
             sensitivity,
             preserve_fps_control: mapping.preserve_fps_control,
+            follow_fps_motion: mapping.follow_fps_motion,
         },
     );
 }

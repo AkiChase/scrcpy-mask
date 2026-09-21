@@ -161,6 +161,16 @@ function Setting({
             }
           />
         </ItemBox>
+        {config.preserve_fps_control && (
+          <ItemBox label={t("mappings.fire.setting.followFpsMotion")} tooltip={t("mappings.fire.setting.followFpsMotionHint")}>
+            <Switch
+              checked={config.follow_fps_motion}
+              onChange={(v) =>
+                onConfigChange({ ...config, follow_fps_motion: v })
+              }
+            />
+          </ItemBox>
+        )}
         <ItemBox label={t("mappings.common.randomOffsetX")} tooltip={t("mappings.common.randomOffsetXHint")}>
           <InputNumber
             className="w-full"
@@ -181,7 +191,7 @@ function Setting({
             }
           />
         </ItemBox>
-        {!config.preserve_fps_control && (
+        {(!config.preserve_fps_control || config.follow_fps_motion) && (
           <ItemBox label={t("mappings.fire.setting.sensitivity")} tooltip={t("mappings.fire.setting.sensitivityHint")}>
             <Space.Compact className="w-full">
               <InputNumber
