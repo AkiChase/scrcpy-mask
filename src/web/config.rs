@@ -9,7 +9,7 @@ use std::net::Ipv4Addr;
 use tokio::sync::oneshot;
 
 use crate::{
-    config::{AUDIO_BIT_RATE_MIN, LocalConfig},
+    config::{AUDIO_BIT_RATE_MIN, LocalConfig, TouchBackend},
     is_available_language,
     mask::mask_command::MaskCommand,
     scrcpy::{
@@ -407,6 +407,20 @@ async fn update_config(
             return Err(WebServerError::bad_request(t!(
                 "web.config.mappingLabelOpacityRange"
             )));
+        }
+        "touch_backend" => {
+            let backend: TouchBackend = serde_json::from_value(payload.value.clone())
+                .map_err(|_| WebServerError::bad_request("touch_backend must be sdk or uhid"))?;
+            if ControlledDevice::is_any_device_controlled().await {
+                return Err(WebServerError::bad_request(
+                    "Disconnect all devices before changing the touch backend / 请先断开所有设备再切换触控后端",
+                ));
+            }
+            LocalConfig::set_touch_backend(backend);
+            return Ok(JsonResponse::success(
+                "触控后端已保存，下次连接生效 / Touch backend saved for next connection",
+                None,
+            ));
         }
         "clipboard_sync" => {
             if let Some(value) = payload.value.as_bool() {

@@ -25,6 +25,7 @@ To better support the interaction between **Scrcpy Mask** and Android devices, w
 * [x] Built-in scripting support — see [Script Syntax Guide](./scripts-help.md)
 * [x] Mouse and keyboard mapping with taps, repeat taps, multi-taps, swipes, direction pads, cast-spell controls, FPS/fire, RawInput, scripts, and more
 * [x] Input randomization enhancements, including randomized touch offsets, swipe paths, random anchors, and micro-jitter
+* [x] Optional experimental UHID touchscreen backend for up to 10 simultaneous contacts
 * [ ] Game controller mapping (awaiting sponsorship ❤️)
 * [x] External control via HTTP API + WebSocket for devices, mapping configs, and app settings, including a window-sync example — see [External Control](https://github.com/AkiChase/scrcpy-mask-external-control)
 * [ ] Documentation

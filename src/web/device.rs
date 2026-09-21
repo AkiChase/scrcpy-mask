@@ -104,6 +104,33 @@ async fn _control_device(
     let device_id = device_id.to_string();
     let local_config = LocalConfig::get();
 
+    // UHID absolute touch is initially supported only on the physical main
+    // display. Older Android versions cannot associate a HID with another one.
+    if local_config.touch_backend == crate::config::TouchBackend::Uhid
+        && (local_config.display_id != 0 || local_config.new_display_enabled)
+    {
+        return Err(WebServerError::bad_request(
+            "UHID currently requires physical display 0; disable virtual display / UHID 目前仅支持主屏幕，请关闭虚拟显示",
+        ));
+    }
+
+    if local_config.touch_backend == crate::config::TouchBackend::Uhid {
+        // Read-only preflight. Do not change permissions or silently fall back.
+        // A node being present is necessary, but does not prove HID registration.
+        let mut probe = Vec::new();
+        Device::shell(
+            &device_id,
+            ["if [ -c /dev/uhid ]; then echo present; fi"],
+            &mut probe,
+        )
+        .map_err(WebServerError::internal_error)?;
+        if String::from_utf8_lossy(&probe).trim() != "present" {
+            return Err(WebServerError::bad_request(
+                "Android /dev/uhid unavailable; select SDK / 手机没有 UHID 设备节点，请改用 SDK",
+            ));
+        }
+    }
+
     let device_list = ControlledDevice::get_device_list().await;
     // check if device is controlled
     if device_list

@@ -31,7 +31,7 @@ use crate::{
             cursor::{CursorFrameSet, CursorPlugins, CursorState},
         },
     },
-    utils::relate_to_data_path,
+    utils::{relate_to_data_path, share::ControlledDevice},
 };
 
 #[derive(States, Clone, Copy, Default, Eq, PartialEq, Hash, Debug)]
@@ -48,6 +48,10 @@ impl Plugin for MappingPlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins((IneffablePlugin, CursorPlugins))
             .insert_state(MappingState::Stop)
+            .add_systems(
+                Update,
+                handle_window_focus.before(CursorFrameSet::HandleMappings),
+            )
             .insert_resource(ActiveMappingConfig(None, String::new()))
             .register_input_action::<MappingAction>()
             .configure_sets(
@@ -148,6 +152,7 @@ impl Plugin for MappingPlugins {
                     fire::cleanup_fps_on_stop,
                     script::cleanup_script_on_stop,
                     cleanup_cursor_capture_on_stop,
+                    release_all_backend_touches,
                 )
                     .chain(),
             )
@@ -165,6 +170,7 @@ impl Plugin for MappingPlugins {
                     fire::cleanup_fps_on_stop,
                     script::cleanup_script_on_stop,
                     cleanup_cursor_capture_on_stop,
+                    release_all_backend_touches,
                 )
                     .chain(),
             );
@@ -173,6 +179,47 @@ impl Plugin for MappingPlugins {
 
 pub fn mask_not_resizing(resize_state: Res<MaskResizeState>) -> bool {
     !resize_state.active()
+}
+
+// Changing focus must not leave a held key or virtual finger behind. The
+// existing Stop transition cleans mapping state.
+// Once the window regains focus while a device is still connected, resume the
+// mapping automatically, otherwise there is no way to leave Stop short of
+// reconnecting the device (MappingState::Normal is otherwise only set on
+// device connect).
+fn handle_window_focus(
+    mut focus_events: MessageReader<bevy::window::WindowFocused>,
+    windows: Query<Entity, With<bevy::window::PrimaryWindow>>,
+    mapping: Res<State<MappingState>>,
+    mut next: ResMut<NextState<MappingState>>,
+) {
+    let Some(last) = focus_events
+        .read()
+        .filter(|event| windows.contains(event.window))
+        .last()
+    else {
+        return;
+    };
+
+    if !last.focused {
+        if *mapping.get() != MappingState::Stop {
+            next.set(MappingState::Stop);
+        }
+        return;
+    }
+
+    // Focus regained: resume mapping when a device is still connected.
+    if *mapping.get() == MappingState::Stop
+        && ControlledDevice::get_main_device_blocking().is_some()
+    {
+        next.set(MappingState::Normal);
+    }
+}
+
+fn release_all_backend_touches(sender: Res<crate::utils::ChannelSenderCS>) {
+    let _ = sender
+        .0
+        .send(crate::scrcpy::control_msg::ScrcpyControlMsg::ReleaseAllTouches);
 }
 
 fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappingConfig>) {

@@ -42,6 +42,8 @@ use crate::{
     utils::{LatestVideoFrame, share::ControlledDevice},
 };
 
+use super::touch_router::{Geometry, TouchRouter};
+
 pub struct ScrcpyConnection {
     pub socket: TcpStream,
 }
@@ -82,87 +84,68 @@ impl ScrcpyConnection {
         }
     }
 
+    // Keep one stateful router per device, serialize whole reports, and finish
+    // cleanup before dropping the socket.
     async fn control_writer(
         mut write_half: OwnedWriteHalf,
         token: CancellationToken,
         mut cs_rx: broadcast::Receiver<ScrcpyControlMsg>,
-        mut watch_rx: watch::Receiver<(u32, u32)>,
+        mut watch_rx: watch::Receiver<Geometry>,
     ) {
-        tokio::select! {
-            _ = token.cancelled()=>{
-                log::info!("[Controller] {}", t!("scrcpy.controlConnectionCancelled"));
-            }
-            _ = async {
-                loop {
-                    match cs_rx.recv().await {
-                        Ok(mut msg) => {
-                                // scale position
-                                match &mut msg {
-                                    ScrcpyControlMsg::InjectTouchEvent {
-                                        x,
-                                        y,
-                                        w,
-                                        h,
-                                        action: _,
-                                        pointer_id: _,
-                                        pressure: _,
-                                        action_button: _,
-                                        buttons: _,
-                                    } => {
-                                        let (device_w, device_h) = watch_rx.borrow_and_update().clone();
-                                        let (old_x, old_y) = (*x, *y);
-                                        let (old_w, old_h) = (*w, *h);
-                                        *x = old_x * device_w as i32 / old_w as i32;
-                                        *y = old_y * device_h as i32 / old_h as i32;
-                                        *w = device_w as u16;
-                                        *h = device_h as u16;
-                                    }
-                                    ScrcpyControlMsg::InjectScrollEvent {
-                                        x,
-                                        y,
-                                        w,
-                                        h,
-                                        hscroll: _,
-                                        vscroll: _,
-                                        buttons: _,
-                                    } => {
-                                        let (device_w, device_h) = watch_rx.borrow_and_update().clone();
-                                        let (old_x, old_y) = (*x, *y);
-                                        let (old_w, old_h) = (*w, *h);
-                                        *x = old_x * device_w as i32 / old_w as i32;
-                                        *y = old_y * device_h as i32 / old_h as i32;
-                                        *w = device_w as u16;
-                                        *h = device_h as u16;
-                                    }
-                                    _ => {}
-                                };
-                                let data:Vec<u8> = msg.into();
-                                if let Err(e) = write_half.write_all(&data).await {
-                                    log::error!("[Controller] {}: {}", t!("scrcpy.controlConnWriteFailed"),e);
-                                }
-                        }
-                        Err(RecvError::Lagged(skipped)) => {
-                            log::warn!("[Controller] {}",t!("controller.csReceiverLagged", skipped => skipped));
-                        }
-                        Err(e) => {
-                            log::info!("[Controller] {}: {}", t!("scrcpy.controlChannelClosed"),e);
+        let backend = crate::config::LocalConfig::get().touch_backend;
+        let mut router = TouchRouter::new(backend);
+        loop {
+            let data = tokio::select! {
+                biased;
+                _ = token.cancelled() => break,
+                result = watch_rx.changed() => {
+                    if result.is_err() { break; }
+                    let geometry = *watch_rx.borrow_and_update();
+                    router.set_geometry(geometry)
+                }
+                result = cs_rx.recv() => match result {
+                    Ok(msg) => match router.route(msg) {
+                        Ok(data) => data,
+                        Err(error) => {
+                            log::error!("[Touch] {}. Disconnecting to release contacts.", error);
                             break;
                         }
+                    },
+                    Err(RecvError::Lagged(skipped)) => {
+                        log::warn!("[Touch] Lost {} events; releasing all contacts", skipped);
+                        // Discard the stale tail: a queued DOWN after a dropped UP
+                        // must not re-create a stuck finger.
+                        cs_rx = cs_rx.resubscribe();
+                        router.release_all()
+                    }
+                    Err(RecvError::Closed) => break,
+                },
+            };
+            if !data.is_empty() {
+                // A blocked connection must not hang shutdown indefinitely.
+                match timeout(Duration::from_millis(500), write_half.write_all(&data)).await {
+                    Ok(Ok(())) => {}
+                    result => {
+                        log::error!("[Touch] Control write failed: {:?}", result);
+                        // The stream may contain a partial message: don't append
+                        // cleanup bytes to a corrupt stream. Server EOF destroys UHID.
+                        token.cancel();
+                        let _ = write_half.shutdown().await;
+                        return;
                     }
                 }
-            }=>{
-                log::error!("[Controller] {}", t!("scrcpy.controlCnnShutdownUnexpectedly"));
             }
         }
-        timeout(Duration::from_millis(500), write_half.shutdown())
-            .await
-            .ok();
+        let cleanup = router.close();
+        let _ = timeout(Duration::from_millis(500), write_half.write_all(&cleanup)).await;
+        let _ = timeout(Duration::from_millis(500), write_half.shutdown()).await;
+        token.cancel();
     }
 
     async fn control_reader_handler(
         mut read_half: OwnedReadHalf,
         cr_tx: UnboundedSender<ScrcpyDeviceMsg>,
-        watch_tx: watch::Sender<(u32, u32)>,
+        watch_tx: watch::Sender<Geometry>,
         scid: &str,
         main: bool,
     ) {
@@ -170,14 +153,18 @@ impl ScrcpyConnection {
             match ScrcpyDeviceMsg::read_msg(&mut read_half, scid.to_string()).await {
                 Ok(msg) => {
                     if let ScrcpyDeviceMsg::Rotation {
-                        rotation: _,
+                        rotation,
                         width,
                         height,
                         scid,
                     } = msg.clone()
                     {
                         ControlledDevice::update_device_size(scid, (width, height)).await;
-                        watch_tx.send((width, height)).unwrap();
+                        let _ = watch_tx.send(Geometry {
+                            width,
+                            height,
+                            rotation,
+                        });
                     }
                     // only forward other message from main device
                     if main {
@@ -196,7 +183,7 @@ impl ScrcpyConnection {
         read_half: OwnedReadHalf,
         token: CancellationToken,
         cr_tx: UnboundedSender<ScrcpyDeviceMsg>,
-        watch_tx: watch::Sender<(u32, u32)>,
+        watch_tx: watch::Sender<Geometry>,
         scid: &str,
         main: bool,
     ) {
@@ -231,9 +218,9 @@ impl ScrcpyConnection {
         }
 
         let (read_half, write_half) = self.socket.into_split();
-        let finnal_token = token.clone();
+
         let token_copy = token.clone();
-        let (watch_tx, watch_rx) = watch::channel::<(u32, u32)>((0, 0)); // share device size with writer
+        let (watch_tx, watch_rx) = watch::channel(Geometry::default()); // share device size with writer
         if main {
             let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
             m_tx.send((
@@ -244,10 +231,14 @@ impl ScrcpyConnection {
             oneshot_rx.await.unwrap().unwrap();
         }
 
-        tokio::select! {
-            _ = Self::control_writer(write_half, token, cs_rx, watch_rx) => {finnal_token.cancel();}
-            _ = Self::control_reader(read_half, token_copy, cr_tx, watch_tx, &scid, main) => {finnal_token.cancel();}
-        }
+        tokio::join!(
+            Self::control_writer(write_half, token, cs_rx, watch_rx),
+            async {
+                Self::control_reader(read_half, token_copy.clone(), cr_tx, watch_tx, &scid, main)
+                    .await;
+                token_copy.cancel();
+            }
+        );
 
         log::info!("[Controller] {}", t!("scrcpy.controlConnectionClosed"));
         if main {

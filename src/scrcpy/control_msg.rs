@@ -86,6 +86,8 @@ pub enum ScrcpyControlMsgType {
 
 #[derive(Debug, Clone)]
 pub enum ScrcpyControlMsg {
+    // Local-only barrier added by the UHID extension. Never sent on the wire.
+    ReleaseAllTouches,
     InjectKeycode {
         action: constant::KeyEventAction, // u8
         keycode: constant::Keycode,       // u32
@@ -136,6 +138,7 @@ pub enum ScrcpyControlMsg {
 impl From<ScrcpyControlMsg> for Vec<u8> {
     fn from(msg: ScrcpyControlMsg) -> Self {
         match msg {
+            ScrcpyControlMsg::ReleaseAllTouches => Vec::new(),
             ScrcpyControlMsg::InjectKeycode {
                 action,
                 keycode,

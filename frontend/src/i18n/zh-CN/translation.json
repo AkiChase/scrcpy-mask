@@ -312,6 +312,14 @@
         "touchModeInterval": "间隔时间",
         "singleTouchIntervalHint": "抬起当前指针后，等待多久再在起点按下同一指针，单位毫秒。设为 0 表示立即按下。",
         "dualTouchIntervalHint": "按下备用指针后，等待多久再抬起旧指针，单位毫秒。设为 0 表示立即抬起。"
+        ,"interaction": "端游式交互切换"
+        ,"interactionHint": "启用后，此 FPS 热键在视角模式下会点击交互位置并显示鼠标；再次按下会恢复 FPS 视角。建议绑定 F。"
+        ,"interactionOpenPosition": "交互按钮位置"
+        ,"interactionOpenPositionHint": "退出 FPS 模式前后要点击的游戏交互、搜索或拾取按钮坐标。"
+        ,"interactionClose": "返回时点击关闭按钮"
+        ,"interactionCloseHint": "再次按键恢复 FPS 视角前，先点击游戏页面的关闭按钮。"
+        ,"interactionClosePosition": "关闭按钮位置"
+        ,"interactionClosePositionHint": "搜索、拾取或菜单页面关闭按钮的坐标。"
       },
       "name": "FPS模式"
     },
@@ -386,6 +394,11 @@
     }
   },
   "settings": {
+    "touchBackend": "触控后端",
+    "touchSdk": "SDK 触摸注入（默认）",
+    "touchUhid": "UHID 虚拟触摸屏（实验）",
+    "touchBackendHint": "先断开所有设备再切换。UHID 支持主屏幕与最多 10 个触点；依赖手机系统支持，不代表隐藏输入来源。切换后需要重新连接。",
+
     "title": {
       "header": "设置",
       "basic": "基本",

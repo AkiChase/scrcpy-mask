@@ -312,6 +312,14 @@
         "singleTouchIntervalHint": "Milliseconds to wait after lifting the current pointer before pressing the same pointer at the start. Set to 0 for immediate press.",
         "dualTouchIntervalHint": "Milliseconds to wait after pressing the alternate pointer before lifting the old pointer. Set to 0 for immediate lift.",
         "title": "Mapping Configuration - FPS"
+        ,"interaction": "PC-style interaction toggle"
+        ,"interactionHint": "When enabled, this FPS hotkey taps the interaction position and shows the cursor. Press it again to resume FPS look. F is recommended."
+        ,"interactionOpenPosition": "Interaction button position"
+        ,"interactionOpenPositionHint": "Coordinates of the in-game interact, search, or loot button tapped when leaving FPS mode."
+        ,"interactionClose": "Tap close when resuming"
+        ,"interactionCloseHint": "Tap the page close button before restoring FPS look on the second press."
+        ,"interactionClosePosition": "Close button position"
+        ,"interactionClosePositionHint": "Coordinates of the close button on the search, loot, or menu page."
       },
       "name": "FPS"
     },
@@ -386,6 +394,11 @@
     }
   },
   "settings": {
+    "touchBackend": "Touch backend",
+    "touchSdk": "SDK touch injection (default)",
+    "touchUhid": "UHID virtual touchscreen (experimental)",
+    "touchBackendHint": "Disconnect all devices before changing. UHID supports the main display and up to 10 contacts; device support is required. It does not hide input origin. Reconnect to apply.",
+
     "title": {
       "header": "Settings",
       "basic": "Basic",
