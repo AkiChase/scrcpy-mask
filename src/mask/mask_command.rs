@@ -1,4 +1,8 @@
-use bevy::{prelude::*, window::WindowLevel};
+use bevy::{
+    ecs::system::SystemParam,
+    prelude::*,
+    window::{Monitor, WindowLevel},
+};
 use bevy_ineffable::prelude::IneffableCommands;
 use rust_i18n::t;
 
@@ -61,14 +65,21 @@ impl TitlebarState {
     }
 }
 
+/// Grouped read-only resources: keeps `handle_mask_command` under the
+/// maximum number of system parameters.
+#[derive(SystemParam)]
+pub struct MaskCommandResources<'w> {
+    m_rx: Res<'w, ChannelReceiverM>,
+    cs_tx_res: Res<'w, ChannelSenderCS>,
+    script_command_tx: Res<'w, ScriptRuntimeCommandSender>,
+    shared_state: Res<'w, ScriptSharedState>,
+    cursor_pos: Res<'w, CursorPosition>,
+    mapping_state: Res<'w, State<MappingState>>,
+    cursor_state: Res<'w, State<CursorState>>,
+}
+
 pub fn handle_mask_command(
-    m_rx: Res<ChannelReceiverM>,
-    cs_tx_res: Res<ChannelSenderCS>,
-    script_command_tx: Res<ScriptRuntimeCommandSender>,
-    shared_state: Res<ScriptSharedState>,
-    cursor_pos: Res<CursorPosition>,
-    mapping_state: Res<State<MappingState>>,
-    cursor_state: Res<State<CursorState>>,
+    res: MaskCommandResources,
     mut window: Single<&mut Window>,
     mut next_mapping_state: ResMut<NextState<MappingState>>,
     mut next_cursor_state: ResMut<NextState<CursorState>>,
@@ -77,9 +88,10 @@ pub fn handle_mask_command(
     mut mask_size: ResMut<MaskSize>,
     mut titlebar_state: ResMut<TitlebarState>,
     mut pending_focus: ResMut<PendingWindowFocus>,
+    monitors: Query<&Monitor>,
     runtime: ResMut<TokioTasksRuntime>,
 ) {
-    for (msg, oneshot_tx) in m_rx.0.try_iter() {
+    for (msg, oneshot_tx) in res.m_rx.0.try_iter() {
         match msg {
             MaskCommand::WinMove {
                 left,
@@ -89,6 +101,20 @@ pub fn handle_mask_command(
             } => {
                 let content_width = (right - left) as f32;
                 let content_height = (bottom - top) as f32;
+
+                // A position persisted while the window was off-screen (e.g. the
+                // transient sentinel coordinates Windows reports for minimized or
+                // hidden windows) would otherwise restore the window outside the
+                // desktop every time. Clamp it back onto a visible monitor.
+                let scale_factor = window.resolution.scale_factor() as f32;
+                let (left, top) = clamp_to_visible_monitor(
+                    left,
+                    top,
+                    content_width,
+                    content_height,
+                    scale_factor,
+                    &monitors,
+                );
 
                 apply_titlebar_dimensions(
                     &mut window,
@@ -178,14 +204,14 @@ pub fn handle_mask_command(
                 };
 
                 if let Some(mapping_config) = &active_mapping.0 {
-                    let cs_tx = cs_tx_res.0.clone();
-                    let script_command_tx = script_command_tx.0.clone();
-                    let shared_state = shared_state.as_ref().clone();
+                    let cs_tx = res.cs_tx_res.0.clone();
+                    let script_command_tx = res.script_command_tx.0.clone();
+                    let shared_state = res.shared_state.as_ref().clone();
                     let original_size = mapping_config.original_size.into();
-                    let cursor_pos = cursor_pos.0;
+                    let cursor_pos = res.cursor_pos.0;
                     let mask_size = mask_size.0;
-                    let raw_input_flag = mapping_state.get() == &MappingState::RawInput;
-                    let fps_mode_flag = cursor_state.get() == &CursorState::Fps;
+                    let raw_input_flag = res.mapping_state.get() == &MappingState::RawInput;
+                    let fps_mode_flag = res.cursor_state.get() == &CursorState::Fps;
                     runtime.spawn_background_task(move |_ctx| async move {
                         let result = ast
                             .run_script(
@@ -299,4 +325,74 @@ pub fn physical_to_logical_i32(value: i32, scale_factor: f32) -> i32 {
 
 fn logical_to_physical_i32(value: f32, scale_factor: f32) -> i32 {
     (value * scale_factor).round() as i32
+}
+
+/// True when the logical rect (content area) intersects at least one monitor.
+///
+/// Windows reports transient off-screen sentinel coordinates while a window is
+/// minimized, hidden or being restored. Persisting or restoring such a position
+/// parks the mask window permanently outside the desktop, where it can neither
+/// be seen nor clicked. When no monitor is known yet (early startup), accept the
+/// position instead of rejecting a possibly valid one.
+pub fn rect_intersects_monitor(
+    left: i32,
+    top: i32,
+    width: f32,
+    height: f32,
+    scale_factor: f32,
+    monitors: &Query<&Monitor>,
+) -> bool {
+    if monitors.is_empty() {
+        return true;
+    }
+    let left_p = logical_to_physical_i32(left as f32, scale_factor);
+    let top_p = logical_to_physical_i32(top as f32, scale_factor);
+    let right_p = logical_to_physical_i32(left as f32 + width, scale_factor);
+    let bottom_p = logical_to_physical_i32(top as f32 + height, scale_factor);
+
+    monitors.iter().any(|m| {
+        let (ml, mt) = (m.physical_position.x, m.physical_position.y);
+        let (mr, mb) = (ml + m.physical_width as i32, mt + m.physical_height as i32);
+        left_p < mr && right_p > ml && top_p < mb && bottom_p > mt
+    })
+}
+
+/// Clamp a restore position so the window stays reachable on a visible monitor.
+///
+/// Positions already intersecting a monitor are returned unchanged, so windows
+/// intentionally parked on a secondary monitor keep their placement. Off-screen
+/// positions fall back to the monitor that contains the desktop origin (the
+/// primary monitor in the common case), or to the first monitor, with a small
+/// margin. The follow-up `WindowMoved` event then persists the corrected value.
+pub fn clamp_to_visible_monitor(
+    left: i32,
+    top: i32,
+    width: f32,
+    height: f32,
+    scale_factor: f32,
+    monitors: &Query<&Monitor>,
+) -> (i32, i32) {
+    if rect_intersects_monitor(left, top, width, height, scale_factor, monitors) {
+        return (left, top);
+    }
+    let Some(fallback) = monitors.iter().min_by_key(|m| {
+        let (ml, mt) = (m.physical_position.x, m.physical_position.y);
+        let (mr, mb) = (ml + m.physical_width as i32, mt + m.physical_height as i32);
+        let contains_origin = ml <= 0 && mr > 0 && mt <= 0 && mb > 0;
+        if contains_origin {
+            (0, ml, mt)
+        } else {
+            (1, ml, mt)
+        }
+    }) else {
+        return (left, top);
+    };
+    let fallback_left = (fallback.physical_position.x as f32 / scale_factor).round() as i32 + 60;
+    let fallback_top = (fallback.physical_position.y as f32 / scale_factor).round() as i32 + 60;
+    log::warn!(
+        "[Mask] Saved position is off-screen; moving window to a visible monitor at ({}, {})",
+        fallback_left,
+        fallback_top
+    );
+    (fallback_left, fallback_top)
 }
