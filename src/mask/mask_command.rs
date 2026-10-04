@@ -179,6 +179,7 @@ pub fn handle_mask_command(
                     titlebar_state.visible,
                     update,
                     device_size,
+                    &monitors,
                 );
                 match &result {
                     Ok(msg) if !msg.is_empty() => log::info!("[Mask] {}", msg),
@@ -342,6 +343,7 @@ fn apply_mask_layout_update(
     titlebar_visible: bool,
     update: MaskLayoutUpdate,
     device_size: Option<(u32, u32)>,
+    monitors: &Query<&Monitor>,
 ) -> Result<String, String> {
     let mut config = LocalConfig::get();
     match update {
@@ -356,6 +358,18 @@ fn apply_mask_layout_update(
         let (left, top, right, bottom) = mask_rect_from_config(&config, device_w, device_h)?;
         let content_width = (right - left) as f32;
         let content_height = (bottom - top) as f32;
+
+        // Same off-screen protection as the restore path, so a mask configured
+        // outside every monitor stays reachable.
+        let scale_factor = window.resolution.scale_factor() as f32;
+        let (left, top) = clamp_to_visible_monitor(
+            left,
+            top,
+            content_width,
+            content_height,
+            scale_factor,
+            monitors,
+        );
 
         apply_titlebar_dimensions(
             window,
