@@ -33,7 +33,7 @@ use crate::{
         },
         mask_command::MaskSize,
     },
-    scrcpy::constant::MotionEventAction,
+    scrcpy::{constant::MotionEventAction, control_msg::ScrcpyControlMsg},
     tokio_tasks::TokioTasksRuntime,
     utils::ChannelSenderCS,
 };
@@ -132,7 +132,7 @@ pub struct FpsInteraction {
 }
 
 pub fn enter_fps_mode(
-    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
     fps_config: &mut ActiveCursorFpsConfig,
     next_state: &mut NextState<CursorState>,
     mapping: &BindMappingFps,
@@ -160,7 +160,7 @@ pub fn enter_fps_mode(
 }
 
 pub fn exit_fps_mode(
-    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
     fps_config: &mut ActiveCursorFpsConfig,
     active_fire_map: &mut ActiveFireMap,
     next_state: &mut NextState<CursorState>,
@@ -213,7 +213,7 @@ impl ValidateMappingConfig for MappingFps {
 }
 
 fn send_interaction_tap(
-    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
     pointer_id: u64,
     original_size: Vec2,
     position: Position,
@@ -407,8 +407,88 @@ struct ReleasedFireActions {
     interrupted_fps_control: bool,
 }
 
+struct FireItem {
+    current_pos: Vec2,
+    pointer_id: u64,
+    sensitivity: Vec2,
+    preserve_fps_control: bool,
+    follow_fps_motion: bool,
+}
+
+impl FireItem {
+    fn send(
+        &self,
+        cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+        action: MotionEventAction,
+        mask_size: Vec2,
+    ) {
+        ControlMsgHelper::send_touch(cs_tx, action, self.pointer_id, mask_size, self.current_pos);
+    }
+}
+
+/// Whether the fire touch reuses one of the FPS pointer ids.
+///
+/// scrcpy-server maps each pointer id to the lowest free internal slot on Down
+/// and frees it on Up. When fire and FPS use different ids, the new finger must
+/// be pressed before the old one is lifted, otherwise the new finger inherits the
+/// freed slot and the game sees the FPS finger "jump" to the fire button.
+/// When they share an id, the old finger must be lifted first, because pressing
+/// an id that is already down and then lifting it would cancel the new touch.
+fn fire_shares_fps_pointer(fps_config: &ActiveCursorFpsConfig, pointer_id: u64) -> bool {
+    pointer_id == fps_config.pointer_id
+        || fps_config.touch_mode.another_pointer_id() == Some(pointer_id)
+}
+
+/// Presses the fire touch and, if needed, hands control over from the FPS touch.
+fn press_fire(
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    fps_config: &mut ActiveCursorFpsConfig,
+    fire_item: &FireItem,
+    mask_size: Vec2,
+    cursor_pos: Vec2,
+) {
+    if fire_item.preserve_fps_control {
+        fire_item.send(cs_tx, MotionEventAction::Down, mask_size);
+        return;
+    }
+
+    fps_config.ignore_fps_motion = true;
+    if fire_shares_fps_pointer(fps_config, fire_item.pointer_id) {
+        release_fps_touches(cs_tx, fps_config, mask_size, cursor_pos);
+        fire_item.send(cs_tx, MotionEventAction::Down, mask_size);
+    } else {
+        fire_item.send(cs_tx, MotionEventAction::Down, mask_size);
+        release_fps_touches(cs_tx, fps_config, mask_size, cursor_pos);
+    }
+}
+
+/// Lifts the fire touch and, if needed, gives control back to the FPS touch.
+/// Returns the restored cursor position when FPS control is restored.
+fn lift_fire(
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+    fps_config: &mut ActiveCursorFpsConfig,
+    fire_item: &FireItem,
+    mask_size: Vec2,
+) -> Option<Vec2> {
+    if fire_item.preserve_fps_control {
+        fire_item.send(cs_tx, MotionEventAction::Up, mask_size);
+        return None;
+    }
+
+    if fire_shares_fps_pointer(fps_config, fire_item.pointer_id) {
+        fire_item.send(cs_tx, MotionEventAction::Up, mask_size);
+        restore_fps_touch(cs_tx, fps_config);
+    } else {
+        restore_fps_touch(cs_tx, fps_config);
+        fire_item.send(cs_tx, MotionEventAction::Up, mask_size);
+    }
+
+    fps_config.ignore_fps_motion = false;
+    Some(fps_config.original_pos / fps_config.original_size * mask_size)
+}
+
 fn release_active_fire(
-    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
     active_map: &mut ActiveFireMap,
     mask_size: Vec2,
 ) -> ReleasedFireActions {
@@ -416,13 +496,7 @@ fn release_active_fire(
     let mut interrupted_fps_control = false;
     for (action, fire_item) in active_map.0.drain() {
         interrupted_fps_control |= !fire_item.preserve_fps_control;
-        ControlMsgHelper::send_touch(
-            cs_tx,
-            MotionEventAction::Up,
-            fire_item.pointer_id,
-            mask_size,
-            fire_item.current_pos,
-        );
+        fire_item.send(cs_tx, MotionEventAction::Up, mask_size);
         released_actions.push(action);
     }
     ReleasedFireActions {
@@ -527,13 +601,7 @@ pub fn handle_fire_trigger(
         // fire mapping move that pointer with the FPS drag, while keeping the
         // historical fixed-pointer behavior as the default.
         fire_item.current_pos += accumulated_motion.delta * fire_item.sensitivity;
-        ControlMsgHelper::send_touch(
-            &cs_tx_res.0,
-            MotionEventAction::Move,
-            fire_item.pointer_id,
-            mask_size.0,
-            fire_item.current_pos, // fire item cursor pos
-        );
+        fire_item.send(&cs_tx_res.0, MotionEventAction::Move, mask_size.0);
     }
 }
 
@@ -548,14 +616,6 @@ mod tests {
         assert!(!should_move_fire_touch(true, false));
         assert!(should_move_fire_touch(true, true));
     }
-}
-
-struct FireItem {
-    current_pos: Vec2,
-    pointer_id: u64,
-    sensitivity: Vec2,
-    preserve_fps_control: bool,
-    follow_fps_motion: bool,
 }
 
 fn fire_has_before_hook(mapping: &BindMappingFire) -> bool {
@@ -576,58 +636,29 @@ fn apply_fire_begin(
     mask_size: Vec2,
     cursor_pos: Vec2,
 ) {
-    if !mapping.preserve_fps_control {
-        fps_config.ignore_fps_motion = true;
-        release_fps_touches(&cs_tx.0, fps_config, mask_size, cursor_pos);
-    }
-
-    let original_pos: Vec2 = mapping.position.into();
     let random_pos = random_offset_vec2(
-        original_pos,
+        mapping.position.into(),
         Vec2::new(mapping.random_offset_x, mapping.random_offset_y),
     );
-    let sensitivity: Vec2 = (mapping.sensitivity_x, mapping.sensitivity_y).into();
-    let current_pos = random_pos / original_size * mask_size;
+    let fire_item = FireItem {
+        current_pos: random_pos / original_size * mask_size,
+        pointer_id: mapping.pointer_id,
+        sensitivity: (mapping.sensitivity_x, mapping.sensitivity_y).into(),
+        preserve_fps_control: mapping.preserve_fps_control,
+        follow_fps_motion: mapping.follow_fps_motion,
+    };
 
-    ControlMsgHelper::send_touch(
-        &cs_tx.0,
-        MotionEventAction::Down,
-        mapping.pointer_id,
-        original_size,
-        random_pos,
-    );
-    active_map.0.insert(
-        action,
-        FireItem {
-            current_pos,
-            pointer_id: mapping.pointer_id,
-            sensitivity,
-            preserve_fps_control: mapping.preserve_fps_control,
-            follow_fps_motion: mapping.follow_fps_motion,
-        },
-    );
+    press_fire(&cs_tx.0, fps_config, &fire_item, mask_size, cursor_pos);
+    active_map.0.insert(action, fire_item);
 }
 
 fn release_fire_item(
-    cs_tx: &broadcast::Sender<crate::scrcpy::control_msg::ScrcpyControlMsg>,
+    cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
     fps_config: &mut ActiveCursorFpsConfig,
     mask_size: Vec2,
     fire_item: FireItem,
 ) -> Option<Vec2> {
-    ControlMsgHelper::send_touch(
-        cs_tx,
-        MotionEventAction::Up,
-        fire_item.pointer_id,
-        mask_size,
-        fire_item.current_pos,
-    );
-    if fire_item.preserve_fps_control {
-        return None;
-    }
-
-    restore_fps_touch(cs_tx, fps_config);
-    fps_config.ignore_fps_motion = false;
-    Some(fps_config.original_pos / fps_config.original_size * mask_size)
+    lift_fire(cs_tx, fps_config, &fire_item, mask_size)
 }
 
 fn apply_fire_end(
@@ -638,16 +669,14 @@ fn apply_fire_end(
     mask_size: Vec2,
     action: &str,
 ) -> bool {
-    if let Some(fire_item) = active_map.0.remove(action) {
-        if let Some(restored_cursor_pos) =
-            release_fire_item(&cs_tx.0, fps_config, mask_size, fire_item)
-        {
-            cursor_pos.0 = restored_cursor_pos;
-        }
-        true
-    } else {
-        false
+    let Some(fire_item) = active_map.0.remove(action) else {
+        return false;
+    };
+    if let Some(restored_cursor_pos) = release_fire_item(&cs_tx.0, fps_config, mask_size, fire_item)
+    {
+        cursor_pos.0 = restored_cursor_pos;
     }
+    true
 }
 
 pub fn handle_fire(
