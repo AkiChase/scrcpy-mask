@@ -23,7 +23,7 @@ use tower_http::{
 use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{control_msg::ScrcpyControlMsg, controller::ControllerCommand},
-    utils::{relate_to_root_path, socket::disable_inheritance},
+    utils::{relate_to_root_path, socket::bind_listener},
     web::ws::WebSocketNotification,
 };
 
@@ -57,21 +57,13 @@ impl Server {
     ) {
         log::info!("[WebServe] {}: {}", t!("web.server.startingOn"), addr);
 
-        let listener = match tokio::net::TcpListener::bind(addr).await {
+        let listener = match bind_listener(addr) {
             Ok(listener) => listener,
             Err(e) => {
                 log::error!("[WebServe] Failed to bind {}: {}", addr, e);
                 return;
             }
         };
-        if let Err(e) = disable_inheritance(&listener) {
-            log::error!(
-                "[WebServe] Failed to disable socket inheritance for {}: {}",
-                addr,
-                e
-            );
-            return;
-        }
 
         let ip_str = if addr.ip().is_unspecified() || addr.ip().is_loopback() {
             "localhost"

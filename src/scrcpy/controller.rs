@@ -3,13 +3,10 @@ use std::{collections::HashMap, net::SocketAddrV4, thread};
 use bevy::log;
 use copypasta::{ClipboardContext, ClipboardProvider};
 use rust_i18n::t;
-use tokio::{
-    net::TcpListener,
-    sync::{
-        broadcast,
-        mpsc::{self, UnboundedReceiver},
-        oneshot,
-    },
+use tokio::sync::{
+    broadcast,
+    mpsc::{self, UnboundedReceiver},
+    oneshot,
 };
 use tokio_util::sync::CancellationToken;
 
@@ -21,8 +18,7 @@ use crate::{
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
     },
     utils::{
-        LatestVideoFrame, mask_win_move_helper, share::ControlledDevice,
-        socket::disable_inheritance,
+        LatestVideoFrame, mask_win_move_helper, share::ControlledDevice, socket::bind_listener,
     },
     web::ws::WebSocketNotification,
 };
@@ -131,21 +127,13 @@ impl Controller {
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         log::info!("[Controller] {}: {}", t!("scrcpy.startingController"), addr);
-        let listener = match TcpListener::bind(addr).await {
+        let listener = match bind_listener(addr) {
             Ok(listener) => listener,
             Err(e) => {
                 log::error!("[Controller] Failed to bind {}: {}", addr, e);
                 return;
             }
         };
-        if let Err(e) = disable_inheritance(&listener) {
-            log::error!(
-                "[Controller] Failed to disable socket inheritance for {}: {}",
-                addr,
-                e
-            );
-            return;
-        }
 
         // scrcpy device msg handler
         let (cr_tx, cr_rx) = mpsc::unbounded_channel::<ScrcpyDeviceMsg>();
